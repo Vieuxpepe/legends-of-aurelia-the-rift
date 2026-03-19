@@ -1,11 +1,42 @@
-# Godot-specific ignores
+# --- GODOT CORE ---
 .godot/
 *.tmp
+*.import
 
-# Export folders (if you have them)
+# --- BINARY ASSETS (Ignore for AI Context) ---
+# Audio
+*.mp3
+*.wav
+*.ogg
+*.m4a
+*.flac
+
+# Images & Textures
+*.jpeg
+*.jpg
+*.png
+*.tga
+*.webp
+*.psd
+*.ai
+
+# Video
+*.mp4
+*.mov
+*.webm
+
+# 3D Models & Fonts
+*.obj
+*.fbx
+*.glb
+*.gltf
+*.ttf
+*.otf
+
+# --- EXPORTS & SYSTEM ---
 build/
 dist/
-
-# System ignores
 .DS_Store
 Thumbs.db
+*.exe
+*.zip
