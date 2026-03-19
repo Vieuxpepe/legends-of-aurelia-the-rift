@@ -9,6 +9,7 @@ const PAIR_LISTEN_RADIUS_DEFAULT: float = 100.0
 const TRIGGER_SCENES: Array = [
 	{
 		"id": "kaelen_celia_watch_scene",
+		"preferred_visit_themes": ["training", "hopeful"],
 		"priority": 40,
 		"when": { "time_block": "dawn" },
 		"unit_a": "Kaelen",
@@ -29,6 +30,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "sorrel_tariq_map_scene",
+		"preferred_visit_themes": ["gossip", "normal"],
 		"priority": 40,
 		"when": { "time_block": "day" },
 		"unit_a": "Sorrel",
@@ -65,6 +67,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "liora_alden_infirmary_scene",
+		"preferred_visit_themes": ["recovery", "somber"],
 		"priority": 38,
 		"when": { "time_block": "day" },
 		"unit_a": "Liora",
@@ -81,6 +84,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "nyx_hest_workbench_scene",
+		"preferred_visit_themes": ["training", "gossip"],
 		"priority": 39,
 		"when": { "time_block": "day" },
 		"unit_a": "Nyx",
@@ -257,6 +261,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "kaelen_celia_tense_watch_variant",
+		"preferred_visit_themes": ["tense"],
 		"priority": 43,
 		"when": { "time_block": "dawn" },
 		"moods": ["tense"],
@@ -277,6 +282,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "liora_alden_somber_infirmary_variant",
+		"preferred_visit_themes": ["somber", "recovery"],
 		"priority": 42,
 		"when": { "time_block": "day" },
 		"moods": ["somber"],
@@ -296,6 +302,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "tamsin_branik_recovery_scene",
+		"preferred_visit_themes": ["recovery"],
 		"priority": 46,
 		"when": { "time_block": "night" },
 		"unit_a": "Tamsin Reed",
@@ -702,7 +709,84 @@ const TRIGGER_SCENES: Array = [
 			{ "speaker": "Pell Rowan", "text": "That is not as comforting as I hoped." },
 			{ "speaker": "Mira Ashdown", "text": "It is still useful." },
 		],
-	}
+	},
+	{
+		"id": "pair_theme_training_sabine_pell_wall",
+		"priority": 37,
+		"when": { "time_block": "day" },
+		"unit_a": "Sabine Varr",
+		"unit_b": "Pell Rowan",
+		"preferred_visit_themes": ["training"],
+		"zone_type": "wall",
+		"pair_radius": 90.0,
+		"once_per_visit": true,
+		"once_ever": true,
+		"grants_familiarity": 1,
+		"grants_tension": 0,
+		"lines": [
+			{ "speaker": "Sabine Varr", "text": "Your shield checks are improving. Do not get sentimental about good habits." },
+			{ "speaker": "Pell Rowan", "text": "I will save sentiment for after I survive the habit." },
+			{ "speaker": "Sabine Varr", "text": "Fair. Sentiment after survival is called discipline with a pulse." },
+		],
+	},
+	{
+		"id": "pair_theme_gossip_corvin_nyx_wagon",
+		"priority": 36,
+		"when": { "time_block": "night" },
+		"unit_a": "Corvin Ash",
+		"unit_b": "Nyx",
+		"preferred_visit_themes": ["gossip", "tense"],
+		"zone_type": "wagon",
+		"pair_radius": 90.0,
+		"once_per_visit": true,
+		"once_ever": true,
+		"grants_familiarity": 1,
+		"grants_tension": 0,
+		"lines": [
+			{ "speaker": "Nyx", "text": "Camp thinks your ledgers are bedtime stories." },
+			{ "speaker": "Corvin Ash", "text": "Only the dull pages. The interesting ones keep people awake on purpose." },
+			{ "speaker": "Nyx", "text": "Comforting. I prefer insomnia with citations." },
+		],
+	},
+	{
+		"id": "pair_theme_hopeful_branik_liora_cook",
+		"priority": 36,
+		"when": { "time_block": "day" },
+		"unit_a": "Branik",
+		"unit_b": "Liora",
+		"preferred_visit_themes": ["hopeful", "recovery"],
+		"zone_type": "cook_area",
+		"pair_radius": 90.0,
+		"once_per_visit": true,
+		"once_ever": true,
+		"grants_familiarity": 1,
+		"grants_tension": 0,
+		"lines": [
+			{ "speaker": "Liora", "text": "You measure salt like you're negotiating peace." },
+			{ "speaker": "Branik", "text": "Bad soup makes worse treaties. I'm biased toward outcomes." },
+			{ "speaker": "Liora", "text": "Then pour. I'll bless the pot after, not before." },
+		],
+	},
+	{
+		"id": "pair_theme_somber_maela_inez_tree",
+		"priority": 37,
+		"when": { "time_block": "night" },
+		"unit_a": "Maela Thorn",
+		"unit_b": "Inez",
+		"preferred_visit_themes": ["somber"],
+		"zone_type": "tree_line",
+		"pair_radius": 90.0,
+		"once_per_visit": true,
+		"once_ever": true,
+		"grants_familiarity": 1,
+		"grants_tension": 0,
+		"lines": [
+			{ "speaker": "Maela Thorn", "text": "Some nights the trees sound like they're counting us." },
+			{ "speaker": "Inez", "text": "Let them count. Means we're still here to be worth inventory." },
+			{ "speaker": "Maela Thorn", "text": "Grim comfort." },
+			{ "speaker": "Inez", "text": "Best kind. Doesn't spoil." },
+		],
+	},
 ]
 
 static func get_all_trigger_scenes() -> Array:
