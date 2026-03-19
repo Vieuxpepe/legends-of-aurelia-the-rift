@@ -9,6 +9,8 @@ const CAMP_SPRITE_SCALE: Vector2 = Vector2(0.22, 0.22)
 const CAMP_BEHAVIOR_DB = preload("res://Scripts/Narrative/CampBehaviorDB.gd")
 const CAMP_ROUTINE_DB = preload("res://Scripts/Narrative/CampRoutineDB.gd")
 
+const WATCHFUL_ROLE_TAGS: Array[String] = ["watch", "duty", "training", "post", "wall", "perimeter", "guard"]
+
 const DEBUG_TEST_CAMP_UNIT_NAMES: Array[String] = [
 	"Kaelen",
 	"Celia",
@@ -55,6 +57,151 @@ func gather_camp_zones() -> void:
 	var nodes: Array = _explore.get_tree().get_nodes_in_group("camp_behavior_zone")
 	for n in nodes:
 		_ctx.camp_zones.append(n)
+
+
+func _read_zone_capacity(z: Node) -> int:
+	if z is CampBehaviorZone:
+		return maxi(1, int((z as CampBehaviorZone).capacity))
+	if z != null and "capacity" in z:
+		return maxi(1, int(z.capacity))
+	return 8
+
+
+func _read_zone_weight(z: Node) -> float:
+	if z == null:
+		return 1.0
+	if "weight" in z:
+		return maxf(0.05, float(z.weight))
+	return 1.0
+
+
+func _read_zone_social_heat(z: Node) -> float:
+	if z is CampBehaviorZone:
+		return maxf(0.0, (z as CampBehaviorZone).social_heat)
+	if z != null and "social_heat" in z:
+		return maxf(0.0, float(z.social_heat))
+	return 0.0
+
+
+func _zone_time_allows(z: Node, time_block: String) -> bool:
+	var blocks: Array = []
+	if z is CampBehaviorZone:
+		blocks = (z as CampBehaviorZone).preferred_time_blocks
+	elif z != null and "preferred_time_blocks" in z:
+		var pv: Variant = z.preferred_time_blocks
+		if pv is Array:
+			blocks = pv as Array
+	if blocks.is_empty():
+		return true
+	var tb: String = str(time_block).strip_edges().to_lower()
+	return tb in blocks
+
+
+func _zone_has_watchful_role(z: Node) -> bool:
+	if z == null:
+		return false
+	var tags: Array = []
+	if z is CampBehaviorZone:
+		tags = (z as CampBehaviorZone).role_tags.duplicate()
+	elif "role_tags" in z:
+		var rv: Variant = z.role_tags
+		if rv is Array:
+			tags = (rv as Array).duplicate()
+	for raw_t in tags:
+		var lt: String = str(raw_t).strip_edges().to_lower()
+		for w in WATCHFUL_ROLE_TAGS:
+			if lt == str(w).strip_edges().to_lower():
+				return true
+	return false
+
+
+func _zone_types_priority_for_profile(merged: Dictionary, idle_style: String) -> Array[String]:
+	var out: Array[String] = []
+	var preferred: Variant = merged.get("preferred_zones", [])
+	var secondary: Variant = merged.get("secondary_zones", [])
+	if preferred is Array:
+		for zz in preferred:
+			var s: String = str(zz).strip_edges()
+			if s != "" and s not in out:
+				out.append(s)
+	if secondary is Array:
+		for zz2 in secondary:
+			var s2: String = str(zz2).strip_edges()
+			if s2 != "" and s2 not in out:
+				out.append(s2)
+	var watchful: bool = idle_style in ["look_out", "check_gear", "inspect_wall", "read_notes"]
+	if watchful:
+		for wt in ["watch_post", "wall", "map_table", "workbench"]:
+			if wt not in out:
+				out.append(wt)
+	var warmish: bool = idle_style in ["warm_hands", "neutral", "tinker_small", "pray_quietly"]
+	if warmish:
+		for ht in ["fire", "bench"]:
+			if ht not in out:
+				out.append(ht)
+	return out
+
+
+func _score_zone_candidate(z: Node, want_type: String, tier: float, idle_style: String, occ: Dictionary) -> float:
+	if not is_instance_valid(z) or not ("zone_type" in z):
+		return -1e9
+	var zt: String = str(z.zone_type).strip_edges()
+	if zt != want_type:
+		return -1e9
+	var tb: String = str(_ctx.active_time_block).strip_edges().to_lower()
+	if not _zone_time_allows(z, tb):
+		return -1e9
+	var cap_v: int = _read_zone_capacity(z)
+	var id: String = str(z.get_instance_id())
+	var c: int = int(occ.get(id, 0))
+	if c >= cap_v:
+		return -800000.0 + tier * 0.05
+	var warm_w: float = 0.38
+	if idle_style in ["warm_hands", "neutral", "tinker_small", "pray_quietly"]:
+		warm_w = 1.0
+	var watchful: bool = idle_style in ["look_out", "check_gear", "inspect_wall", "read_notes"]
+	var sc: float = tier
+	sc += _read_zone_weight(z) * 4.5
+	sc += _read_zone_social_heat(z) * 15.0 * warm_w
+	if watchful and _zone_has_watchful_role(z):
+		sc += 11.0
+	if c > 0:
+		sc -= float(c) * 5.5
+	return sc
+
+
+func _random_point_in_zone(z: Node, fallback: Vector2) -> Vector2:
+	if not is_instance_valid(z):
+		return fallback
+	var center: Vector2 = z.global_position
+	var rad: float = 32.0
+	if "radius" in z:
+		rad = maxf(4.0, float(z.radius))
+	var j: float = rad * 0.38
+	var p: Vector2 = center + Vector2(randf_range(-j, j), randf_range(-j, j))
+	p.x = clampf(p.x, _ctx.walk_min.x, _ctx.walk_max.x)
+	p.y = clampf(p.y, _ctx.walk_min.y, _ctx.walk_max.y)
+	return p
+
+
+func _pick_zone_home_for_walker(merged: Dictionary, _unit_name: String, anchor_global: Vector2, occ: Dictionary) -> Dictionary:
+	if _ctx.camp_zones.is_empty():
+		return {"pos": anchor_global, "zone": null}
+	var idle_style: String = str(merged.get("idle_style", "neutral")).strip_edges().to_lower()
+	var types: Array[String] = _zone_types_priority_for_profile(merged, idle_style)
+	var best_score: float = -1e10
+	var best_zone: Node = null
+	for ti in range(types.size()):
+		var ztype: String = types[ti]
+		var tier: float = 112.0 - float(ti) * 1.35
+		for zn in _ctx.camp_zones:
+			var raw: float = _score_zone_candidate(zn, ztype, tier, idle_style, occ)
+			if raw > best_score:
+				best_score = raw
+				best_zone = zn
+	if best_zone == null or best_score < -7e5:
+		return {"pos": anchor_global, "zone": null}
+	return {"pos": _random_point_in_zone(best_zone, anchor_global), "zone": best_zone}
 
 
 func prepend_unique_zones(existing: Variant, preferred_first: Array[String]) -> Array:
@@ -357,16 +504,15 @@ func spawn_walkers(walkers_container: Node2D, debug_use_test_camp_roster: bool, 
 		var fx: float = (float(col) + 0.5) / float(cols)
 		var fy: float = (float(row) + 0.5) / float(rows)
 		anchors.append(Vector2(_ctx.walk_min.x + w * fx, _ctx.walk_min.y + h * fy))
+	var zone_occupancy: Dictionary = {}
 	for i in roster.size():
 		var entry: Dictionary = (roster[i] as Dictionary).duplicate(true)
 		entry["unit_name"] = _ctx.normalize_unit_name_for_matching(str(entry.get("unit_name", "")))
 		var inst: Node = WALKER_SCENE.instantiate()
 		wc.add_child(inst)
-		inst.global_position = anchors[i] if i < anchors.size() else (_ctx.walk_min + _ctx.walk_max) * 0.5
+		var anchor_g: Vector2 = anchors[i] if i < anchors.size() else (_ctx.walk_min + _ctx.walk_max) * 0.5
 		if inst is CampRosterWalker:
 			var walker: CampRosterWalker = inst as CampRosterWalker
-			walker.home_position = inst.global_position
-			walker.roam_radius = 60.0
 			walker.setup_from_roster(entry)
 			var base_profile: Dictionary = CAMP_BEHAVIOR_DB.get_profile(walker.unit_name)
 			var routine: Dictionary = CAMP_ROUTINE_DB.get_best_routine(walker.unit_name, context)
@@ -381,6 +527,19 @@ func spawn_walkers(walkers_container: Node2D, debug_use_test_camp_roster: bool, 
 				if routine.has("idle_style"):
 					merged["idle_style"] = routine.get("idle_style")
 			merged = apply_condition_behavior_bias(merged, walker.unit_name)
+			var pick: Dictionary = _pick_zone_home_for_walker(merged, walker.unit_name, anchor_g, zone_occupancy)
+			var home_g: Vector2 = pick.get("pos", anchor_g)
+			var znode: Node = pick.get("zone", null)
+			inst.global_position = home_g
+			walker.home_position = inst.global_position
+			walker.roam_radius = 60.0
+			if znode != null:
+				var zid: String = str(znode.get_instance_id())
+				zone_occupancy[zid] = int(zone_occupancy.get(zid, 0)) + 1
+			if znode != null and znode is CampBehaviorZone:
+				var ov: String = str((znode as CampBehaviorZone).idle_style_override).strip_edges()
+				if ov != "":
+					merged["idle_style"] = ov
 			walker.apply_behavior_profile(merged)
 			if CampaignManager:
 				walker.apply_condition_flags(
@@ -389,6 +548,8 @@ func spawn_walkers(walkers_container: Node2D, debug_use_test_camp_roster: bool, 
 				)
 			walker.set_behavior_zones(_ctx.camp_zones)
 			walker.start_behavior()
+		else:
+			inst.global_position = anchor_g
 		_ctx.walker_nodes.append(inst)
 	apply_relationship_home_bias()
 	var status: String = _requests.get_camp_request_status()

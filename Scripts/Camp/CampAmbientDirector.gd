@@ -313,6 +313,7 @@ func _get_eligible_rumor() -> Dictionary:
 		var score: float = float(rumor.get("priority", 0))
 		if listener != "":
 			score = _ctx.score_with_relationship_bias(score, rumor, speaker, listener)
+		score += _ctx.visit_theme_score_adjust(rumor, "rumor")
 		score -= _get_recent_history_penalty("rumor", rumor, speaker)
 		if score > best_score:
 			best_score = score
@@ -386,6 +387,7 @@ func _get_eligible_ambient_chatter() -> Dictionary:
 		if dist_sq_player > overhear_radius * overhear_radius:
 			continue
 		var score: float = _ctx.score_with_relationship_bias(float(entry.get("priority", 0)), entry, a_name, b_name)
+		score += _ctx.visit_theme_score_adjust(entry, "chatter")
 		score -= _get_recent_history_penalty("chatter", entry, a_name)
 		if score > best_score:
 			best_score = score
@@ -603,6 +605,7 @@ func _get_best_spontaneous_social_candidate() -> Dictionary:
 			continue
 		var speaker_name: String = str(entry.get("speaker", "")).strip_edges()
 		var score: float = float(candidate.get("score", float(entry.get("priority", 0))))
+		score += _ctx.visit_theme_score_adjust(entry, "social")
 		score -= _get_recent_history_penalty("social", entry, speaker_name)
 		if score > best_score:
 			best_score = score
@@ -1151,6 +1154,7 @@ func _get_eligible_micro_bark() -> Dictionary:
 			if zt != "" and not _ctx.is_walker_near_zone(speaker_walker, zt):
 				continue
 		var score: float = _ctx.score_with_relationship_bias(float(bark.get("priority", 0)), bark, speaker, listener)
+		score += _ctx.visit_theme_score_adjust(bark, "micro")
 		score -= _get_recent_history_penalty("micro", bark, speaker)
 		if score > best_score:
 			best_score = score

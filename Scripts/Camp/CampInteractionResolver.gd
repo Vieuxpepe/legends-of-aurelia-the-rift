@@ -21,6 +21,79 @@ func get_camp_request_status() -> String:
 	return _requests.get_camp_request_status()
 
 
+## Mirrors `open_dialogue` resolution without opening UI or mutating request state (except reads).
+func peek_walker_interaction_kind(walker_node: Node) -> String:
+	if walker_node == null or not (walker_node is CampRosterWalker):
+		return "none"
+	var cm: Variant = CampaignManager
+	var w: CampRosterWalker = walker_node as CampRosterWalker
+	var unit_name: String = w.unit_name
+	var unit_data: Variant = w.unit_data.get("data", null)
+	var status: String = get_camp_request_status()
+	var giver: String = str(cm.camp_request_giver_name).strip_edges() if cm else ""
+	if status == "failed" and unit_name == giver:
+		return "request_failed"
+	if status == "ready_to_turn_in" and unit_name == giver:
+		return "request_turn_in"
+	if status == "active" and unit_name == giver and cm and str(cm.camp_request_type) == CampRequestDB.TYPE_ITEM_DELIVERY:
+		var have: int = _requests.count_camp_request_items(_requests.get_camp_request_item_identifier())
+		if have >= int(cm.camp_request_target_amount):
+			return "request_turn_in"
+	if status == "active" and unit_name == giver:
+		return "request_progress"
+	if status == "active" and cm and str(cm.camp_request_type) == CampRequestDB.TYPE_TALK_TO_UNIT:
+		var target: String = str(cm.camp_request_target_name).strip_edges()
+		if unit_name == target and int(cm.camp_request_progress) == 0:
+			var payload_chk: Dictionary = cm.camp_request_payload if cm.camp_request_payload is Dictionary else {}
+			if payload_chk.get("branching_check") == true:
+				return "request_branching"
+			return "request_target_talk"
+	if status != "active" and status != "ready_to_turn_in" and status != "failed" and CampaignManager and unit_name != "":
+		var tier: String = CampaignManager.get_avatar_relationship_tier(unit_name)
+		for scene_tier in ["close", "trusted"]:
+			var scene: Dictionary = CampRequestContentDB.get_special_camp_scene(unit_name, scene_tier)
+			if not scene.is_empty() and not scene.get("lines", []).is_empty():
+				var tier_ok: bool = (scene_tier == "close" and tier in ["close", "bonded"]) or (scene_tier == "trusted" and tier in ["trusted", "close", "bonded"])
+				if tier_ok and not (scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier)):
+					return "special_scene"
+		if not CampaignManager.get_available_pair_scene_for_unit(unit_name).is_empty():
+			return "pair_snippet"
+		if not CampaignManager.get_available_camp_lore(unit_name).is_empty():
+			return "lore"
+	if _requests.offer_giver_name == unit_name:
+		return "request_offer"
+	return "idle_talk"
+
+
+func get_interact_prompt_primary_line(nearest: Node, eligible_pair: Dictionary) -> String:
+	if nearest != null and would_single_walker_priority(nearest):
+		var kind: String = peek_walker_interaction_kind(nearest)
+		match kind:
+			"request_failed":
+				return "E  Hear them out"
+			"request_turn_in":
+				return "E  Turn in"
+			"request_progress":
+				return "E  Quest update"
+			"request_target_talk", "request_branching":
+				return "E  Quest: speak"
+			"special_scene":
+				return "E  Talk"
+			"pair_snippet":
+				return "E  Talk"
+			"lore":
+				return "E  Talk"
+			"request_offer":
+				return "E  Request offered"
+			_:
+				return "E  Talk"
+	if not eligible_pair.is_empty():
+		return "E  Listen"
+	if nearest != null:
+		return "E  Talk"
+	return ""
+
+
 func would_single_walker_priority(nearest: Node) -> bool:
 	if nearest == null or not (nearest is CampRosterWalker):
 		return false

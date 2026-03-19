@@ -97,6 +97,11 @@ func _ready() -> void:
 	if _player_sprite != null:
 		_player_base_sprite_offset = _player_sprite.position
 	_spawn.gather_camp_zones()
+	if CampaignManager:
+		CampaignManager.ensure_camp_unit_condition()
+		CampaignManager.advance_camp_condition_recovery_on_visit()
+		CampaignManager.apply_post_battle_camp_condition()
+	_ctx.resolve_visit_theme()
 	walkers_container = _spawn.spawn_walkers(walkers_container, debug_use_test_camp_roster, debug_replace_roster_entirely)
 	_connect_ui()
 	_camp_music_tracks = DefaultCampMusic.get_default_camp_music_tracks()
@@ -117,9 +122,6 @@ func _ready() -> void:
 		rumor_label.visible = false
 		rumor_label.text = ""
 	if CampaignManager:
-		CampaignManager.ensure_camp_unit_condition()
-		CampaignManager.advance_camp_condition_recovery_on_visit()
-		CampaignManager.apply_post_battle_camp_condition()
 		CampaignManager.ensure_camp_memory()
 		CampaignManager.increment_camp_visit()
 	var now_time: float = Time.get_ticks_msec() / 1000.0
@@ -304,15 +306,10 @@ func _update_interact_prompt() -> void:
 		return
 	var nearest: Node = _get_nearest_walker_in_range()
 	var eligible_pair: Dictionary = _dialogue.get_eligible_pair_scene()
-	if nearest != null and _interactions.would_single_walker_priority(nearest):
+	var prompt_line: String = _interactions.get_interact_prompt_primary_line(nearest, eligible_pair)
+	if prompt_line != "":
 		interact_prompt.visible = true
-		interact_prompt.text = "E  Talk"
-	elif not eligible_pair.is_empty():
-		interact_prompt.visible = true
-		interact_prompt.text = "E  Listen"
-	elif nearest != null:
-		interact_prompt.visible = true
-		interact_prompt.text = "E  Talk"
+		interact_prompt.text = prompt_line
 	else:
 		interact_prompt.visible = false
 

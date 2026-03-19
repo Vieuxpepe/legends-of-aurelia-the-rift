@@ -12,6 +12,7 @@ var walker_nodes: Array[Node] = []
 var camp_zones: Array = []
 var active_time_block: String = "day"
 var active_camp_mood: String = "normal"
+var visit_theme: String = "normal"
 
 
 func normalize_unit_name_for_matching(raw_name: String) -> String:
@@ -44,7 +45,102 @@ func build_camp_context_dict() -> Dictionary:
 	ctx["camp_mood"] = mood
 	ctx["progress_level"] = progress_level
 	ctx["story_flags"] = story_flags
+	ctx["visit_theme"] = str(visit_theme).strip_edges().to_lower()
 	return ctx
+
+
+func resolve_visit_theme() -> void:
+	var mood: String = normalize_camp_mood(active_camp_mood)
+	var theme: String = "normal"
+	match mood:
+		"hopeful":
+			theme = "hopeful"
+		"tense":
+			theme = "tense"
+		"somber":
+			theme = "somber"
+		_:
+			theme = "normal"
+	var injured_any: bool = false
+	var fatigued_any: bool = false
+	if CampaignManager:
+		for row in CampaignManager.player_roster:
+			if not (row is Dictionary):
+				continue
+			var n: String = str((row as Dictionary).get("unit_name", "")).strip_edges()
+			if n == "":
+				continue
+			if CampaignManager.is_unit_injured(n):
+				injured_any = true
+			if CampaignManager.is_unit_fatigued(n):
+				fatigued_any = true
+	if injured_any or fatigued_any:
+		if theme == "normal" or theme == "hopeful":
+			theme = "recovery"
+	var st: String = ""
+	if CampaignManager:
+		st = str(CampaignManager.camp_request_status).strip_edges().to_lower()
+	if st == "active" or st == "ready_to_turn_in":
+		if theme in ["normal", "hopeful", "gossip"]:
+			theme = "tense"
+	if theme == "normal":
+		var tb: String = str(active_time_block).strip_edges().to_lower()
+		if tb == "day":
+			var r: float = randf()
+			if r < 0.14:
+				theme = "gossip"
+			elif r < 0.24:
+				theme = "training"
+	visit_theme = theme
+
+
+func visit_theme_score_adjust(entry: Dictionary, event_kind: String) -> float:
+	var delta: float = 0.0
+	var t: String = str(visit_theme).strip_edges().to_lower()
+	if entry.has("preferred_visit_themes"):
+		var pv: Variant = entry.get("preferred_visit_themes", [])
+		if pv is Array:
+			for item in pv as Array:
+				if str(item).strip_edges().to_lower() == t:
+					delta += 1.35
+					break
+	if entry.has("avoided_visit_themes"):
+		var av: Variant = entry.get("avoided_visit_themes", [])
+		if av is Array:
+			for item2 in av as Array:
+				if str(item2).strip_edges().to_lower() == t:
+					delta -= 2.1
+					break
+	match t:
+		"gossip":
+			if event_kind in ["rumor", "micro", "chatter", "social"]:
+				delta += 0.48
+			elif event_kind == "pair_listen":
+				delta += 0.2
+		"recovery":
+			if event_kind in ["rumor", "micro", "chatter"]:
+				delta += 0.32
+			elif event_kind == "social":
+				delta += 0.12
+		"tense":
+			if event_kind in ["rumor", "social", "micro"]:
+				delta += 0.28
+		"hopeful":
+			if event_kind in ["chatter", "social", "pair_listen"]:
+				delta += 0.24
+		"somber":
+			if event_kind in ["rumor", "micro"]:
+				delta += 0.22
+			elif event_kind == "chatter":
+				delta -= 0.08
+		"training":
+			if event_kind == "pair_listen":
+				delta += 0.26
+			if event_kind in ["chatter", "social"]:
+				delta += 0.1
+		_:
+			pass
+	return delta
 
 
 func normalize_camp_mood(value: String) -> String:

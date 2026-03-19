@@ -15,7 +15,7 @@ var roam_radius: float = 80.0
 var unit_name: String = ""
 ## Roster unit dict: portrait, battle_sprite, data, etc. May be empty.
 var unit_data: Dictionary = {}
-## Request marker: "none", "offer" (!), "turn_in" (?). Set by CampExplore.
+## Request marker: "none", "offer", "offer_personal", "turn_in", "request_target", "request_progress", "request_failed". Set by CampRequestController.
 var request_marker: String = "none"
 
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
@@ -161,6 +161,15 @@ func _process(_delta: float) -> void:
 			marker_label.visible = true
 		elif request_marker == "turn_in":
 			marker_label.text = "?"
+			marker_label.visible = true
+		elif request_marker == "request_target":
+			marker_label.text = ">"
+			marker_label.visible = true
+		elif request_marker == "request_progress":
+			marker_label.text = "+"
+			marker_label.visible = true
+		elif request_marker == "request_failed":
+			marker_label.text = "×"
 			marker_label.visible = true
 		else:
 			marker_label.visible = false

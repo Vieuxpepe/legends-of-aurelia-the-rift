@@ -162,6 +162,7 @@ func get_eligible_pair_scene() -> Dictionary:
 				continue
 		var prio: float = float(s.get("priority", 0))
 		var score: float = _ctx.score_with_relationship_bias(prio, s, a_name, b_name)
+		score += _ctx.visit_theme_score_adjust(s, "pair_listen")
 		if score > best_score:
 			best_score = score
 			best = { "scene": s, "walker_a": w_a, "walker_b": w_b }

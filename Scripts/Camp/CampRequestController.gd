@@ -79,6 +79,8 @@ func update_request_markers() -> void:
 	var cm: Variant = CampaignManager
 	var status: String = get_camp_request_status()
 	var giver: String = str(cm.camp_request_giver_name).strip_edges() if cm else ""
+	var req_type: String = str(cm.camp_request_type).strip_edges() if cm else ""
+	var target_name: String = str(cm.camp_request_target_name).strip_edges() if cm else ""
 	var has_active_or_ready: bool = (status == "active" or status == "ready_to_turn_in" or status == "failed")
 	for w in _ctx.walker_nodes:
 		if not (w is CampRosterWalker):
@@ -86,6 +88,12 @@ func update_request_markers() -> void:
 		var walker: CampRosterWalker = w as CampRosterWalker
 		if status == "ready_to_turn_in" and walker.unit_name == giver:
 			walker.request_marker = "turn_in"
+		elif status == "failed" and walker.unit_name == giver:
+			walker.request_marker = "request_failed"
+		elif status == "active" and req_type == CampRequestDB.TYPE_TALK_TO_UNIT and target_name != "" and walker.unit_name == target_name:
+			walker.request_marker = "request_target"
+		elif status == "active" and giver != "" and walker.unit_name == giver:
+			walker.request_marker = "request_progress"
 		elif not has_active_or_ready and offer_giver_name != "" and walker.unit_name == offer_giver_name:
 			walker.request_marker = "offer_personal" if offer_is_personal else "offer"
 		else:
