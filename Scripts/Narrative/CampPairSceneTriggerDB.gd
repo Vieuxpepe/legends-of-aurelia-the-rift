@@ -84,7 +84,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "nyx_hest_workbench_scene",
-		"preferred_visit_themes": ["training", "gossip"],
+		"preferred_visit_themes": ["gossip"],
 		"priority": 39,
 		"when": { "time_block": "day" },
 		"unit_a": "Nyx",
@@ -282,7 +282,7 @@ const TRIGGER_SCENES: Array = [
 	},
 	{
 		"id": "liora_alden_somber_infirmary_variant",
-		"preferred_visit_themes": ["somber", "recovery"],
+		"preferred_visit_themes": ["somber"],
 		"priority": 42,
 		"when": { "time_block": "day" },
 		"moods": ["somber"],
@@ -754,7 +754,7 @@ const TRIGGER_SCENES: Array = [
 		"when": { "time_block": "day" },
 		"unit_a": "Branik",
 		"unit_b": "Liora",
-		"preferred_visit_themes": ["hopeful", "recovery"],
+		"preferred_visit_themes": ["hopeful"],
 		"zone_type": "cook_area",
 		"pair_radius": 90.0,
 		"once_per_visit": true,

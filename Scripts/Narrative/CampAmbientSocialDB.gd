@@ -7,7 +7,7 @@ const SOCIAL_DEFAULT_CLUSTER_RADIUS: float = 120.0
 const SOCIAL_ENTRIES: Array = [
 	{
 		"id": "social_pass_kaelen_celia_watch",
-		"preferred_visit_themes": ["training", "hopeful"],
+		"preferred_visit_themes": ["training"],
 		"priority": 9,
 		"kind": "passing_remark",
 		"when": { "time_block": "day" },
@@ -63,7 +63,7 @@ const SOCIAL_ENTRIES: Array = [
 	},
 	{
 		"id": "social_pass_nyx_hest_workbench",
-		"preferred_visit_themes": ["gossip", "training"],
+		"preferred_visit_themes": ["gossip"],
 		"priority": 9,
 		"kind": "passing_remark",
 		"when": { "time_block": "day" },
@@ -753,7 +753,7 @@ const SOCIAL_ENTRIES: Array = [
 		"speaker": "Inez",
 		"listener": "Corvin Ash",
 		"relationship_tone": "tense",
-		"preferred_visit_themes": ["tense", "gossip"],
+		"preferred_visit_themes": ["tense"],
 		"lines": [
 			{ "speaker": "Inez", "text": "Your questions track like hunter's boots—loud enough to warn everything that hides." },
 			{ "speaker": "Inez", "text": "If you need answers, learn to ask without kicking up dust." },

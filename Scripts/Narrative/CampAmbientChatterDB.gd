@@ -21,7 +21,7 @@ const CHATTERS: Array = [
 	},
 	{
 		"id": "chatter_nyx_hest_workbench",
-		"preferred_visit_themes": ["gossip", "training"],
+		"preferred_visit_themes": ["gossip"],
 		"priority": 10,
 		"when": { "time_block": "day" },
 		"unit_a": "Nyx",
@@ -790,7 +790,7 @@ const CHATTERS: Array = [
 		"unit_a": "Sabine Varr",
 		"unit_b": "Celia",
 		"zone_type": "wall",
-		"preferred_visit_themes": ["training", "tense"],
+		"preferred_visit_themes": ["training"],
 		"lines": [
 			{ "speaker": "Sabine Varr", "text": "Report in three words or fewer." },
 			{ "speaker": "Celia", "text": "Clear. Cold. Quiet." },
@@ -822,7 +822,7 @@ const CHATTERS: Array = [
 		"unit_a": "Corvin Ash",
 		"unit_b": "Sorrel",
 		"zone_type": "wagon",
-		"preferred_visit_themes": ["somber", "gossip"],
+		"preferred_visit_themes": ["somber"],
 		"lines": [
 			{ "speaker": "Sorrel", "text": "You filed another story under \"avoid reading after wine.\"" },
 			{ "speaker": "Corvin Ash", "text": "Better than filing it under \"pretend it never happened.\"" },
@@ -838,7 +838,7 @@ const CHATTERS: Array = [
 		"unit_a": "Tariq",
 		"unit_b": "Hest \"Sparks\"",
 		"zone_type": "workbench",
-		"preferred_visit_themes": ["tense", "training"],
+		"preferred_visit_themes": ["tense"],
 		"lines": [
 			{ "speaker": "Tariq", "text": "Your diagram assumes stable ground." },
 			{ "speaker": "Hest \"Sparks\"", "text": "Your world assumes stable officers. We adapt." },
@@ -854,8 +854,7 @@ const CHATTERS: Array = [
 		"unit_a": "Pell Rowan",
 		"unit_b": "Darian",
 		"zone_type": "bench",
-		"preferred_visit_themes": ["normal", "hopeful"],
-		"avoided_visit_themes": ["tense"],
+		"preferred_visit_themes": ["normal"],
 		"lines": [
 			{ "speaker": "Darian", "text": "Try looking like the bench is not an enemy recruit." },
 			{ "speaker": "Pell Rowan", "text": "It outranks me. Of course I'm nervous." },
@@ -871,7 +870,7 @@ const CHATTERS: Array = [
 		"unit_a": "Ser Hadrien",
 		"unit_b": "Veska Moor",
 		"zone_type": "watch_post",
-		"preferred_visit_themes": ["training", "somber"],
+		"preferred_visit_themes": ["training"],
 		"lines": [
 			{ "speaker": "Ser Hadrien", "text": "Discipline is repeating the dull part until it becomes mercy." },
 			{ "speaker": "Veska Moor", "text": "Then I will be mercifully dull until dawn." },
