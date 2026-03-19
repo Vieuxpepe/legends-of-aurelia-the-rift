@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bifxh5yt0130y"]
+
+[ext_resource type="Resource" uid="uid://ckj67pxqohcw7" path="res://Resources/Classes/Thief.tres" id="1_85yvr"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_61nsi"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_7yii6"]
+[ext_resource type="Texture2D" uid="uid://ba7ggk853dbrb" path="res://Assets/Portraits/Nyx Portrait.png" id="3_37x46"]
+[ext_resource type="Resource" uid="uid://cfq4xt7bqmvwh" path="res://Resources/GeneratedItems/Weapon_Street_Dirk.tres" id="4_37x46"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_oqmb8"]
+[ext_resource type="Texture2D" uid="uid://dcr5052bsjhdn" path="res://Assets/Sprites/Nyx Battle Sprite.png" id="7_oqmb8"]
+
+[resource]
+script = ExtResource("3_7yii6")
+display_name = "Nyx"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Heh… figures I finally trusted people worth dying for.", "Well, that’s embarrassing. Don’t let them touch my things.", "Guess this is what I get for sticking around.", "Tch… if you survive, make it messy enough to honor me."])
+level_up_quotes = Array[String](["Oh, excellent. I’m becoming even harder to catch.", "Nice. Love when the universe rewards bad habits and good reflexes.", "There we go — sharper hands, better odds."])
+support_personality = "sly"
+character_class = ExtResource("1_85yvr")
+starting_weapon = ExtResource("4_37x46")
+unit_sprite = ExtResource("7_oqmb8")
+portrait = ExtResource("3_37x46")
+max_hp = 18
+strength = 4
+magic = 1
+resistance = 3
+speed = 9
+agility = 7
+hp_growth = 55
+def_growth = 15
+res_growth = 25
+spd_growth = 70
+agi_growth = 60

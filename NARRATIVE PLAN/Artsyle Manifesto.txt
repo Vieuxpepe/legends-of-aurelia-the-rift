@@ -1,0 +1,57 @@
+🎨 ART MANIFESTO: LEGENDS OF AURELIA
+1. Core Aesthetic Philosophy: "Gritty 32-Bit Dark Fantasy"
+The visual identity of Aurelia sits somewhere between late-era SNES/GBA tactical games (Tactics Ogre: Let Us Cling Together, Fire Emblem: Thracia 776) and 90s PC-98 dark fantasy (Record of Lodoss War).
+
+The "Slightly Pixelated" Rule: The art is not ultra-chunky 8-bit, nor is it smooth HD anime. It uses a high-resolution pixel art style (or a painted style heavily downsampled/indexed to a limited color palette). Pixel-perfect crisp outlines, but with enough resolution to show texture (rust on armor, fraying on cloaks).
+
+Grounded Reality over High Fantasy: Armor must look functional and heavy. Weapons should be realistically proportioned. No oversized "buster swords" unless it is a specific boss mechanic.
+
+The Weight of War: Characters should look exhausted, weather-beaten, and dangerous. Pristine armor is reserved exclusively for the corrupt nobility and League antagonists.
+
+2. Character Portraits (Dialogue & Menus)
+Portraits are the emotional core of the game's ideological clashes. They appear during the Combat Forecast, Level-Ups, and story dialogues.
+
+Resolution & Framing: Drawn at a base resolution of 128x128 or 256x256 (then scaled up via integer scaling in Godot). Framed from the chest up (busts).
+
+Lighting & Shading: Hard, high-contrast shadows. Use strategic dithering for transitions between shadows and mid-tones to emphasize the "retro" pixel feel.
+
+Expression Rule: Avoid exaggerated anime tropes (no giant sweat drops, no popping veins). Expressions should be restrained: cold stares, cynical smirks, exhausted sighs, and hardened resolve.
+
+Faction Visuals:
+
+The Roster (Kaelen, Branik, Mira): Worn leather, nicked steel, muted earth tones, visible stitching, mud-splattered cloaks.
+
+The League/Valeron (Cassian, Halwen): Impeccable tailoring, polished silver/gold, stark whites, deep royal blues, rigid and suffocatingly perfect posture.
+
+The Occult (Vespera, Mortivar): Ashen skin tones, tattered void-weaves, floating particulate matter, unnatural violet or sickly green ambient rim-lighting.
+
+3. Battle Sprites (Grid Combat)
+Sprites must prioritize readability on the Godot tactical grid above all else.
+
+Scale & Proportions: 3/4 top-down perspective (classic SRPG angle). Sprites should fit within a standard 48x48 or 64x64 pixel bounding box to leave room for attack animations.
+
+Anatomy: "Heroic" proportions, slightly condensed. Heads are large enough to easily identify the character by their hair/helmet, but not fully "chibi."
+
+Weapon Readability: The equipped weapon must be immediately identifiable at a glance. A spear, a heavy axe, and a dark tome must have distinct, readable silhouettes.
+
+Animation Frames: Keep frame counts deliberate and punchy.
+
+Idle: A slow, 4-frame breathing cycle.
+
+Move: A snappy 4-to-6 frame run cycle.
+
+Attack: Emphasize the "anticipation" frame (winding up the strike), followed by a 1-frame blur of the weapon swinging, and a heavy "recovery" frame where the weapon hits the ground/target. This creates the heavy, visceral impact needed for tactical games.
+
+4. Color Palette & World Lighting
+Aurelia is a world bleeding out. The palette must reflect this.
+
+Muted Baselines: The world itself (grass, dirt, stone) uses desaturated, melancholic tones (olive greens, slate grays, muddy browns).
+
+High-Contrast Identifiers: Character sprites pop against the background using highly saturated "class colors" on small accents (a bright red scarf, a glowing blue gem, a shining silver pauldron).
+
+The "Blood and Void" Accents: Save true, vibrant reds exclusively for health bars, critical hits, and actual blood. Save deep, glowing purples/blacks for Rift/Void magic.
+
+5. UI and Typography Elements
+Text Boxes & Menus: Dark, worn parchment or cold wrought-iron borders. Simple, sharp pixel fonts (like Silver or Pico-8 scaled up) that are incredibly easy to read.
+
+Icons: 16x16 pixel weapon and item icons. They should look like little physical objects resting in the inventory, not abstract flat vectors.

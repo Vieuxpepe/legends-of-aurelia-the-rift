@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dtx0jxcfp1jmd"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_mgna1"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_iclsp"]
+
+[resource]
+script = ExtResource("2_iclsp")
+rarity = "Epic"
+item_name = "Saint's Ash"
+description = "A silver casket of fine white ash smelling faintly of incense and rain. Priests call it holy; grave thieves call it profitable."
+gold_cost = 220
+icon = ExtResource("1_mgna1")
+category = "Lore_And_Misc"

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://dcylueaaiejtm"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_0idpc"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_txoe7"]
+[ext_resource type="Resource" uid="uid://dif3f245yt0a2" path="res://Resources/Skills/Generated/Ascended/DawnExalt/Skill_de_mag_1.tres" id="3_o6i3x"]
+[ext_resource type="Resource" uid="uid://c8kaakxw800gb" path="res://Resources/Skills/Generated/Ascended/DawnExalt/Skill_de_res_1.tres" id="4_wxs5b"]
+[ext_resource type="Resource" uid="uid://bqdlsqtp4823j" path="res://Resources/Skills/Generated/Ascended/DawnExalt/Skill_de_hp_1.tres" id="5_lgkew"]
+[ext_resource type="Resource" uid="uid://dvwlnad28sfyd" path="res://Resources/Skills/Generated/Ascended/DawnExalt/Skill_de_spd_1.tres" id="6_i23p2"]
+[ext_resource type="Resource" uid="uid://dej1h2mq8xo8t" path="res://Resources/Skills/Generated/Ascended/DawnExalt/Skill_de_agi_1.tres" id="7_uftre"]
+
+[resource]
+script = ExtResource("1_0idpc")
+tree_name = "DawnExalt Tree"
+skills = Array[ExtResource("2_txoe7")]([ExtResource("3_o6i3x"), ExtResource("4_wxs5b"), ExtResource("5_lgkew"), ExtResource("6_i23p2"), ExtResource("7_uftre")])

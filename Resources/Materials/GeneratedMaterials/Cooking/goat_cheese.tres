@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://deda7gwswcldr"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_aspm3"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_41qp4"]
+
+[resource]
+script = ExtResource("2_41qp4")
+item_name = "Goat Cheese"
+description = "A small round of crumbly white cheese wrapped in cloth. It smells tangy and sharp, with a richness that survives long travel."
+gold_cost = 11
+icon = ExtResource("1_aspm3")
+category = "Cooking"

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://c27610kgm0tlq"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_mkfv7"]
+
+[resource]
+script = ExtResource("1_mkfv7")
+rarity = "Epic"
+description = "A refractive spellbook tuned for precise casting."
+weapon_name = "Prism Tome"
+gold_cost = 4700
+damage_type = 1
+weapon_type = 4
+affected_stat = "magic"
+effect_amount = 0
+might = 10
+hit_bonus = 14
+max_range = 2
+max_durability = 26
+current_durability = 26

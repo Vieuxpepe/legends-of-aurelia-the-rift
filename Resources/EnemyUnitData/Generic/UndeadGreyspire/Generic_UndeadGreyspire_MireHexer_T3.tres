@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://berpnmbptcwts"]
+
+[ext_resource type="Resource" uid="uid://crrxowmyf6sgg" path="res://Resources/Classes/PromotedClass/FireSage.tres" id="1_453yx"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_dfexr"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_02d8t"]
+[ext_resource type="Resource" uid="uid://cfgnrv5umr08w" path="res://Resources/GeneratedItems/Weapon_Hexleaf_Codex.tres" id="4_jot5r"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_8a5gk"]
+
+[resource]
+script = ExtResource("3_02d8t")
+display_name = "Mire Hexer"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_453yx")
+starting_weapon = ExtResource("4_jot5r")
+max_hp = 32
+strength = 0
+magic = 12
+defense = 4
+resistance = 8
+speed = 6
+agility = 7
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

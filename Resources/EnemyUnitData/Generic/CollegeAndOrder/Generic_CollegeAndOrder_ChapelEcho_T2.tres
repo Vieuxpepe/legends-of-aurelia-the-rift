@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bwe1mvbipud75"]
+
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="1_adk80"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_8fmba"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_r1fu1"]
+[ext_resource type="Resource" uid="uid://ccyk40com7whw" path="res://Resources/GeneratedItems/Weapon_Celestial_Tome.tres" id="4_hmpc2"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_21yy4"]
+
+[resource]
+script = ExtResource("3_r1fu1")
+display_name = "Chapel Echo"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_adk80")
+starting_weapon = ExtResource("4_hmpc2")
+max_hp = 28
+strength = 0
+magic = 11
+defense = 4
+resistance = 8
+speed = 5
+agility = 7
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 7
+max_gold_drop = 12
+drops_equipped_weapon = true
+equipped_weapon_chance = 14

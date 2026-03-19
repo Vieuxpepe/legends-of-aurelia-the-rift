@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://d23f7pge71hrf"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_yo1ya"]
+
+[resource]
+script = ExtResource("1_yo1ya")
+rarity = "Rare"
+description = "A serious battlefield axe for seasoned shock troops."
+weapon_name = "War Axe"
+gold_cost = 1750
+weapon_type = 2
+effect_amount = 0
+might = 9
+hit_bonus = -1

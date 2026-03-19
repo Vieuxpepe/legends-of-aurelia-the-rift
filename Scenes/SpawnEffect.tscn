@@ -1,0 +1,130 @@
+[gd_scene format=3 uid="uid://cw1hvhq0anox3"]
+
+[ext_resource type="Texture2D" uid="uid://c4j6tla2gagfo" path="res://animations/Dark VFX 2 (48x64).png" id="1_js6ke"]
+[ext_resource type="Script" uid="uid://dbebpsgqbc0w1" path="res://SpawnEffect.gd" id="2_odgvg"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_smx0b"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(0, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2d5xd"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(48, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_148p5"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(96, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6kb1x"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(144, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ypsog"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(192, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_virrv"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(240, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8bhse"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(288, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_atc2v"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(336, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dxsym"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(384, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_15nrp"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(432, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n5fti"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(480, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kyxg1"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(528, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sjg5l"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(576, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kj7ws"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(624, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ckutv"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(672, 0, 48, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xbpxb"]
+atlas = ExtResource("1_js6ke")
+region = Rect2(720, 0, 48, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_ordso"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_smx0b")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2d5xd")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_148p5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6kb1x")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ypsog")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_virrv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8bhse")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_atc2v")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dxsym")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_15nrp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n5fti")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kyxg1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_sjg5l")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kj7ws")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ckutv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xbpxb")
+}],
+"loop": false,
+"name": &"default",
+"speed": 15.0
+}]
+
+[node name="SpawnEffect" type="AnimatedSprite2D" unique_id=838799268]
+sprite_frames = SubResource("SpriteFrames_ordso")
+frame = 15
+frame_progress = 1.0
+script = ExtResource("2_odgvg")

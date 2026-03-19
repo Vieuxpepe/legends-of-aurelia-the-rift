@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://veu2mo223v3k"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_s6y53"]
+
+[resource]
+script = ExtResource("1_s6y53")
+skill_id = "assassin_str_1"
+skill_name = "Lethal Tempo"
+description = "Grants +2 Strength."
+required_skill_id = "assassin_agi_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "str"
+boost_amount = 2

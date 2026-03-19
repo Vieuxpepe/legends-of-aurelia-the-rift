@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://ct81rcdpkiw42"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_tyexq"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_8stpp"]
+
+[resource]
+script = ExtResource("2_8stpp")
+rarity = "Rare"
+item_name = "Enric's Salts"
+description = "Grey crystallized salts prepared by Master Enric for corpse preservation and soul-binding calculations. They smell faintly medicinal until moisture wakes the rot beneath."
+gold_cost = 93
+icon = ExtResource("1_tyexq")
+category = "Lore_And_Misc"

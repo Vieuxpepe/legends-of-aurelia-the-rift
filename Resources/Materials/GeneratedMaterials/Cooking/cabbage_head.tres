@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b3auaa8rlrnsq"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_lp3a2"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_h5aye"]
+
+[resource]
+script = ExtResource("2_h5aye")
+item_name = "Cabbage Head"
+description = "A dense green cabbage wrapped in cool, waxy leaves. It keeps well in storage and stretches a meal farther than most vegetables."
+gold_cost = 7
+icon = ExtResource("1_lp3a2")
+category = "Cooking"

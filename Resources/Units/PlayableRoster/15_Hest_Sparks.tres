@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dgcddxy1ukbmr"]
+
+[ext_resource type="Resource" uid="uid://30vlmdpj6o62" path="res://Resources/Classes/RookieClass/Urchin.tres" id="1_ig51d"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_wb55w"]
+[ext_resource type="Texture2D" uid="uid://pipua01aj1gt" path="res://Assets/Portraits/Hest Spark Portrait.png" id="3_huqun"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_jhke6"]
+[ext_resource type="Resource" uid="uid://bka5a1mua7c6a" path="res://Resources/GeneratedItems/Weapon_Sparkknife.tres" id="4_huqun"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_h1dvj"]
+[ext_resource type="Texture2D" uid="uid://dh7j0xb75scii" path="res://Assets/Sprites/Hest Spark Battle Sprite.png" id="7_h1dvj"]
+
+[resource]
+script = ExtResource("3_jhke6")
+display_name = "Hest “Sparks”"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Wow… that’s rude; I was just starting to think this lot might keep me.", "Heh… guess I finally pushed one bad joke too far.", "Don’t go all sad on me now. Win first.", "So much for sticking the landing."])
+level_up_quotes = Array[String](["Ha! I knew being reckless was building character.", "Look at that — premium-grade disaster goblin.", "Oh, this is fantastic. I’m getting away with even more now."])
+support_personality = "chaotic"
+character_class = ExtResource("1_ig51d")
+starting_weapon = ExtResource("4_huqun")
+unit_sprite = ExtResource("7_h1dvj")
+portrait = ExtResource("3_huqun")
+max_hp = 17
+magic = 3
+defense = 1
+resistance = 3
+speed = 8
+agility = 6
+hp_growth = 50
+str_growth = 20
+mag_growth = 40
+def_growth = 10
+res_growth = 25
+spd_growth = 70
+agi_growth = 60

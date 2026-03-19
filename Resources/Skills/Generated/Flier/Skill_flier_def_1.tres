@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://d2rnkkvlar1io"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_n7nwu"]
+
+[resource]
+script = ExtResource("1_n7nwu")
+skill_id = "flier_def_1"
+skill_name = "Feather Guard I"
+description = "Increases Defense by +1."
+required_skill_id = "flier_hp_2"
+grid_position = Vector2(4, 1)
+stat_to_boost = "def"
+boost_amount = 1

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bpu4arvt822p0"]
+
+[ext_resource type="Resource" uid="uid://d08sn5e7me4qv" path="res://Resources/Classes/PromotedClass/HighPaladin.tres" id="1_lh75c"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_qeq53"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_onkp4"]
+[ext_resource type="Texture2D" uid="uid://dw1qjm7ogo8jx" path="res://Assets/Portraits/kaelen_side.png" id="3_wvot3"]
+[ext_resource type="Resource" uid="uid://bmge3tdi8ymys" path="res://Resources/GeneratedItems/Weapon_Steel_Sword.tres" id="4_wvot3"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_dugqt"]
+[ext_resource type="Texture2D" uid="uid://bk8w43371ayu6" path="res://Assets/Sprites/Kaelen Sprite.png" id="7_dugqt"]
+
+[resource]
+script = ExtResource("3_onkp4")
+display_name = "Kaelen"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Damn it… I was supposed to get you through this, not leave you in it.", "So this is my part done. Make yours count.", "Don’t stand there grieving — survive first, regret later.", "Tch… should’ve known I wouldn’t get to see how this ends."])
+level_up_quotes = Array[String](["There. Slightly less likely to die doing something stupid.", "Good. Maybe now I can stop doing everyone else’s work for them.", "Hnh. Rust scrapes off eventually."])
+support_personality = "stoic"
+character_class = ExtResource("1_lh75c")
+starting_weapon = ExtResource("4_wvot3")
+unit_sprite = ExtResource("7_dugqt")
+portrait = ExtResource("3_wvot3")
+max_hp = 33
+strength = 13
+magic = 2
+defense = 12
+resistance = 8
+speed = 11
+agility = 14
+hp_growth = 45
+str_growth = 35
+mag_growth = 10
+def_growth = 35
+agi_growth = 40

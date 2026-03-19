@@ -1,0 +1,65 @@
+WEAPON AUDIT REPORT
+==================================================
+
+Total WeaponData resources found: 95
+
+EXACT DUPLICATES BY weapon_name
+--------------------------------------------------
+
+Name: Fire Tome
+  - res://Resources/GeneratedItems/Weapon_Fire_Tome.tres
+  - res://Resources/Weapons/FireTome.tres
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Fire_Tome.tres
+
+Name: Heal Staff
+  - res://Resources/GeneratedItems/Weapon_Heal_Staff.tres
+  - res://Resources/Weapons/Heal Staff.tres
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Heal_Staff.tres
+
+Name: Iron Sword
+  - res://Resources/GeneratedItems/Weapon_Iron_Sword.tres
+  - res://Resources/Weapons/IronSword.tres
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Iron_Sword.tres
+
+Name: Protect Staff
+  - res://Resources/GeneratedItems/Weapon_Protect_Staff.tres
+  - res://Resources/Weapons/Protect Staff.tres
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Protect_Staff.tres
+
+SUSPICIOUS / NEAR DUPLICATES BY NORMALIZED NAME
+--------------------------------------------------
+
+Normalized key: firetome
+  - res://Resources/GeneratedItems/Weapon_Fire_Tome.tres | weapon_name='Fire Tome'
+  - res://Resources/Weapons/FireTome.tres | weapon_name='Fire Tome'
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Fire_Tome.tres
+
+Normalized key: healstaff
+  - res://Resources/GeneratedItems/Weapon_Heal_Staff.tres | weapon_name='Heal Staff'
+  - res://Resources/Weapons/Heal Staff.tres | weapon_name='Heal Staff'
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Heal_Staff.tres
+
+Normalized key: ironsword
+  - res://Resources/GeneratedItems/Weapon_Iron_Sword.tres | weapon_name='Iron Sword'
+  - res://Resources/Weapons/IronSword.tres | weapon_name='Iron Sword'
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Iron_Sword.tres
+
+Normalized key: protectstaff
+  - res://Resources/GeneratedItems/Weapon_Protect_Staff.tres | weapon_name='Protect Staff'
+  - res://Resources/Weapons/Protect Staff.tres | weapon_name='Protect Staff'
+  -> Preferred keep: res://Resources/GeneratedItems/Weapon_Protect_Staff.tres
+
+SUSPICIOUS FILES
+--------------------------------------------------
+Name/file mismatch: res://Resources/Weapons/Crude Bow.tres | weapon_name='Simple Bow'
+Test-like file: res://Resources/Weapons/Legendary TEST Sword.tres
+Name/file mismatch: res://Resources/Weapons/Legendary TEST Sword.tres | weapon_name='Legendary Sword'
+Name/file mismatch: res://Resources/Weapons/SteelAxe.tres | weapon_name='Iron Axe'
+Name/file mismatch: res://Resources/Weapons/TomeOfFireBeam.tres | weapon_name='Fire Beam Tome'
+
+RECOMMENDED CLEANUP RULES
+--------------------------------------------------
+1. Prefer GeneratedItems versions over legacy Weapons versions when both represent the same weapon.
+2. Keep files whose weapon_name is filled in and matches the intended design.
+3. Review test assets manually before deletion.
+4. Never delete until references are checked in units, shops, loot tables, and enemy loadouts.

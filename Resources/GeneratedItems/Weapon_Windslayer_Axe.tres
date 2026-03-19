@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://c1ygc6o7akxjn"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_p8fyh"]
+
+[resource]
+script = ExtResource("1_p8fyh")
+rarity = "Legendary"
+description = "An axe that rends through wind and flesh."
+weapon_name = "Windslayer Axe"
+gold_cost = 8900
+damage_type = 1
+weapon_type = 2
+affected_stat = "magic"
+effect_amount = 0
+might = 20
+hit_bonus = 18
+max_range = 3
+max_durability = 19
+current_durability = 19

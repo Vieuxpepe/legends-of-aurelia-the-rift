@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://0x00ipfl4npg"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_jsm0q"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_oae51"]
+
+[resource]
+script = ExtResource("2_oae51")
+rarity = "Uncommon"
+item_name = "Oak Resin"
+description = "Dark, sticky resin scraped from ancient bark and stored in a horn vial. It smells sharp and earthy, perfect for pitch and binding compounds."
+gold_cost = 27
+icon = ExtResource("1_jsm0q")
+category = "Crafting"

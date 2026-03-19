@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c1gboto5ynikh"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_vywfq"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_aqrpt"]
+
+[resource]
+script = ExtResource("2_aqrpt")
+item_name = "Oat Groats"
+description = "Pale kernels of oats dried for storage in a cloth pouch. They cook into thick porridge and keep a camp fed on bitter mornings."
+gold_cost = 7
+icon = ExtResource("1_vywfq")
+category = "Cooking"

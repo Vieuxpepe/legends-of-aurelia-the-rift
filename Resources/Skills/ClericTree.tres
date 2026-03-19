@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://cu706faere6ll"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_6ho7n"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_thhsc"]
+[ext_resource type="Resource" uid="uid://bo2ndny6x24r3" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_def_1.tres" id="3_2dkh2"]
+[ext_resource type="Resource" uid="uid://b2v8x5oytbntt" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_divine_protection.tres" id="4_t2ofy"]
+[ext_resource type="Resource" uid="uid://s0tylwb4al5k" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_healing_light.tres" id="5_mn1dn"]
+[ext_resource type="Resource" uid="uid://bve40bohosqmd" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_hp_1.tres" id="6_mrl4k"]
+[ext_resource type="Resource" uid="uid://cno1bow615n26" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_hp_2.tres" id="7_sloh2"]
+[ext_resource type="Resource" uid="uid://brnehtie1apjt" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_mag_1.tres" id="8_3natq"]
+[ext_resource type="Resource" uid="uid://ctsngwuwujms" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_mag_2.tres" id="9_gbgop"]
+[ext_resource type="Resource" uid="uid://vs53se3jieuc" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_mag_3.tres" id="10_a3w38"]
+[ext_resource type="Resource" uid="uid://dman3rucc8reo" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_mag_4.tres" id="11_5mpyc"]
+[ext_resource type="Resource" uid="uid://c5bpxqt0hstx2" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_miracle.tres" id="12_ajvq3"]
+[ext_resource type="Resource" uid="uid://kic6erprton8" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_res_1.tres" id="13_ojelv"]
+[ext_resource type="Resource" uid="uid://bsqiqg1a74kbb" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_res_2.tres" id="14_4ulx1"]
+[ext_resource type="Resource" uid="uid://d2g70fuv1q01b" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_spd_1.tres" id="15_6xayf"]
+[ext_resource type="Resource" uid="uid://ke0vs2rodb86" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_spd_2.tres" id="16_klmw8"]
+[ext_resource type="Resource" uid="uid://crw2ccmofa1o5" path="res://Resources/Skills/Generated/Cleric/Skill_cleric_spd_3.tres" id="17_i2bs8"]
+
+[resource]
+script = ExtResource("1_6ho7n")
+skills = Array[ExtResource("2_thhsc")]([ExtResource("3_2dkh2"), ExtResource("4_t2ofy"), ExtResource("5_mn1dn"), ExtResource("6_mrl4k"), ExtResource("7_sloh2"), ExtResource("8_3natq"), ExtResource("9_gbgop"), ExtResource("10_a3w38"), ExtResource("11_5mpyc"), ExtResource("12_ajvq3"), ExtResource("13_ojelv"), ExtResource("14_4ulx1"), ExtResource("15_6xayf"), ExtResource("16_klmw8"), ExtResource("17_i2bs8")])
+metadata/_custom_type_script = "uid://cedoicamottly"

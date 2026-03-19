@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cpl8w88so0yds"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_swxgv"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_42tjo"]
+
+[resource]
+script = ExtResource("2_42tjo")
+item_name = "Flour Sack"
+description = "A stout sack of pale flour that clings to fingers and sleeves alike. It smells faintly sweet and forms the backbone of every humble loaf."
+gold_cost = 7
+icon = ExtResource("1_swxgv")
+category = "Cooking"

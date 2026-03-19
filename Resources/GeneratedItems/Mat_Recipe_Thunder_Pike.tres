@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b0ycbqrn5yusf"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_84fw4"]
+
+[resource]
+script = ExtResource("1_84fw4")
+rarity = "Rare"
+item_name = "Recipe: Thunder Pike"
+description = "Blueprint for forging a Thunder Pike."
+gold_cost = 420

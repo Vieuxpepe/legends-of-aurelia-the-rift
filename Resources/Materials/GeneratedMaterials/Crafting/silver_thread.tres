@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b52y2jrevw3fa"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_ww22e"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ll7t5"]
+
+[resource]
+script = ExtResource("2_ll7t5")
+rarity = "Uncommon"
+item_name = "Silver Thread"
+description = "Spools of fine metallic thread that catch candlelight in cold little flashes. Sewn into vestments, wards, and noble burial cloths."
+gold_cost = 34
+icon = ExtResource("1_ww22e")
+category = "Crafting"

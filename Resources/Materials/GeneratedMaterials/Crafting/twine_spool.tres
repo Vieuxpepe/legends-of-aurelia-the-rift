@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://3cbitjvqp45p"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_66ygi"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_dtsmr"]
+
+[resource]
+script = ExtResource("2_dtsmr")
+item_name = "Twine Spool"
+description = "A spool of coarse plant-fiber twine, scratchy and dependable. It ties herbs, binds parcels, and fixes more than it ought to."
+gold_cost = 6
+icon = ExtResource("1_66ygi")
+category = "Crafting"

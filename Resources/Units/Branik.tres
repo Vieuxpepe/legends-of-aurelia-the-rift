@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bkt2omwfcsl28"]
+
+[ext_resource type="Resource" uid="uid://dw6xbp4oqav3p" path="res://Resources/Classes/Warrior.tres" id="1_6enbf"]
+[ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_tjl0j"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_46k0m"]
+[ext_resource type="Texture2D" uid="uid://m1cm4vm6hrlg" path="res://Assets/Portraits/Branik Portrait.png" id="5_5kgcg"]
+[ext_resource type="Resource" uid="uid://dm5s65gledy77" path="res://Resources/Materials/Wooden Plank.tres" id="5_w3fkm"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="7_nkht4"]
+[ext_resource type="Resource" uid="uid://cklgmau71r55h" path="res://Resources/Weapons/SteelAxe.tres" id="7_tjl0j"]
+[ext_resource type="Texture2D" uid="uid://ws8gi2njly6c" path="res://Assets/Sprites/Branik Sprite.png" id="9_46k0m"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="9_nfb16"]
+
+[sub_resource type="Resource" id="Resource_65wnc"]
+script = ExtResource("3_46k0m")
+item = ExtResource("5_w3fkm")
+drop_chance = 25.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[resource]
+script = ExtResource("7_nkht4")
+display_name = "Branik"
+is_recruitable = true
+recruit_dialogue = Array[String](["Stand aside, bandit. The Vanguard are hunting us, and we don't have time for you.", "I don't care about the Vanguard. Hand over the merchant's gold, or I'll smash that cart myself.", "If you smash the cart, we all starve. Help us break through this forest, and the merchant will pay you double.", "...Fine. But if that merchant shortchanges me, I'm taking his donkey."])
+pre_battle_quote = Array[String](["Whoa, easy! I'm just here for the merchant's coin. We don't have to kill each other over this! Just walk away."])
+character_class = ExtResource("1_6enbf")
+starting_weapon = ExtResource("7_tjl0j")
+death_sound = ExtResource("2_tjl0j")
+unit_sprite = ExtResource("9_46k0m")
+portrait = ExtResource("5_5kgcg")
+visual_scale = 1.5
+strength = 4
+resistance = 2
+speed = 4
+agility = 1
+max_gold_drop = 5
+drops_equipped_weapon = true
+equipped_weapon_chance = 15
+extra_loot = Array[ExtResource("3_46k0m")]([SubResource("Resource_65wnc")])
+metadata/_custom_type_script = "uid://3jului3v2v6"

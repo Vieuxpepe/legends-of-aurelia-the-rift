@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dy5ybj85mc0ga"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_3krq1"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_vbmeq"]
+
+[resource]
+script = ExtResource("2_vbmeq")
+item_name = "Needle Kit"
+description = "A travel roll of needles, awls, and heavy thread for field repairs. Torn packs and split seams rarely wait for town."
+icon = ExtResource("1_3krq1")
+category = "Crafting"

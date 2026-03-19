@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://cxdu236021j6n"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_4vf7f"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_rm0i6"]
+[ext_resource type="Resource" uid="uid://bwg1h61yxhgyi" path="res://Resources/SkillTrees/Mercenary/Skill_Merc_HP1.tres" id="3_5ha0f"]
+[ext_resource type="Resource" uid="uid://c5biqfvor0soy" path="res://Resources/SkillTrees/Mercenary/Skill_Merc_Shove.tres" id="4_bd42j"]
+
+[resource]
+script = ExtResource("1_4vf7f")
+skills = Array[ExtResource("2_rm0i6")]([ExtResource("3_5ha0f"), ExtResource("4_bd42j")])
+metadata/_custom_type_script = "uid://cedoicamottly"

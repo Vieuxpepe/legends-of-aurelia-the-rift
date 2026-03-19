@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cq0vdh40c4nun"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_cwvmy"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ky27v"]
+
+[resource]
+script = ExtResource("2_ky27v")
+item_name = "Dried Sausage"
+description = "A smoked length of preserved sausage hung to harden in cool air. Rich with fat, spice, and enough salt to survive the road."
+gold_cost = 13
+icon = ExtResource("1_cwvmy")
+category = "Cooking"

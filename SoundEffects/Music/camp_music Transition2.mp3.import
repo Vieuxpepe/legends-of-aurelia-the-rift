@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bnu50h5hefoay"
+path="res://.godot/imported/camp_music Transition2.mp3-640627243669ca23950f7a527ef949d6.mp3str"
+
+[deps]
+
+source_file="res://SoundEffects/Music/camp_music Transition2.mp3"
+dest_files=["res://.godot/imported/camp_music Transition2.mp3-640627243669ca23950f7a527ef949d6.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

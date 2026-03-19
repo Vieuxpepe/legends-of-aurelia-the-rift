@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cc3xxssomenmu"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_2bju8"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_2vn87"]
+
+[resource]
+script = ExtResource("2_2vn87")
+item_name = "Tin Cup"
+description = "A simple metal cup with a bent handle and old scratch marks. It serves for broth, ale, medicine, or whatever the road allows."
+gold_cost = 6
+icon = ExtResource("1_2bju8")
+category = "Crafting"

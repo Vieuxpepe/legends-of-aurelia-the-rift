@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://h48cj0d4vbmt"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_58eow"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_87j7o"]
+
+[resource]
+script = ExtResource("2_87j7o")
+rarity = "Uncommon"
+item_name = "Pick Hammer"
+description = "A compact hammer with a wedge-shaped beak for stone and packed earth. It rings sharply when used in crypts and caves."
+gold_cost = 26
+icon = ExtResource("1_58eow")
+category = "Crafting"

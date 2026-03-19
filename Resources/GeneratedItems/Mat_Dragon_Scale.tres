@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cmqjgkhjvl4o3"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_8rlyc"]
+
+[resource]
+script = ExtResource("1_8rlyc")
+rarity = "Legendary"
+item_name = "Dragon Scale"
+description = "A scale from a mighty dragon."
+gold_cost = 1700

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://ium0x774ksdm"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_2uvan"]
+
+[resource]
+script = ExtResource("1_2uvan")
+rarity = "Legendary"
+item_name = "Recipe: Holy Lance"
+description = "Blueprint for forging a Holy Lance."
+gold_cost = 1500

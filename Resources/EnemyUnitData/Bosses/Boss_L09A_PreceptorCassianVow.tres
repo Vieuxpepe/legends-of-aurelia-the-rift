@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cq4lrpq6ekh7y"]
+
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="1_msnba"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ohvbl"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_stgof"]
+[ext_resource type="Resource" uid="uid://bghj3es7upp4g" path="res://Resources/GeneratedItems/Weapon_Edict_Staff.tres" id="4_jfu7s"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_tgact"]
+
+[resource]
+script = ExtResource("3_stgof")
+display_name = "Preceptor Cassian Vow"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["How tedious… to die in the service of people too small to deserve order."])
+character_class = ExtResource("1_msnba")
+starting_weapon = ExtResource("4_jfu7s")
+ability = "false_accord"
+max_hp = 34
+strength = 0
+magic = 15
+defense = 4
+resistance = 14
+speed = 10
+agility = 15
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

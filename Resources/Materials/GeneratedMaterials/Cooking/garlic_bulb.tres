@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://d1crg4v0qmkud"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_xnsgo"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_6gqjd"]
+
+[resource]
+script = ExtResource("2_6gqjd")
+item_name = "Garlic Bulb"
+description = "A cluster of white cloves wrapped in thin, brittle skin. Its smell is strong, earthy, and welcome in any poor kitchen."
+gold_cost = 6
+icon = ExtResource("1_xnsgo")
+category = "Cooking"

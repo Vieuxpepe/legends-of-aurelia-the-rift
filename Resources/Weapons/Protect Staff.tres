@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dp7go3ranoy6m"]
+
+[ext_resource type="Texture2D" uid="uid://dp5216fp07ejg" path="res://Assets/Protect Staff.png" id="1_3b77d"]
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_7sfex"]
+
+[resource]
+script = ExtResource("1_7sfex")
+weapon_name = "Protect Staff"
+damage_type = 1
+weapon_type = 3
+is_buff_staff = true
+affected_stat = "speed"
+icon = ExtResource("1_3b77d")
+metadata/_custom_type_script = "uid://b1atwvdvhdm0s"

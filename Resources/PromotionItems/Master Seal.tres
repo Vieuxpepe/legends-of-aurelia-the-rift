@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://dbnl0ow81mtj5"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_vnvyl"]
+
+[resource]
+script = ExtResource("1_vnvyl")
+description = "Promotes a class."
+item_name = "Master Seal"
+heal_amount = 0
+is_promotion_item = true
+metadata/_custom_type_script = "uid://67xkte2k6sun"

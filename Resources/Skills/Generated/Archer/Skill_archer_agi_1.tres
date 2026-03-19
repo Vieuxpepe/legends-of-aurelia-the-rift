@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://kqowefvstc3b"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_huleg"]
+
+[resource]
+script = ExtResource("1_huleg")
+skill_id = "archer_agi_1"
+skill_name = "Agility I"
+description = "Increases Agility by +1."
+required_skill_id = "archer_spd_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "agi"
+boost_amount = 1

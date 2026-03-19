@@ -1,0 +1,126 @@
+Kaelen vs Lady Vespera
+
+Boss defeat:
+“Marena… none of this will give him back. But it ends here.”
+
+Retreat variant:
+“You’re still running at the same grave, Vespera. I won’t let you drag the world into it.”
+
+Kaelen vs Mortivar Hale
+
+Boss defeat:
+“Rest, old friend. Duty has taken enough from both of us.”
+
+Retreat variant:
+“Still marching. Still refusing the grave. Fine — I’ll stop you again.”
+
+Liora vs Ephrem the Zealot
+
+Boss defeat:
+“This was never holiness. May the faith outlive what men like you made of it.”
+
+Celia vs Justicar Halwen Serast
+
+Boss defeat:
+“You taught us how to stand before judgment. I learned too late that judgment was all you loved.”
+
+Retreat variant:
+“No more of your pageantry. I am done performing fear for you.”
+
+Sister Meris vs Mother Caldris Vein
+
+Boss defeat:
+“I looked at you once and thought certainty was virtue. Now I know what it cost.”
+
+Retreat variant:
+“You call it purity because you cannot bear to name it cruelty.”
+
+Nyx vs Noemi Veyr
+
+Boss defeat:
+“There. No mask, no perfume, no clever angle — just you, and what you were.”
+
+Retreat variant:
+“Run, then. You always liked the part where somebody else cleans up your mess.”
+
+Rufus vs Port-Master Rhex Valcero
+
+Boss defeat:
+“That’s for every back bent under your books. Turns out the bill finally came due.”
+
+Retreat variant:
+“Go on, run. First honest labor you’ve done in years.”
+
+Garrick Vale vs Duke Alric Thornmere
+
+Boss defeat:
+“I grieved the man I thought you were long before I ever crossed blades with you.”
+
+Retreat variant:
+“You wear the realm like a cloak, Alric. One day it will stop hiding you.”
+
+Inez vs Thorn-Captain Edda Fen
+
+Boss defeat:
+“The grove will remember this. Not as victory — as ending.”
+
+Retreat variant:
+“Leave. The trees have no more patience for you.”
+
+Tariq vs Provost Serik Quill
+
+Boss defeat:
+“All that locking, and still the truth got out. How inconvenient for your philosophy.”
+
+Retreat variant:
+“You can still run to another archive, Serik. You’ll still take your fear with you.”
+
+Sorrel vs Provost Serik Quill
+
+Boss defeat:
+“You spent your life trying to contain knowledge. In the end, it was only your own fear you preserved.”
+
+Retreat variant:
+“You may keep your keys, Provost. I was never after your permission.”
+
+Ser Hadrien vs The Ash Adjudicator
+
+Boss defeat:
+“The Order was not meant to survive as sentence without soul. Sleep now with the rest of our failures.”
+
+Retreat variant:
+“Echoes break more slowly than men. I will return when the judgment does.”
+
+Brother Alden vs Ephrem
+
+Boss defeat:
+“If faith remains after this, let it kneel beside the suffering — not stand above them.”
+
+Retreat variant:
+“You call mercy weakness because you have never had the courage for it.”
+
+Sabine vs Auditor Nerez Sable
+
+Boss defeat:
+“You built a profession out of making people into entries. Consider yourself corrected.”
+
+Retreat variant:
+“Withdraw neatly if you like. Rot remains rot, even in order.”
+
+Strongest final-pick versions
+
+These are the ones I would mark as closest to ready for implementation:
+
+Kaelen vs Mortivar: “Rest, old friend. Duty has taken enough from both of us.”
+
+Liora vs Ephrem: “This was never holiness. May the faith outlive what men like you made of it.”
+
+Celia vs Halwen: “You taught us how to stand before judgment. I learned too late that judgment was all you loved.”
+
+Nyx vs Noemi: “There. No mask, no perfume, no clever angle — just you, and what you were.”
+
+Rufus vs Rhex: “That’s for every back bent under your books. Turns out the bill finally came due.”
+
+Garrick vs Alric: “I grieved the man I thought you were long before I ever crossed blades with you.”
+
+Next best expansion would be the reverse side: what each of those bosses says when that specific playable character defeats them.

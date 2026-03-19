@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dvj8na3bctl7y"
+path="res://.godot/imported/Emberwood BGM (1).mp3-5a9f54242cd7d294a236bd0f4fbc9b8f.mp3str"
+
+[deps]
+
+source_file="res://SoundEffects/Music/Emberwood BGM (1).mp3"
+dest_files=["res://.godot/imported/Emberwood BGM (1).mp3-5a9f54242cd7d294a236bd0f4fbc9b8f.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

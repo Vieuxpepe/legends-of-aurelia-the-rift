@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://c8kaakxw800gb"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_r03wi"]
+
+[resource]
+script = ExtResource("1_r03wi")
+skill_id = "de_res_1"
+skill_name = "Halo Ward"
+description = "Grants +3 Resistance."
+required_skill_id = "de_mag_1"
+grid_position = Vector2(1, 0)
+stat_to_boost = "res"
+boost_amount = 3

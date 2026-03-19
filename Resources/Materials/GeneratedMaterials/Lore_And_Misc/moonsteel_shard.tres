@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b8en3wkuxmv7q"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_2a0ja"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_sspnj"]
+
+[resource]
+script = ExtResource("2_sspnj")
+rarity = "Rare"
+item_name = "Moonsteel Shard"
+description = "A crescent sliver of pale metal that gleams blue beneath the night sky. Smiths whisper that it takes an edge meant for unholy flesh."
+gold_cost = 110
+icon = ExtResource("1_2a0ja")
+category = "Lore_And_Misc"

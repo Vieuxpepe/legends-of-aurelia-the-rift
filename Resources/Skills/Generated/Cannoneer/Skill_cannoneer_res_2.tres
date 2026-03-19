@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://ctrdc6is3c80c"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_02wt6"]
+
+[resource]
+script = ExtResource("1_02wt6")
+skill_id = "cannoneer_res_2"
+skill_name = "Smoke Tolerance II"
+description = "Increases Resistance by +1."
+required_skill_id = "cannoneer_agi_2"
+grid_position = Vector2(4, 1)
+stat_to_boost = "res"
+boost_amount = 1

@@ -1,0 +1,708 @@
+class_name CampAmbientSocialDB
+
+const SOCIAL_DEFAULT_RADIUS: float = 170.0
+const SOCIAL_DEFAULT_PAIR_RADIUS: float = 96.0
+const SOCIAL_DEFAULT_CLUSTER_RADIUS: float = 120.0
+
+const SOCIAL_ENTRIES: Array = [
+	{
+		"id": "social_pass_kaelen_celia_watch",
+		"priority": 9,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "watch_post",
+		"speaker": "Kaelen",
+		"listener": "Celia",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Kaelen", "text": "You call cleaner checks now. Keep it." },
+			{ "speaker": "Kaelen", "text": "Less noise, better sightlines. You're learning fast." },
+			{ "speaker": "Kaelen", "text": "Hold that angle. Don't gift the ridge a blind spot." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_sorrel_tariq_map",
+		"priority": 9,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "map_table",
+		"speaker": "Sorrel",
+		"listener": "Tariq",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Sorrel", "text": "If this route fails, we blame the map artist." },
+			{ "speaker": "Sorrel", "text": "I marked two shortcuts. One is honest." },
+			{ "speaker": "Sorrel", "text": "If the road looks kind, it's usually lying." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_tamsin_branik_fire",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "night" },
+		"zone_type": "fire",
+		"speaker": "Tamsin Reed",
+		"listener": "Branik",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Tamsin Reed", "text": "You fed half the camp. Again." },
+			{ "speaker": "Tamsin Reed", "text": "Your stew has better morale than my lectures." },
+			{ "speaker": "Tamsin Reed", "text": "Keep the pot going. It keeps people upright." },
+		],
+		"once_per_visit": false,
+		"radius": 172.0,
+		"pair_radius": 98.0,
+	},
+	{
+		"id": "social_pass_nyx_hest_workbench",
+		"priority": 9,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "workbench",
+		"speaker": "Nyx",
+		"listener": "Hest \"Sparks\"",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Nyx", "text": "If that hum gets higher, I am stepping back." },
+			{ "speaker": "Nyx", "text": "I trust your math. I do not trust your sparks." },
+			{ "speaker": "Nyx", "text": "If this starts smoking, I'm blaming the cheerful engineer." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_liora_alden_infirmary",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "infirmary",
+		"speaker": "Brother Alden",
+		"listener": "Liora",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Brother Alden", "text": "One pause now saves three mistakes later." },
+			{ "speaker": "Brother Alden", "text": "Sit for one breath. Duty survives twelve heartbeats." },
+			{ "speaker": "Brother Alden", "text": "Even healers need mending between patients." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_garrick_sabine_wall",
+		"priority": 9,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "wall",
+		"speaker": "Sabine Varr",
+		"listener": "Garrick Vale",
+		"relationship_tone": "tense",
+		"lines": [
+			{ "speaker": "Sabine Varr", "text": "Your timing improved. Keep proving me wrong." },
+			{ "speaker": "Sabine Varr", "text": "Report first, opinions second. We move faster that way." },
+			{ "speaker": "Sabine Varr", "text": "Good pace. Don't let the wall get comfortable." },
+		],
+		"once_per_visit": true,
+		"radius": 172.0,
+		"pair_radius": 98.0,
+	},
+	{
+		"id": "social_pass_celia_sabine_wall",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "dawn" },
+		"zone_type": "wall",
+		"speaker": "Celia",
+		"listener": "Sabine Varr",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Celia", "text": "You check bolts like they're traitors." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_nyx_tariq_map",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "map_table",
+		"speaker": "Tariq",
+		"listener": "Nyx",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Tariq", "text": "I prefer hidden paths on paper, not under my boots." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_cluster_fire_night",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "night" },
+		"zone_type": "fire",
+		"speaker": "Branik",
+		"required_units": ["Branik", "Tamsin Reed", "Liora"],
+		"lines": [
+			{ "speaker": "Branik", "text": "Eat first, worry second. In that order." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_cluster_map_day",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "map_table",
+		"speaker": "Sorrel",
+		"required_units": ["Sorrel", "Tariq", "Nyx"],
+		"lines": [
+			{ "speaker": "Sorrel", "text": "Three plans. Pick the one least embarrassing when it works." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_cluster_wall_day",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "wall",
+		"speaker": "Garrick Vale",
+		"required_units": ["Kaelen", "Garrick Vale", "Sabine Varr"],
+		"lines": [
+			{ "speaker": "Garrick Vale", "text": "Two lines watching one angle beats one line watching two." },
+		],
+		"once_per_visit": true,
+		"radius": 180.0,
+		"cluster_radius": 122.0,
+	},
+	{
+		"id": "social_cluster_workbench_day",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "workbench",
+		"speaker": "Hest \"Sparks\"",
+		"required_units": ["Hest \"Sparks\"", "Nyx", "Celia"],
+		"lines": [
+			{ "speaker": "Hest \"Sparks\"", "text": "No one touch that latch unless you hate your eyebrows." },
+		],
+		"once_per_visit": true,
+		"radius": 180.0,
+		"cluster_radius": 122.0,
+	},
+	{
+		"id": "social_pass_pell_rufus_workbench",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "workbench",
+		"speaker": "Rufus",
+		"listener": "Pell Rowan",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Rufus", "text": "Slow is fine. Sloppy isn't." },
+			{ "speaker": "Rufus", "text": "You've got the hands for this. Keep them steady." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_meris_corvin_shrine",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "night" },
+		"zone_type": "shrine",
+		"speaker": "Sister Meris",
+		"listener": "Corvin Ash",
+		"relationship_tone": "tense",
+		"lines": [
+			{ "speaker": "Sister Meris", "text": "If you archive this night, leave out the pride." },
+			{ "speaker": "Sister Meris", "text": "Some records should teach restraint before brilliance." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_veska_oren_wall",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "wall",
+		"speaker": "Veska Moor",
+		"listener": "Oren Pike",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Veska Moor", "text": "Good braces. Better than speeches." },
+			{ "speaker": "Veska Moor", "text": "If this corner holds, we'll both sleep easier." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_hadrien_maela_watch",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "dawn" },
+		"zone_type": "watch_post",
+		"speaker": "Ser Hadrien",
+		"listener": "Maela Thorn",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Ser Hadrien", "text": "Speed has honor when it serves others first." },
+			{ "speaker": "Ser Hadrien", "text": "You fly as if dawn owes you a race." },
+		],
+		"once_per_visit": true,
+		"radius": 172.0,
+		"pair_radius": 98.0,
+	},
+	{
+		"id": "social_cluster_wall_day_engineers",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "wall",
+		"speaker": "Oren Pike",
+		"required_units": ["Oren Pike", "Veska Moor"],
+		"optional_units": ["Rufus", "Pell Rowan"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Oren Pike", "text": "If this wall lasts, thank the people with splinters, not speeches." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_pass_inez_maela_tree_dawn",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "dawn" },
+		"zone_type": "tree_line",
+		"speaker": "Inez",
+		"listener": "Maela Thorn",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Inez", "text": "Circle wide, then quiet your wings near camp." },
+			{ "speaker": "Inez", "text": "Fast is useful. Quiet is survival." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_corvin_hadrien_shrine_night",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "night" },
+		"zone_type": "shrine",
+		"speaker": "Corvin Ash",
+		"listener": "Ser Hadrien",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Corvin Ash", "text": "Memory and penance keep similar ledgers." },
+			{ "speaker": "Corvin Ash", "text": "Some ghosts endure because the living still need instruction." },
+		],
+		"once_per_visit": true,
+		"radius": 172.0,
+		"pair_radius": 98.0,
+	},
+	{
+		"id": "social_pass_meris_alden_infirmary_day",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "infirmary",
+		"speaker": "Sister Meris",
+		"listener": "Brother Alden",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Sister Meris", "text": "You make forgiveness look procedural. It's unsettling." },
+			{ "speaker": "Sister Meris", "text": "Your patience is either grace or stubbornness. Likely both." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_mira_pell_watch_dawn",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "dawn" },
+		"zone_type": "watch_post",
+		"speaker": "Mira Ashdown",
+		"listener": "Pell Rowan",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Mira Ashdown", "text": "Call your sightline first. Your spear follows your voice." },
+			{ "speaker": "Mira Ashdown", "text": "You're loud when nervous. Use that to warn, not to hide." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_cluster_tree_night_watchers",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "night" },
+		"zone_type": "tree_line",
+		"speaker": "Inez",
+		"required_units": ["Inez", "Mira Ashdown"],
+		"optional_units": ["Corvin Ash", "Maela Thorn", "Ser Hadrien"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Inez", "text": "No one crosses that line alone. Not tonight." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_pass_progress_mid_sorrel_tariq",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"min_progress_level": 9,
+		"max_progress_level": 13,
+		"zone_type": "map_table",
+		"speaker": "Sorrel",
+		"listener": "Tariq",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Sorrel", "text": "At this stage, uncertainty is a resource. Keep tracking it." },
+		],
+		"once_per_visit": true,
+		"radius": 176.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_cluster_progress_late_shrine_vigil",
+		"priority": 9,
+		"kind": "small_cluster",
+		"when": { "time_block": "night" },
+		"min_progress_level": 16,
+		"zone_type": "shrine",
+		"speaker": "Sister Meris",
+		"required_units": ["Sister Meris", "Ser Hadrien", "Corvin Ash"],
+		"optional_units": ["Liora", "Brother Alden"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Sister Meris", "text": "No speeches tonight. Just witness, and hold." },
+		],
+		"once_per_visit": true,
+		"radius": 184.0,
+		"cluster_radius": 122.0,
+	},
+	{
+		"id": "social_pass_branik_rufus_fire_shift",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "night" },
+		"zone_type": "fire",
+		"speaker": "Branik",
+		"listener": "Rufus",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Branik", "text": "Eat before the night shift chews on you." },
+			{ "speaker": "Branik", "text": "You can grumble with a full stomach just as well." },
+			{ "speaker": "Branik", "text": "Take the bigger bowl. You earned the weight of it." },
+		],
+		"once_per_visit": false,
+		"radius": 172.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_darian_pell_bench_polish",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "bench",
+		"speaker": "Darian",
+		"listener": "Pell Rowan",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Darian", "text": "Try confidence before stiffness. It wears better." },
+			{ "speaker": "Darian", "text": "A knight may sit down without declaring war on the bench." },
+			{ "speaker": "Darian", "text": "Look less like a statue and more like a promise." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_liora_tamsin_infirmary_lists",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "infirmary",
+		"speaker": "Liora",
+		"listener": "Tamsin Reed",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Liora", "text": "Your lists save more pain than most sermons." },
+			{ "speaker": "Liora", "text": "Leave one mistake on the page, not in a bandage." },
+			{ "speaker": "Liora", "text": "You are allowed to sit while the ink dries." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_tariq_liora_bench_language",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "bench",
+		"speaker": "Tariq",
+		"listener": "Liora",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Tariq", "text": "Your revised prayer is less threatening. Improvement." },
+			{ "speaker": "Tariq", "text": "Mercy reads better when it stops sounding like a decree." },
+			{ "speaker": "Tariq", "text": "Keep correcting the old language. It has had a long run." },
+		],
+		"once_per_visit": true,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_garrick_celia_watch_respect",
+		"priority": 9,
+		"kind": "passing_remark",
+		"when": { "time_block": "dawn" },
+		"zone_type": "watch_post",
+		"speaker": "Garrick Vale",
+		"listener": "Celia",
+		"relationship_tone": "warm",
+		"lines": [
+			{ "speaker": "Garrick Vale", "text": "Your reports are cleaner every morning." },
+			{ "speaker": "Garrick Vale", "text": "You hold the post like it answers to reason. Keep that." },
+			{ "speaker": "Garrick Vale", "text": "A steadier watch makes the whole camp breathe easier." },
+		],
+		"once_per_visit": true,
+		"radius": 172.0,
+		"pair_radius": 98.0,
+	},
+	{
+		"id": "social_pass_yselle_sabine_bench_poised",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "bench",
+		"speaker": "Yselle Maris",
+		"listener": "Sabine Varr",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Yselle Maris", "text": "You make vigilance look almost fashionable." },
+			{ "speaker": "Yselle Maris", "text": "For someone who dislikes theatrics, you have remarkable stage presence." },
+			{ "speaker": "Yselle Maris", "text": "One day I will teach you posture without suspicion. Perhaps." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_pass_oren_hest_workbench_smoke",
+		"priority": 9,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "workbench",
+		"speaker": "Oren Pike",
+		"listener": "Hest \"Sparks\"",
+		"relationship_tone": "tense",
+		"lines": [
+			{ "speaker": "Oren Pike", "text": "If it hums and smokes, step back before I start naming offenses." },
+			{ "speaker": "Oren Pike", "text": "Your ideas are good. Your distances are terrible." },
+			{ "speaker": "Oren Pike", "text": "Keep the spark. Lose the flair for near-disaster." },
+		],
+		"once_per_visit": false,
+		"radius": 172.0,
+		"pair_radius": 98.0,
+	},
+	{
+		"id": "social_pass_maela_inez_tree_competition",
+		"priority": 8,
+		"kind": "passing_remark",
+		"when": { "time_block": "day" },
+		"zone_type": "tree_line",
+		"speaker": "Maela Thorn",
+		"listener": "Inez",
+		"relationship_tone": "neutral",
+		"lines": [
+			{ "speaker": "Maela Thorn", "text": "One day you will admit I am getting quieter." },
+			{ "speaker": "Maela Thorn", "text": "I only scared three birds this time. Progress." },
+			{ "speaker": "Maela Thorn", "text": "When I finally beat your path time, I expect at least one approving nod." },
+		],
+		"once_per_visit": false,
+		"radius": 170.0,
+		"pair_radius": 96.0,
+	},
+	{
+		"id": "social_cluster_fire_night_brace_and_bowl",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "night" },
+		"zone_type": "fire",
+		"speaker": "Brother Alden",
+		"required_units": ["Brother Alden", "Branik"],
+		"optional_units": ["Tamsin Reed", "Liora", "Rufus"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Brother Alden", "text": "Warm food, warm hands, fewer heroics. A sensible doctrine for one evening." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_cluster_workbench_day_fixers",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "workbench",
+		"speaker": "Oren Pike",
+		"required_units": ["Oren Pike", "Rufus"],
+		"optional_units": ["Pell Rowan", "Hest \"Sparks\""],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Oren Pike", "text": "Good. Four sets of hands and only two of them are currently offending me." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_cluster_wall_day_order_chain",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "wall",
+		"speaker": "Sabine Varr",
+		"required_units": ["Sabine Varr", "Garrick Vale", "Veska Moor"],
+		"optional_units": ["Celia", "Kaelen"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Sabine Varr", "text": "If everyone here keeps doing their job, I may only have to complain twice today." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_cluster_fire_night_morale_circle",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "night" },
+		"zone_type": "fire",
+		"speaker": "Yselle Maris",
+		"required_units": ["Yselle Maris", "Darian"],
+		"optional_units": ["Branik", "Mira Ashdown", "Pell Rowan"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Yselle Maris", "text": "No tragedies for five minutes. Sit down and let the camp remember itself." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	},
+	{
+		"id": "social_cluster_cook_day_kitchen_hands",
+		"priority": 8,
+		"kind": "small_cluster",
+		"when": { "time_block": "day" },
+		"zone_type": "cook_area",
+		"speaker": "Branik",
+		"required_units": ["Branik"],
+		"optional_units": ["Rufus", "Tamsin Reed", "Pell Rowan"],
+		"min_participants": 3,
+		"max_participants": 4,
+		"lines": [
+			{ "speaker": "Branik", "text": "Mind the knives, mind the pot, and nobody tell me chopping onions is a tactical exercise." },
+		],
+		"once_per_visit": true,
+		"radius": 182.0,
+		"cluster_radius": 124.0,
+	}
+]
+
+static func get_all_entries() -> Array:
+	return SOCIAL_ENTRIES.duplicate()
+
+static func when_matches(entry: Dictionary, context: Dictionary) -> bool:
+	if not (entry is Dictionary) or not (context is Dictionary):
+		return false
+	var when: Variant = entry.get("when", {})
+	if when is Dictionary:
+		var want_tb: String = str((when as Dictionary).get("time_block", "")).strip_edges().to_lower()
+		if want_tb != "":
+			var ctx_tb: String = str(context.get("time_block", "")).strip_edges().to_lower()
+			if ctx_tb != want_tb:
+				return false
+	if entry.has("moods"):
+		var moods_v: Variant = entry.get("moods", [])
+		if moods_v is Array:
+			var want_mood: String = str(context.get("camp_mood", "normal")).strip_edges().to_lower()
+			var allowed: Array = moods_v
+			var matched: bool = false
+			for m in allowed:
+				if str(m).strip_edges().to_lower() == want_mood:
+					matched = true
+					break
+			if not matched:
+				return false
+	if not _story_progress_matches(entry, context):
+		return false
+	return true
+
+static func _story_progress_matches(entry: Dictionary, context: Dictionary) -> bool:
+	var progress_level: int = int(context.get("progress_level", 0))
+	var min_level: int = int(entry.get("min_progress_level", -1))
+	if min_level >= 0 and progress_level < min_level:
+		return false
+	var max_level: int = int(entry.get("max_progress_level", -1))
+	if max_level >= 0 and progress_level > max_level:
+		return false
+	var flags_v: Variant = context.get("story_flags", {})
+	var story_flags: Dictionary = flags_v if flags_v is Dictionary else {}
+	var req_v: Variant = entry.get("required_story_flags", [])
+	if req_v is Array:
+		for token_v in (req_v as Array):
+			var token: String = str(token_v).strip_edges()
+			if token == "":
+				continue
+			if not bool(story_flags.get(token, false)):
+				return false
+	var block_v: Variant = entry.get("blocked_story_flags", [])
+	if block_v is Array:
+		for token_v2 in (block_v as Array):
+			var token2: String = str(token_v2).strip_edges()
+			if token2 == "":
+				continue
+			if bool(story_flags.get(token2, false)):
+				return false
+	return true

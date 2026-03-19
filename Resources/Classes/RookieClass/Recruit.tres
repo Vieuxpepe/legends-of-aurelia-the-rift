@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://bjqsfivdqe818"]
+
+[ext_resource type="Resource" uid="uid://ccy6giku7jsq0" path="res://Resources/Skills/Generated/Rookie/Recruit/RecruitTree.tres" id="1_5qkmg"]
+[ext_resource type="Resource" uid="uid://yi8w2a8kj00d" path="res://Resources/Classes/Knight.tres" id="2_djbbi"]
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="3_2nqaf"]
+[ext_resource type="Resource" uid="uid://dw6xbp4oqav3p" path="res://Resources/Classes/Warrior.tres" id="4_2vbcd"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="5_qjndx"]
+
+[resource]
+script = ExtResource("5_qjndx")
+job_name = "Recruit"
+allowed_weapon_types = Array[int]([0, 1, 2])
+class_skill_tree = ExtResource("1_5qkmg")
+promotion_options = Array[Resource]([ExtResource("2_djbbi"), ExtResource("3_2nqaf"), ExtResource("4_2vbcd")])
+hp_bonus = 2
+str_bonus = 1
+def_bonus = 1
+hp_growth_bonus = 5
+str_growth_bonus = 5
+def_growth_bonus = 5

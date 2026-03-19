@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dw6xbp4oqav3p"]
+
+[ext_resource type="Resource" uid="uid://cx4judmq6c7ht" path="res://Resources/Skills/WarriorTree.tres" id="1_4l6fw"]
+[ext_resource type="Resource" uid="uid://cb3mjav7sxdwj" path="res://Resources/Classes/PromotedClass/BladeMaster.tres" id="1_dlxwq"]
+[ext_resource type="Resource" uid="uid://dytneeqlng3tj" path="res://Resources/Classes/PromotedClass/Berserker.tres" id="2_4l6fw"]
+[ext_resource type="Resource" uid="uid://bqdkvp4liu4s2" path="res://Resources/Classes/PromotedClass/Hero.tres" id="3_o2j81"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="4_xo5hl"]
+
+[resource]
+script = ExtResource("4_xo5hl")
+job_name = "Warrior"
+allowed_weapon_types = Array[int]([2])
+class_skill_tree = ExtResource("1_4l6fw")
+promotion_options = Array[Resource]([ExtResource("1_dlxwq"), ExtResource("2_4l6fw"), ExtResource("3_o2j81")])
+hp_bonus = 15
+str_bonus = 5
+def_bonus = -2
+spd_bonus = 1
+mag_bonus = -2
+res_bonus = -2
+hp_growth_bonus = 30
+str_growth_bonus = 20
+def_growth_bonus = -10
+res_growth_bonus = -10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

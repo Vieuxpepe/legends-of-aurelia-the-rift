@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cvtbmiho2sq6l"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_sgvke"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_jdv7t"]
+
+[resource]
+script = ExtResource("2_jdv7t")
+rarity = "Uncommon"
+item_name = "Molasses Jug"
+description = "A heavy jug of dark syrup that pours slow as tar. Bitter-sweet and rich, it is prized for baking and brewing alike."
+gold_cost = 23
+icon = ExtResource("1_sgvke")
+category = "Cooking"

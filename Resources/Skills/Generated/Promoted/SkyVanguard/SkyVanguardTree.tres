@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://030y3bv5dsxx"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_euc6u"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_wrto6"]
+[ext_resource type="Resource" uid="uid://deq46jjoxtg4f" path="res://Resources/Skills/Generated/Promoted/SkyVanguard/Skill_sv_hp_1.tres" id="3_r4jc6"]
+[ext_resource type="Resource" uid="uid://c5m881ejnjwtg" path="res://Resources/Skills/Generated/Promoted/SkyVanguard/Skill_sv_str_1.tres" id="4_v0ai4"]
+[ext_resource type="Resource" uid="uid://cepsxk7cirtru" path="res://Resources/Skills/Generated/Promoted/SkyVanguard/Skill_sv_def_1.tres" id="5_iina0"]
+[ext_resource type="Resource" uid="uid://dtgban3p0md2w" path="res://Resources/Skills/Generated/Promoted/SkyVanguard/Skill_sv_spd_1.tres" id="6_yxskc"]
+[ext_resource type="Resource" uid="uid://1lv3lg4oykl4" path="res://Resources/Skills/Generated/Promoted/SkyVanguard/Skill_sv_mastery.tres" id="7_ejtpa"]
+
+[resource]
+script = ExtResource("1_euc6u")
+tree_name = "SkyVanguard Tree"
+skills = Array[ExtResource("2_wrto6")]([ExtResource("3_r4jc6"), ExtResource("4_v0ai4"), ExtResource("5_iina0"), ExtResource("6_yxskc"), ExtResource("7_ejtpa")])

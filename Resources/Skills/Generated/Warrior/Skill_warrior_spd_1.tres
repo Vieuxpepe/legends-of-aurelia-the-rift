@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dtpmcu06qy1a0"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_0qpgd"]
+
+[resource]
+script = ExtResource("1_0qpgd")
+skill_id = "warrior_spd_1"
+skill_name = "Speed I"
+description = "Increases Speed by +1."
+required_skill_id = "warrior_hp_1"
+grid_position = Vector2(1, 0)
+stat_to_boost = "spd"
+boost_amount = 1

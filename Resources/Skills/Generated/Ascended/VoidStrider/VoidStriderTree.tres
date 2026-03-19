@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://v4st7g0v0h8e"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_k1j7d"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_1t17n"]
+[ext_resource type="Resource" uid="uid://butrirp03wwiv" path="res://Resources/Skills/Generated/Ascended/VoidStrider/Skill_vs_spd_1.tres" id="3_kl35v"]
+[ext_resource type="Resource" uid="uid://dg2qcgxviwpw0" path="res://Resources/Skills/Generated/Ascended/VoidStrider/Skill_vs_agi_1.tres" id="4_noyne"]
+[ext_resource type="Resource" uid="uid://ctp2svbc27e5v" path="res://Resources/Skills/Generated/Ascended/VoidStrider/Skill_vs_str_1.tres" id="5_qndgv"]
+[ext_resource type="Resource" uid="uid://bmstjf3oxi880" path="res://Resources/Skills/Generated/Ascended/VoidStrider/Skill_vs_mag_1.tres" id="6_qxmae"]
+[ext_resource type="Resource" uid="uid://46mu5yofhwbl" path="res://Resources/Skills/Generated/Ascended/VoidStrider/Skill_vs_hp_1.tres" id="7_t2seq"]
+
+[resource]
+script = ExtResource("1_k1j7d")
+tree_name = "VoidStrider Tree"
+skills = Array[ExtResource("2_1t17n")]([ExtResource("3_kl35v"), ExtResource("4_noyne"), ExtResource("5_qndgv"), ExtResource("6_qxmae"), ExtResource("7_t2seq")])

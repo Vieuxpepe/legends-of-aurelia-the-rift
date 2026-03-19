@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://cdsop8gwvpobe"]
+
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_6wpvu"]
+[ext_resource type="Resource" uid="uid://dpfi0ml7kea6v" path="res://Resources/Skills/SpellbladeTree.tres" id="1_jgrcv"]
+[ext_resource type="Resource" uid="uid://bqhyltkqmqfpx" path="res://Resources/Classes/PromotedClass/BladeWeaver.tres" id="1_vlaqy"]
+[ext_resource type="Resource" uid="uid://cadv2qi1rxorv" path="res://Resources/Classes/PromotedClass/DeathKnight.tres" id="2_jgrcv"]
+
+[resource]
+script = ExtResource("1_6wpvu")
+job_name = "Spellblade"
+move_range = 5
+allowed_weapon_types = Array[int]([0, 4])
+class_skill_tree = ExtResource("1_jgrcv")
+promotion_options = Array[Resource]([ExtResource("1_vlaqy"), ExtResource("2_jgrcv")])
+hp_bonus = 10
+str_bonus = 2
+spd_bonus = 1
+mag_bonus = 2
+res_bonus = 1
+str_growth_bonus = 10
+spd_growth_bonus = 5
+mag_growth_bonus = 10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

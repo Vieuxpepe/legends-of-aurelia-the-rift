@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://b8r4kwxsceb46"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_mqqye"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_6g5v4"]
+[ext_resource type="Resource" uid="uid://cn8fw0pp2sins" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_hp_1.tres" id="3_2k300"]
+[ext_resource type="Resource" uid="uid://c8kbtossdy5va" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_str_1.tres" id="4_fs0hg"]
+[ext_resource type="Resource" uid="uid://3ju4ymu0wdll" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_def_1.tres" id="5_2hi6x"]
+[ext_resource type="Resource" uid="uid://bs4oicd0737c6" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_agi_1.tres" id="6_jtduq"]
+[ext_resource type="Resource" uid="uid://ct6gqy7rl2n4m" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_str_2.tres" id="7_mftcn"]
+[ext_resource type="Resource" uid="uid://cy3nv1phuxpsf" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_hp_2.tres" id="8_ogiu8"]
+[ext_resource type="Resource" uid="uid://dgcjsdsumc5i0" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_res_1.tres" id="9_v36n5"]
+[ext_resource type="Resource" uid="uid://cqf2fpek6gj3i" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_deadeye_shot.tres" id="10_u8m5a"]
+[ext_resource type="Resource" uid="uid://0wwo0nvce0e0" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_def_2.tres" id="11_43nig"]
+[ext_resource type="Resource" uid="uid://05xbxucs0q4" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_agi_2.tres" id="12_6gp1i"]
+[ext_resource type="Resource" uid="uid://k22evsdot3fb" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_str_3.tres" id="13_udgqj"]
+[ext_resource type="Resource" uid="uid://dlxr7fdth60ay" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_hp_3.tres" id="14_owm20"]
+[ext_resource type="Resource" uid="uid://ctrdc6is3c80c" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_res_2.tres" id="15_khq78"]
+[ext_resource type="Resource" uid="uid://vmsdfw0rbqc8" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_def_3.tres" id="16_nse28"]
+[ext_resource type="Resource" uid="uid://djxsmjemm1j7w" path="res://Resources/Skills/Generated/Cannoneer/Skill_cannoneer_ballista_shot.tres" id="17_tf67p"]
+
+[resource]
+script = ExtResource("1_mqqye")
+tree_name = "Cannoneer Tree"
+skills = Array[ExtResource("2_6g5v4")]([ExtResource("3_2k300"), ExtResource("4_fs0hg"), ExtResource("5_2hi6x"), ExtResource("6_jtduq"), ExtResource("7_mftcn"), ExtResource("8_ogiu8"), ExtResource("9_v36n5"), ExtResource("10_u8m5a"), ExtResource("11_43nig"), ExtResource("12_6gp1i"), ExtResource("13_udgqj"), ExtResource("14_owm20"), ExtResource("15_khq78"), ExtResource("16_nse28"), ExtResource("17_tf67p")])

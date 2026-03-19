@@ -1,0 +1,931 @@
+[gd_scene format=3 uid="uid://w4lhb2dbk705"]
+
+[ext_resource type="Script" uid="uid://bb8afhnbmpp7g" path="res://Scenes/CityMenu.gd" id="1_614eu"]
+[ext_resource type="Resource" uid="uid://c4fq6nvug5i83" path="res://Resources/Consumables/Vigor's Epitaph.tres" id="2_vvdfs"]
+[ext_resource type="Resource" uid="uid://c445fnop4de3v" path="res://Resources/Weapons/Legendary TEST Sword.tres" id="3_3rhop"]
+[ext_resource type="AudioStream" uid="uid://dl4s21ip7hen8" path="res://SoundEffects/Music/music discs/The Multiverse Arena Battle.mp3" id="4_ajokt"]
+[ext_resource type="Texture2D" uid="uid://cj2l3x6ltuylw" path="res://Assets/Backgrounds/CityMenuBackground.jpeg" id="4_ltwrq"]
+[ext_resource type="AudioStream" uid="uid://3mouvda1214t" path="res://SoundEffects/Music/music discs/The Grand City.mp3" id="5_lv0fc"]
+[ext_resource type="Texture2D" uid="uid://dek11407wimwc" path="res://Assets/Portraits/Arena_Quartermaster.png" id="6_3rhop"]
+[ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="7_lv0fc"]
+[ext_resource type="AudioStream" uid="uid://chbsrwtiafyvv" path="res://SoundEffects/SellSound.mp3" id="8_ikohw"]
+[ext_resource type="PackedScene" uid="uid://c80ef0dbdtjjb" path="res://Scenes/fire_glow.tscn" id="9_brgl5"]
+[ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="9_ikohw"]
+[ext_resource type="AudioStream" uid="uid://galtjlx54djw" path="res://SoundEffects/Music/music discs/Arena Quartermaster Token Shop.mp3" id="10_6i001"]
+[ext_resource type="PackedScene" uid="uid://bceah4ri0w8fh" path="res://Scenes/ScavengerUI.tscn" id="13_skpfb"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_614eu"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1hqi3"]
+bg_color = Color(0.0018410675, 0.0018410685, 0.0018410663, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skpfb"]
+bg_color = Color(0, 0, 0, 0.8627451)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ltwrq"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_brgl5"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6aq3o"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="CityMenu" type="Control" unique_id=595021694]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_614eu")
+token_shop_items = Array[Resource]([ExtResource("2_vvdfs"), ExtResource("3_3rhop")])
+
+[node name="ColorRect" type="TextureRect" parent="." unique_id=1065648400]
+modulate = Color(0.7750634, 0.7750634, 0.7750634, 1)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -9.0
+offset_bottom = -9.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_ltwrq")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="." unique_id=82073382]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -97.0
+offset_top = 105.0
+offset_right = 101.0
+offset_bottom = 135.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "THE GRAND CITY"
+
+[node name="BackButton" type="Button" parent="." unique_id=1592757526]
+layout_mode = 0
+offset_left = 1649.0
+offset_top = 916.0
+offset_right = 1819.0
+offset_bottom = 954.0
+theme_override_font_sizes/font_size = 32
+text = "Back to Map"
+
+[node name="ArenaButton" type="Button" parent="." unique_id=113686430]
+layout_mode = 0
+offset_left = 1636.0
+offset_top = 755.0
+offset_right = 1864.0
+offset_bottom = 802.0
+theme_override_font_sizes/font_size = 42
+text = "Enter Arena"
+
+[node name="ArenaPanel" type="Panel" parent="." unique_id=939925987]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -390.0
+offset_top = -362.0
+offset_right = 410.0
+offset_bottom = 438.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_614eu")
+
+[node name="TitleLabel" type="Label" parent="ArenaPanel" unique_id=1665064123]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -117.0
+offset_top = 37.0
+offset_right = 121.0
+offset_bottom = 67.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "MULTIVERSE ARENA"
+
+[node name="CloseArenaButton" type="Button" parent="ArenaPanel" unique_id=1826784044]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -8.0
+offset_bottom = 8.0
+grow_horizontal = 0
+text = "X"
+
+[node name="RefreshMatchesButton" type="Button" parent="ArenaPanel" unique_id=1989032094]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -207.0
+offset_top = -57.0
+offset_right = -29.0
+offset_bottom = -34.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Search for Challengers"
+
+[node name="StatusLabel" type="Label" parent="ArenaPanel" unique_id=1212572268]
+layout_mode = 0
+offset_left = 335.0
+offset_top = 533.0
+offset_right = 487.0
+offset_bottom = 548.0
+text = "Welcome to the Arena."
+
+[node name="ScrollContainer" type="ScrollContainer" parent="ArenaPanel" unique_id=1600422922]
+layout_mode = 0
+offset_left = 161.0
+offset_top = 119.0
+offset_right = 633.0
+offset_bottom = 503.0
+
+[node name="OpponentContainer" type="VBoxContainer" parent="ArenaPanel/ScrollContainer" unique_id=852262241]
+layout_mode = 2
+
+[node name="LeaderboardButton" type="Button" parent="ArenaPanel" unique_id=94634489]
+layout_mode = 0
+offset_left = 509.0
+offset_top = 97.0
+offset_right = 690.0
+offset_bottom = 148.0
+text = "Leaderboard"
+
+[node name="LeaderboardPanel" type="Panel" parent="ArenaPanel" unique_id=1800932549]
+visible = false
+z_index = 6
+layout_mode = 0
+offset_left = -82.0
+offset_top = -150.0
+offset_right = 802.0
+offset_bottom = 767.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_1hqi3")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="ArenaPanel/LeaderboardPanel" unique_id=1342991074]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 4.0
+offset_right = 888.0
+offset_bottom = 707.0
+
+[node name="LeaderboardContainer" type="VBoxContainer" parent="ArenaPanel/LeaderboardPanel/ScrollContainer" unique_id=124271385]
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="ArenaPanel/LeaderboardPanel" unique_id=1484709415]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -133.5
+offset_top = -42.0
+offset_right = 133.5
+grow_horizontal = 2
+grow_vertical = 0
+text = "Close"
+
+[node name="GhostInspectPanel" type="Panel" parent="ArenaPanel/LeaderboardPanel" unique_id=553963762]
+layout_mode = 0
+offset_left = 440.0
+offset_top = 25.0
+offset_right = 840.0
+offset_bottom = 236.0
+mouse_filter = 1
+
+[node name="GhostTitle" type="Label" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=1535445207]
+layout_mode = 0
+offset_left = 31.0
+offset_top = 23.0
+offset_right = 125.0
+offset_bottom = 38.0
+text = "Kaelen's Team"
+
+[node name="GhostTeamGrid" type="GridContainer" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=1263462363]
+layout_mode = 0
+offset_left = 61.0
+offset_top = 57.0
+offset_right = 101.0
+offset_bottom = 97.0
+columns = 3
+
+[node name="CloseButton" type="Button" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=15891023]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+text = "Close"
+
+[node name="ArenaSetupPanel" type="Panel" parent="." unique_id=601249676]
+visible = false
+z_index = 2
+layout_mode = 0
+offset_left = 723.0
+offset_top = 267.0
+offset_right = 1266.0
+offset_bottom = 906.0
+
+[node name="TitleLabel" type="Label" parent="ArenaSetupPanel" unique_id=1081308587]
+layout_mode = 0
+offset_left = 207.0
+offset_top = 39.0
+offset_right = 330.0
+offset_bottom = 54.0
+text = "Select 3 Fighters"
+
+[node name="RosterGrid" type="GridContainer" parent="ArenaSetupPanel" unique_id=536690061]
+layout_mode = 0
+offset_left = 58.0
+offset_top = 66.0
+offset_right = 98.0
+offset_bottom = 106.0
+columns = 5
+
+[node name="TeamGrid" type="GridContainer" parent="ArenaSetupPanel" unique_id=186408078]
+layout_mode = 0
+offset_left = 111.0
+offset_top = 210.0
+offset_right = 151.0
+offset_bottom = 250.0
+columns = 3
+
+[node name="ConfirmTeamButton" type="Button" parent="ArenaSetupPanel" unique_id=1131908771]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 503.0
+offset_right = 435.0
+offset_bottom = 541.0
+theme_override_font_sizes/font_size = 32
+text = "Lock Team & Find Match"
+
+[node name="CloseSetupButton" type="Button" parent="ArenaSetupPanel" unique_id=827058810]
+layout_mode = 0
+offset_left = 200.0
+offset_top = 562.0
+offset_right = 341.0
+offset_bottom = 612.0
+theme_override_font_sizes/font_size = 32
+text = "Cancel"
+
+[node name="TokenDisplayLabel" type="Label" parent="ArenaSetupPanel" unique_id=608356706]
+layout_mode = 0
+offset_left = 211.0
+offset_top = 353.0
+offset_right = 359.0
+offset_bottom = 418.0
+
+[node name="DefensePopup" type="Panel" parent="." unique_id=1472839651]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -100.0
+offset_right = 200.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="DefensePopup" unique_id=1754301317]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 396.0
+offset_bottom = 196.0
+
+[node name="Label" type="Label" parent="DefensePopup/Panel" unique_id=273533718]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 15.0
+
+[node name="OkButton" type="Button" parent="DefensePopup/Panel" unique_id=1656181508]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -38.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "OK"
+
+[node name="ArenaResultSequence" type="Control" parent="." unique_id=1372234374]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -275.0
+offset_top = -297.0
+offset_right = 275.0
+offset_bottom = 297.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="ArenaResultSequence" unique_id=1039229012]
+layout_mode = 1
+offset_right = 552.0
+offset_bottom = 600.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
+
+[node name="TitleLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=282480243]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -66.0
+offset_top = 25.0
+offset_right = 66.0
+offset_bottom = 84.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 64
+text = "Title"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RankIcon" type="TextureRect" parent="ArenaResultSequence/Panel" unique_id=1469144152]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -70.0
+offset_top = 100.0
+offset_right = 80.0
+offset_bottom = 250.0
+grow_horizontal = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RankNameLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=1013685780]
+layout_mode = 0
+offset_left = 203.0
+offset_top = 243.0
+offset_right = 357.0
+offset_bottom = 273.0
+theme_override_font_sizes/font_size = 32
+text = "Ranmk Name"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RatingLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=1797044186]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -87.0
+offset_top = 85.0
+offset_right = 87.0
+offset_bottom = 115.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 32
+text = "Rating Label"
+
+[node name="MMRDeltaLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=288807374]
+layout_mode = 0
+offset_left = 407.0
+offset_top = 390.0
+offset_right = 502.0
+offset_bottom = 412.0
+theme_override_colors/font_color = Color(1, 1, 0.45882353, 1)
+theme_override_font_sizes/font_size = 24
+text = "MMRDetla"
+
+[node name="RankBar" type="ProgressBar" parent="ArenaResultSequence/Panel" unique_id=1661710365]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -187.5
+offset_top = 275.0
+offset_right = 187.5
+offset_bottom = 315.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="RankBarValue" type="Label" parent="ArenaResultSequence/Panel" unique_id=466802852]
+layout_mode = 0
+offset_left = 264.0
+offset_top = 329.0
+offset_right = 476.0
+offset_bottom = 359.0
+theme_override_font_sizes/font_size = 32
+text = "Rank Bar Value"
+
+[node name="StampLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=560407519]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -22.0
+offset_top = -155.0
+offset_right = 56.0
+offset_bottom = -125.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Stamp"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RewardsLabel" type="RichTextLabel" parent="ArenaResultSequence/Panel" unique_id=1046819383]
+layout_mode = 0
+offset_left = 195.0
+offset_top = 481.0
+offset_right = 364.0
+offset_bottom = 561.0
+theme_override_font_sizes/normal_font_size = 32
+bbcode_enabled = true
+text = "Rewards"
+
+[node name="ClickToContinue" type="Label" parent="ArenaResultSequence/Panel" unique_id=105888758]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -103.0
+offset_top = -40.0
+offset_right = 103.0
+offset_bottom = -25.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "- Click anywhere to continue -"
+
+[node name="Dimmer" type="ColorRect" parent="ArenaResultSequence" unique_id=1441196056]
+visible = false
+layout_mode = 0
+offset_right = 551.0
+offset_bottom = 598.0
+color = Color(1, 1, 1, 0)
+
+[node name="FlashRect" type="ColorRect" parent="ArenaResultSequence" unique_id=1679584176]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BurstParticles" type="CPUParticles2D" parent="ArenaResultSequence" unique_id=1206785302]
+
+[node name="GladiatorStreakBadge" type="Control" parent="." unique_id=909489580]
+visible = false
+anchors_preset = 0
+offset_left = 603.0
+offset_top = 182.0
+offset_right = 1201.0
+offset_bottom = 332.0
+
+[node name="Glow" type="ColorRect" parent="GladiatorStreakBadge" unique_id=1653582140]
+layout_mode = 0
+offset_left = 4.0
+offset_top = -2.0
+offset_right = 44.0
+offset_bottom = 38.0
+
+[node name="Label" type="Label" parent="GladiatorStreakBadge" unique_id=399159799]
+layout_mode = 0
+offset_left = 124.0
+offset_top = -4.0
+offset_right = 164.0
+offset_bottom = 11.0
+text = "label"
+
+[node name="SubLabel" type="Label" parent="GladiatorStreakBadge" unique_id=1272580274]
+layout_mode = 0
+offset_left = 128.0
+offset_top = 37.0
+offset_right = 192.0
+offset_bottom = 52.0
+text = "Sublabel"
+
+[node name="FlameParticles" type="CPUParticles2D" parent="GladiatorStreakBadge" unique_id=2046807605]
+
+[node name="UnitInfoPanel" type="Panel" parent="." unique_id=739349267]
+visible = false
+layout_mode = 0
+offset_left = 1380.0
+offset_top = 360.0
+offset_right = 1713.0
+offset_bottom = 679.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_ltwrq")
+
+[node name="PortraitRect" type="TextureRect" parent="UnitInfoPanel" unique_id=1160808307]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 27.0
+offset_right = 206.0
+offset_bottom = 160.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="UnitInfoPanel" unique_id=472200276]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 181.0
+offset_right = 68.0
+offset_bottom = 196.0
+text = "Name"
+
+[node name="ClassLabel" type="Label" parent="UnitInfoPanel" unique_id=1040074291]
+layout_mode = 0
+offset_left = 32.0
+offset_top = 198.0
+offset_right = 72.0
+offset_bottom = 213.0
+text = "Class"
+
+[node name="LevelLabel" type="Label" parent="UnitInfoPanel" unique_id=424142304]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 216.0
+offset_right = 70.0
+offset_bottom = 231.0
+text = "Level"
+
+[node name="HPLabel" type="Label" parent="UnitInfoPanel" unique_id=843536431]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 232.0
+offset_right = 70.0
+offset_bottom = 247.0
+text = "HP"
+
+[node name="StatsLabel" type="Label" parent="UnitInfoPanel" unique_id=9909146]
+layout_mode = 0
+offset_left = 27.0
+offset_top = 248.0
+offset_right = 67.0
+offset_bottom = 263.0
+text = "Stats"
+
+[node name="WeaponLabel" type="Label" parent="UnitInfoPanel" unique_id=929268479]
+layout_mode = 0
+offset_left = 23.0
+offset_top = 291.0
+offset_right = 71.0
+offset_bottom = 306.0
+text = "Weapon"
+
+[node name="ArenaMusic" type="AudioStreamPlayer" parent="." unique_id=804339819]
+unique_name_in_owner = true
+stream = ExtResource("4_ajokt")
+
+[node name="CityMusic" type="AudioStreamPlayer" parent="." unique_id=1186038363]
+unique_name_in_owner = true
+stream = ExtResource("5_lv0fc")
+volume_db = -15.336
+
+[node name="TokenShopPanel" type="Panel" parent="." unique_id=112236884]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -426.5
+offset_top = -443.5
+offset_right = 426.5
+offset_bottom = 443.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_brgl5")
+
+[node name="CloseShopButton" type="Button" parent="TokenShopPanel" unique_id=525929195]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -72.5
+offset_top = 6.5
+offset_right = -16.5
+offset_bottom = 69.5
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 60
+text = "X"
+
+[node name="ShopTokenDisplay" type="Label" parent="TokenShopPanel" unique_id=1558909178]
+layout_mode = 0
+offset_left = 67.5
+offset_top = 66.5
+offset_right = 227.5
+offset_bottom = 96.5
+theme_override_font_sizes/font_size = 32
+text = "Tokens: 500"
+
+[node name="ShopItemsGrid" type="GridContainer" parent="TokenShopPanel" unique_id=2121204066]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -356.5
+offset_top = -195.0
+offset_right = 66.0
+offset_bottom = 195.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="TokenShopPanel" unique_id=1099475850]
+layout_mode = 0
+offset_left = 264.5
+offset_top = 11.5
+offset_right = 558.5
+offset_bottom = 41.5
+theme_override_font_sizes/font_size = 32
+text = "Gladiator Token Shop"
+
+[node name="GladiatorPortrait" type="TextureRect" parent="TokenShopPanel" unique_id=1211567398]
+layout_mode = 0
+offset_left = 480.5
+offset_top = 146.5
+offset_right = 780.5
+offset_bottom = 446.5
+pivot_offset = Vector2(150, 150)
+texture = ExtResource("6_3rhop")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GladiatorDialogue" type="Label" parent="TokenShopPanel" unique_id=1799439564]
+layout_mode = 0
+offset_left = 453.5
+offset_top = 429.5
+offset_right = 788.0
+offset_bottom = 553.0
+autowrap_mode = 2
+
+[node name="TextBlipSound" type="AudioStreamPlayer" parent="TokenShopPanel" unique_id=1306064672]
+stream = ExtResource("7_lv0fc")
+
+[node name="BuySound" type="AudioStreamPlayer" parent="TokenShopPanel" unique_id=2007828238]
+stream = ExtResource("8_ikohw")
+
+[node name="ShopDescription" type="RichTextLabel" parent="TokenShopPanel" unique_id=1524714746]
+layout_mode = 0
+offset_left = 480.5
+offset_top = 635.5
+offset_right = 831.0
+offset_bottom = 837.0
+bbcode_enabled = true
+
+[node name="ShopItemPreview" type="TextureRect" parent="TokenShopPanel" unique_id=1557848410]
+layout_mode = 0
+offset_left = 205.5
+offset_top = 682.5
+offset_right = 391.0
+offset_bottom = 852.0
+
+[node name="SelectSound" type="AudioStreamPlayer" parent="TokenShopPanel" unique_id=602297055]
+stream = ExtResource("9_ikohw")
+
+[node name="ItemDescriptionPanel" type="Panel" parent="TokenShopPanel" unique_id=2057323548]
+layout_mode = 0
+offset_left = -380.5
+offset_top = 244.5
+offset_right = -20.0
+offset_bottom = 615.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_6aq3o")
+
+[node name="LargeItemPreview" type="TextureRect" parent="TokenShopPanel/ItemDescriptionPanel" unique_id=1747790404]
+layout_mode = 0
+offset_left = 116.0
+offset_top = 23.0
+offset_right = 245.0
+offset_bottom = 148.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ItemStatsLabel" type="RichTextLabel" parent="TokenShopPanel/ItemDescriptionPanel" unique_id=753346902]
+layout_mode = 0
+offset_left = 35.0
+offset_top = 163.0
+offset_right = 328.0
+offset_bottom = 298.0
+bbcode_enabled = true
+
+[node name="TokenPurchaseButton" type="Button" parent="TokenShopPanel" unique_id=999517811]
+layout_mode = 0
+offset_left = -360.5
+offset_top = 529.5
+offset_right = -36.5
+offset_bottom = 580.5
+theme_override_font_sizes/font_size = 28
+text = "Buy"
+
+[node name="RankRoadmap" type="Control" parent="TokenShopPanel" unique_id=527566433]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="RoadmapBar" type="ProgressBar" parent="TokenShopPanel/RankRoadmap" unique_id=255707357]
+layout_mode = 0
+offset_left = 65.5
+offset_top = 821.5
+offset_right = 771.5
+offset_bottom = 840.5
+show_percentage = false
+
+[node name="MarkersContainer" type="HBoxContainer" parent="TokenShopPanel/RankRoadmap" unique_id=987418660]
+layout_mode = 0
+offset_left = 52.5
+offset_top = 706.5
+offset_right = 781.5
+offset_bottom = 814.5
+
+[node name="OpenShopButton" type="Button" parent="." unique_id=1513115721]
+layout_mode = 0
+offset_left = 1648.0
+offset_top = 684.0
+offset_right = 1808.0
+offset_bottom = 722.0
+theme_override_font_sizes/font_size = 40
+text = "Token Shop"
+
+[node name="ShopMusic" type="AudioStreamPlayer" parent="." unique_id=29685806]
+unique_name_in_owner = true
+stream = ExtResource("10_6i001")
+volume_db = -20.3
+
+[node name="TavernButton" type="Button" parent="." unique_id=1390389000]
+layout_mode = 0
+offset_left = 1523.0
+offset_top = 825.0
+offset_right = 1872.0
+offset_bottom = 870.0
+theme_override_font_sizes/font_size = 40
+text = "Enter Grand Tavern"
+
+[node name="FireGlow7" parent="." unique_id=933684048 instance=ExtResource("9_brgl5")]
+position = Vector2(970, 446)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow19" parent="." unique_id=1516713952 instance=ExtResource("9_brgl5")]
+position = Vector2(1241, 676)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow20" parent="." unique_id=1749685555 instance=ExtResource("9_brgl5")]
+position = Vector2(994, 752)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow21" parent="." unique_id=154363191 instance=ExtResource("9_brgl5")]
+position = Vector2(1100, 721)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow22" parent="." unique_id=1390983244 instance=ExtResource("9_brgl5")]
+position = Vector2(1175, 720)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow23" parent="." unique_id=1322958200 instance=ExtResource("9_brgl5")]
+position = Vector2(1342, 679)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow24" parent="." unique_id=551227136 instance=ExtResource("9_brgl5")]
+position = Vector2(827, 903)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow8" parent="." unique_id=708400301 instance=ExtResource("9_brgl5")]
+position = Vector2(875, 444)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow9" parent="." unique_id=1961337946 instance=ExtResource("9_brgl5")]
+position = Vector2(803, 439)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow10" parent="." unique_id=243058502 instance=ExtResource("9_brgl5")]
+position = Vector2(744, 429)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow11" parent="." unique_id=772336664 instance=ExtResource("9_brgl5")]
+position = Vector2(700, 417)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow12" parent="." unique_id=1191039578 instance=ExtResource("9_brgl5")]
+position = Vector2(677, 404)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow13" parent="." unique_id=911599353 instance=ExtResource("9_brgl5")]
+position = Vector2(694, 390)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow14" parent="." unique_id=678022582 instance=ExtResource("9_brgl5")]
+position = Vector2(1067, 438)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow15" parent="." unique_id=900620456 instance=ExtResource("9_brgl5")]
+position = Vector2(1131, 432)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow16" parent="." unique_id=199191033 instance=ExtResource("9_brgl5")]
+position = Vector2(1166, 417)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow17" parent="." unique_id=191635689 instance=ExtResource("9_brgl5")]
+position = Vector2(1181, 405)
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="FireGlow18" parent="." unique_id=1276391714 instance=ExtResource("9_brgl5")]
+position = Vector2(1163, 387)
+rotation = -0.053707063
+color = Color(1, 0.47843137, 0, 0.24705882)
+energy = 0.53
+texture_scale = 0.4
+
+[node name="ScavengerUI" parent="." unique_id=1311269240 instance=ExtResource("13_skpfb")]
+visible = false
+layout_mode = 1
+
+[node name="ScavengerButton" type="Button" parent="." unique_id=26666042]
+layout_mode = 0
+offset_left = 1638.0
+offset_top = 630.0
+offset_right = 1804.0
+offset_bottom = 653.0
+text = "Visit Scavenger Market"

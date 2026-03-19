@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bxqjy0aj5ft1v"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_vc0fu"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_alaho"]
+[ext_resource type="Resource" uid="uid://d4duslyvsds3q" path="res://Resources/Skills/Generated/Promoted/General/Skill_general_def_1.tres" id="3_sqs87"]
+[ext_resource type="Resource" uid="uid://opqs0cwdiu4e" path="res://Resources/Skills/Generated/Promoted/General/Skill_general_hp_1.tres" id="4_h01ap"]
+[ext_resource type="Resource" uid="uid://p5ttf25lchl7" path="res://Resources/Skills/Generated/Promoted/General/Skill_general_mastery.tres" id="5_4f8xb"]
+[ext_resource type="Resource" uid="uid://djpm78plo1173" path="res://Resources/Skills/Generated/Promoted/General/Skill_general_res_1.tres" id="6_mrvn0"]
+[ext_resource type="Resource" uid="uid://bemfhsd42lywc" path="res://Resources/Skills/Generated/Promoted/General/Skill_general_str_1.tres" id="7_ibn7n"]
+
+[resource]
+script = ExtResource("1_vc0fu")
+skills = Array[ExtResource("2_alaho")]([ExtResource("3_sqs87"), ExtResource("4_h01ap"), ExtResource("5_4f8xb"), ExtResource("6_mrvn0"), ExtResource("7_ibn7n")])
+metadata/_custom_type_script = "uid://cedoicamottly"

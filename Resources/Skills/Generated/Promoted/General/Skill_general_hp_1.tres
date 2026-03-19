@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://opqs0cwdiu4e"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ixax0"]
+
+[resource]
+script = ExtResource("1_ixax0")
+skill_id = "general_hp_1"
+skill_name = "Juggernaut"
+description = "Grants +10 Max HP."
+required_skill_id = "general_def_1"
+grid_position = Vector2(1, 0)
+boost_amount = 10

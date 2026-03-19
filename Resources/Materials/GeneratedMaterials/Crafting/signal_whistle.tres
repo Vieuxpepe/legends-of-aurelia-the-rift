@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://speympt1ow5w"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_xptxe"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_msac2"]
+
+[resource]
+script = ExtResource("2_msac2")
+item_name = "Signal Whistle"
+description = "A small metal whistle that shrieks sharply enough to cut through wind and panic. Subtle it is not."
+gold_cost = 7
+icon = ExtResource("1_xptxe")
+category = "Crafting"

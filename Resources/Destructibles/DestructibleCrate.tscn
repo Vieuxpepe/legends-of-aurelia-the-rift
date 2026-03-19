@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://btlrorrpwhiot"]
+
+[ext_resource type="Texture2D" uid="uid://do0yukch0njqm" path="res://Assets/Wooden Crate.png" id="1_50fdf"]
+[ext_resource type="Script" uid="uid://y207001wtu7u" path="res://Scripts/Core/Destructible.gd" id="1_q5cp0"]
+[ext_resource type="Resource" uid="uid://dvnkhrkiyej5a" path="res://Resources/Weapons/Lance.tres" id="2_elk33"]
+[ext_resource type="Resource" uid="uid://cgqcb2tacelge" path="res://Resources/Consumables/Vulnerary.tres" id="2_vl1va"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_wore5"]
+[ext_resource type="Resource" uid="uid://ckitvh4grj5oh" path="res://Resources/Chests/Keys/Iron Key.tres" id="5_15pab"]
+[ext_resource type="AudioStream" uid="uid://35iqouvyqc5n" path="res://SoundEffects/crate_breakin.wav" id="5_wore5"]
+
+[sub_resource type="Resource" id="Resource_15pab"]
+script = ExtResource("3_wore5")
+item = ExtResource("2_elk33")
+drop_chance = 10.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_7ddr4"]
+script = ExtResource("3_wore5")
+item = ExtResource("2_vl1va")
+drop_chance = 15.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_kgw6u"]
+script = ExtResource("3_wore5")
+item = ExtResource("5_15pab")
+drop_chance = 26.042
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[node name="DestructibleCrate" type="Node2D" unique_id=1565693868]
+script = ExtResource("1_q5cp0")
+max_gold_drop = 5
+drop_loot = Array[Resource]([SubResource("Resource_15pab"), SubResource("Resource_7ddr4"), SubResource("Resource_kgw6u")])
+death_sound = ExtResource("5_wore5")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=589411584]
+visible = false
+offset_right = 64.0
+offset_bottom = 64.0
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=143416345]
+position = Vector2(32, 34)
+scale = Vector2(0.11, 0.11)
+texture = ExtResource("1_50fdf")
+
+[node name="DeathSound" type="AudioStreamPlayer" parent="." unique_id=949690048]

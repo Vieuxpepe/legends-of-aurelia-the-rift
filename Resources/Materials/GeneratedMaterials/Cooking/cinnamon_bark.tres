@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c4uypdaeiq3iv"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_rm6iv"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_707o8"]
+
+[resource]
+script = ExtResource("2_707o8")
+rarity = "Uncommon"
+item_name = "Cinnamon Bark"
+description = "Curled strips of fragrant bark, dry and reddish-brown. Sweet, woody, and a little rare in rougher markets."
+gold_cost = 24
+icon = ExtResource("1_rm6iv")
+category = "Cooking"

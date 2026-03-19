@@ -1,0 +1,347 @@
+[gd_scene format=3 uid="uid://bgqgwvr5tx5b2"]
+
+[ext_resource type="Script" uid="uid://bskihve2tf1wj" path="res://Scenes/UI/GrandTavern.gd" id="1_klcnk"]
+[ext_resource type="AudioStream" uid="uid://cpq3fsm3ywve2" path="res://SoundEffects/Music/The Grand Tavern.mp3" id="2_0a0uf"]
+[ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="2_ai32n"]
+[ext_resource type="Texture2D" uid="uid://jatlr6gqmoi5" path="res://Assets/Backgrounds/Grand Tavern Background.png" id="2_n8wlx"]
+[ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="3_mk42n"]
+[ext_resource type="PackedScene" uid="uid://b26dbn8pt35pi" path="res://Scenes/Campfire_vfx.tscn" id="6_lftds"]
+[ext_resource type="PackedScene" uid="uid://c80ef0dbdtjjb" path="res://Scenes/fire_glow.tscn" id="7_owt0g"]
+[ext_resource type="Texture2D" uid="uid://bsn0xh66chx80" path="res://Assets/Portraits/Seraphina Bartender.png" id="8_cgyqp"]
+[ext_resource type="Script" uid="uid://d3k2dg3ypkasl" path="res://Scripts/SeraphinaDialogueManager.gd" id="11_8sa06"]
+[ext_resource type="Script" uid="uid://dwslf0j6v3ovn" path="res://Scenes/UI/TavernChat.gd" id="11_ren3y"]
+[ext_resource type="Texture2D" uid="uid://bx3qbxth1ldmj" path="res://Assets/Portraits/Lysander Portrait.png" id="12_suc83"]
+[ext_resource type="Script" uid="uid://doukuxmgkagk" path="res://Scenes/UI/LysanderInteraction.gd" id="13_qldpy"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="14_31w6i"]
+[ext_resource type="Script" uid="uid://d0wh8hdqrhxx2" path="res://Scripts/TavernNoticeBoard.gd" id="14_qldpy"]
+[ext_resource type="Resource" uid="uid://bl8fighi5vacc" path="res://Resources/Music Discs/Disc_EpicTheme.tres" id="15_bvlwd"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_klcnk"]
+bg_color = Color(0, 0, 0, 1)
+
+[sub_resource type="Shader" id="Shader_lftds"]
+code = "shader_type canvas_item;
+
+uniform sampler2D noise_texture : repeat_enable;
+uniform vec2 scroll_speed = vec2(0.015, 0.01); // Speed and direction of the wind
+uniform vec4 shadow_color : source_color = vec4(0.05, 0.0, 0.1, 0.4); // Dark purpleish shadow
+uniform float cloud_coverage : hint_range(0.0, 1.0) = 0.45; // How much of the screen is covered
+uniform float softness : hint_range(0.0, 1.0) = 0.5; // Blurs the edges of the clouds
+
+void fragment() {
+    // Scroll the texture coordinates over time to simulate wind
+    vec2 scrolled_uv = UV + (scroll_speed * TIME);
+    
+    // Sample the noise texture
+    float noise_val = texture(noise_texture, scrolled_uv).r;
+    
+    // Calculate the cloud shape using smoothstep for soft, natural edges
+    float cloud_alpha = smoothstep(1.0 - cloud_coverage, (1.0 - cloud_coverage) + softness, noise_val);
+    
+    // Apply the shadow color and the calculated alpha
+    COLOR = vec4(shadow_color.rgb, shadow_color.a * cloud_alpha);
+}"
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_owt0g"]
+frequency = 0.005
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_d7ssd"]
+noise = SubResource("FastNoiseLite_owt0g")
+seamless = true
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cgyqp"]
+shader = SubResource("Shader_lftds")
+shader_parameter/noise_texture = SubResource("NoiseTexture2D_d7ssd")
+shader_parameter/scroll_speed = Vector2(-0.015, 0.01)
+shader_parameter/shadow_color = Color(0.9764706, 0.95686275, 1, 0.078431375)
+shader_parameter/cloud_coverage = 0.6150000292125
+shader_parameter/softness = 0.5
+
+[node name="GrandTavern" type="Control" unique_id=17551859]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_klcnk")
+
+[node name="TavernBackground" type="TextureRect" parent="." unique_id=982278996]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -4.0
+offset_top = -17.0
+offset_right = -4.0
+offset_bottom = -17.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_n8wlx")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RosterScroll" type="ScrollContainer" parent="." unique_id=978008466]
+layout_mode = 0
+offset_left = 135.0
+offset_top = 99.0
+offset_right = 691.0
+offset_bottom = 279.0
+
+[node name="TavernGrid" type="GridContainer" parent="RosterScroll" unique_id=150393719]
+layout_mode = 2
+columns = 8
+
+[node name="DialoguePanel" type="Panel" parent="." unique_id=1369614143]
+z_index = 4096
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -950.0
+offset_top = -238.0
+offset_right = 950.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_klcnk")
+
+[node name="LeftPortrait" type="TextureRect" parent="DialoguePanel" unique_id=1915902714]
+layout_mode = 0
+offset_left = 260.0
+offset_top = -400.0
+offset_right = 636.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RightPortrait" type="TextureRect" parent="DialoguePanel" unique_id=50524557]
+layout_mode = 0
+offset_left = 1160.0
+offset_top = -400.0
+offset_right = 1560.0
+
+[node name="SpeakerName" type="Label" parent="DialoguePanel" unique_id=2107662905]
+layout_mode = 0
+offset_left = 72.0
+offset_top = 15.0
+offset_right = 395.0
+offset_bottom = 64.0
+theme_override_colors/font_color = Color(1, 1, 0.36078432, 1)
+theme_override_font_sizes/font_size = 32
+
+[node name="DialogueText" type="RichTextLabel" parent="DialoguePanel" unique_id=501105509]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 94.0
+offset_top = 74.0
+offset_right = -229.0
+offset_bottom = -61.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/normal_font_size = 32
+
+[node name="NextButton" type="Button" parent="DialoguePanel" unique_id=1146860027]
+layout_mode = 0
+offset_left = 1701.0
+offset_top = 115.0
+offset_right = 1825.0
+offset_bottom = 178.0
+theme_override_font_sizes/font_size = 60
+text = "Next"
+
+[node name="ChoiceContainer" type="VBoxContainer" parent="DialoguePanel" unique_id=606396356]
+z_index = 1000
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.43100002
+anchor_top = 0.11000001
+anchor_right = 0.43100002
+anchor_bottom = 0.11000001
+offset_left = -18.900024
+offset_top = -426.18
+offset_right = 130.09998
+offset_bottom = -201.18001
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Choice1" type="Button" parent="DialoguePanel/ChoiceContainer" unique_id=1750949931]
+z_index = 1000
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Choice 1"
+
+[node name="Choice2" type="Button" parent="DialoguePanel/ChoiceContainer" unique_id=1621738935]
+z_index = 1000
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Choice 2"
+
+[node name="Choice3" type="Button" parent="DialoguePanel/ChoiceContainer" unique_id=1510898496]
+z_index = 1000
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Choice 2"
+
+[node name="Choice4" type="Button" parent="DialoguePanel/ChoiceContainer" unique_id=1260889602]
+z_index = 1000
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Choice 2"
+
+[node name="LeaveButton" type="Button" parent="." unique_id=1500054112]
+layout_mode = 0
+offset_left = 1824.0
+offset_top = 3.0
+offset_right = 1899.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 64
+text = "X"
+
+[node name="TavernMusic" type="AudioStreamPlayer" parent="." unique_id=510083917]
+stream = ExtResource("2_0a0uf")
+
+[node name="SelectSound" type="AudioStreamPlayer" parent="." unique_id=1613133117]
+stream = ExtResource("2_ai32n")
+
+[node name="BlipSound" type="AudioStreamPlayer" parent="." unique_id=871646531]
+stream = ExtResource("3_mk42n")
+
+[node name="CloudShadows" type="ColorRect" parent="." unique_id=1220889136]
+z_index = 4095
+material = SubResource("ShaderMaterial_cgyqp")
+layout_mode = 0
+offset_left = 1447.0
+offset_top = 674.0
+offset_right = 3338.0
+offset_bottom = 2577.0
+mouse_filter = 2
+
+[node name="SeraphinaPortrait" type="TextureButton" parent="." unique_id=1617085134]
+layout_mode = 0
+offset_left = 1638.0
+offset_top = 137.0
+offset_right = 1843.0
+offset_bottom = 336.0
+texture_normal = ExtResource("8_cgyqp")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="NoticeBoard" type="Button" parent="." unique_id=1041506110]
+layout_mode = 0
+offset_left = 1354.0
+offset_top = 323.0
+offset_right = 1822.0
+offset_bottom = 360.0
+text = "Board"
+script = ExtResource("14_qldpy")
+
+[node name="SeraphinaController" type="Node" parent="." unique_id=1218661190 node_paths=PackedStringArray("portrait_node")]
+script = ExtResource("11_8sa06")
+portrait_node = NodePath("../SeraphinaPortrait")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1121217850]
+
+[node name="campfireVFX" parent="UI" unique_id=193426360 instance=ExtResource("6_lftds")]
+position = Vector2(1217, 605)
+
+[node name="campfireVFX2" parent="UI" unique_id=1054052892 instance=ExtResource("6_lftds")]
+position = Vector2(1162, 598)
+
+[node name="FireGlow" parent="UI" unique_id=933684048 instance=ExtResource("7_owt0g")]
+position = Vector2(1192, 586)
+
+[node name="FireGlow2" parent="UI" unique_id=771650009 instance=ExtResource("7_owt0g")]
+position = Vector2(1088, 131)
+
+[node name="FireGlow3" parent="UI" unique_id=1268638707 instance=ExtResource("7_owt0g")]
+position = Vector2(982, 117)
+
+[node name="FireGlow4" parent="UI" unique_id=1472155253 instance=ExtResource("7_owt0g")]
+position = Vector2(1537, 626)
+
+[node name="FireGlow5" parent="UI" unique_id=920076896 instance=ExtResource("7_owt0g")]
+position = Vector2(1695, 468)
+
+[node name="FireGlow6" parent="UI" unique_id=1341247508 instance=ExtResource("7_owt0g")]
+position = Vector2(1783, 464)
+
+[node name="FireGlow7" parent="UI" unique_id=2026897206 instance=ExtResource("7_owt0g")]
+position = Vector2(1440, 748)
+
+[node name="FireGlow10" parent="UI" unique_id=648133010 instance=ExtResource("7_owt0g")]
+position = Vector2(784, 592)
+energy = 0.63
+
+[node name="FireGlow11" parent="UI" unique_id=1490428415 instance=ExtResource("7_owt0g")]
+position = Vector2(527, 470)
+energy = 0.63
+
+[node name="FireGlow8" parent="UI" unique_id=1290854901 instance=ExtResource("7_owt0g")]
+position = Vector2(756, 727)
+
+[node name="FireGlow12" parent="UI" unique_id=422978033 instance=ExtResource("7_owt0g")]
+position = Vector2(784, 431)
+energy = 0.6
+
+[node name="FireGlow9" parent="UI" unique_id=872648431 instance=ExtResource("7_owt0g")]
+position = Vector2(1257, 388)
+
+[node name="ChatPanel" type="Panel" parent="." unique_id=408785981]
+layout_mode = 0
+offset_left = 691.0
+offset_top = 11.0
+offset_right = 1351.0
+offset_bottom = 332.0
+script = ExtResource("11_ren3y")
+
+[node name="ChatScroll" type="ScrollContainer" parent="ChatPanel" unique_id=825315152]
+layout_mode = 0
+offset_right = 557.0
+offset_bottom = 288.0
+
+[node name="MessageList" type="VBoxContainer" parent="ChatPanel/ChatScroll" unique_id=1235233698]
+custom_minimum_size = Vector2(520, 250)
+layout_mode = 2
+
+[node name="ChatInput" type="LineEdit" parent="ChatPanel" unique_id=686160370]
+layout_mode = 0
+offset_left = 7.0
+offset_top = 290.0
+offset_right = 310.0
+offset_bottom = 316.0
+placeholder_text = "Say something to the tavern..."
+
+[node name="SendButton" type="Button" parent="ChatPanel" unique_id=516952962]
+layout_mode = 0
+offset_left = 343.0
+offset_top = 293.0
+offset_right = 383.0
+offset_bottom = 316.0
+text = "Send"
+
+[node name="PollingTimer" type="Timer" parent="ChatPanel" unique_id=784783929]
+wait_time = 6.868
+autostart = true
+
+[node name="TextureButton" type="TextureButton" parent="." unique_id=1841052685]
+layout_mode = 0
+offset_left = 1490.0
+offset_top = 108.0
+offset_right = 1644.0
+offset_bottom = 333.0
+texture_normal = ExtResource("12_suc83")
+ignore_texture_size = true
+stretch_mode = 5
+script = ExtResource("13_qldpy")
+reward_discs = Array[ExtResource("14_31w6i")]([ExtResource("15_bvlwd")])
+base_qte_speed = 2000.0
+base_sweet_spot_width = 100.0
+tier_speeds = PackedFloat32Array()
+
+[connection signal="pressed" from="SeraphinaPortrait" to="." method="_on_seraphina_portrait_pressed"]
+[connection signal="pressed" from="NoticeBoard" to="NoticeBoard" method="interact"]

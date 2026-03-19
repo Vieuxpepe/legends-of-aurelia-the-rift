@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dt0tavrs43on6"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_qnvs8"]
+
+[resource]
+script = ExtResource("1_qnvs8")
+skill_id = "archer_spd_3"
+skill_name = "Swiftness III"
+description = "Increases Speed by +2."
+required_skill_id = "archer_volley"
+grid_position = Vector2(4, 0)
+stat_to_boost = "spd"
+boost_amount = 2

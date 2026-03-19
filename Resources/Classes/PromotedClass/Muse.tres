@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://tudq6fxg0xwb"]
+
+[ext_resource type="Resource" uid="uid://c0lfujb8hbpl0" path="res://Resources/Skills/Generated/Promoted/Muse/MuseTree.tres" id="1_ir7ik"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_2pu3w"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="2_bc6cb"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="3_0a4vn"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="4_omef6"]
+
+[resource]
+script = ExtResource("2_2pu3w")
+job_name = "Muse"
+move_range = 6
+allowed_weapon_types = Array[int]([9])
+can_use_healing_staff = true
+can_use_buff_staff = true
+can_use_debuff_staff = true
+class_skill_tree = ExtResource("1_ir7ik")
+promotion_options = Array[Resource]([ExtResource("2_bc6cb"), ExtResource("3_0a4vn"), ExtResource("4_omef6")])
+promo_hp_bonus = 1
+promo_str_bonus = 0
+promo_mag_bonus = 2
+promo_def_bonus = 0
+promo_res_bonus = 2

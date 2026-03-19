@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dl1qwhv0weym3"]
+
+[ext_resource type="Resource" uid="uid://lifv7w6xb806" path="res://Resources/Classes/Cleric.tres" id="1_5cbul"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_xhu7j"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_jwbri"]
+[ext_resource type="Resource" uid="uid://c27610kgm0tlq" path="res://Resources/GeneratedItems/Weapon_Prism_Tome.tres" id="4_kvtrq"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_ocakb"]
+
+[resource]
+script = ExtResource("3_jwbri")
+display_name = "Censer Cleric"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_5cbul")
+starting_weapon = ExtResource("4_kvtrq")
+max_hp = 18
+strength = 0
+magic = 8
+resistance = 6
+speed = 4
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

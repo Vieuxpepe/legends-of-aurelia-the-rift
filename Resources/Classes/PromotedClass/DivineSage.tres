@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://ddhvvub1fy7ex"]
+
+[ext_resource type="Resource" uid="uid://bkoq22vqag8fw" path="res://Resources/Skills/Generated/Promoted/DivineSage/DivineSageTree.tres" id="1_67w3x"]
+[ext_resource type="Texture2D" uid="uid://dyvovuygb8rln" path="res://Assets/Sprites/Promoted Battle Sprites/Divine Sage.png" id="1_t26xl"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_67w3x"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_x6b0l"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_nu5ys"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_ri8lw"]
+
+[resource]
+script = ExtResource("2_67w3x")
+job_name = "Divine Sage"
+allowed_weapon_types = Array[int]([4])
+can_use_healing_staff = true
+can_use_buff_staff = true
+can_use_debuff_staff = true
+class_skill_tree = ExtResource("1_67w3x")
+promotion_options = Array[Resource]([ExtResource("3_x6b0l"), ExtResource("4_nu5ys"), ExtResource("5_ri8lw")])
+promoted_battle_sprite = ExtResource("1_t26xl")
+promo_str_bonus = 0
+promo_mag_bonus = 2
+promo_res_bonus = 2
+promo_spd_bonus = 0
+promo_agi_bonus = 0
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

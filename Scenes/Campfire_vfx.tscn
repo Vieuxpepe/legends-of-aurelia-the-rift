@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://b26dbn8pt35pi"]
+
+[sub_resource type="Curve" id="Curve_qijw8"]
+_data = [Vector2(0.0026737936, 0.026014686), 0.0, 0.0, 0, 0, Vector2(0.54812837, 0.6550469), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_dtrl6"]
+offsets = PackedFloat32Array(0, 0.47988507, 0.75574714, 0.9741379)
+colors = PackedColorArray(0, 0, 0, 1, 0.47988507, 0.47988507, 0.47988507, 1, 0.13333334, 0.13333334, 0.13333334, 1, 0, 0, 0, 0)
+
+[sub_resource type="Gradient" id="Gradient_afjx2"]
+offsets = PackedFloat32Array(0, 0.5086207, 1)
+colors = PackedColorArray(1, 0.9019608, 0, 1, 1, 0.3019608, 0, 1, 1, 1, 1, 0)
+
+[node name="campfireVFX" type="Node2D" unique_id=193426360]
+z_index = 50
+
+[node name="DarkSmoke" type="CPUParticles2D" parent="." unique_id=927873366]
+amount = 400
+lifetime = 4.0
+preprocess = 4.0
+emission_shape = 3
+emission_rect_extents = Vector2(30, 10)
+direction = Vector2(0, 0)
+spread = 64.41
+gravity = Vector2(0, -20)
+initial_velocity_max = 10.0
+scale_amount_min = 6.0
+scale_amount_max = 18.0
+scale_amount_curve = SubResource("Curve_qijw8")
+color_ramp = SubResource("Gradient_dtrl6")
+
+[node name="Sparks" type="CPUParticles2D" parent="." unique_id=1535717358]
+amount = 15
+lifetime = 0.78
+preprocess = 2.0
+lifetime_randomness = 0.34
+emission_shape = 3
+emission_rect_extents = Vector2(20, 5)
+gravity = Vector2(0, -120)
+initial_velocity_min = 2.4
+initial_velocity_max = 139.05
+scale_amount_min = 2.0
+scale_amount_max = 3.0
+color_ramp = SubResource("Gradient_afjx2")

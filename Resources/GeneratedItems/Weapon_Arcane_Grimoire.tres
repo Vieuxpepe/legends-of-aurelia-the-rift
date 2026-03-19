@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b6or84k5hkngk"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_jehit"]
+
+[resource]
+script = ExtResource("1_jehit")
+rarity = "Uncommon"
+description = "A compact grimoire for educated battlefield mages."
+weapon_name = "Arcane Grimoire"
+gold_cost = 980
+damage_type = 1
+weapon_type = 4
+affected_stat = "magic"
+effect_amount = 0
+might = 6
+hit_bonus = 10
+max_range = 2
+max_durability = 34
+current_durability = 34

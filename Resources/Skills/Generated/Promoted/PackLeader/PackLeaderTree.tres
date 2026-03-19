@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://7k2jthmw67q6"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_x33fn"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_3olem"]
+[ext_resource type="Resource" uid="uid://dm4ociev3diit" path="res://Resources/Skills/Generated/Promoted/PackLeader/Skill_pl_str_1.tres" id="3_q3ehg"]
+[ext_resource type="Resource" uid="uid://kchfwkqckgg2" path="res://Resources/Skills/Generated/Promoted/PackLeader/Skill_pl_spd_1.tres" id="4_hrd1d"]
+[ext_resource type="Resource" uid="uid://biecoq8meuq7q" path="res://Resources/Skills/Generated/Promoted/PackLeader/Skill_pl_agi_1.tres" id="5_bml7t"]
+[ext_resource type="Resource" uid="uid://0pu43mxkcmdc" path="res://Resources/Skills/Generated/Promoted/PackLeader/Skill_pl_hp_1.tres" id="6_7o7u5"]
+[ext_resource type="Resource" uid="uid://iefxs45rqxob" path="res://Resources/Skills/Generated/Promoted/PackLeader/Skill_pl_mastery.tres" id="7_4ldn4"]
+
+[resource]
+script = ExtResource("1_x33fn")
+tree_name = "PackLeader Tree"
+skills = Array[ExtResource("2_3olem")]([ExtResource("3_q3ehg"), ExtResource("4_hrd1d"), ExtResource("5_bml7t"), ExtResource("6_7o7u5"), ExtResource("7_4ldn4")])

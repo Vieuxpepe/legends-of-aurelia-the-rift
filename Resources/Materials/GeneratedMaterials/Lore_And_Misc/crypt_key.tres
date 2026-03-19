@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://d2kkq73wxfhke"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_kg11v"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_gmnxf"]
+
+[resource]
+script = ExtResource("2_gmnxf")
+rarity = "Rare"
+item_name = "Crypt Key"
+description = "A long iron key etched with funerary marks and black wax residue. It opens no common lock and fits nowhere innocent."
+gold_cost = 76
+icon = ExtResource("1_kg11v")
+category = "Lore_And_Misc"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cnwd0r4rc4r4x"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_0hu5i"]
+
+[resource]
+script = ExtResource("1_0hu5i")
+skill_id = "flier_charge"
+skill_name = "Sky Charge"
+description = "Unlocks Charge for a fast diving assault."
+required_skill_id = "flier_str_2"
+grid_position = Vector2(3, -1)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Charge"

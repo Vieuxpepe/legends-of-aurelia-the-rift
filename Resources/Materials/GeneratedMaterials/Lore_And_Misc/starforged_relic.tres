@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cyjsivdmf0bwn"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_vsu6h"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_hdw86"]
+
+[resource]
+script = ExtResource("2_hdw86")
+rarity = "Legendary"
+item_name = "Starforged Relic"
+description = "A broken fragment of metal not born from any earthly vein, smooth and dark with points of captive light. It hums softly when night falls and old things wake."
+gold_cost = 690
+icon = ExtResource("1_vsu6h")
+category = "Lore_And_Misc"

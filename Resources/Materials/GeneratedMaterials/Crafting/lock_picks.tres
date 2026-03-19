@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://feglsf535mlu"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_hssdb"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_s5c1c"]
+
+[resource]
+script = ExtResource("2_s5c1c")
+rarity = "Uncommon"
+item_name = "Lock Picks"
+description = "A wrap of thin steel tools tucked in waxed leather. Delicate little instruments meant for quiet entries and bad manners."
+gold_cost = 35
+icon = ExtResource("1_hssdb")
+category = "Crafting"

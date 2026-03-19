@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://d14ws3ckfm156"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_a8m47"]
+
+[resource]
+script = ExtResource("1_a8m47")
+description = "A small axe meant for chopping wood."
+weapon_name = "Hatchet"
+gold_cost = 280
+weapon_type = 2
+effect_amount = 0
+hit_bonus = 8
+max_durability = 37
+current_durability = 37

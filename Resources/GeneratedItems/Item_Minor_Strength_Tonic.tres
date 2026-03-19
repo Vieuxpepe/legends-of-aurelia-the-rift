@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://lp3hi7ag01vf"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_5hn4y"]
+
+[resource]
+script = ExtResource("1_5hn4y")
+description = "Grants +1 strength for the next battle."
+item_name = "Minor Strength Tonic"
+heal_amount = 0
+gold_cost = 120
+str_boost = 1

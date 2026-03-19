@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://lg5dre6peod7"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_bn74u"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_bycfx"]
+
+[resource]
+script = ExtResource("2_bycfx")
+rarity = "Rare"
+item_name = "Weeping Lily"
+description = "A marsh flower with translucent petals gathered from ritual pools in the Weeping Marsh. The stem leaks saline droplets said to carry the sorrow of bound spirits."
+gold_cost = 99
+icon = ExtResource("1_bn74u")
+category = "Lore_And_Misc"

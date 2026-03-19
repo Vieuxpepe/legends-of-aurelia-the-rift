@@ -1,0 +1,101 @@
+[gd_scene format=3 uid="uid://d10qv6ttwr4ly"]
+
+[ext_resource type="Script" uid="uid://cceglbna4248y" path="res://world_map.gd" id="1_jvasx"]
+[ext_resource type="Texture2D" uid="uid://bxp016a0ihc1m" path="res://Scenes/UI/World Map.png" id="2_43vb4"]
+[ext_resource type="AudioStream" uid="uid://bsvo7ydr6gwr0" path="res://SoundEffects/Music/World map music.mp3" id="2_rktdp"]
+[ext_resource type="AudioStream" uid="uid://ca7i7yddc72fx" path="res://SoundEffects/Music/Camp Music.wav" id="3_e7ioy"]
+[ext_resource type="Texture2D" uid="uid://chperuk86553l" path="res://Scenes/UI/image-removebg-preview (72).png" id="3_wwjcs"]
+[ext_resource type="Texture2D" uid="uid://dqsmf6p45l8v" path="res://Scenes/UI/image-removebg-preview (74).png" id="4_3qp1y"]
+[ext_resource type="Texture2D" uid="uid://cwbtpvxwiu1fg" path="res://Scenes/UI/image-removebg-preview (66).png" id="4_onk3u"]
+[ext_resource type="Texture2D" uid="uid://fp36a07x734c" path="res://Scenes/UI/image-removebg-preview (73).png" id="5_rktdp"]
+[ext_resource type="Texture2D" uid="uid://27vkatsvqy6t" path="res://Scenes/UI/image-removebg-preview (68).png" id="5_y0l24"]
+[ext_resource type="Texture2D" uid="uid://4yr4dpm13uv6" path="res://Scenes/UI/image-removebg-preview (67).png" id="6_6nmm6"]
+[ext_resource type="Texture2D" uid="uid://dx6bci8abks2k" path="res://Scenes/UI/image-removebg-preview (69).png" id="7_lvy74"]
+[ext_resource type="Texture2D" uid="uid://urvc4po4krx1" path="res://Scenes/UI/image-removebg-preview (71).png" id="8_77xpn"]
+[ext_resource type="Texture2D" uid="uid://bp2tncgukbtd6" path="res://Scenes/UI/image-removebg-preview (70).png" id="9_bwrcc"]
+[ext_resource type="Texture2D" uid="uid://bel0qvgthacg3" path="res://Scenes/UI/Shattered Sanctum Button.png" id="10_3qp1y"]
+[ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="15_f0ir8"]
+
+[node name="WorldMap" type="Node2D" unique_id=601850729]
+script = ExtResource("1_jvasx")
+music_track = ExtResource("2_rktdp")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=248743043]
+offset_right = 1956.0
+offset_bottom = 1031.0
+texture = ExtResource("2_43vb4")
+
+[node name="PlayerIcon" type="Sprite2D" parent="." unique_id=726160311]
+
+[node name="MapMusic" type="AudioStreamPlayer" parent="." unique_id=481531211]
+stream = ExtResource("3_e7ioy")
+
+[node name="MapNodes" type="Node" parent="." unique_id=1548907971]
+
+[node name="LevelNode3" type="TextureButton" parent="MapNodes" unique_id=1167058540]
+offset_left = 527.0
+offset_top = 376.0
+offset_right = 729.0
+offset_bottom = 477.0
+texture_normal = ExtResource("7_lvy74")
+texture_pressed = ExtResource("8_77xpn")
+texture_hover = ExtResource("9_bwrcc")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="LevelNode2" type="TextureButton" parent="MapNodes" unique_id=1431701979]
+offset_left = 727.0
+offset_top = 376.0
+offset_right = 929.0
+offset_bottom = 477.0
+texture_normal = ExtResource("10_3qp1y")
+texture_pressed = ExtResource("10_3qp1y")
+texture_hover = ExtResource("10_3qp1y")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="LevelNode1" type="TextureButton" parent="MapNodes" unique_id=839137790]
+offset_left = 527.0
+offset_top = 376.0
+offset_right = 729.0
+offset_bottom = 477.0
+texture_normal = ExtResource("7_lvy74")
+texture_pressed = ExtResource("8_77xpn")
+texture_hover = ExtResource("9_bwrcc")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="LevelNode0" type="TextureButton" parent="MapNodes" unique_id=1626507423]
+offset_left = 343.0
+offset_top = 579.0
+offset_right = 582.0
+offset_bottom = 685.0
+texture_normal = ExtResource("4_onk3u")
+texture_pressed = ExtResource("5_y0l24")
+texture_hover = ExtResource("6_6nmm6")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="UI" type="Node" parent="." unique_id=1957928369]
+
+[node name="CampButton" type="TextureButton" parent="UI" unique_id=1555680871]
+offset_left = 1530.0
+offset_top = 767.0
+offset_right = 1862.0
+offset_bottom = 953.0
+texture_normal = ExtResource("3_wwjcs")
+texture_pressed = ExtResource("4_3qp1y")
+texture_hover = ExtResource("5_rktdp")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="CityButton" type="Button" parent="UI" unique_id=114155319]
+offset_left = 1580.0
+offset_top = 689.0
+offset_right = 1795.0
+offset_bottom = 741.0
+theme_override_font_sizes/font_size = 48
+text = "Enter City"
+
+[node name="TextBlipSound" type="AudioStreamPlayer" parent="." unique_id=1620145478]
+stream = ExtResource("15_f0ir8")

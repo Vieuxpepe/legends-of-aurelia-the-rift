@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://betg8t78jymdx"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_trr8g"]
+
+[resource]
+script = ExtResource("1_trr8g")
+rarity = "Uncommon"
+item_name = "Recipe: Knight's Halberd"
+description = "Blueprint for forging a Knight's Halberd."
+gold_cost = 220

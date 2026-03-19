@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://qk2kyj5ylfb3"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_olp11"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_jptu7"]
+
+[resource]
+script = ExtResource("2_jptu7")
+rarity = "Epic"
+item_name = "Luminous Ledger"
+description = "A hidden account book maintained for the Luminous Table of the Vharian Merchant League. Every page ties respectable merchants to war profiteering, embargo fraud, and relic trafficking."
+gold_cost = 287
+icon = ExtResource("1_olp11")
+category = "Lore_And_Misc"

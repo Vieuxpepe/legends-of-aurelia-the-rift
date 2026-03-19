@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://bxfb4nk1qwi1b"]
+
+[ext_resource type="Resource" uid="uid://dcylueaaiejtm" path="res://Resources/Skills/Generated/Ascended/DawnExalt/DawnExaltTree.tres" id="1_x50ne"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_xbiqe"]
+
+[resource]
+script = ExtResource("2_xbiqe")
+job_name = "Dawn Exalt"
+move_range = 6
+allowed_weapon_types = Array[int]([0, 4])
+can_use_healing_staff = true
+can_use_buff_staff = true
+can_use_debuff_staff = true
+class_skill_tree = ExtResource("1_x50ne")
+promo_hp_bonus = 3
+promo_mag_bonus = 3
+promo_res_bonus = 3
+promo_agi_bonus = 2
+hp_bonus = 4
+str_bonus = 1
+def_bonus = 1
+spd_bonus = 1
+agi_bonus = 2
+mag_bonus = 4
+res_bonus = 4
+hp_growth_bonus = 5
+spd_growth_bonus = 5
+agi_growth_bonus = 5
+mag_growth_bonus = 10
+res_growth_bonus = 10

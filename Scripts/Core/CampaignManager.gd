@@ -1,0 +1,2876 @@
+# ============================================================================
+# 🤖 AI & DEVELOPER CHEAT SHEET: HOW TO ADD A NEW LEVEL 🤖
+# ============================================================================
+# This game uses a dual-transition array system to seamlessly route the player:
+# [BATTLE WIN] -> [POST-BATTLE TRANSITION] -> [CAMP] -> [PRE-BATTLE TRANSITION] -> [NEXT BATTLE]
+#
+# To add a new level (e.g., Level 4), follow these 4 steps EXACTLY:
+#
+# STEP 1: CREATE THE SCENES
+#   - Create the map: `res://Scenes/Levels/Level4.tscn`
+#   - Create the intro story: `res://Scenes/Transition4_Intro.tscn` (Pre-Battle)
+#   - Create the outro story: `res://Scenes/Transition4_Outro.tscn` (Post-Battle)
+#
+# STEP 2: UPDATE ARRAYS IN THIS SCRIPT (CampaignManager.gd)
+#   - Add the level to `campaign_levels`
+#   - Add the intro to `pre_battle_transitions` (Leave as "" if no intro exists)
+#   - Add the outro to `post_battle_transitions` (Use "res://Scenes/camp_menu.tscn" to go straight to camp)
+#   * IMPORTANT: The indices MUST match! Index 0 = Level 1, Index 1 = Level 2, etc.
+#
+# STEP 3: WORLD MAP PROGRESSION (Optional)
+#   - The linear "Story -> Camp -> Story" phase ends when `max_unlocked_index >= 2` (Level 3).
+#   - After that, the Camp Menu "Next Battle" button automatically opens the World Map.
+#   - To add a node to the World Map, update `WorldMap.gd` and point the new map pin to the correct Index.
+#
+# STEP 4: ADD LORE/SHOP TWEAKS (Optional)
+#   - In `Camp_menu.gd`, you can add new dialogue to `blacksmith_monologues` 
+#     and set its `unlock_level` to match the new map index!
+# ============================================================================
+# RESPONSIBILITY CLUSTERS (for audit): player settings | campaign progression |
+# roster/inventory | world map & base | encounter flags | jukebox/playlists |
+# NPC relationships (Seraphina + legacy) | merchant/crafting | arena state |
+# structures/deployment | dragons (Morgra). Save/load/reset symmetry: see save_data
+# in save_game(), load_game(), and reset_campaign_data().
+# ============================================================================
+
+extends Node
+
+const SETTINGS_FILE_PATH: String = "user://settings.cfg"
+const CAMP_PAIR_SCENE_DB = preload("res://Scripts/Narrative/CampPairSceneDB.gd")
+
+# --- GLOBAL PLAYER SETTINGS (runtime cache; persisted separately from campaign saves) ---
+var audio_master_volume: float = 1.0
+
+# KEEP your existing vars:
+# var camera_pan_speed: float = 600.0
+# var unit_move_speed: float = 0.15
+
+var battle_follow_enemy_camera: bool = true
+var battle_show_danger_zone_default: bool = false
+var battle_show_minimap_default: bool = false
+var battle_minimap_opacity: float = 0.90
+
+var battle_zoom_step: float = 0.10
+var battle_min_zoom: float = 0.60
+var battle_max_zoom: float = 2.20
+var battle_zoom_to_cursor: bool = true
+var battle_edge_margin: int = 50
+
+var battle_show_grid: bool = true
+var battle_show_enemy_threat: bool = true
+var battle_show_faction_tiles: bool = true
+var battle_show_path_preview: bool = true
+var battle_path_preview_pulse: bool = true
+var battle_show_log: bool = true
+
+# Important: this is a PLAYER OVERRIDE.
+# It should only be able to DISABLE fog on maps that use it,
+# not force fog onto maps that were not designed for it.
+var battle_allow_fog_of_war: bool = true
+
+var arena_mmr: int = 1000
+
+# --- ANTI-EXPLOIT REWARD TRACKER ---
+var claimed_rank_rewards: Array = []
+var support_bonds: Dictionary = {}
+# Relationship Web V1: key = get_support_key(name_a, name_b), value = { trust, rivalry, mentorship, fear } (ints 0..100). Grief is battle-local only.
+var relationship_web: Dictionary = {}
+
+var morgra_favorite_dragon_uid: String = ""
+var morgra_anger_duration: int = 0
+var morgra_neutral_duration: int = 0
+var morgra_favorite_survived_battles: int = 0
+
+func get_save_path(slot: int, is_auto: bool = false) -> String:
+	if is_auto:
+		return "user://auto_save_" + str(slot) + ".dat"
+	return "user://save_slot_" + str(slot) + ".dat"
+
+# --- NPC RELATIONSHIP STATE ---
+# Generic persistent relationship store for narrative NPCs.
+# Seraphina uses a multi-axis model:
+#   - affection
+#   - trust
+#   - professionalism
+#
+# The three legacy Seraphina variables are kept as compatibility properties so
+# older scripts can continue to read/write them during the transition.
+var npc_relationships: Dictionary = {}
+var camp_time_of_day: String = "evening"
+var current_camp_mood: String = "normal"
+
+# Purpose: Defines the resource 'flavor' for each map node.
+# Values are multipliers or base ranges for passive collection.
+var base_yield_table: Dictionary = {
+	0: {"name": "Evergreen Forest", "wood": "High", "iron": "Low", "gold": "Medium"},
+	1: {"name": "Ironcrest Mines", "wood": "Low", "iron": "High", "gold": "Low"},
+	2: {"name": "Trade Hub Outskirts", "wood": "Medium", "iron": "Medium", "gold": "High"},
+	3: {"name": "Cursed Marshes", "wood": "Medium", "iron": "Low", "gold": "Very High"}
+}
+
+var _suppress_seraphina_legacy_sync: bool = false
+var _legacy_seraphina_disposition: int = 0
+var _legacy_seraphina_romance_rank: int = 0
+var _legacy_seraphina_met_today: bool = false
+
+var seraphina_disposition: int:
+	get:
+		return _legacy_seraphina_disposition
+	set(value):
+		_legacy_seraphina_disposition = value
+		if not _suppress_seraphina_legacy_sync:
+			_apply_legacy_seraphina_to_relationship_state()
+
+var seraphina_romance_rank: int:
+	get:
+		return _legacy_seraphina_romance_rank
+	set(value):
+		_legacy_seraphina_romance_rank = value
+		if not _suppress_seraphina_legacy_sync:
+			_apply_legacy_seraphina_to_relationship_state()
+
+var seraphina_met_today: bool:
+	get:
+		return _legacy_seraphina_met_today
+	set(value):
+		_legacy_seraphina_met_today = value
+		if not _suppress_seraphina_legacy_sync:
+			_apply_legacy_seraphina_to_relationship_state()
+
+# --- CAMPAIGN STATE ---
+var custom_avatar: Dictionary = {}
+var player_roster: Array[Dictionary] = []
+var active_save_slot: int = -1
+var global_gold: int = 0
+var global_fame: int = 0
+var global_inventory: Array[Resource] = []
+
+# --- CAMP PERSISTENCE ---
+var camp_shop_stock: Array[Resource] = []
+var camp_discount_item: Resource = null
+var camp_has_haggled: bool = false
+var blacksmith_unlocked: bool = false
+
+# --- WORLD MAP & PROGRESSION ---
+var current_level_index: int = 0
+var max_unlocked_index: int = 0
+var is_skirmish_mode: bool = false
+
+# --- ENCOUNTER MEMORY (chained events / remembered consequences) ---
+# Persistent flags set/cleared by world-map encounters; used for selection and option/result variants.
+var encounter_flags: Dictionary = {}
+
+# --- SCAVENGER CLAIM HISTORY (correctness: prevent re-claim after refresh/reload) ---
+# score_id -> total quantity already claimed by this player for that score. Persisted in save.
+var claimed_scavenger_scores: Dictionary = {}
+
+# --- BASE MANAGEMENT ---
+# Purpose: Tracks the status, location, and economy of the player's single forward operating base.
+var active_base_level_index: int = -1
+var base_resource_storage: Dictionary = {"wood": 0, "iron": 0, "gold": 0}
+var base_under_attack: bool = false
+
+var base_last_harvest_report: Dictionary = {}
+
+# Hijack Flag: Set to true when entering a map specifically to defend the base.
+# The level script will read this and delete narrative objectives.
+var is_base_defense_active: bool = false
+
+var camera_pan_speed: float = 600.0
+var unit_move_speed: float = 0.15
+var merchant_reputation: int = 0
+
+var merchant_quests_completed: int = 0
+var merchant_quest_active: bool = false
+var merchant_quest_item_name: String = ""
+var merchant_quest_target_amount: int = 0
+var merchant_quest_reward: int = 0
+
+# --- CAMP REQUESTS (Explore Camp v1) ---
+var camp_request_status: String = ""
+var camp_request_giver_name: String = ""
+var camp_request_type: String = ""
+var camp_request_title: String = ""
+var camp_request_description: String = ""
+var camp_request_target_name: String = ""
+var camp_request_target_amount: int = 0
+var camp_request_progress: int = 0
+var camp_request_reward_gold: int = 0
+var camp_request_reward_affinity: int = 0
+var camp_request_payload: Dictionary = {}
+var camp_requests_completed: int = 0
+# Level-cleared-based pacing: increments only on successful story level completion (load_next_level).
+var camp_request_progress_level: int = 0
+# unit_name -> level threshold; giver eligible when camp_request_progress_level >= threshold. No entry = eligible.
+var camp_request_unit_next_eligible_level: Dictionary = {}
+var camp_request_recent_givers: Array = []
+var camp_requests_completed_by_unit: Dictionary = {}
+
+# --- AVATAR-TO-UNIT RELATIONSHIP (lightweight; foundation for real quests, support scenes, camp trust gates) ---
+# key = unit_name (String), value = { score, requests_completed, branching_successes, branching_failures, last_change, last_reason }
+# Score 0–100. Tier derived from score (stranger / known / trusted / close / bonded). Save/load safe; missing unit = safe defaults.
+var avatar_relationship_by_unit: Dictionary = {}
+
+# --- PERSONAL QUEST / PROGRESSION (relationship-gated; one-at-a-time with camp requests) ---
+# Foundation for deeper personal quests, support-style scenes, trust-gated camp interactions.
+# key = unit_name, value = { unlocked, active, completed, last_offered_at_score, seen_unlock_scene }.
+# Used now: active (set/clear on accept/clear/turn-in), completed (set on turn-in). Reserved for future: unlocked, last_offered_at_score, seen_unlock_scene.
+var personal_quest_state_by_unit: Dictionary = {}
+
+# --- SPECIAL CAMP SCENES SEEN (one-time trusted/close scenes) ---
+# key = "unit_name|tier" (e.g. "Liora|trusted"), value = true when one_time scene was shown.
+var special_camp_scenes_seen: Dictionary = {}
+
+# --- BASE RESOURCE PREFABS ---
+var wood_item_path: String = "res://Resources/Materials/Wooden Plank.tres"
+var iron_item_path: String = "res://Resources/GeneratedItems/Mat_Iron_Ore.tres"
+
+# --- CRAFTING UNLOCKS ---
+var has_recipe_book: bool = false
+var has_smelter: bool = false
+var unlocked_recipes: Array[String] = []
+
+var unlocked_music_paths: Array[String] = []
+
+# --- JUKEBOX PERSISTENT STATE (playlists + last session) ---
+# saved_music_playlists: playlist_name -> Array of track path strings (save-friendly).
+var saved_music_playlists: Dictionary = {}
+var jukebox_volume_db: float = 0.0
+var jukebox_last_mode: String = "default"
+var jukebox_last_track_path: String = ""
+var jukebox_last_playlist_name: String = ""
+var favorite_music_paths: Array[String] = []
+
+# --- ARENA STREAK & TOKENS (session/campaign; not in save_data — ArenaManager/SilentWolf may hold authoritative state) ---
+var arena_win_streak: int = 0
+var arena_best_win_streak: int = 0
+var gladiator_tokens: int = 0
+
+# --- Camp lore (one-time optional camp conversations) ---
+var seen_camp_lore: Dictionary = {}
+
+# --- Camp pair scenes (one-time paired camp interactions) ---
+var seen_camp_pair_scenes: Dictionary = {}
+
+# --- Camp memory (lightweight persistent social consequences) ---
+var camp_memory: Dictionary = {}
+var camp_unit_condition: Dictionary = {}
+var camp_condition_last_applied_progress_level: int = -1
+
+# --- NEW: ANTI-EXPLOIT SHOP CACHE ---
+var active_shop_inventory: Array[Resource] = []
+
+var campaign_levels: Array[String] = [
+	"res://Scenes/Levels/Level1.tscn",
+	"res://Scenes/Levels/Level2.tscn", # Index 1
+	"res://Scenes/Levels/Level3.tscn"  # Index 2
+]
+
+# --- NARRATIVE TRANSITIONS ---
+
+# 1. Plays when leaving Camp/World Map to start a new level
+var pre_battle_transitions: Array[String] = [
+	"",                              # Before Map 1
+	"res://Scenes/Transition2.tscn", # Before Map 2
+	"res://Scenes/Transition3.tscn"  # Before Map 3
+]
+
+# 2. Plays immediately after clicking "Continue" on the Victory Screen
+var post_battle_transitions: Array[String] = [
+	"res://Scenes/camp_transition.tscn", # After Map 1
+	"res://Scenes/camp_menu.tscn",       # After Map 2
+	"res://Scenes/camp_menu.tscn"        # After Map 3
+]
+
+enum Difficulty { NORMAL, HARD, MADDENING }
+var current_difficulty: Difficulty = Difficulty.NORMAL
+
+# The master inventory of placeable structures
+var player_structures: Array[Dictionary] = [
+	{
+		"name": "Wooden Crate",
+		"type": "barricade",
+		"count": 3,
+		"scene_path": "res://Resources/Destructibles/DestructibleCrate.tscn"
+	},
+	{
+		"name": "Portable Fort",
+		"type": "fortress",
+		"count": 2,
+		"scene_path": "res://Scenes/PortableFortress.tscn"
+	},
+	{
+		"name": "Mercenary Tent",
+		"type": "spawner",
+		"count": 1,
+		"scene_path": "res://Scenes/MercenaryTent.tscn"
+	}
+]
+
+func _reset_player_structures() -> void:
+	player_structures = [
+		{
+			"name": "Wooden Crate",
+			"type": "barricade",
+			"count": 3,
+			"scene_path": "res://Resources/Destructibles/DestructibleCrate.tscn"
+		},
+		{
+			"name": "Portable Fort",
+			"type": "fortress",
+			"count": 2,
+			"scene_path": "res://Scenes/PortableFortress.tscn"
+		},
+		{
+			"name": "Mercenary Tent",
+			"type": "spawner",
+			"count": 1,
+			"scene_path": "res://Scenes/MercenaryTent.tscn"
+		}
+	]
+
+func get_arena_gold_multiplier() -> float:
+	var bonus_steps: int = max(0, arena_win_streak - 1) 
+	return min(1.0 + (float(bonus_steps) * 0.20), 2.0) 
+
+func record_arena_win(base_gold: int = 150) -> Dictionary:
+	arena_win_streak += 1
+	arena_best_win_streak = max(arena_best_win_streak, arena_win_streak)
+
+	var multiplier: float = get_arena_gold_multiplier() 
+	var gold_reward: int = int(round(float(base_gold) * multiplier)) 
+	var token_reward: int = 1 + int(floor(float(arena_win_streak - 1) / 2.0)) 
+
+	global_gold += gold_reward
+	gladiator_tokens += token_reward
+
+	return {
+		"streak": arena_win_streak,
+		"multiplier": multiplier,
+		"gold": gold_reward,
+		"tokens": token_reward
+	}
+
+func record_arena_loss() -> void:
+	arena_win_streak = 0
+
+func _normalize_camp_mood(value: String) -> String:
+	var mood: String = str(value).strip_edges().to_lower()
+	if mood in ["normal", "hopeful", "tense", "somber"]:
+		return mood
+	return "normal"
+
+func get_current_camp_mood() -> String:
+	current_camp_mood = _normalize_camp_mood(current_camp_mood)
+	return current_camp_mood
+
+func set_current_camp_mood(mood: String) -> void:
+	current_camp_mood = _normalize_camp_mood(mood)
+
+func _encounter_flags_match_any(tokens: Array[String]) -> bool:
+	if encounter_flags.is_empty() or tokens.is_empty():
+		return false
+	for k in encounter_flags.keys():
+		if not bool(encounter_flags.get(k, false)):
+			continue
+		var key: String = str(k).strip_edges().to_lower()
+		if key.is_empty():
+			continue
+		for token in tokens:
+			var t: String = str(token).strip_edges().to_lower()
+			if t != "" and key.find(t) >= 0:
+				return true
+	return false
+
+func _resolve_chapter_tone_fallback() -> String:
+	var lvl: int = maxi(1, int(camp_request_progress_level) + 1)
+	match lvl:
+		1:
+			return "somber"
+		2, 3:
+			return "tense"
+		6:
+			return "hopeful"
+		7:
+			return "tense"
+		10:
+			return "tense"
+		11:
+			return "normal"
+		14:
+			return "tense"
+		15:
+			return "somber"
+		17, 18:
+			return "tense"
+		19:
+			return "somber"
+		20:
+			if _encounter_flags_match_any(["sacrifice", "grief", "mourning", "loss"]):
+				return "somber"
+			return "hopeful"
+		_:
+			return "normal"
+
+func resolve_auto_camp_mood() -> String:
+	var status: String = str(camp_request_status).strip_edges().to_lower()
+	if status == "failed":
+		return "somber"
+	if is_base_defense_active:
+		return "tense"
+
+	if _encounter_flags_match_any(["catastrophe", "collapse", "betray", "ambush", "haunted", "void", "ritual_fail", "grief"]):
+		return "somber"
+	if _encounter_flags_match_any(["siege", "retreat", "crisis", "threat", "storm", "judgment", "trial", "assassin", "war"]):
+		return "tense"
+	if _encounter_flags_match_any(["hub", "greyspire", "coalition", "alliance", "festival", "secured", "victory", "relief"]):
+		return "hopeful"
+
+	if global_fame <= -5:
+		return "somber"
+	if global_fame >= 20 and int(camp_request_progress_level) >= 5:
+		return "hopeful"
+
+	return _resolve_chapter_tone_fallback()
+
+func reset_campaign_data() -> void:
+	player_roster.clear()
+	global_inventory.clear()
+	global_gold = 0
+	global_fame = 0
+	merchant_reputation = 0
+	current_level_index = 0
+	max_unlocked_index = 0
+	is_skirmish_mode = false
+	encounter_flags.clear()
+	claimed_scavenger_scores.clear()
+	seen_camp_lore.clear()
+	seen_camp_pair_scenes.clear()
+	camp_memory.clear()
+	camp_unit_condition.clear()
+	camp_condition_last_applied_progress_level = -1
+	merchant_quests_completed = 0
+	merchant_quest_active = false
+	merchant_quest_item_name = ""
+	merchant_quest_target_amount = 0
+	merchant_quest_reward = 0
+	camp_request_status = ""
+	camp_request_giver_name = ""
+	camp_request_type = ""
+	camp_request_title = ""
+	camp_request_description = ""
+	camp_request_target_name = ""
+	camp_request_target_amount = 0
+	camp_request_progress = 0
+	camp_request_reward_gold = 0
+	camp_request_reward_affinity = 0
+	camp_request_payload = {}
+	camp_requests_completed = 0
+	camp_request_progress_level = 0
+	camp_request_unit_next_eligible_level = {}
+	camp_request_recent_givers = []
+	camp_requests_completed_by_unit = {}
+	personal_quest_state_by_unit.clear()
+	special_camp_scenes_seen.clear()
+	support_bonds.clear()
+	relationship_web.clear()
+	claimed_rank_rewards.clear()
+	blacksmith_unlocked = false
+	has_recipe_book = false
+	has_smelter = false
+	unlocked_recipes.clear()
+	unlocked_music_paths.clear()
+	saved_music_playlists.clear()
+	jukebox_last_mode = "default"
+	jukebox_last_track_path = ""
+	jukebox_last_playlist_name = ""
+	favorite_music_paths.clear()
+	DragonManager.player_dragons.clear()
+	active_shop_inventory.clear()
+	base_last_harvest_report.clear()
+	npc_relationships.clear()
+	camp_time_of_day = "evening"
+	current_camp_mood = "normal"
+	morgra_favorite_dragon_uid = ""
+	morgra_anger_duration = 0
+	morgra_neutral_duration = 0
+	morgra_favorite_survived_battles = 0
+	
+	ensure_seraphina_state()
+	_sync_seraphina_legacy_from_relationship_state()
+	ensure_camp_memory()
+
+	_reset_player_structures()
+	reset_camp_shop()
+	
+	# --- RESET BASE MANAGEMENT ---
+	active_base_level_index = -1
+	base_resource_storage = {"wood": 0, "iron": 0, "gold": 0}
+	base_under_attack = false
+	is_base_defense_active = false
+
+	current_difficulty = Difficulty.NORMAL
+
+	custom_avatar.clear()
+
+	print("Campaign RAM successfully wiped for a fresh start.")
+			
+func reset_camp_shop() -> void:
+	camp_shop_stock.clear()
+	camp_discount_item = null
+	camp_has_haggled = false
+
+func delete_game(slot: int) -> void:
+	var dir = DirAccess.open("user://")
+	if dir == null:
+		return
+
+	var man_file = "save_slot_" + str(slot) + ".dat"
+	var auto_file = "auto_save_" + str(slot) + ".dat"
+	if dir.file_exists(man_file):
+		dir.remove(man_file)
+	if dir.file_exists(auto_file):
+		dir.remove(auto_file)
+
+	if active_save_slot == slot:
+		active_save_slot = -1
+
+# ==========================================
+# ITEM LIFECYCLE (UNIQUENESS + SAVE FORMAT)
+# ==========================================
+
+func make_unique_item(src: Resource) -> Resource:
+	if src == null:
+		return null
+
+	var inst: Resource = src.duplicate(true)
+
+	var opath := ""
+	if src.resource_path != "":
+		opath = src.resource_path
+	elif src.has_meta("original_path"):
+		opath = str(src.get_meta("original_path"))
+
+	if opath != "":
+		inst.set_meta("original_path", opath)
+
+	if not inst.has_meta("uid"):
+		inst.set_meta("uid", str(Time.get_unix_time_from_system()) + "_" + str(randi()))
+
+	return inst
+
+func duplicate_item(original: Resource) -> Resource:
+	var dup = make_unique_item(original)
+	if dup == null and original != null and not (original is WeaponData):
+		return original
+	return dup
+
+func _serialize_item(item: Resource) -> Dictionary:
+	if item == null:
+		return {}
+
+	var path := ""
+	if item.resource_path != "":
+		path = item.resource_path
+	elif item.has_meta("original_path"):
+		path = str(item.get_meta("original_path"))
+
+	if path == "":
+		# Item has no path/original_path; omit from save so save does not corrupt. No warning to avoid log spam; ensure all code paths use make_unique_item() or set_meta("original_path", path) when adding to inventory.
+		return {}
+
+	var uid := ""
+	if item.has_meta("uid"):
+		uid = str(item.get_meta("uid"))
+
+	var data: Dictionary = {
+		"path": path,
+		"uid": uid,
+		"type": item.get_class()
+	}
+	
+	if item.has_meta("is_locked"): 
+		data["is_locked"] = item.get_meta("is_locked")
+	if item.has_meta("base_recipe_name"): 
+		data["base_recipe_name"] = item.get_meta("base_recipe_name")
+
+	if item is WeaponData:
+		data["weapon_name"] = item.weapon_name
+		data["might"] = item.might
+		data["hit_bonus"] = item.hit_bonus
+		data["rarity"] = item.rarity
+		data["gold_cost"] = item.get("gold_cost") if item.get("gold_cost") != null else 0
+		data["current_durability"] = item.current_durability
+		data["max_durability"] = item.max_durability
+
+	return data
+
+func _deserialize_item(d) -> Resource:
+	if d == null or typeof(d) != TYPE_DICTIONARY or d.is_empty():
+		return null
+
+	var path := str(d.get("path", ""))
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+
+	var template: Resource = load(path)
+	if template == null:
+		return null
+
+	var inst: Resource = make_unique_item(template)
+
+	var uid := str(d.get("uid", ""))
+	if uid != "":
+		inst.set_meta("uid", uid)
+		
+	if d.has("is_locked"): 
+		inst.set_meta("is_locked", d["is_locked"])
+	if d.has("base_recipe_name"): 
+		inst.set_meta("base_recipe_name", d["base_recipe_name"])
+
+	if inst is WeaponData:
+		if d.has("weapon_name"): inst.weapon_name = str(d["weapon_name"])
+		if d.has("might"): inst.might = int(d["might"])
+		if d.has("hit_bonus"): inst.hit_bonus = int(d["hit_bonus"])
+		if d.has("rarity"): inst.rarity = str(d["rarity"])
+		if d.has("gold_cost"): inst.gold_cost = int(d["gold_cost"])
+		if d.has("current_durability"): inst.current_durability = int(d["current_durability"])
+		if d.has("max_durability"): inst.max_durability = int(d["max_durability"])
+
+	return inst
+
+# --- Avatar relationship save/load (primitive-only; old saves without key = safe defaults on read) ---
+func _serialize_avatar_relationships() -> Dictionary:
+	var out: Dictionary = {}
+	for unit_name in avatar_relationship_by_unit:
+		var entry: Variant = avatar_relationship_by_unit[unit_name]
+		if entry is Dictionary:
+			var d: Dictionary = entry as Dictionary
+			out[str(unit_name)] = {
+				"score": int(d.get("score", 0)),
+				"requests_completed": int(d.get("requests_completed", 0)),
+				"branching_successes": int(d.get("branching_successes", 0)),
+				"branching_failures": int(d.get("branching_failures", 0)),
+				"last_change": int(d.get("last_change", 0)),
+				"last_reason": str(d.get("last_reason", "")),
+			}
+	return out
+
+func _deserialize_avatar_relationships(raw: Variant) -> void:
+	avatar_relationship_by_unit.clear()
+	if raw == null or typeof(raw) != TYPE_DICTIONARY:
+		return
+	for unit_name in raw:
+		var entry: Variant = raw[unit_name]
+		if entry is Dictionary:
+			var d: Dictionary = entry as Dictionary
+			avatar_relationship_by_unit[str(unit_name)] = {
+				"score": clampi(int(d.get("score", 0)), 0, 100),
+				"requests_completed": maxi(0, int(d.get("requests_completed", 0))),
+				"branching_successes": maxi(0, int(d.get("branching_successes", 0))),
+				"branching_failures": maxi(0, int(d.get("branching_failures", 0))),
+				"last_change": int(d.get("last_change", 0)),
+				"last_reason": str(d.get("last_reason", "")).strip_edges(),
+			}
+
+func _serialize_personal_quest_states() -> Dictionary:
+	var out: Dictionary = {}
+	for unit_name in personal_quest_state_by_unit:
+		var entry: Variant = personal_quest_state_by_unit[unit_name]
+		if entry is Dictionary:
+			var d: Dictionary = entry as Dictionary
+			out[str(unit_name)] = {
+				"unlocked": bool(d.get("unlocked", false)),
+				"active": bool(d.get("active", false)),
+				"completed": bool(d.get("completed", false)),
+				"last_offered_at_score": int(d.get("last_offered_at_score", 0)),
+				"seen_unlock_scene": bool(d.get("seen_unlock_scene", false)),
+			}
+	return out
+
+func _deserialize_personal_quest_states(raw: Variant) -> void:
+	personal_quest_state_by_unit.clear()
+	if raw == null or typeof(raw) != TYPE_DICTIONARY:
+		return
+	for unit_name in raw:
+		var entry: Variant = raw[unit_name]
+		if entry is Dictionary:
+			var d: Dictionary = entry as Dictionary
+			personal_quest_state_by_unit[str(unit_name)] = {
+				"unlocked": bool(d.get("unlocked", false)),
+				"active": bool(d.get("active", false)),
+				"completed": bool(d.get("completed", false)),
+				"last_offered_at_score": int(d.get("last_offered_at_score", 0)),
+				"seen_unlock_scene": bool(d.get("seen_unlock_scene", false)),
+			}
+
+# ==========================================
+# CORE SAVING & LOADING
+# ==========================================
+
+func save_game(slot: int, is_auto: bool = false) -> void:
+	var path = get_save_path(slot, is_auto)
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return
+		
+	ensure_seraphina_state()
+	_sync_seraphina_legacy_from_relationship_state()
+	
+	# 1) Global inventory
+	var inventory_saved: Array = []
+	for item in global_inventory:
+		var s := _serialize_item(item)
+		if not s.is_empty():
+			inventory_saved.append(s)
+
+	# 2) Camp shop
+	var shop_stock_saved: Array = []
+	for item in camp_shop_stock:
+		var s := _serialize_item(item)
+		if not s.is_empty():
+			shop_stock_saved.append(s)
+
+	# --- NEW: Serialize the Arena Token Shop ---
+	var active_shop_saved: Array = []
+	for item in active_shop_inventory:
+		var s := _serialize_item(item)
+		if not s.is_empty():
+			active_shop_saved.append(s)
+
+	# --- FIX 1: DISCOUNT ITEM UID RELINKING ---
+	var discount_saved: Dictionary = {}
+	var discount_uid: String = ""
+	if camp_discount_item != null:
+		discount_saved = _serialize_item(camp_discount_item)
+		if camp_discount_item.has_meta("uid"):
+			discount_uid = str(camp_discount_item.get_meta("uid"))
+
+	# 3) Roster
+	var roster_to_save: Array = []
+	for unit in player_roster:
+		var u_copy := unit.duplicate()
+
+		u_copy["equipped_weapon"] = {}
+		var eq: Resource = unit.get("equipped_weapon")
+		if eq != null:
+			u_copy["equipped_weapon"] = _serialize_item(eq)
+
+		var unit_inv_saved: Array = []
+		if unit.has("inventory"):
+			for it in unit["inventory"]:
+				var s := _serialize_item(it)
+				if not s.is_empty():
+					unit_inv_saved.append(s)
+		u_copy["inventory"] = unit_inv_saved
+
+		if u_copy.get("data") is Resource:
+			var data_res: Resource = u_copy["data"]
+			var data_path: String = str(data_res.resource_path).strip_edges()
+			if data_path == "" and data_res.has_meta("original_path"):
+				data_path = str(data_res.get_meta("original_path")).strip_edges()
+			if data_path == "":
+				data_path = str(u_copy.get("data_path_hint", "")).strip_edges()
+			u_copy["data"] = data_path if data_path != "" else ""
+		if u_copy.get("class_data") is Resource: u_copy["class_data"] = u_copy["class_data"].resource_path
+		if u_copy.get("portrait") is Texture2D: u_copy["portrait"] = u_copy["portrait"].resource_path
+		if u_copy.get("battle_sprite") is Texture2D: u_copy["battle_sprite"] = u_copy["battle_sprite"].resource_path
+		u_copy["unit_tags"] = unit.get("unit_tags", [])
+
+		roster_to_save.append(u_copy)
+
+	# 4) Custom avatar
+	var custom_avatar_saved := custom_avatar.duplicate()
+	if custom_avatar_saved.get("class_data") is Resource: custom_avatar_saved["class_data"] = custom_avatar_saved["class_data"].resource_path
+	if custom_avatar_saved.get("portrait") is Texture2D: custom_avatar_saved["portrait"] = custom_avatar_saved["portrait"].resource_path
+	if custom_avatar_saved.get("battle_sprite") is Texture2D: custom_avatar_saved["battle_sprite"] = custom_avatar_saved["battle_sprite"].resource_path
+
+	var save_data := {
+		"support_bonds": support_bonds,
+		"relationship_web": relationship_web.duplicate(),
+		"custom_avatar": custom_avatar_saved,
+		"player_roster": roster_to_save,
+		"global_gold": global_gold,
+		"global_fame": global_fame,
+		"global_inventory": inventory_saved,
+		"merchant_reputation": merchant_reputation,
+		"current_level_index": current_level_index,
+		"max_unlocked_index": max_unlocked_index,
+		"merchant_quests_completed": merchant_quests_completed,
+		"merchant_quest_active": merchant_quest_active,
+		"merchant_quest_item_name": merchant_quest_item_name,
+		"merchant_quest_target_amount": merchant_quest_target_amount,
+		"merchant_quest_reward": merchant_quest_reward,
+
+		"camp_request_status": camp_request_status,
+		"camp_request_giver_name": camp_request_giver_name,
+		"camp_request_type": camp_request_type,
+		"camp_request_title": camp_request_title,
+		"camp_request_description": camp_request_description,
+		"camp_request_target_name": camp_request_target_name,
+		"camp_request_target_amount": camp_request_target_amount,
+		"camp_request_progress": camp_request_progress,
+		"camp_request_reward_gold": camp_request_reward_gold,
+		"camp_request_reward_affinity": camp_request_reward_affinity,
+		"camp_request_payload": camp_request_payload.duplicate(),
+		"camp_requests_completed": camp_requests_completed,
+		"camp_request_progress_level": camp_request_progress_level,
+		"camp_request_unit_next_eligible_level": camp_request_unit_next_eligible_level.duplicate(),
+		"camp_request_recent_givers": camp_request_recent_givers.duplicate(),
+		"camp_requests_completed_by_unit": camp_requests_completed_by_unit.duplicate(),
+		"avatar_relationship_by_unit": _serialize_avatar_relationships(),
+		"personal_quest_state_by_unit": _serialize_personal_quest_states(),
+		"special_camp_scenes_seen": special_camp_scenes_seen.duplicate(),
+
+		"camp_shop_stock": shop_stock_saved,
+		"active_shop_inventory": active_shop_saved,
+		"camp_discount_item": discount_saved,
+		"camp_discount_uid": discount_uid,
+		"camp_has_haggled": camp_has_haggled,
+		"blacksmith_unlocked": blacksmith_unlocked,
+		"has_recipe_book": has_recipe_book,
+		"has_smelter": has_smelter,
+		"unlocked_music_paths": unlocked_music_paths,
+		"saved_music_playlists": saved_music_playlists.duplicate(),
+		"jukebox_volume_db": jukebox_volume_db,
+		"jukebox_last_mode": jukebox_last_mode,
+		"jukebox_last_track_path": jukebox_last_track_path,
+		"jukebox_last_playlist_name": jukebox_last_playlist_name,
+		"favorite_music_paths": favorite_music_paths.duplicate(),
+		"unlocked_recipes": unlocked_recipes,
+		"player_structures": player_structures.duplicate(true),
+		"claimed_rank_rewards": claimed_rank_rewards.duplicate(),
+		"player_dragons": DragonManager.player_dragons.duplicate(true),
+		
+		# Base Management
+		"active_base_level_index": active_base_level_index,
+		"base_resource_storage": base_resource_storage.duplicate(),
+		"base_under_attack": base_under_attack,
+		"is_base_defense_active": is_base_defense_active,
+
+		"current_difficulty": int(current_difficulty),
+
+		# New relationship system
+		"npc_relationships": npc_relationships.duplicate(true),
+		"camp_time_of_day": camp_time_of_day,
+		"current_camp_mood": get_current_camp_mood(),
+
+		# Legacy compatibility save fields
+		"seraphina_disposition": seraphina_disposition,
+		"seraphina_romance_rank": seraphina_romance_rank,
+		"seraphina_met_today": seraphina_met_today,
+		
+		"morgra_favorite_dragon_uid": morgra_favorite_dragon_uid,
+		"morgra_anger_duration": morgra_anger_duration,
+		"morgra_neutral_duration": morgra_neutral_duration,
+		"morgra_favorite_survived_battles": morgra_favorite_survived_battles,
+
+		"encounter_flags": encounter_flags.duplicate(),
+		"claimed_scavenger_scores": claimed_scavenger_scores.duplicate(),
+		"seen_camp_lore": seen_camp_lore.duplicate(),
+		"seen_camp_pair_scenes": seen_camp_pair_scenes.duplicate(),
+		"camp_memory": camp_memory.duplicate(true),
+		"camp_unit_condition": camp_unit_condition.duplicate(true),
+		"camp_condition_last_applied_progress_level": camp_condition_last_applied_progress_level,
+	}
+
+	file.store_var(save_data)
+	file.close()
+
+func load_game(slot: int, is_auto: bool = false) -> bool:
+	var path = get_save_path(slot, is_auto)
+	if not FileAccess.file_exists(path):
+		return false
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	var save_data = file.get_var()
+	file.close()
+
+	if typeof(save_data) != TYPE_DICTIONARY:
+		return false
+
+	global_gold = save_data.get("global_gold", 0)
+	global_fame = save_data.get("global_fame", 0)
+	merchant_reputation = save_data.get("merchant_reputation", 0)
+	
+	active_base_level_index = save_data.get("active_base_level_index", -1)
+	base_resource_storage = save_data.get("base_resource_storage", {"wood": 0, "iron": 0, "gold": 0})
+	base_under_attack = save_data.get("base_under_attack", false)
+	is_base_defense_active = save_data.get("is_base_defense_active", false)
+
+	var diff_val: int = clampi(int(save_data.get("current_difficulty", 0)), 0, 2)
+	if diff_val == 1:
+		current_difficulty = Difficulty.HARD
+	elif diff_val == 2:
+		current_difficulty = Difficulty.MADDENING
+	else:
+		current_difficulty = Difficulty.NORMAL
+
+	current_level_index = save_data.get("current_level_index", 0)
+	max_unlocked_index = save_data.get("max_unlocked_index", 0)
+	merchant_quests_completed = save_data.get("merchant_quests_completed", 0)
+	merchant_quest_active = save_data.get("merchant_quest_active", false)
+	merchant_quest_item_name = save_data.get("merchant_quest_item_name", "")
+	merchant_quest_target_amount = save_data.get("merchant_quest_target_amount", 0)
+	merchant_quest_reward = save_data.get("merchant_quest_reward", 0)
+	camp_request_status = str(save_data.get("camp_request_status", "")).strip_edges()
+	camp_request_giver_name = str(save_data.get("camp_request_giver_name", ""))
+	camp_request_type = str(save_data.get("camp_request_type", ""))
+	camp_request_title = str(save_data.get("camp_request_title", ""))
+	camp_request_description = str(save_data.get("camp_request_description", ""))
+	camp_request_target_name = str(save_data.get("camp_request_target_name", ""))
+	camp_request_target_amount = int(save_data.get("camp_request_target_amount", 0))
+	camp_request_progress = int(save_data.get("camp_request_progress", 0))
+	camp_request_reward_gold = int(save_data.get("camp_request_reward_gold", 0))
+	camp_request_reward_affinity = int(save_data.get("camp_request_reward_affinity", 0))
+	var raw_payload = save_data.get("camp_request_payload", {})
+	camp_request_payload = raw_payload if raw_payload is Dictionary else {}
+	camp_requests_completed = int(save_data.get("camp_requests_completed", 0))
+	# Level-based progression; migrate from max_unlocked_index if missing (old saves).
+	camp_request_progress_level = int(save_data.get("camp_request_progress_level", max_unlocked_index))
+	var raw_next_eligible = save_data.get("camp_request_unit_next_eligible_level", {})
+	camp_request_unit_next_eligible_level = raw_next_eligible if raw_next_eligible is Dictionary else {}
+	var raw_recent = save_data.get("camp_request_recent_givers", [])
+	var recent_arr: Array = raw_recent if raw_recent is Array else []
+	camp_request_recent_givers = recent_arr.duplicate()
+	while camp_request_recent_givers.size() > 3:
+		camp_request_recent_givers.pop_back()
+	var raw_by_unit = save_data.get("camp_requests_completed_by_unit", {})
+	camp_requests_completed_by_unit = raw_by_unit if raw_by_unit is Dictionary else {}
+	var raw_avatar_rel = save_data.get("avatar_relationship_by_unit", {})
+	_deserialize_avatar_relationships(raw_avatar_rel)
+	var raw_pq = save_data.get("personal_quest_state_by_unit", {})
+	_deserialize_personal_quest_states(raw_pq)
+	var raw_scenes = save_data.get("special_camp_scenes_seen", {})
+	special_camp_scenes_seen = raw_scenes if raw_scenes is Dictionary else {}
+
+	camp_has_haggled = save_data.get("camp_has_haggled", false)
+	support_bonds = save_data.get("support_bonds", {})
+	relationship_web = save_data.get("relationship_web", {})
+	
+	npc_relationships = save_data.get("npc_relationships", {})
+	camp_time_of_day = str(save_data.get("camp_time_of_day", "evening")).to_lower()
+	set_current_camp_mood(str(save_data.get("current_camp_mood", "normal")))
+
+	var raw_flags = save_data.get("encounter_flags", {})
+	encounter_flags.clear()
+	if raw_flags is Dictionary:
+		for k in raw_flags:
+			if str(k).strip_edges() != "" and raw_flags[k]:
+				encounter_flags[str(k).strip_edges()] = true
+
+	claimed_scavenger_scores.clear()
+	var raw_claimed = save_data.get("claimed_scavenger_scores", {})
+	if raw_claimed is Dictionary:
+		for sid in raw_claimed:
+			var q: int = int(raw_claimed[sid])
+			if str(sid).strip_edges() != "" and q > 0:
+				claimed_scavenger_scores[str(sid).strip_edges()] = q
+
+	seen_camp_lore.clear()
+	var raw_lore = save_data.get("seen_camp_lore", {})
+	if raw_lore is Dictionary:
+		for lid in raw_lore:
+			if str(lid).strip_edges() != "" and raw_lore[lid]:
+				seen_camp_lore[str(lid).strip_edges()] = true
+
+	seen_camp_pair_scenes.clear()
+	var raw_pairs = save_data.get("seen_camp_pair_scenes", {})
+	if raw_pairs is Dictionary:
+		for pid in raw_pairs:
+			if str(pid).strip_edges() != "" and raw_pairs[pid]:
+				seen_camp_pair_scenes[str(pid).strip_edges()] = true
+
+	var raw_camp_memory = save_data.get("camp_memory", {})
+	if raw_camp_memory is Dictionary:
+		camp_memory = (raw_camp_memory as Dictionary).duplicate(true)
+	else:
+		camp_memory = {}
+	ensure_camp_memory()
+	var raw_condition = save_data.get("camp_unit_condition", {})
+	if raw_condition is Dictionary:
+		camp_unit_condition = (raw_condition as Dictionary).duplicate(true)
+	else:
+		camp_unit_condition = {}
+	camp_condition_last_applied_progress_level = int(save_data.get("camp_condition_last_applied_progress_level", -1))
+	ensure_camp_unit_condition()
+
+	_migrate_legacy_seraphina_state(save_data)
+	ensure_seraphina_state()
+	_sync_seraphina_legacy_from_relationship_state()
+	morgra_favorite_dragon_uid = save_data.get("morgra_favorite_dragon_uid", "")
+	morgra_anger_duration = save_data.get("morgra_anger_duration", 0)
+	morgra_neutral_duration = save_data.get("morgra_neutral_duration", 0)
+	morgra_favorite_survived_battles = save_data.get("morgra_favorite_survived_battles", 0)
+	
+	DragonManager.player_dragons.clear()
+	var loaded_dragons = save_data.get("player_dragons", [])
+	for d in loaded_dragons:
+		if d is Dictionary:
+			DragonManager.player_dragons.append(d)
+
+	for d in DragonManager.player_dragons:
+		if d is Dictionary and not d.has("ranch_action_used_this_level"):
+			d["ranch_action_used_this_level"] = false
+	
+	unlocked_music_paths.clear()
+	for m in save_data.get("unlocked_music_paths", []): unlocked_music_paths.append(str(m))
+
+	var raw_playlists = save_data.get("saved_music_playlists", {})
+	saved_music_playlists.clear()
+	if raw_playlists is Dictionary:
+		for k in raw_playlists.keys():
+			var arr = raw_playlists[k]
+			if arr is Array:
+				saved_music_playlists[str(k)] = arr.duplicate()
+	jukebox_volume_db = save_data.get("jukebox_volume_db", 0.0)
+	jukebox_last_mode = str(save_data.get("jukebox_last_mode", "default"))
+	jukebox_last_track_path = str(save_data.get("jukebox_last_track_path", ""))
+	jukebox_last_playlist_name = str(save_data.get("jukebox_last_playlist_name", ""))
+	favorite_music_paths.clear()
+	for p in save_data.get("favorite_music_paths", []):
+		favorite_music_paths.append(str(p))
+
+	has_recipe_book = save_data.get("has_recipe_book", false)
+	unlocked_recipes.clear()
+	for r in save_data.get("unlocked_recipes", []): unlocked_recipes.append(str(r))
+		
+	blacksmith_unlocked = save_data.get("blacksmith_unlocked", false)
+	has_smelter = save_data.get("has_smelter", false)
+	
+	player_structures.clear()
+	var raw_structures = save_data.get("player_structures", [])
+	for s in raw_structures:
+		if typeof(s) == TYPE_DICTIONARY:
+			player_structures.append(s.duplicate(true))
+
+	if player_structures.is_empty():
+		_reset_player_structures()
+
+	custom_avatar = save_data.get("custom_avatar", {})
+	if custom_avatar.get("class_data") is String and ResourceLoader.exists(custom_avatar["class_data"]): custom_avatar["class_data"] = load(custom_avatar["class_data"])
+	if custom_avatar.get("portrait") is String and ResourceLoader.exists(custom_avatar["portrait"]): custom_avatar["portrait"] = load(custom_avatar["portrait"])
+	if custom_avatar.get("battle_sprite") is String and ResourceLoader.exists(custom_avatar["battle_sprite"]): custom_avatar["battle_sprite"] = load(custom_avatar["battle_sprite"])
+
+	global_inventory.clear()
+	for d in save_data.get("global_inventory", []):
+		var it: Resource = _deserialize_item(d)
+		if it != null: global_inventory.append(it)
+
+	camp_shop_stock.clear()
+	for d in save_data.get("camp_shop_stock", []):
+		var it: Resource = _deserialize_item(d)
+		if it != null: camp_shop_stock.append(it)
+
+	# --- NEW: LOAD ARENA SHOP STOCK ---
+	active_shop_inventory.clear()
+	for d in save_data.get("active_shop_inventory", []):
+		var it: Resource = _deserialize_item(d)
+		if it != null: active_shop_inventory.append(it)
+
+	# --- FIX 1: RESTORING DISCOUNT ITEM PROPERLY ---
+	camp_discount_item = null
+	var discount_uid: String = str(save_data.get("camp_discount_uid", ""))
+
+	if discount_uid != "":
+		for it in camp_shop_stock:
+			if it != null and it.has_meta("uid") and str(it.get_meta("uid")) == discount_uid:
+				camp_discount_item = it
+				break
+
+	if camp_discount_item == null:
+		var discount_data = save_data.get("camp_discount_item", {})
+		if typeof(discount_data) == TYPE_DICTIONARY and not discount_data.is_empty():
+			var discount_path: String = str(discount_data.get("path", ""))
+			for it in camp_shop_stock:
+				if it == null: continue
+				var it_path: String = ""
+				if it.resource_path != "": it_path = it.resource_path
+				elif it.has_meta("original_path"): it_path = str(it.get_meta("original_path"))
+				if it_path == discount_path:
+					camp_discount_item = it
+					break
+
+	player_roster.clear()
+	var raw_roster: Array = save_data.get("player_roster", [])
+
+	for unit in raw_roster:
+		var loaded_inv: Array = []
+		if unit.has("inventory"):
+			for d in unit["inventory"]:
+				var it: Resource = _deserialize_item(d)
+				if it != null: loaded_inv.append(it)
+		unit["inventory"] = loaded_inv
+
+		unit["equipped_weapon"] = null
+		var eq_data = unit.get("equipped_weapon", {})
+		if typeof(eq_data) == TYPE_DICTIONARY and not eq_data.is_empty():
+			var target_uid := str(eq_data.get("uid", ""))
+			if target_uid != "":
+				for inv_item in loaded_inv:
+					if inv_item != null and inv_item.has_meta("uid") and str(inv_item.get_meta("uid")) == target_uid:
+						unit["equipped_weapon"] = inv_item
+						break
+
+			if unit["equipped_weapon"] == null:
+				var target_path := str(eq_data.get("path", ""))
+				var target_dur := int(eq_data.get("current_durability", -1))
+				for inv_item in loaded_inv:
+					if inv_item == null: continue
+					var inv_path := ""
+					if inv_item.resource_path != "": inv_path = inv_item.resource_path
+					elif inv_item.has_meta("original_path"): inv_path = str(inv_item.get_meta("original_path"))
+
+					if inv_path == target_path:
+						if inv_item is WeaponData and target_dur >= 0:
+							if inv_item.current_durability == target_dur:
+								unit["equipped_weapon"] = inv_item
+								break
+						else:
+							unit["equipped_weapon"] = inv_item
+							break
+
+		if unit["equipped_weapon"] == null:
+			for inv_item in loaded_inv:
+				if inv_item is WeaponData:
+					unit["equipped_weapon"] = inv_item
+					break
+
+		if unit.get("data") is String and ResourceLoader.exists(unit["data"]):
+			unit["data"] = load(unit["data"])
+		elif unit.get("data") == null:
+			var data_hint: String = str(unit.get("data_path_hint", "")).strip_edges()
+			if data_hint != "" and ResourceLoader.exists(data_hint):
+				unit["data"] = load(data_hint)
+		if unit.get("class_data") is String and ResourceLoader.exists(unit["class_data"]): unit["class_data"] = load(unit["class_data"])
+		if unit.get("portrait") is String and ResourceLoader.exists(unit["portrait"]): unit["portrait"] = load(unit["portrait"])
+		if unit.get("battle_sprite") is String and ResourceLoader.exists(unit["battle_sprite"]): unit["battle_sprite"] = load(unit["battle_sprite"])
+		
+		if not unit.has("unit_tags"): unit["unit_tags"] = []
+		if not unit.has("skill_points"): unit["skill_points"] = 0
+		if not unit.has("unlocked_skills"): unit["unlocked_skills"] = []
+		if not unit.has("unlocked_abilities"): 
+			var curr_ab = unit.get("ability", "")
+			unit["unlocked_abilities"] = [curr_ab] if curr_ab != "" else []
+		
+		player_roster.append(unit)
+
+	claimed_rank_rewards.clear()
+	var loaded_rewards = save_data.get("claimed_rank_rewards", [])
+	for r in loaded_rewards: claimed_rank_rewards.append(r)
+	
+	active_save_slot = slot
+	return true
+
+func has_seen_camp_lore(lore_id: String) -> bool:
+	var key: String = str(lore_id).strip_edges()
+	if key.is_empty():
+		return true
+	return bool(seen_camp_lore.get(key, false))
+
+func mark_camp_lore_seen(lore_id: String) -> void:
+	var key: String = str(lore_id).strip_edges()
+	if key.is_empty():
+		return
+	seen_camp_lore[key] = true
+
+func _is_camp_lore_flag_satisfied(flag_name: String) -> bool:
+	var key: String = str(flag_name).strip_edges()
+	if key.is_empty():
+		return true
+	match key:
+		"greyspire_hub_established":
+			return camp_request_progress_level >= 6
+		"market_of_masks_cleared":
+			return camp_request_progress_level >= 11
+		"dawnkeep_siege_cleared":
+			return camp_request_progress_level >= 14
+		"echoes_of_the_order_cleared":
+			return camp_request_progress_level >= 16
+		"gathering_storms_cleared":
+			return camp_request_progress_level >= 17
+		_:
+			return bool(encounter_flags.get(key, false))
+
+func get_available_camp_lore(unit_name: String) -> Dictionary:
+	var uname: String = str(unit_name).strip_edges()
+	if uname.is_empty():
+		return {}
+	var entries: Array = CampLoreDB.get_lore_entries_for_unit(uname)
+	if entries.is_empty():
+		return {}
+
+	var tier: String = get_avatar_relationship_tier(uname)
+	var tier_rank: int = _tier_rank(tier)
+
+	for entry_variant in entries:
+		if not (entry_variant is Dictionary):
+			continue
+		var entry: Dictionary = entry_variant
+		var lore_id: String = str(entry.get("id", "")).strip_edges()
+		if lore_id.is_empty():
+			continue
+		if has_seen_camp_lore(lore_id):
+			continue
+
+		var need_tier: String = str(entry.get("threshold", "stranger")).strip_edges().to_lower()
+		if _tier_rank(need_tier) > tier_rank:
+			continue
+
+		var requires_flags: Array = entry.get("requires_flags", [])
+		var forbidden_flags: Array = entry.get("forbidden_flags", [])
+
+		var blocked: bool = false
+		for f in requires_flags:
+			var fk: String = str(f).strip_edges()
+			if fk == "":
+				continue
+			if not _is_camp_lore_flag_satisfied(fk):
+				blocked = true
+				break
+		if blocked:
+			continue
+		for f2 in forbidden_flags:
+			var fk2: String = str(f2).strip_edges()
+			if fk2 == "":
+				continue
+			if _is_camp_lore_flag_satisfied(fk2):
+				blocked = true
+				break
+		if blocked:
+			continue
+
+		return entry
+
+	return {}
+
+func has_seen_pair_scene(scene_id: String) -> bool:
+	var key: String = str(scene_id).strip_edges()
+	if key.is_empty():
+		return true
+	return bool(seen_camp_pair_scenes.get(key, false))
+
+func mark_pair_scene_seen(scene_id: String) -> void:
+	var key: String = str(scene_id).strip_edges()
+	if key.is_empty():
+		return
+	seen_camp_pair_scenes[key] = true
+
+func ensure_camp_memory() -> void:
+	if not (camp_memory is Dictionary):
+		camp_memory = {}
+	if not camp_memory.has("visit_index") or typeof(camp_memory.get("visit_index")) != TYPE_INT:
+		camp_memory["visit_index"] = 0
+	if not camp_memory.has("seen_scene_ids") or not (camp_memory.get("seen_scene_ids") is Dictionary):
+		camp_memory["seen_scene_ids"] = {}
+	if not camp_memory.has("pair_stats") or not (camp_memory.get("pair_stats") is Dictionary):
+		camp_memory["pair_stats"] = {}
+
+func increment_camp_visit() -> int:
+	ensure_camp_memory()
+	var idx: int = int(camp_memory.get("visit_index", 0)) + 1
+	camp_memory["visit_index"] = idx
+	return idx
+
+func get_camp_visit_index() -> int:
+	ensure_camp_memory()
+	return int(camp_memory.get("visit_index", 0))
+
+func make_pair_key(name_a: String, name_b: String) -> String:
+	var a: String = str(name_a).strip_edges()
+	var b: String = str(name_b).strip_edges()
+	if a == "" or b == "":
+		return ""
+	if a <= b:
+		return "%s|%s" % [a, b]
+	return "%s|%s" % [b, a]
+
+func get_pair_stats(name_a: String, name_b: String) -> Dictionary:
+	ensure_camp_memory()
+	var key: String = make_pair_key(name_a, name_b)
+	if key == "":
+		return { "familiarity": 0, "tension": 0, "last_visit_spoke": 0 }
+	var pair_stats: Dictionary = camp_memory.get("pair_stats", {})
+	var raw: Variant = pair_stats.get(key, {})
+	if raw is Dictionary:
+		var d: Dictionary = raw
+		return {
+			"familiarity": int(d.get("familiarity", 0)),
+			"tension": int(d.get("tension", 0)),
+			"last_visit_spoke": int(d.get("last_visit_spoke", 0)),
+		}
+	return { "familiarity": 0, "tension": 0, "last_visit_spoke": 0 }
+
+func set_pair_stats(name_a: String, name_b: String, stats: Dictionary) -> void:
+	ensure_camp_memory()
+	var key: String = make_pair_key(name_a, name_b)
+	if key == "":
+		return
+	var pair_stats: Dictionary = camp_memory.get("pair_stats", {})
+	pair_stats[key] = {
+		"familiarity": maxi(0, int(stats.get("familiarity", 0))),
+		"tension": maxi(0, int(stats.get("tension", 0))),
+		"last_visit_spoke": maxi(0, int(stats.get("last_visit_spoke", 0))),
+	}
+	camp_memory["pair_stats"] = pair_stats
+
+func get_pair_familiarity(name_a: String, name_b: String) -> int:
+	var stats: Dictionary = get_pair_stats(name_a, name_b)
+	return int(stats.get("familiarity", 0))
+
+func has_seen_camp_memory_scene(scene_id: String) -> bool:
+	ensure_camp_memory()
+	var sid: String = str(scene_id).strip_edges()
+	if sid == "":
+		return false
+	var seen: Dictionary = camp_memory.get("seen_scene_ids", {})
+	return bool(seen.get(sid, false))
+
+func mark_camp_memory_scene_seen(scene_id: String) -> void:
+	ensure_camp_memory()
+	var sid: String = str(scene_id).strip_edges()
+	if sid == "":
+		return
+	var seen: Dictionary = camp_memory.get("seen_scene_ids", {})
+	seen[sid] = true
+	camp_memory["seen_scene_ids"] = seen
+
+func ensure_camp_unit_condition() -> void:
+	if not (camp_unit_condition is Dictionary):
+		camp_unit_condition = {}
+	for key in camp_unit_condition.keys():
+		var uname: String = str(key).strip_edges()
+		if uname == "":
+			continue
+		var raw: Variant = camp_unit_condition.get(key, {})
+		if raw is Dictionary:
+			var d: Dictionary = raw
+			camp_unit_condition[uname] = {
+				"injured": bool(d.get("injured", false)),
+				"fatigued": bool(d.get("fatigued", false)),
+				"recovery_visits": maxi(0, int(d.get("recovery_visits", 0))),
+			}
+
+func get_unit_camp_condition(unit_name: String) -> Dictionary:
+	ensure_camp_unit_condition()
+	var key: String = str(unit_name).strip_edges()
+	if key == "":
+		return { "injured": false, "fatigued": false, "recovery_visits": 0 }
+	var raw: Variant = camp_unit_condition.get(key, {})
+	if raw is Dictionary:
+		var d: Dictionary = raw
+		return {
+			"injured": bool(d.get("injured", false)),
+			"fatigued": bool(d.get("fatigued", false)),
+			"recovery_visits": maxi(0, int(d.get("recovery_visits", 0))),
+		}
+	return { "injured": false, "fatigued": false, "recovery_visits": 0 }
+
+func set_unit_camp_condition(unit_name: String, data: Dictionary) -> void:
+	ensure_camp_unit_condition()
+	var key: String = str(unit_name).strip_edges()
+	if key == "":
+		return
+	camp_unit_condition[key] = {
+		"injured": bool(data.get("injured", false)),
+		"fatigued": bool(data.get("fatigued", false)),
+		"recovery_visits": maxi(0, int(data.get("recovery_visits", 0))),
+	}
+
+func is_unit_injured(unit_name: String) -> bool:
+	var c: Dictionary = get_unit_camp_condition(unit_name)
+	return bool(c.get("injured", false))
+
+func is_unit_fatigued(unit_name: String) -> bool:
+	var c: Dictionary = get_unit_camp_condition(unit_name)
+	return bool(c.get("fatigued", false))
+
+func apply_post_battle_camp_condition() -> void:
+	ensure_camp_unit_condition()
+	var progress_marker: int = int(camp_request_progress_level)
+	if progress_marker == camp_condition_last_applied_progress_level:
+		return
+	camp_condition_last_applied_progress_level = progress_marker
+	for ud in player_roster:
+		if not (ud is Dictionary):
+			continue
+		var unit: Dictionary = ud
+		var uname: String = str(unit.get("unit_name", "")).strip_edges()
+		if uname == "":
+			continue
+		var max_hp_v: int = int(unit.get("max_hp", 0))
+		var cur_hp_v: int = int(unit.get("current_hp", max_hp_v))
+		if max_hp_v <= 0:
+			continue
+		var hp_ratio: float = clampf(float(cur_hp_v) / float(max_hp_v), 0.0, 1.0)
+		var injured_now: bool = hp_ratio <= 0.45
+		var fatigued_now: bool = hp_ratio <= 0.80
+		if not injured_now and not fatigued_now:
+			continue
+		var c: Dictionary = get_unit_camp_condition(uname)
+		var rec_visits: int = 2 if injured_now else 1
+		c["injured"] = bool(c.get("injured", false)) or injured_now
+		c["fatigued"] = bool(c.get("fatigued", false)) or fatigued_now
+		c["recovery_visits"] = maxi(int(c.get("recovery_visits", 0)), rec_visits)
+		set_unit_camp_condition(uname, c)
+
+func _get_roster_hp_ratio(unit_name: String) -> float:
+	var key: String = str(unit_name).strip_edges()
+	if key == "":
+		return -1.0
+	for ud in player_roster:
+		if not (ud is Dictionary):
+			continue
+		var unit: Dictionary = ud
+		var uname: String = str(unit.get("unit_name", "")).strip_edges()
+		if uname != key:
+			continue
+		var max_hp_v: int = int(unit.get("max_hp", 0))
+		if max_hp_v <= 0:
+			return -1.0
+		var cur_hp_v: int = int(unit.get("current_hp", max_hp_v))
+		return clampf(float(cur_hp_v) / float(max_hp_v), 0.0, 1.0)
+	return -1.0
+
+func advance_camp_condition_recovery_on_visit() -> void:
+	ensure_camp_unit_condition()
+	for key in camp_unit_condition.keys():
+		var uname: String = str(key).strip_edges()
+		if uname == "":
+			continue
+		var c: Dictionary = get_unit_camp_condition(uname)
+		var rec: int = maxi(0, int(c.get("recovery_visits", 0)))
+		if rec > 0:
+			rec -= 1
+		if rec <= 0:
+			var hp_ratio: float = _get_roster_hp_ratio(uname)
+			if hp_ratio >= 0.0:
+				c["injured"] = hp_ratio <= 0.45
+				c["fatigued"] = hp_ratio <= 0.80
+			else:
+				c["injured"] = false
+				c["fatigued"] = false
+			c["recovery_visits"] = 0
+		else:
+			c["recovery_visits"] = rec
+		set_unit_camp_condition(uname, c)
+
+func get_available_pair_scene_for_unit(unit_name: String) -> Dictionary:
+	var uname: String = str(unit_name).strip_edges()
+	if uname.is_empty():
+		return {}
+
+	var scenes: Array = CAMP_PAIR_SCENE_DB.get_scenes()
+	if scenes.is_empty():
+		return {}
+
+	var roster_names: Array[String] = []
+	for ud in player_roster:
+		if ud is Dictionary:
+			var n := str((ud as Dictionary).get("unit_name", "")).strip_edges()
+			if n != "" and n not in roster_names:
+				roster_names.append(n)
+
+	for scene_variant in scenes:
+		if not (scene_variant is Dictionary):
+			continue
+		var scene: Dictionary = scene_variant
+		var sid: String = str(scene.get("id", "")).strip_edges()
+		if sid.is_empty():
+			continue
+		if has_seen_pair_scene(sid) and bool(scene.get("one_time", true)):
+			continue
+
+		var a: String = str(scene.get("unit_a", "")).strip_edges()
+		var b: String = str(scene.get("unit_b", "")).strip_edges()
+		if a == "" or b == "":
+			continue
+		if uname != a and uname != b:
+			continue
+
+		if a not in roster_names or b not in roster_names:
+			continue
+
+		var tier_a: String = get_avatar_relationship_tier(a)
+		var tier_b: String = get_avatar_relationship_tier(b)
+		var need_a: String = str(scene.get("threshold_a", "stranger")).strip_edges().to_lower()
+		var need_b: String = str(scene.get("threshold_b", "stranger")).strip_edges().to_lower()
+		if _tier_rank(tier_a) < _tier_rank(need_a):
+			continue
+		if _tier_rank(tier_b) < _tier_rank(need_b):
+			continue
+
+		var requires_flags: Array = scene.get("requires_flags", [])
+		var forbidden_flags: Array = scene.get("forbidden_flags", [])
+
+		var blocked: bool = false
+		for f in requires_flags:
+			var fk: String = str(f).strip_edges()
+			if fk == "":
+				continue
+			if not _is_camp_lore_flag_satisfied(fk):
+				blocked = true
+				break
+		if blocked:
+			continue
+		for f2 in forbidden_flags:
+			var fk2: String = str(f2).strip_edges()
+			if fk2 == "":
+				continue
+			if _is_camp_lore_flag_satisfied(fk2):
+				blocked = true
+				break
+		if blocked:
+			continue
+
+		return scene
+
+	return {}
+
+# ==========================================
+# PARTY CAPTURE (MOST IMPORTANT SOURCE OF ORPHANS)
+# ==========================================
+
+func save_party(battlefield: Node2D) -> void:
+	global_gold = battlefield.player_gold
+
+	global_inventory.clear()
+	for it in battlefield.player_inventory:
+		var uniq := make_unique_item(it)
+		if uniq != null:
+			global_inventory.append(uniq)
+
+	player_roster.clear()
+
+	for unit in battlefield.player_container.get_children():
+		if not unit.is_queued_for_deletion() and unit.current_hp > 0:
+			if unit.get_meta("is_dragon", false):
+				# --- COUNT FAVORITE SURVIVALS ---
+				var d_uid = str(unit.get_meta("dragon_uid", ""))
+				if d_uid != "" and d_uid == morgra_favorite_dragon_uid:
+					morgra_favorite_survived_battles += 1
+				# -------------------------------------
+				continue
+
+			var actual_sprite = null
+			if unit.has_node("Sprite"):
+				actual_sprite = unit.get_node("Sprite").texture
+			elif unit.has_node("Sprite2D"):
+				actual_sprite = unit.get_node("Sprite2D").texture
+
+			var actual_portrait = null
+			if unit.data:
+				actual_portrait = unit.data.portrait
+
+			# --- FIX 2: PRESERVE EQUIPPED WEAPON REFERENCE IN INVENTORY ---
+			var inv_raw: Array = []
+			var eq_weapon_src: Resource = null
+			var eq_weapon: Resource = null
+
+			if "equipped_weapon" in unit:
+				eq_weapon_src = unit.equipped_weapon
+
+			if "inventory" in unit and unit.inventory != null:
+				for it in unit.inventory:
+					var uniq := make_unique_item(it)
+					if uniq != null:
+						inv_raw.append(uniq)
+						if it == eq_weapon_src:
+							eq_weapon = uniq
+
+			# Fallback if somehow the equipped weapon is not inside inventory
+			if eq_weapon == null and eq_weapon_src != null:
+				eq_weapon = make_unique_item(eq_weapon_src)
+
+			var m_type = 0
+			if "move_type" in unit: m_type = unit.move_type
+
+			var u_ability = ""
+			if "ability" in unit: u_ability = unit.ability
+
+			var unit_dict = {
+				"unit_name": unit.unit_name,
+				"unit_class": unit.unit_class_name,
+				"is_promoted": unit.get("is_promoted") if "is_promoted" in unit else false,
+				"data": unit.data,
+				"data_path_hint": (
+					str(unit.data.resource_path).strip_edges()
+					if unit.data != null and str(unit.data.resource_path).strip_edges() != ""
+					else (
+						str(unit.data.get_meta("original_path")).strip_edges()
+						if unit.data != null and unit.data.has_meta("original_path")
+						else ""
+					)
+				),
+				"class_data": unit.active_class_data,
+				"level": unit.level,
+				"experience": unit.experience,
+				"max_hp": unit.max_hp,
+				"current_hp": unit.current_hp,
+				"strength": unit.strength,
+				"magic": unit.magic,
+				"defense": unit.defense,
+				"resistance": unit.resistance,
+				"speed": unit.speed,
+				"agility": unit.agility,
+				"move_range": unit.move_range,
+				"move_type": m_type,
+				"equipped_weapon": eq_weapon,
+				"inventory": inv_raw,
+				"portrait": actual_portrait,
+				"battle_sprite": actual_sprite,
+				"ability": u_ability,
+				"skill_points": unit.get("skill_points") if unit.get("skill_points") != null else 0,
+				"unlocked_skills": unit.get("unlocked_skills").duplicate() if unit.get("unlocked_skills") != null else [],
+				"unlocked_abilities": unit.get("unlocked_abilities").duplicate() if unit.get("unlocked_abilities") != null else [],
+				"unit_tags": unit.get("unit_tags", []).duplicate()
+			}
+
+			player_roster.append(unit_dict)
+
+	if active_save_slot != -1:
+		save_game(active_save_slot, true)
+
+
+# ==========================================
+# LEVEL FLOW
+# ==========================================
+
+func load_next_level() -> void:
+	# --- MORGRA EMOTIONAL STATE COUNTDOWN ---
+	if morgra_anger_duration > 0:
+		morgra_anger_duration -= 1
+		if morgra_anger_duration == 0:
+			# Anger is over, now she gives you the cold shoulder for 2 maps
+			morgra_neutral_duration = 2 
+	elif morgra_neutral_duration > 0:
+		morgra_neutral_duration -= 1
+		
+	reset_camp_shop()
+	reset_dragon_ranch_actions()
+	has_triggered_map_encounter = false
+	reset_npc_visit_flags()
+	_process_base_economy()
+	
+	if active_save_slot != -1:
+		save_game(active_save_slot, true)
+
+	if is_skirmish_mode:
+		SceneTransition.change_scene_to_file("res://Scenes/UI/WorldMap.tscn")
+		return
+
+	var next_scene = "res://Scenes/camp_menu.tscn"
+
+	if current_level_index < post_battle_transitions.size() and post_battle_transitions[current_level_index] != "":
+		next_scene = post_battle_transitions[current_level_index]
+
+	if current_level_index == max_unlocked_index:
+		max_unlocked_index += 1
+		# Camp request pacing: advance only when a story level is actually cleared.
+		camp_request_progress_level += 1
+
+	current_level_index = max_unlocked_index
+	SceneTransition.change_scene_to_file(next_scene)
+						
+func enter_level_from_map(selected_level_idx: int) -> void:
+	reset_camp_shop()
+	current_level_index = selected_level_idx
+	
+	if selected_level_idx < max_unlocked_index:
+		is_skirmish_mode = true
+		if selected_level_idx < campaign_levels.size():
+			SceneTransition.change_scene_to_file(campaign_levels[selected_level_idx])
+	else:
+		is_skirmish_mode = false
+		if selected_level_idx < pre_battle_transitions.size() and pre_battle_transitions[selected_level_idx] != "":
+			SceneTransition.change_scene_to_file(pre_battle_transitions[selected_level_idx])
+		elif selected_level_idx < campaign_levels.size():
+			SceneTransition.change_scene_to_file(campaign_levels[selected_level_idx])
+
+# --- FIX 3: SAFE PROGRESS SAVING ---
+func save_current_progress(slot: int = -1) -> void:
+	var target_slot: int = slot
+	if target_slot == -1:
+		target_slot = active_save_slot
+		
+	if target_slot == -1:
+		return
+		
+	save_game(target_slot)
+
+## Returns how much of this scavenger score this player has already claimed (persisted). Used so refresh does not resurface claimed quantity.
+func get_claimed_scavenger_quantity(score_id: String) -> int:
+	if score_id == null or str(score_id).strip_edges().is_empty():
+		return 0
+	return int(claimed_scavenger_scores.get(str(score_id).strip_edges(), 0))
+
+## Records a claim so fetch can subtract it; call before or with save to prevent re-claim after reload.
+func record_scavenger_claim(score_id: String, quantity: int) -> void:
+	if score_id == null or str(score_id).strip_edges().is_empty() or quantity <= 0:
+		return
+	var key: String = str(score_id).strip_edges()
+	var prev: int = int(claimed_scavenger_scores.get(key, 0))
+	claimed_scavenger_scores[key] = prev + quantity
+
+## True if a save can be written (prevents scavenger transactions from applying without persistence).
+func can_persist_scavenger() -> bool:
+	return active_save_slot >= 0
+
+# ==========================================
+# SUPPORTS
+# ==========================================
+
+# Safe pair key: delimiter must not appear in unit names. Legacy saves use "_"; we migrate on read.
+const REL_PAIR_KEY_SEP: String = "\u001F"
+
+func get_support_key(name_a: String, name_b: String) -> String:
+	var names = [name_a, name_b]
+	names.sort()
+	return names[0] + REL_PAIR_KEY_SEP + names[1]
+
+## Parses a relationship/support key into [id_a, id_b]. Handles legacy "_" keys for backward compatibility.
+func parse_relationship_key(key: String) -> PackedStringArray:
+	if key.contains(REL_PAIR_KEY_SEP):
+		return key.split(REL_PAIR_KEY_SEP)
+	return key.split("_")
+
+func _legacy_pair_key(name_a: String, name_b: String) -> String:
+	var names = [name_a, name_b]
+	names.sort()
+	return names[0] + "_" + names[1]
+
+func _migrate_support_bond_key_if_needed(name_a: String, name_b: String) -> void:
+	var key: String = get_support_key(name_a, name_b)
+	if support_bonds.has(key):
+		return
+	var legacy: String = _legacy_pair_key(name_a, name_b)
+	if support_bonds.has(legacy):
+		support_bonds[key] = support_bonds[legacy]
+		support_bonds.erase(legacy)
+
+## Returns support bond dict for the pair; migrates legacy key on read. Use this instead of support_bonds.get(key) when you have names.
+func get_support_bond(name_a: String, name_b: String) -> Dictionary:
+	_migrate_support_bond_key_if_needed(name_a, name_b)
+	var key: String = get_support_key(name_a, name_b)
+	return support_bonds.get(key, {"points": 0, "rank": 0})
+
+func add_support_points(name_a: String, name_b: String, amount: int = 1) -> void:
+	_migrate_support_bond_key_if_needed(name_a, name_b)
+	var key = get_support_key(name_a, name_b)
+	if not support_bonds.has(key):
+		support_bonds[key] = {"points": 0, "rank": 0}
+
+	if support_bonds[key]["rank"] >= 3:
+		return
+
+	support_bonds[key]["points"] += amount
+
+func reset_dragon_ranch_actions() -> void:
+	for d in DragonManager.player_dragons:
+		if d is Dictionary:
+			d["ranch_action_used_this_level"] = false
+
+func penalize_support_points(name_a: String, name_b: String, amount: int = 2) -> void:
+	_migrate_support_bond_key_if_needed(name_a, name_b)
+	var key = get_support_key(name_a, name_b)
+	if support_bonds.has(key):
+		# Don't let it drop below 0
+		support_bonds[key]["points"] = max(0, support_bonds[key]["points"] - amount)
+
+# --- Relationship Web V1: pair stats (trust, rivalry, mentorship, fear). Grief is battle-local only, not persisted. ---
+const RELATIONSHIP_DEFAULTS: Dictionary = {"trust": 0, "rivalry": 0, "mentorship": 0, "fear": 0}
+
+func get_relationship(name_a: String, name_b: String) -> Dictionary:
+	var key: String = get_support_key(name_a, name_b)
+	var raw = relationship_web.get(key)
+	if raw == null or not (raw is Dictionary):
+		var legacy_key: String = _legacy_pair_key(name_a, name_b)
+		raw = relationship_web.get(legacy_key)
+		if raw != null and raw is Dictionary:
+			relationship_web[key] = raw.duplicate()
+			relationship_web.erase(legacy_key)
+	if raw == null or not (raw is Dictionary):
+		return RELATIONSHIP_DEFAULTS.duplicate()
+	var out: Dictionary = RELATIONSHIP_DEFAULTS.duplicate()
+	for k in out.keys():
+		if raw.has(k):
+			out[k] = clampi(int(raw[k]), 0, 100)
+	return out
+
+func set_relationship_value(name_a: String, name_b: String, stat: String, value: int) -> void:
+	if stat == "grief":
+		return
+	var key: String = get_support_key(name_a, name_b)
+	if not relationship_web.has(key):
+		relationship_web[key] = RELATIONSHIP_DEFAULTS.duplicate()
+	if RELATIONSHIP_DEFAULTS.has(stat):
+		relationship_web[key][stat] = clampi(value, 0, 100)
+
+func add_relationship_value(name_a: String, name_b: String, stat: String, delta: int) -> void:
+	if stat == "grief":
+		return
+	var rel: Dictionary = get_relationship(name_a, name_b)
+	set_relationship_value(name_a, name_b, stat, rel.get(stat, 0) + delta)
+
+# --- Avatar-to-unit relationship (lightweight; reusable for real quests, support scenes, camp trust gates) ---
+const AVATAR_RELATIONSHIP_SCORE_MIN: int = 0
+const AVATAR_RELATIONSHIP_SCORE_MAX: int = 100
+const AVATAR_RELATIONSHIP_TIER_STRANGER: int = 0
+const AVATAR_RELATIONSHIP_TIER_KNOWN: int = 10
+const AVATAR_RELATIONSHIP_TIER_TRUSTED: int = 25
+const AVATAR_RELATIONSHIP_TIER_CLOSE: int = 50
+const AVATAR_RELATIONSHIP_TIER_BONDED: int = 80
+
+func _avatar_relationship_default_entry() -> Dictionary:
+	return {
+		"score": 0,
+		"requests_completed": 0,
+		"branching_successes": 0,
+		"branching_failures": 0,
+		"last_change": 0,
+		"last_reason": "",
+	}
+
+## Returns full relationship entry for unit; creates with defaults if missing. Safe for missing units.
+func get_avatar_relationship(unit_name: String) -> Dictionary:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return _avatar_relationship_default_entry().duplicate()
+	if not avatar_relationship_by_unit.has(key):
+		avatar_relationship_by_unit[key] = _avatar_relationship_default_entry().duplicate()
+	var entry: Variant = avatar_relationship_by_unit[key]
+	if entry is Dictionary:
+		return (entry as Dictionary).duplicate()
+	return _avatar_relationship_default_entry().duplicate()
+
+## Returns current score (0–100) for Avatar–unit relationship. Safe for missing units.
+func get_avatar_relationship_score(unit_name: String) -> int:
+	var entry: Dictionary = get_avatar_relationship(unit_name)
+	return clampi(int(entry.get("score", 0)), AVATAR_RELATIONSHIP_SCORE_MIN, AVATAR_RELATIONSHIP_SCORE_MAX)
+
+## Returns tier string from score: stranger / known / trusted / close / bonded. Derived, not stored.
+func get_avatar_relationship_tier(unit_name: String) -> String:
+	var score: int = get_avatar_relationship_score(unit_name)
+	if score >= AVATAR_RELATIONSHIP_TIER_BONDED:
+		return "bonded"
+	if score >= AVATAR_RELATIONSHIP_TIER_CLOSE:
+		return "close"
+	if score >= AVATAR_RELATIONSHIP_TIER_TRUSTED:
+		return "trusted"
+	if score >= AVATAR_RELATIONSHIP_TIER_KNOWN:
+		return "known"
+	return "stranger"
+
+## Applies score delta and updates last_change/last_reason. Clamps score to 0–100. Creates entry if missing.
+func add_avatar_relationship(unit_name: String, amount: int, reason: String = "") -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return
+	if not avatar_relationship_by_unit.has(key):
+		avatar_relationship_by_unit[key] = _avatar_relationship_default_entry().duplicate()
+	var entry: Dictionary = avatar_relationship_by_unit[key]
+	var old_score: int = int(entry.get("score", 0))
+	var new_score: int = clampi(old_score + amount, AVATAR_RELATIONSHIP_SCORE_MIN, AVATAR_RELATIONSHIP_SCORE_MAX)
+	entry["score"] = new_score
+	entry["last_change"] = new_score - old_score
+	entry["last_reason"] = str(reason).strip_edges()
+
+## Call when player completes a camp request (turn-in). Increments requests_completed; if branching, branching_successes.
+## request_depth: "normal" (+2 or +3), "deep" (+4), "personal" (+5). Used for progression layer.
+func record_avatar_request_completed(unit_name: String, is_branching: bool, request_depth: String = "normal") -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return
+	if not avatar_relationship_by_unit.has(key):
+		avatar_relationship_by_unit[key] = _avatar_relationship_default_entry().duplicate()
+	var entry: Dictionary = avatar_relationship_by_unit[key]
+	entry["requests_completed"] = int(entry.get("requests_completed", 0)) + 1
+	if is_branching:
+		entry["branching_successes"] = int(entry.get("branching_successes", 0)) + 1
+	var delta: int = 2
+	if request_depth == "personal":
+		delta = 5
+	elif request_depth == "deep":
+		delta = 4
+	elif is_branching:
+		delta = 3
+	add_avatar_relationship(unit_name, delta, "request_completed")
+
+## Call when player fails a branching camp check. Increments branching_failures and applies -1.
+func record_avatar_branching_failure(unit_name: String) -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return
+	if not avatar_relationship_by_unit.has(key):
+		avatar_relationship_by_unit[key] = _avatar_relationship_default_entry().duplicate()
+	var entry: Dictionary = avatar_relationship_by_unit[key]
+	entry["branching_failures"] = int(entry.get("branching_failures", 0)) + 1
+	add_avatar_relationship(unit_name, -1, "branching_failed")
+
+## Returns a lightweight, display-ready summary of the current camp request.
+## Keys:
+##   has_active (bool), status (String), title (String), giver (String),
+##   request_depth (String: normal/deep/personal), type (String),
+##   objective (String), progress (String), reward (String),
+##   relationship_tier (String), no_active_message (String), no_active_hint (String)
+func get_camp_request_display_data() -> Dictionary:
+	var status: String = str(camp_request_status).strip_edges().to_lower()
+	var valid_status: bool = status == "active" or status == "ready_to_turn_in" or status == "failed"
+	if not valid_status:
+		return {
+			"has_active": false,
+			"status": "",
+			"title": "",
+			"giver": "",
+			"request_depth": "",
+			"type": "",
+			"objective": "",
+			"progress": "",
+			"reward": "",
+			"relationship_tier": "",
+			"no_active_message": "No active camp request.",
+			"no_active_hint": "Explore camp and speak to your allies. Higher bonds unlock deeper requests.",
+		}
+	var giver: String = str(camp_request_giver_name).strip_edges()
+	var req_type: String = str(camp_request_type).strip_edges()
+	var depth: String = "normal"
+	if camp_request_payload is Dictionary:
+		depth = str(camp_request_payload.get("request_depth", "normal")).strip_edges().to_lower()
+	var objective: String = ""
+	var progress_text: String = ""
+	var target_name: String = str(camp_request_target_name).strip_edges()
+	var target_amount: int = int(camp_request_target_amount)
+	if status == "active":
+		if req_type == "item_delivery":
+			if target_name != "" and giver != "":
+				objective = "Bring %d× %s to %s." % [maxi(1, target_amount), target_name, giver]
+			elif giver != "":
+				objective = "Gather the requested supplies for %s." % giver
+			else:
+				objective = "Gather the requested supplies."
+			var have: int = camp_request_progress
+			if have > 0 and target_amount > 0:
+				progress_text = "Progress: %d / %d" % [have, target_amount]
+		elif req_type == "talk_to_unit":
+			if target_name != "" and giver != "":
+				objective = "Talk to %s, then return to %s." % [target_name, giver]
+			elif target_name != "":
+				objective = "Talk to %s." % target_name
+			elif giver != "":
+				objective = "Speak with the requested target, then return to %s." % giver
+			else:
+				objective = "Speak with the requested ally in camp."
+			progress_text = "Objective: Find %s and speak with them." % target_name if target_name != "" else "Objective: Speak with the requested ally."
+	elif status == "ready_to_turn_in":
+		if req_type == "item_delivery":
+			if giver != "":
+				objective = "Return to %s to complete the request." % giver
+			else:
+				objective = "Return to camp to complete the request."
+			if target_name != "" and target_amount > 0:
+				progress_text = "You have what you need: %d× %s." % [target_amount, target_name]
+			else:
+				progress_text = "Requirements met. Ready to turn in."
+		elif req_type == "talk_to_unit":
+			if target_name != "" and giver != "":
+				objective = "You spoke with %s. Return to %s to complete the request." % [target_name, giver]
+			elif target_name != "":
+				objective = "You spoke with %s. Return to camp to complete the request." % target_name
+			elif giver != "":
+				objective = "Return to %s to complete the request." % giver
+			else:
+				objective = "Return to camp to complete the request."
+			progress_text = "Conversation complete. Turn the request in."
+		else:
+			objective = "Return to %s to complete the request." % giver if giver != "" else "Return to camp to complete the request."
+			progress_text = "Ready to turn in."
+	elif status == "failed":
+		if req_type == "talk_to_unit":
+			if target_name != "" and giver != "":
+				objective = "You failed to get through to %s. Return to %s." % [target_name, giver]
+			elif target_name != "":
+				objective = "You failed to get through to %s. Return to camp." % target_name
+			elif giver != "":
+				objective = "You were not able to complete this request. Return to %s." % giver
+			else:
+				objective = "You were not able to complete this request."
+		elif giver != "":
+			objective = "You were not able to complete this request. Return to %s." % giver
+		else:
+			objective = "You were not able to complete this request."
+		progress_text = "Outcome: failed. No reward will be granted."
+	var reward_bits: Array[String] = []
+	if camp_request_reward_gold > 0:
+		reward_bits.append("%d gold" % int(camp_request_reward_gold))
+	if camp_request_reward_affinity > 0 and giver != "":
+		reward_bits.append("Favor with %s (+%d)" % [giver, int(camp_request_reward_affinity)])
+	var reward_text: String = ""
+	if reward_bits.size() == 1:
+		reward_text = "Reward: %s." % reward_bits[0]
+	elif reward_bits.size() > 1:
+		reward_text = "Reward: %s and %s." % [reward_bits[0], reward_bits[1]]
+	var tier: String = get_avatar_relationship_tier(giver) if giver != "" else ""
+	return {
+		"has_active": true,
+		"status": status,
+		"title": str(camp_request_title),
+		"giver": giver,
+		"request_depth": depth,
+		"type": req_type,
+		"objective": objective,
+		"progress": progress_text,
+		"reward": reward_text,
+		"relationship_tier": tier,
+		"no_active_message": "",
+		"no_active_hint": "",
+	}
+
+# --- Personal quest state (relationship-gated; one-at-a-time with camp requests) ---
+const _TIER_ORDER: Array = ["stranger", "known", "trusted", "close", "bonded"]
+
+func _tier_rank(tier: String) -> int:
+	var t: String = str(tier).strip_edges().to_lower()
+	for i in range(_TIER_ORDER.size()):
+		if _TIER_ORDER[i] == t:
+			return i
+	return 0
+
+func _personal_quest_default_state() -> Dictionary:
+	return {"unlocked": false, "active": false, "completed": false, "last_offered_at_score": 0, "seen_unlock_scene": false}
+
+## Returns personal quest state for unit; creates default entry if missing. Safe for missing units.
+func get_personal_quest_state(unit_name: String) -> Dictionary:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return _personal_quest_default_state().duplicate()
+	if not personal_quest_state_by_unit.has(key):
+		personal_quest_state_by_unit[key] = _personal_quest_default_state().duplicate()
+	var entry: Variant = personal_quest_state_by_unit[key]
+	if entry is Dictionary:
+		return (entry as Dictionary).duplicate()
+	return _personal_quest_default_state().duplicate()
+
+## Sets active flag so one-at-a-time rule holds (active = no other camp request from this unit).
+func set_personal_quest_active(unit_name: String, active: bool) -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return
+	if not personal_quest_state_by_unit.has(key):
+		personal_quest_state_by_unit[key] = _personal_quest_default_state().duplicate()
+	personal_quest_state_by_unit[key]["active"] = active
+
+## Marks personal quest completed for unit; clears active.
+func mark_personal_quest_completed(unit_name: String) -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return
+	if not personal_quest_state_by_unit.has(key):
+		personal_quest_state_by_unit[key] = _personal_quest_default_state().duplicate()
+	personal_quest_state_by_unit[key]["completed"] = true
+	personal_quest_state_by_unit[key]["active"] = false
+
+## Marks personal quest unlocked (when tier first qualifies). Optional.
+func mark_personal_quest_unlocked(unit_name: String) -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return
+	if not personal_quest_state_by_unit.has(key):
+		personal_quest_state_by_unit[key] = _personal_quest_default_state().duplicate()
+	personal_quest_state_by_unit[key]["unlocked"] = true
+
+## True if unit has a personal quest profile, tier meets unlock_tier, and not completed/active.
+func is_personal_quest_eligible(unit_name: String) -> bool:
+	var profile: Dictionary = CampRequestContentDB.get_personal_quest_profile(unit_name)
+	if profile.is_empty():
+		return false
+	var state: Dictionary = get_personal_quest_state(unit_name)
+	if state.get("completed", false) or state.get("active", false):
+		return false
+	var tier: String = get_avatar_relationship_tier(unit_name)
+	var need: String = str(profile.get("unlock_tier", "close")).strip_edges().to_lower()
+	return _tier_rank(tier) >= _tier_rank(need)
+
+## Returns a compact list of "Available Leads" in camp (personal quests, special scenes, deep-bond hints).
+## Each entry: { unit_name, lead_type (personal_quest|special_scene|deep_hint), text, priority }
+## Does not mutate any state; uses existing relationship / quest / scene data.
+func get_available_task_leads(max_leads: int = 5) -> Array[Dictionary]:
+	var leads_by_unit: Dictionary = {}
+	if max_leads <= 0:
+		return []
+
+	var active_status: String = str(camp_request_status).strip_edges().to_lower()
+	var active_giver: String = str(camp_request_giver_name).strip_edges()
+	var has_active_request: bool = active_status == "active" or active_status == "ready_to_turn_in" or active_status == "failed"
+
+	# Precompute roster and item candidates for request_offer leads (read-only).
+	var roster_names: Array[String] = []
+	for ud in player_roster:
+		if ud is Dictionary:
+			var n := str((ud as Dictionary).get("unit_name", "")).strip_edges()
+			if n != "" and n not in roster_names:
+				roster_names.append(n)
+
+	var item_names: Array[String] = []
+	if ItemDatabase:
+		for item in ItemDatabase.master_item_pool:
+			if item == null:
+				continue
+			# Only use materials/consumables for camp requests (matches camp behavior).
+			if not (item is MaterialData or item is ConsumableData):
+				continue
+			var wn: Variant = item.get("weapon_name")
+			var iname: Variant = item.get("item_name")
+			var disp: String = ""
+			if wn != null and str(wn).strip_edges() != "":
+				disp = str(wn).strip_edges()
+			elif iname != null and str(iname).strip_edges() != "":
+				disp = str(iname).strip_edges()
+			if disp != "" and disp not in item_names:
+				item_names.append(disp)
+
+	# Build a combined set of unit names we know about.
+	var unit_names: Array[String] = []
+	for rel_name in avatar_relationship_by_unit.keys():
+		var s: String = str(rel_name).strip_edges()
+		if s != "" and s not in unit_names:
+			unit_names.append(s)
+	for pq_name in personal_quest_state_by_unit.keys():
+		var s2: String = str(pq_name).strip_edges()
+		if s2 != "" and s2 not in unit_names:
+			unit_names.append(s2)
+	# Include current roster unit names if available.
+	for unit_data in player_roster:
+		if unit_data is Dictionary:
+			var uname: String = str((unit_data as Dictionary).get("unit_name", "")).strip_edges()
+			if uname != "" and uname not in unit_names:
+				unit_names.append(uname)
+	# Include units that have personal quest profiles defined in content.
+	for profile_name in CampRequestContentDB.PERSONAL_QUEST_PROFILES.keys():
+		var s3: String = str(profile_name).strip_edges()
+		if s3 != "" and s3 not in unit_names:
+			unit_names.append(s3)
+	# Include units that have special camp scenes defined in content.
+	for scene_name in CampRequestContentDB.SPECIAL_CAMP_SCENES.keys():
+		var s4: String = str(scene_name).strip_edges()
+		if s4 != "" and s4 not in unit_names:
+			unit_names.append(s4)
+
+	for unit_name in unit_names:
+		var uname: String = str(unit_name).strip_edges()
+		if uname == "":
+			continue
+
+		# Skip the current active request giver for lead hints, to avoid confusion.
+		if has_active_request and uname == active_giver:
+			continue
+
+		var best_lead: Dictionary = {}
+		var best_priority: int = -1
+
+		# 1) Personal quest available.
+		if is_personal_quest_eligible(uname):
+			var text_pq: String = "Personal quest available: %s." % uname
+			best_lead = {
+				"unit_name": uname,
+				"lead_type": "personal_quest",
+				"text": text_pq,
+				"priority": 100,
+			}
+			best_priority = 100
+
+		# 2) Special camp scene available (only if we didn't already pick a higher-priority personal quest).
+		if best_priority < 100:
+			var tier: String = get_avatar_relationship_tier(uname)
+			for scene_tier in ["close", "trusted"]:
+				var scene_tier_str: String = str(scene_tier)
+				var scene := CampRequestContentDB.get_special_camp_scene(uname, scene_tier_str)
+				if scene.is_empty() or scene.get("lines", []).is_empty():
+					continue
+				var tier_ok: bool = (scene_tier_str == "close" and tier in ["close", "bonded"]) or (scene_tier_str == "trusted" and tier in ["trusted", "close", "bonded"])
+				if not tier_ok:
+					continue
+				if scene.get("one_time", true) and has_seen_special_scene(uname, scene_tier_str):
+					continue
+				var text_scene: String = "Special camp scene available with %s." % uname
+				if best_priority < 80:
+					best_lead = {
+						"unit_name": uname,
+						"lead_type": "special_scene",
+						"text": text_scene,
+						"priority": 80,
+					}
+					best_priority = 80
+				break
+
+		# 3) High-bond deeper-content hint (only if we have no stronger lead yet).
+		if best_priority < 80:
+			var tier2: String = get_avatar_relationship_tier(uname)
+			if tier2 in ["close", "bonded"]:
+				var text_hint: String = "%s may have something more personal to ask." % uname
+				best_lead = {
+					"unit_name": uname,
+					"lead_type": "deep_hint",
+					"text": text_hint,
+					"priority": 50,
+				}
+				best_priority = 50
+
+		# 4) Normal camp request offer (read-only; only when no active request and no stronger lead).
+		if best_priority < 50 and not has_active_request and not roster_names.is_empty():
+			var preview: Dictionary = get_best_available_camp_offer_preview()
+			if bool(preview.get("has_offer", false)):
+				var giver: String = str(preview.get("giver_name", "")).strip_edges()
+				if giver == uname:
+					var texts: Array[String] = [
+						"%s may have something for you." % uname,
+						"%s seems to want a word." % uname,
+						"%s may need your help." % uname,
+					]
+					var idx: int = abs(uname.hash()) % texts.size()
+					best_lead = {
+						"unit_name": uname,
+						"lead_type": "request_offer",
+						"text": texts[idx],
+						"priority": 30,
+					}
+					best_priority = 30
+
+		if best_priority > 0:
+			leads_by_unit[uname] = best_lead
+
+	var out: Array[Dictionary] = []
+	for uname in leads_by_unit.keys():
+		out.append(leads_by_unit[uname])
+
+	out.sort_custom(func(a, b) -> bool:
+		return int(a.get("priority", 0)) > int(b.get("priority", 0))
+	)
+	if out.size() > max_leads:
+		out = out.slice(0, max_leads)
+	return out
+
+## Mirrors CampExplore.gd's "one offer giver when no active request" selection logic in a read-only helper.
+## Returns: { has_offer: bool, giver_name: String, offer: Dictionary, score: int }.
+func get_best_available_camp_offer_preview() -> Dictionary:
+	var status: String = str(camp_request_status).strip_edges().to_lower()
+	if status == "active" or status == "ready_to_turn_in" or status == "failed":
+		return {"has_offer": false}
+	if player_roster.is_empty():
+		return {"has_offer": false}
+
+	var roster_names: Array[String] = []
+	for ud in player_roster:
+		if ud is Dictionary:
+			var n := str((ud as Dictionary).get("unit_name", "")).strip_edges()
+			if n != "" and n not in roster_names:
+				roster_names.append(n)
+
+	var item_names: Array[String] = []
+	if ItemDatabase:
+		for item in ItemDatabase.master_item_pool:
+			if item == null:
+				continue
+			if not (item is MaterialData or item is ConsumableData):
+				continue
+			var wn: Variant = item.get("weapon_name")
+			var iname: Variant = item.get("item_name")
+			var disp: String = ""
+			if wn != null and str(wn).strip_edges() != "":
+				disp = str(wn).strip_edges()
+			elif iname != null and str(iname).strip_edges() != "":
+				disp = str(iname).strip_edges()
+			if disp != "" and disp not in item_names:
+				item_names.append(disp)
+
+	var best_name: String = ""
+	var best_offer: Dictionary = {}
+	var best_score: int = -99999
+	var progress_level: int = camp_request_progress_level
+	var next_eligible: Dictionary = camp_request_unit_next_eligible_level
+	var recent: Array = camp_request_recent_givers
+	var completed_by: Dictionary = camp_requests_completed_by_unit
+
+	for ud in player_roster:
+		if not (ud is Dictionary):
+			continue
+		var d: Dictionary = ud
+		var name_str: String = str(d.get("unit_name", "")).strip_edges()
+		if name_str == "":
+			continue
+		var score: int = 0
+		var completed: int = int(completed_by.get(name_str, 0))
+		if completed == 0:
+			score += 20
+		elif completed == 1:
+			score += 10
+		if name_str in recent:
+			score -= 30
+		var threshold: int = int(next_eligible.get(name_str, -1))
+		if threshold >= 0 and progress_level < threshold:
+			score -= 100
+		var tiebreak: int = (name_str.hash() + progress_level) % 1000
+		score = score * 1000 + (500 - tiebreak)
+
+		var giver_tier: String = get_avatar_relationship_tier(name_str)
+		var personal_eligible: bool = is_personal_quest_eligible(name_str)
+		var unit_data_variant: Variant = d.get("data", null)
+		var personality: String = CampRequestDB.get_personality(unit_data_variant, name_str)
+		var offer: Dictionary = CampRequestDB.get_offer(
+			name_str,
+			personality,
+			roster_names,
+			item_names,
+			false,
+			giver_tier,
+			personal_eligible
+		)
+		if offer.is_empty():
+			continue
+		if score > best_score:
+			best_score = score
+			best_name = name_str
+			best_offer = offer
+
+	if best_name == "" or best_offer.is_empty():
+		return {"has_offer": false}
+
+	return {
+		"has_offer": true,
+		"giver_name": best_name,
+		"offer": best_offer,
+		"score": best_score,
+	}
+
+## Mark one-time special camp scene as seen for unit+tier.
+func mark_special_scene_seen(unit_name: String, tier: String) -> void:
+	var key: String = "%s|%s" % [str(unit_name).strip_edges(), str(tier).strip_edges().to_lower()]
+	if key.is_empty() or key == "|":
+		return
+	special_camp_scenes_seen[key] = true
+
+## True if one-time special scene for unit+tier was already shown.
+func has_seen_special_scene(unit_name: String, tier: String) -> bool:
+	var key: String = "%s|%s" % [str(unit_name).strip_edges(), str(tier).strip_edges().to_lower()]
+	return special_camp_scenes_seen.get(key, false)
+
+func get_mentorship(name_a: String, name_b: String) -> int:
+	return int(get_relationship(name_a, name_b).get("mentorship", 0))
+
+func get_rivalry(name_a: String, name_b: String) -> int:
+	return int(get_relationship(name_a, name_b).get("rivalry", 0))
+
+# --- Relationship Web UI helpers (display names, colors, effect hints, entries for Unit Details / tooltips) ---
+const REL_UI_MENTORSHIP_FORMED_THRESHOLD: int = 25
+const REL_UI_RIVALRY_FORMED_THRESHOLD: int = 20
+const REL_UI_STATS: Array[String] = ["trust", "mentorship", "rivalry"]
+
+func get_relationship_entries_for_unit(unit_id: String) -> Array:
+	var out: Array = []
+	if unit_id.is_empty():
+		return out
+	for key in relationship_web.keys():
+		var parts: PackedStringArray = parse_relationship_key(key)
+		if parts.size() < 2:
+			continue
+		var a: String = parts[0]
+		var b: String = parts[1]
+		if a != unit_id and b != unit_id:
+			continue
+		var partner_id: String = b if a == unit_id else a
+		var rel: Dictionary = get_relationship(a, b)
+		out.append({
+			"partner_id": partner_id,
+			"trust": int(rel.get("trust", 0)),
+			"rivalry": int(rel.get("rivalry", 0)),
+			"mentorship": int(rel.get("mentorship", 0)),
+			"fear": int(rel.get("fear", 0))
+		})
+	return out
+
+func get_top_relationship_entries_for_unit(unit_id: String, candidate_ids: Array, max_entries: int) -> Array:
+	var entries: Array = get_relationship_entries_for_unit(unit_id)
+	var flat: Array = []
+	for e in entries:
+		var partner_id: String = e.get("partner_id", "")
+		if not candidate_ids.is_empty() and partner_id not in candidate_ids:
+			continue
+		for stat in REL_UI_STATS:
+			var val: int = int(e.get(stat, 0))
+			if val <= 0:
+				continue
+			var formed: bool = false
+			if stat == "mentorship":
+				formed = val >= REL_UI_MENTORSHIP_FORMED_THRESHOLD
+			elif stat == "rivalry":
+				formed = val >= REL_UI_RIVALRY_FORMED_THRESHOLD
+			flat.append({"partner_id": partner_id, "stat": stat, "value": val, "formed": formed})
+	flat.sort_custom(func(a, b) -> bool:
+		var af: bool = a.get("formed", false)
+		var bf: bool = b.get("formed", false)
+		if af != bf:
+			return af
+		return int(a.get("value", 0)) > int(b.get("value", 0))
+	)
+	return flat.slice(0, max_entries)
+
+func get_relationship_type_display_name(stat: String) -> String:
+	var s: String = str(stat).to_lower()
+	if s == "trust": return "Trust"
+	if s == "mentorship": return "Mentorship"
+	if s == "rivalry": return "Rivalry"
+	if s == "fear": return "Fear"
+	return stat
+
+func get_relationship_type_color(stat: String) -> Color:
+	var s: String = str(stat).to_lower()
+	if s == "trust": return Color(0.35, 0.82, 0.88)
+	if s == "mentorship": return Color(0.95, 0.75, 0.2)
+	if s == "rivalry": return Color(0.92, 0.35, 0.2)
+	if s == "fear": return Color(0.6, 0.4, 0.6)
+	return Color.GRAY
+
+func get_relationship_effect_hint(stat: String, _value: int) -> String:
+	var s: String = str(stat).to_lower()
+	if s == "trust": return "better guard / assist synergy nearby"
+	if s == "mentorship": return "guidance bonus nearby"
+	if s == "rivalry": return "sharper crits, lower coordination with them"
+	if s == "fear": return "penalty when near"
+	return ""
+
+func format_relationship_tooltip(entry: Dictionary) -> String:
+	var partner_id: String = entry.get("partner_id", "?")
+	var stat: String = entry.get("stat", "")
+	var value: int = int(entry.get("value", 0))
+	var type_name: String = get_relationship_type_display_name(stat)
+	var hint: String = get_relationship_effect_hint(stat, value)
+	return type_name + ": " + partner_id + " (+" + hint + ")"
+
+func format_relationship_row_bbcode(entry: Dictionary) -> String:
+	var partner_id: String = entry.get("partner_id", "?")
+	var stat: String = entry.get("stat", "")
+	var value: int = int(entry.get("value", 0))
+	var formed: bool = entry.get("formed", false)
+	var type_name: String = get_relationship_type_display_name(stat)
+	var hint: String = get_relationship_effect_hint(stat, value)
+	var col: Color = get_relationship_type_color(stat)
+	var hex: String = "#" + col.to_html(false)
+	var label: String = (type_name + " Formed") if formed else (type_name + " " + str(value))
+	return "[color=" + hex + "]" + partner_id + " — " + label + "[/color] — " + hint
+
+# --- WORLD MAP ENCOUNTERS (session-only; not persisted) ---
+var has_triggered_map_encounter: bool = false
+
+
+# ==========================================
+# SERAPHINA / NPC RELATIONSHIP HELPERS
+# ==========================================
+
+func _build_default_seraphina_state() -> Dictionary:
+	return {
+		"affection": 0,
+		"trust": 0,
+		"professionalism": 0,
+		"flags": {
+			"met_seraphina": false,
+			"met_this_visit": false,
+			"asked_about_scar": false,
+			"drank_the_special": false,
+			"discussed_special_aftertaste": false,
+			"after_hours_talk": false
+		},
+		"seen_nodes": {},
+		"counters": {
+			"times_spoken": 0
+		}
+	}
+
+func _normalize_seraphina_state(state: Dictionary) -> Dictionary:
+	var defaults: Dictionary = _build_default_seraphina_state()
+
+	if not state.has("affection"):
+		state["affection"] = defaults["affection"]
+	if not state.has("trust"):
+		state["trust"] = defaults["trust"]
+	if not state.has("professionalism"):
+		state["professionalism"] = defaults["professionalism"]
+
+	if not state.has("flags") or typeof(state["flags"]) != TYPE_DICTIONARY:
+		state["flags"] = {}
+	if not state.has("seen_nodes") or typeof(state["seen_nodes"]) != TYPE_DICTIONARY:
+		state["seen_nodes"] = {}
+	if not state.has("counters") or typeof(state["counters"]) != TYPE_DICTIONARY:
+		state["counters"] = {}
+
+	var flags: Dictionary = state["flags"]
+	var seen_nodes: Dictionary = state["seen_nodes"]
+	var counters: Dictionary = state["counters"]
+
+	for key in defaults["flags"].keys():
+		if not flags.has(key):
+			flags[key] = defaults["flags"][key]
+
+	for key in defaults["counters"].keys():
+		if not counters.has(key):
+			counters[key] = defaults["counters"][key]
+
+	state["flags"] = flags
+	state["seen_nodes"] = seen_nodes
+	state["counters"] = counters
+	return state
+
+func ensure_seraphina_state() -> void:
+	if not npc_relationships.has("seraphina"):
+		npc_relationships["seraphina"] = _build_default_seraphina_state()
+	else:
+		npc_relationships["seraphina"] = _normalize_seraphina_state(npc_relationships["seraphina"])
+
+func get_seraphina_state() -> Dictionary:
+	ensure_seraphina_state()
+	return npc_relationships["seraphina"]
+
+func sync_seraphina_legacy_cache() -> void:
+	_sync_seraphina_legacy_from_relationship_state()
+
+func _sync_seraphina_legacy_from_relationship_state() -> void:
+	ensure_seraphina_state()
+	var state: Dictionary = npc_relationships["seraphina"]
+	var flags: Dictionary = state.get("flags", {})
+
+	var affection: int = int(state.get("affection", 0))
+	var trust: int = int(state.get("trust", 0))
+	var professionalism: int = int(state.get("professionalism", 0))
+
+	var derived_disposition: int = clampi(
+		int(round((float(affection) * 0.40) + (float(trust) * 0.30) + (float(professionalism) * 0.30))),
+		0,
+		100
+	)
+
+	var derived_rank: int = 0
+	if affection >= 50 and trust >= 55 and professionalism >= 30:
+		derived_rank = 3
+	elif affection >= 25 and trust >= 35 and professionalism >= 25:
+		derived_rank = 2
+	elif trust >= 15 and professionalism >= 20:
+		derived_rank = 1
+
+	_suppress_seraphina_legacy_sync = true
+	_legacy_seraphina_disposition = derived_disposition
+	_legacy_seraphina_romance_rank = derived_rank
+	_legacy_seraphina_met_today = bool(flags.get("met_this_visit", false))
+	_suppress_seraphina_legacy_sync = false
+
+func _apply_legacy_seraphina_to_relationship_state() -> void:
+	ensure_seraphina_state()
+	var state: Dictionary = npc_relationships["seraphina"]
+	var flags: Dictionary = state.get("flags", {})
+
+	state["affection"] = clampi(int(round(float(_legacy_seraphina_disposition) * 0.45)), 0, 100)
+	state["trust"] = clampi(int(round(float(_legacy_seraphina_disposition) * 0.35)), 0, 100)
+	state["professionalism"] = clampi(int(round(float(_legacy_seraphina_disposition) * 0.55)), 0, 100)
+
+	match _legacy_seraphina_romance_rank:
+		1:
+			state["trust"] = max(int(state["trust"]), 15)
+			state["professionalism"] = max(int(state["professionalism"]), 20)
+		2:
+			state["affection"] = max(int(state["affection"]), 25)
+			state["trust"] = max(int(state["trust"]), 35)
+			state["professionalism"] = max(int(state["professionalism"]), 25)
+		3:
+			state["affection"] = max(int(state["affection"]), 50)
+			state["trust"] = max(int(state["trust"]), 55)
+			state["professionalism"] = max(int(state["professionalism"]), 30)
+
+	if _legacy_seraphina_disposition > 0 or _legacy_seraphina_romance_rank > 0:
+		flags["met_seraphina"] = true
+
+	flags["met_this_visit"] = _legacy_seraphina_met_today
+	state["flags"] = flags
+	npc_relationships["seraphina"] = _normalize_seraphina_state(state)
+
+func _migrate_legacy_seraphina_state(save_data: Dictionary) -> void:
+	if npc_relationships.has("seraphina"):
+		npc_relationships["seraphina"] = _normalize_seraphina_state(npc_relationships["seraphina"])
+		return
+
+	var state: Dictionary = _build_default_seraphina_state()
+
+	var legacy_disposition: int = int(save_data.get("seraphina_disposition", 0))
+	var legacy_rank: int = int(save_data.get("seraphina_romance_rank", 0))
+	var legacy_met_today: bool = bool(save_data.get("seraphina_met_today", false))
+
+	state["affection"] = clampi(int(round(float(legacy_disposition) * 0.45)), 0, 100)
+	state["trust"] = clampi(int(round(float(legacy_disposition) * 0.35)), 0, 100)
+	state["professionalism"] = clampi(int(round(float(legacy_disposition) * 0.55)), 0, 100)
+
+	match legacy_rank:
+		1:
+			state["trust"] = max(int(state["trust"]), 15)
+			state["professionalism"] = max(int(state["professionalism"]), 20)
+		2:
+			state["affection"] = max(int(state["affection"]), 25)
+			state["trust"] = max(int(state["trust"]), 35)
+			state["professionalism"] = max(int(state["professionalism"]), 25)
+		3:
+			state["affection"] = max(int(state["affection"]), 50)
+			state["trust"] = max(int(state["trust"]), 55)
+			state["professionalism"] = max(int(state["professionalism"]), 30)
+
+	if legacy_disposition > 0 or legacy_rank > 0:
+		state["flags"]["met_seraphina"] = true
+
+	state["flags"]["met_this_visit"] = legacy_met_today
+	npc_relationships["seraphina"] = _normalize_seraphina_state(state)
+	_sync_seraphina_legacy_from_relationship_state()
+
+func reset_npc_visit_flags() -> void:
+	ensure_seraphina_state()
+	var seraphina: Dictionary = npc_relationships["seraphina"]
+	var flags: Dictionary = seraphina.get("flags", {})
+	flags["met_this_visit"] = false
+	seraphina["flags"] = flags
+	npc_relationships["seraphina"] = _normalize_seraphina_state(seraphina)
+	_sync_seraphina_legacy_from_relationship_state()
+
+# ==========================================
+# BASE MANAGEMENT API
+# ==========================================
+
+# Purpose: Registers a new base location and assigns units to defend it.
+# Inputs: level_index (int) representing the map, selected_unit_names (Array of Strings).
+# Outputs: None.
+# Side Effects: Clears old base data, updates roster garrison flags.
+func establish_new_base(level_index: int, selected_unit_names: Array) -> void:
+	active_base_level_index = level_index
+	base_resource_storage = {"wood": 0, "iron": 0, "gold": 0}
+	base_under_attack = false
+	is_base_defense_active = false
+	
+	# Clear existing garrison flags to enforce the 1-base limit
+	for unit in player_roster:
+		unit["is_garrisoned"] = false
+		
+	# Apply the flag to the newly selected units
+	for unit in player_roster:
+		if unit.get("unit_name", "") in selected_unit_names:
+			unit["is_garrisoned"] = true
+
+# Purpose: Wipes the base state and returns garrisoned units to the active pool.
+func abandon_base() -> void:
+	active_base_level_index = -1
+	base_under_attack = false
+	is_base_defense_active = false
+	for unit in player_roster:
+		unit["is_garrisoned"] = false
+
+# Purpose: Retrieves only the units currently defending the base.
+# Returns: Array of unit dictionaries.
+func get_garrisoned_units() -> Array[Dictionary]:
+	var garrison: Array[Dictionary] = []
+	for unit in player_roster:
+		if unit.get("is_garrisoned", false):
+			garrison.append(unit)
+	return garrison
+
+# Purpose: Retrieves the units available for standard campaign deployment.
+# Returns: Array of unit dictionaries.
+func get_available_roster() -> Array[Dictionary]:
+	var available: Array[Dictionary] = []
+	for unit in player_roster:
+		if not unit.get("is_garrisoned", false):
+			available.append(unit)
+	return available
+	
+# Purpose: Calculates passive income based on base location and rolls for enemy attacks.
+# Inputs: None.
+# Outputs: None.
+# Side Effects: Modifies base_resource_storage and base_under_attack flags.
+func _process_base_economy() -> void:
+	base_last_harvest_report.clear()
+	if active_base_level_index == -1: return 
+
+	if is_base_defense_active:
+		is_base_defense_active = false
+		base_under_attack = false
+		return 
+
+	if base_under_attack:
+		base_resource_storage["wood"] = int(float(base_resource_storage["wood"]) * 0.2)
+		base_resource_storage["iron"] = int(float(base_resource_storage["iron"]) * 0.2)
+		base_resource_storage["gold"] = int(float(base_resource_storage["gold"]) * 0.2)
+		base_under_attack = false
+		base_last_harvest_report = {"robbed": true}
+		return 
+
+	# --- DYNAMIC YIELD LOGIC ---
+	var w_gain = randi_range(2, 4)
+	var i_gain = randi_range(2, 4)
+	var g_gain = randi_range(40, 60)
+
+	match active_base_level_index:
+		0: # Forest: Wood Focus
+			w_gain = randi_range(8, 12)
+			g_gain = randi_range(20, 30)
+		1: # Mines: Iron Focus
+			i_gain = randi_range(6, 10)
+			w_gain = randi_range(1, 2)
+		2: # Trade Hub: Gold Focus
+			g_gain = randi_range(120, 200)
+		3: # Marshes: High Risk/High Gold
+			g_gain = randi_range(250, 400)
+			# Marshes might have a higher attack chance, but we'll stick to gold for now
+
+	base_resource_storage["wood"] += w_gain
+	base_resource_storage["iron"] += i_gain
+	base_resource_storage["gold"] += g_gain
+
+	base_last_harvest_report = {
+		"robbed": false, "wood": w_gain, "iron": i_gain, "gold": g_gain,
+		"total_wood": base_resource_storage["wood"], "total_iron": base_resource_storage["iron"], "total_gold": base_resource_storage["gold"]
+	}
+
+	if randf() <= 0.15:
+		base_under_attack = true
+				
+# Purpose: Transfers stored resources to the global inventory and resets the base storage.
+# Returns: A dictionary containing the exact amounts collected for UI display.
+func collect_base_resources() -> Dictionary:
+	var collected = base_resource_storage.duplicate()
+	
+	# 1. Transfer Gold
+	global_gold += collected["gold"]
+	
+	# 2. Transfer Physical Items (Wooden Planks)
+	# Check if we have any wood AND if the file exists before doing work
+	if collected["wood"] > 0 and ResourceLoader.exists(wood_item_path):
+		var wood_template = load(wood_item_path) # Load ONCE outside the loop
+		for i in range(collected["wood"]):
+			var new_wood = make_unique_item(wood_template) 
+			global_inventory.append(new_wood)
+	elif collected["wood"] > 0:
+		push_error("Base Collection Error: WoodenPlank.tres not found at " + wood_item_path)
+		
+	# 3. Transfer Physical Items (Iron Ore)
+	if collected["iron"] > 0 and ResourceLoader.exists(iron_item_path):
+		var iron_template = load(iron_item_path) # Load ONCE outside the loop
+		for i in range(collected["iron"]):
+			var new_iron = make_unique_item(iron_template)
+			global_inventory.append(new_iron)
+	elif collected["iron"] > 0:
+		push_error("Base Collection Error: IronOre.tres not found at " + iron_item_path)
+		
+	# 4. Reset storage and save progress
+	base_resource_storage = {"wood": 0, "iron": 0, "gold": 0}
+	save_current_progress()
+	
+	return collected
+# Purpose: Scans the entire player roster to find the highest level unit.
+# Inputs: None.
+# Outputs: Integer representing the maximum level found (defaults to 1).
+func get_highest_roster_level() -> int:
+	var highest_level = 1
+	
+	for unit in player_roster:
+		var u_level = int(unit.get("level", 1))
+		if u_level > highest_level:
+			highest_level = u_level
+			
+	return highest_level
+
+# Purpose: Scans ONLY the units currently assigned to defend the base.
+# Inputs: None.
+# Outputs: Integer representing the maximum level among the garrison (defaults to 1).
+func get_highest_garrison_level() -> int:
+	var highest_level = 1
+	
+	for unit in player_roster:
+		if unit.get("is_garrisoned", false):
+			var u_level = int(unit.get("level", 1))
+			if u_level > highest_level:
+				highest_level = u_level
+				
+	return highest_level
+
+func _ready() -> void:
+	load_global_settings()
+
+func load_global_settings() -> void:
+	var cfg := ConfigFile.new()
+	var err := cfg.load(SETTINGS_FILE_PATH)
+
+	if err != OK:
+		apply_audio_settings()
+		return
+
+	audio_master_volume = clampf(float(cfg.get_value("audio", "master_volume", audio_master_volume)), 0.0, 1.0)
+
+	camera_pan_speed = clampf(float(cfg.get_value("battle", "camera_pan_speed", camera_pan_speed)), 100.0, 2500.0)
+	unit_move_speed = clampf(float(cfg.get_value("battle", "unit_move_speed", unit_move_speed)), 0.03, 1.0)
+
+	battle_follow_enemy_camera = bool(cfg.get_value("battle", "follow_enemy_camera", battle_follow_enemy_camera))
+	battle_show_danger_zone_default = bool(cfg.get_value("battle", "show_danger_zone_default", battle_show_danger_zone_default))
+	battle_show_minimap_default = bool(cfg.get_value("battle", "show_minimap_default", battle_show_minimap_default))
+	battle_minimap_opacity = clampf(float(cfg.get_value("battle", "minimap_opacity", battle_minimap_opacity)), 0.15, 1.0)
+
+	battle_zoom_step = clampf(float(cfg.get_value("battle", "zoom_step", battle_zoom_step)), 0.02, 0.50)
+	battle_min_zoom = clampf(float(cfg.get_value("battle", "min_zoom", battle_min_zoom)), 0.20, 3.00)
+	battle_max_zoom = clampf(float(cfg.get_value("battle", "max_zoom", battle_max_zoom)), 0.20, 4.00)
+	if battle_max_zoom <= battle_min_zoom:
+		battle_max_zoom = battle_min_zoom + 0.10
+
+	battle_zoom_to_cursor = bool(cfg.get_value("battle", "zoom_to_cursor", battle_zoom_to_cursor))
+	battle_edge_margin = clampi(int(cfg.get_value("battle", "edge_margin", battle_edge_margin)), 4, 300)
+
+	battle_show_grid = bool(cfg.get_value("battle", "show_grid", battle_show_grid))
+	battle_show_enemy_threat = bool(cfg.get_value("battle", "show_enemy_threat", battle_show_enemy_threat))
+	battle_show_faction_tiles = bool(cfg.get_value("battle", "show_faction_tiles", battle_show_faction_tiles))
+	battle_show_path_preview = bool(cfg.get_value("battle", "show_path_preview", battle_show_path_preview))
+	battle_path_preview_pulse = bool(cfg.get_value("battle", "path_preview_pulse", battle_path_preview_pulse))
+	battle_show_log = bool(cfg.get_value("battle", "show_log", battle_show_log))
+	battle_allow_fog_of_war = bool(cfg.get_value("battle", "allow_fog_of_war", battle_allow_fog_of_war))
+
+	apply_audio_settings()
+
+func save_global_settings() -> void:
+	var cfg := ConfigFile.new()
+
+	cfg.set_value("audio", "master_volume", audio_master_volume)
+
+	cfg.set_value("battle", "camera_pan_speed", camera_pan_speed)
+	cfg.set_value("battle", "unit_move_speed", unit_move_speed)
+
+	cfg.set_value("battle", "follow_enemy_camera", battle_follow_enemy_camera)
+	cfg.set_value("battle", "show_danger_zone_default", battle_show_danger_zone_default)
+	cfg.set_value("battle", "show_minimap_default", battle_show_minimap_default)
+	cfg.set_value("battle", "minimap_opacity", battle_minimap_opacity)
+
+	cfg.set_value("battle", "zoom_step", battle_zoom_step)
+	cfg.set_value("battle", "min_zoom", battle_min_zoom)
+	cfg.set_value("battle", "max_zoom", battle_max_zoom)
+	cfg.set_value("battle", "zoom_to_cursor", battle_zoom_to_cursor)
+	cfg.set_value("battle", "edge_margin", battle_edge_margin)
+
+	cfg.set_value("battle", "show_grid", battle_show_grid)
+	cfg.set_value("battle", "show_enemy_threat", battle_show_enemy_threat)
+	cfg.set_value("battle", "show_faction_tiles", battle_show_faction_tiles)
+	cfg.set_value("battle", "show_path_preview", battle_show_path_preview)
+	cfg.set_value("battle", "path_preview_pulse", battle_path_preview_pulse)
+	cfg.set_value("battle", "show_log", battle_show_log)
+	cfg.set_value("battle", "allow_fog_of_war", battle_allow_fog_of_war)
+
+	var err := cfg.save(SETTINGS_FILE_PATH)
+	if err != OK:
+		push_warning("Could not save global settings. Error code: %s" % err)
+
+func apply_audio_settings() -> void:
+	var master_bus := AudioServer.get_bus_index("Master")
+	if master_bus == -1:
+		return
+
+	var v := clampf(audio_master_volume, 0.0, 1.0)
+	if v <= 0.001:
+		AudioServer.set_bus_mute(master_bus, true)
+	else:
+		AudioServer.set_bus_mute(master_bus, false)
+		AudioServer.set_bus_volume_db(master_bus, linear_to_db(v))

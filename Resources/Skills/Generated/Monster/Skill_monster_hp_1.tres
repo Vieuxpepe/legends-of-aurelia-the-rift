@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://d3d16uvyo107v"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_1w5rl"]
+
+[resource]
+script = ExtResource("1_1w5rl")
+skill_id = "monster_hp_1"
+skill_name = "Ferocious Vitality I"
+description = "Grants +2 Max HP."
+boost_amount = 2

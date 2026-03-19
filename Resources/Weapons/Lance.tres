@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dvnkhrkiyej5a"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_h88rr"]
+[ext_resource type="Texture2D" uid="uid://b2gr6ggg0iagk" path="res://Assets/IronLance.png" id="1_nvalu"]
+
+[resource]
+script = ExtResource("1_h88rr")
+weapon_name = "Lance"
+gold_cost = 50
+weapon_type = 1
+might = 4
+hit_bonus = 20
+icon = ExtResource("1_nvalu")
+metadata/_custom_type_script = "uid://b1atwvdvhdm0s"

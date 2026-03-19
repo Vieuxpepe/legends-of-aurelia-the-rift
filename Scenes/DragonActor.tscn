@@ -1,0 +1,68 @@
+[gd_scene format=3 uid="uid://ceqisqxe7mmrt"]
+
+[ext_resource type="Script" uid="uid://6n8mk40g7sd0" path="res://Scenes/DragonActor.gd" id="1_8h82t"]
+[ext_resource type="AudioStream" uid="uid://tkqyxynyje4r" path="res://SoundEffects/Dragon Roaring.mp3" id="2_iixar"]
+[ext_resource type="AudioStream" uid="uid://brdythqiqjaex" path="res://SoundEffects/Dragon Roaring (1).mp3" id="3_kkutn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xdpyf"]
+bg_color = Color(0, 0, 0, 0.39215687)
+corner_radius_top_left = 200
+corner_radius_top_right = 200
+corner_radius_bottom_right = 200
+corner_radius_bottom_left = 200
+
+[node name="DragonActor" type="Control" unique_id=1627793885]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -1856.0
+offset_bottom = -1016.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8h82t")
+roar_sounds = Array[AudioStream]([ExtResource("2_iixar"), ExtResource("3_kkutn")])
+
+[node name="Shadow" type="Panel" parent="." unique_id=1497850082]
+layout_mode = 0
+offset_left = -6.0
+offset_top = 30.0
+offset_right = 37.0
+offset_bottom = 45.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xdpyf")
+
+[node name="BodyPivot" type="Control" parent="." unique_id=1959879190]
+anchors_preset = 0
+offset_right = 32.0
+offset_bottom = 32.0
+pivot_offset = Vector2(32, 64)
+mouse_filter = 2
+
+[node name="SpriteRect" type="TextureRect" parent="BodyPivot" unique_id=634402877]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="AuraParticles" type="CPUParticles2D" parent="BodyPivot" unique_id=288671425]
+amount = 12
+lifetime = 1.5
+emission_shape = 3
+emission_rect_extents = Vector2(1, 1)
+scale_amount_min = 3.0
+scale_amount_max = 3.0
+
+[node name="NameLabel" type="Label" parent="." unique_id=213244622]
+layout_mode = 0
+offset_top = -17.0
+offset_right = 40.0
+offset_bottom = -2.0
+theme_override_font_sizes/font_size = 12
+
+[node name="RoarPlayer" type="AudioStreamPlayer" parent="." unique_id=1974022339]

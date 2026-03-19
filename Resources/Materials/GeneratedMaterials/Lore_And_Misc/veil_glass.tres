@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://ct16yckvk13db"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_cpnqd"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_7wu5y"]
+
+[resource]
+script = ExtResource("2_7wu5y")
+rarity = "Rare"
+item_name = "Veil Glass"
+description = "A translucent shard formed where the Veil thinned and sealed again. Looking through it makes the edges of Aurelia seem fractionally misaligned."
+gold_cost = 136
+icon = ExtResource("1_cpnqd")
+category = "Lore_And_Misc"

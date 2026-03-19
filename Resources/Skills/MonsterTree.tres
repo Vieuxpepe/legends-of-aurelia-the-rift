@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://00ulotqdgwqs"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_5hhnr"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_2odgp"]
+[ext_resource type="Resource" uid="uid://fri1jnis7j7r" path="res://Resources/Skills/Generated/Monster/Skill_monster_agi_1.tres" id="3_ri68k"]
+[ext_resource type="Resource" uid="uid://bi5o2wgt0xygl" path="res://Resources/Skills/Generated/Monster/Skill_monster_agi_2.tres" id="4_0ww1y"]
+[ext_resource type="Resource" uid="uid://c5e5xti3r3vtv" path="res://Resources/Skills/Generated/Monster/Skill_monster_agi_3.tres" id="5_sbycq"]
+[ext_resource type="Resource" uid="uid://885nup5pqwgj" path="res://Resources/Skills/Generated/Monster/Skill_monster_apex_predator.tres" id="6_1ftnp"]
+[ext_resource type="Resource" uid="uid://2i5neor7gig2" path="res://Resources/Skills/Generated/Monster/Skill_monster_def_1.tres" id="7_qfe6l"]
+[ext_resource type="Resource" uid="uid://bhlul4gpbhgp5" path="res://Resources/Skills/Generated/Monster/Skill_monster_def_2.tres" id="8_e0chc"]
+[ext_resource type="Resource" uid="uid://b8l2u36275bqa" path="res://Resources/Skills/Generated/Monster/Skill_monster_frenzy_claw.tres" id="9_xe8gu"]
+[ext_resource type="Resource" uid="uid://d3d16uvyo107v" path="res://Resources/Skills/Generated/Monster/Skill_monster_hp_1.tres" id="10_ir2if"]
+[ext_resource type="Resource" uid="uid://dxj1a5wqr6boi" path="res://Resources/Skills/Generated/Monster/Skill_monster_hp_2.tres" id="11_fntnn"]
+[ext_resource type="Resource" uid="uid://crj44r5qa7vi" path="res://Resources/Skills/Generated/Monster/Skill_monster_res_1.tres" id="12_4mh68"]
+[ext_resource type="Resource" uid="uid://b27i830ai5qmx" path="res://Resources/Skills/Generated/Monster/Skill_monster_spd_1.tres" id="13_i5opl"]
+[ext_resource type="Resource" uid="uid://hkrek5nf3ujp" path="res://Resources/Skills/Generated/Monster/Skill_monster_str_1.tres" id="14_taxtm"]
+[ext_resource type="Resource" uid="uid://dsqq3sarcgmw2" path="res://Resources/Skills/Generated/Monster/Skill_monster_str_2.tres" id="15_dpkwe"]
+[ext_resource type="Resource" uid="uid://q1qpglpdg8ea" path="res://Resources/Skills/Generated/Monster/Skill_monster_str_3.tres" id="16_0ixdo"]
+[ext_resource type="Resource" uid="uid://cd3iw8qq2sf7e" path="res://Resources/Skills/Generated/Monster/Skill_monster_terrifying_roar.tres" id="17_3woen"]
+
+[resource]
+script = ExtResource("1_5hhnr")
+skills = Array[ExtResource("2_2odgp")]([ExtResource("3_ri68k"), ExtResource("4_0ww1y"), ExtResource("5_sbycq"), ExtResource("6_1ftnp"), ExtResource("7_qfe6l"), ExtResource("8_e0chc"), ExtResource("9_xe8gu"), ExtResource("10_ir2if"), ExtResource("11_fntnn"), ExtResource("12_4mh68"), ExtResource("13_i5opl"), ExtResource("14_taxtm"), ExtResource("15_dpkwe"), ExtResource("16_0ixdo"), ExtResource("17_3woen")])
+metadata/_custom_type_script = "uid://cedoicamottly"

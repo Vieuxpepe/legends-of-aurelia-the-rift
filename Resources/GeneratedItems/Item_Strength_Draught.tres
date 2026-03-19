@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://do5njjjldhrll"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_pbd4m"]
+
+[resource]
+script = ExtResource("1_pbd4m")
+rarity = "Rare"
+description = "Permanently grants +2 strength."
+item_name = "Strength Draught"
+heal_amount = 0
+gold_cost = 2000
+str_boost = 2

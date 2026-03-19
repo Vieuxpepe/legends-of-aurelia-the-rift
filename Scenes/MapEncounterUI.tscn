@@ -1,0 +1,112 @@
+[gd_scene format=3 uid="uid://bhox6sxwme336"]
+
+[ext_resource type="Script" uid="uid://udv3dbq0vpyo" path="res://Scenes/MapEncounterUI.gd" id="1_i38b0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_i38b0"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.2686247, 0.1468339, 0.01338521, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="MapEncounterUI" type="CanvasLayer" unique_id=1506727118]
+script = ExtResource("1_i38b0")
+
+[node name="BackgroundDim" type="ColorRect" parent="." unique_id=2020924261]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.60784316)
+
+[node name="Panel" type="Panel" parent="." unique_id=1697302382]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -300.0
+offset_right = 400.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_i38b0")
+
+[node name="TitleLabel" type="Label" parent="Panel" unique_id=928635092]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -131.0
+offset_top = 10.0
+offset_right = 131.0
+offset_bottom = 75.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.83137256, 0.7764706, 0.7019608, 1)
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DescriptionLabel" type="RichTextLabel" parent="Panel" unique_id=1673842794]
+layout_mode = 0
+offset_left = 31.0
+offset_top = 111.0
+offset_right = 770.0
+offset_bottom = 336.0
+theme_override_colors/default_color = Color(0.65882355, 0.62352943, 0.5686275, 1)
+theme_override_font_sizes/normal_font_size = 32
+
+[node name="ChoiceContainer" type="VBoxContainer" parent="Panel" unique_id=1242967480]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 296.0
+offset_right = 587.0
+offset_bottom = 336.0
+theme_override_constants/separation = 10
+
+[node name="ResultPanel" type="Panel" parent="." unique_id=1321346876]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -250.0
+offset_right = 350.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_i38b0")
+
+[node name="ResultLabel" type="RichTextLabel" parent="ResultPanel" unique_id=1594922590]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 14.0
+offset_right = 682.0
+offset_bottom = 393.0
+theme_override_colors/default_color = Color(0.83137256, 0.7764706, 0.7019608, 1)
+theme_override_font_sizes/normal_font_size = 32
+bbcode_enabled = true
+
+[node name="CloseButton" type="Button" parent="ResultPanel" unique_id=147105661]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -95.0
+offset_top = -65.0
+offset_right = 95.0
+offset_bottom = -25.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 24
+text = "Continue"

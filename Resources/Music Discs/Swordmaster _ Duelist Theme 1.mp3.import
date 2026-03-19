@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bs7ub6xtecypo"
+path="res://.godot/imported/Swordmaster _ Duelist Theme 1.mp3-574f744557d452fb62653725e435a757.mp3str"
+
+[deps]
+
+source_file="res://Resources/Music Discs/Swordmaster _ Duelist Theme 1.mp3"
+dest_files=["res://.godot/imported/Swordmaster _ Duelist Theme 1.mp3-574f744557d452fb62653725e435a757.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

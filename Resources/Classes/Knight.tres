@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://yi8w2a8kj00d"]
+
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_a442o"]
+[ext_resource type="Resource" uid="uid://det6nvsuvxh7n" path="res://Resources/Skills/KnightTree.tres" id="1_b8f3r"]
+[ext_resource type="Resource" uid="uid://cmwue2g0kcnl4" path="res://Resources/Classes/PromotedClass/GreatKnight.tres" id="1_barbc"]
+[ext_resource type="Resource" uid="uid://l1toh3q5rgcb" path="res://Resources/Classes/PromotedClass/General.tres" id="2_b8f3r"]
+[ext_resource type="Resource" uid="uid://bqdkvp4liu4s2" path="res://Resources/Classes/PromotedClass/Hero.tres" id="3_p37jy"]
+
+[resource]
+script = ExtResource("1_a442o")
+job_name = "Knight"
+move_type = 1
+allowed_weapon_types = Array[int]([1])
+class_skill_tree = ExtResource("1_b8f3r")
+promotion_options = Array[Resource]([ExtResource("1_barbc"), ExtResource("2_b8f3r"), ExtResource("3_p37jy")])
+hp_bonus = 14
+str_bonus = 2
+def_bonus = 4
+spd_bonus = -1
+agi_bonus = -1
+res_bonus = 2
+hp_growth_bonus = 20
+def_growth_bonus = 20
+spd_growth_bonus = -10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

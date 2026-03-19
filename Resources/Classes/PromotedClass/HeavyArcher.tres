@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://b5ptobcqxnny3"]
+
+[ext_resource type="Texture2D" uid="uid://fowssurta5m8" path="res://Assets/Sprites/Promoted Battle Sprites/Heavy Archer.png" id="1_e23u6"]
+[ext_resource type="Resource" uid="uid://bl0fig177brb1" path="res://Resources/Skills/Generated/Promoted/HeavyArcher/HeavyArcherTree.tres" id="1_sdgon"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_sdgon"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_gp44w"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_tgqxy"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_asl26"]
+
+[resource]
+script = ExtResource("2_sdgon")
+job_name = "Heavy Archer"
+move_type = 1
+allowed_weapon_types = Array[int]([3])
+class_skill_tree = ExtResource("1_sdgon")
+promotion_options = Array[Resource]([ExtResource("3_gp44w"), ExtResource("4_tgqxy"), ExtResource("5_asl26")])
+promoted_battle_sprite = ExtResource("1_e23u6")
+promo_def_bonus = 3
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

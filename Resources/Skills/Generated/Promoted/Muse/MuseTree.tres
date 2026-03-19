@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://c0lfujb8hbpl0"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_1g3lb"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_1x1ys"]
+[ext_resource type="Resource" uid="uid://dwfexukbl8hh4" path="res://Resources/Skills/Generated/Promoted/Muse/Skill_muse_mag_1.tres" id="3_dqtve"]
+[ext_resource type="Resource" uid="uid://ds12whmr3nelg" path="res://Resources/Skills/Generated/Promoted/Muse/Skill_muse_res_1.tres" id="4_h8y7p"]
+[ext_resource type="Resource" uid="uid://bj1bnot1qd8cn" path="res://Resources/Skills/Generated/Promoted/Muse/Skill_muse_spd_1.tres" id="5_nflsp"]
+[ext_resource type="Resource" uid="uid://iua4r0g5wgyx" path="res://Resources/Skills/Generated/Promoted/Muse/Skill_muse_hp_1.tres" id="6_rk8o3"]
+[ext_resource type="Resource" uid="uid://cvlr3ccmot2xy" path="res://Resources/Skills/Generated/Promoted/Muse/Skill_muse_mastery.tres" id="7_1goxe"]
+
+[resource]
+script = ExtResource("1_1g3lb")
+tree_name = "Muse Tree"
+skills = Array[ExtResource("2_1x1ys")]([ExtResource("3_dqtve"), ExtResource("4_h8y7p"), ExtResource("5_nflsp"), ExtResource("6_rk8o3"), ExtResource("7_1goxe")])

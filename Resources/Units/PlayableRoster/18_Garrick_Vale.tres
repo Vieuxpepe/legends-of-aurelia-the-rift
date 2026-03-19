@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://c1i0arg0khbol"]
+
+[ext_resource type="Resource" uid="uid://dripsbbvug6em" path="res://Resources/Classes/Paladin.tres" id="1_66t7s"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_65mdv"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_bytxx"]
+[ext_resource type="Texture2D" uid="uid://ci5mxbo6mxpn5" path="res://Assets/Portraits/Garrick Portrait.png" id="3_yppcw"]
+[ext_resource type="Resource" uid="uid://d0y5maqadn6gh" path="res://Resources/GeneratedItems/Weapon_Pike_of_Valor.tres" id="4_yppcw"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_jpfjf"]
+[ext_resource type="Texture2D" uid="uid://cgf450vwe2n28" path="res://Assets/Sprites/Garrick Battle Sprite.png" id="7_jpfjf"]
+
+[resource]
+script = ExtResource("3_bytxx")
+display_name = "Garrick Vale"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["If duty means anything, let it be this: protect the living, not the throne.", "Then let my oath die with me, not my conscience.", "A kingdom is not its crown. Remember that.", "I served too much that was unworthy. Do better with what remains."])
+level_up_quotes = Array[String](["Good. Then I can meet the next test with clearer hands.", "Discipline answered. As it should.", "Then I remain fit to serve something better than what I was given."])
+support_personality = "disciplined"
+character_class = ExtResource("1_66t7s")
+starting_weapon = ExtResource("4_yppcw")
+unit_sprite = ExtResource("7_jpfjf")
+portrait = ExtResource("3_yppcw")
+max_hp = 31
+strength = 10
+defense = 10
+resistance = 6
+speed = 9
+agility = 11
+hp_growth = 70
+str_growth = 45
+mag_growth = 5
+def_growth = 35
+res_growth = 25
+spd_growth = 40
+agi_growth = 50

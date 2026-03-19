@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bgg1xt1f0kbm6"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_cuv3j"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_3wmvu"]
+
+[resource]
+script = ExtResource("2_3wmvu")
+rarity = "Uncommon"
+item_name = "Marrow Fungus"
+description = "A fleshy cave mushroom streaked with ivory veins. When cut open, it smells damp and faintly meaty."
+gold_cost = 26
+icon = ExtResource("1_cuv3j")
+category = "Lore_And_Misc"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://ckncamvc2bmbc"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_xox2d"]
+
+[resource]
+script = ExtResource("1_xox2d")
+description = "A simple pike for early recruits and militia lines."
+weapon_name = "Bronze Pike"
+gold_cost = 380
+weapon_type = 1
+effect_amount = 0
+might = 4
+hit_bonus = 8
+max_durability = 42
+current_durability = 42

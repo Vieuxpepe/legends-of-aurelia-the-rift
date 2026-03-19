@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://ckb12c5bq4x00"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_1osmu"]
+
+[resource]
+script = ExtResource("1_1osmu")
+rarity = "Rare"
+description = "Long reach at the cost of comfort and tempo."
+weapon_name = "Longbow"
+gold_cost = 2200
+weapon_type = 3
+effect_amount = 0
+might = 7
+hit_bonus = 5
+min_range = 2
+max_range = 3
+max_durability = 28
+current_durability = 28

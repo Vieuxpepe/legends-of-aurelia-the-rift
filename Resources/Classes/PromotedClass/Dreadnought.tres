@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://8fin17512ug8"]
+
+[ext_resource type="Resource" uid="uid://i2i233jex4xt" path="res://Resources/Skills/Generated/Promoted/Dreadnought/DreadnoughtTree.tres" id="1_sp5c1"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="2_5ve6v"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_qbapy"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="3_khnya"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="4_wxrvx"]
+
+[resource]
+script = ExtResource("2_qbapy")
+job_name = "Dreadnought"
+move_type = 1
+allowed_weapon_types = Array[int]([7, 0])
+class_skill_tree = ExtResource("1_sp5c1")
+promotion_options = Array[Resource]([ExtResource("2_5ve6v"), ExtResource("3_khnya"), ExtResource("4_wxrvx")])
+promo_hp_bonus = 4
+promo_str_bonus = 2
+promo_def_bonus = 3
+promo_spd_bonus = 0
+promo_agi_bonus = 0

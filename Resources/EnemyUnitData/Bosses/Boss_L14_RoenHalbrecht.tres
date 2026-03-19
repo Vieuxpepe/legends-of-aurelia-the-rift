@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://3v0eghsbielp"]
+
+[ext_resource type="Resource" uid="uid://l1toh3q5rgcb" path="res://Resources/Classes/PromotedClass/General.tres" id="1_u6l0r"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ajm51"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_aq0o0"]
+[ext_resource type="Resource" uid="uid://d0y5maqadn6gh" path="res://Resources/GeneratedItems/Weapon_Pike_of_Valor.tres" id="4_qchyg"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_wafu8"]
+
+[resource]
+script = ExtResource("3_aq0o0")
+display_name = "Roen Halbrecht"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["I sold honor piece by piece and called the bargain necessary."])
+character_class = ExtResource("1_u6l0r")
+starting_weapon = ExtResource("4_qchyg")
+ability = "betrayers_lever"
+max_hp = 50
+strength = 18
+defense = 17
+resistance = 8
+speed = 7
+agility = 12
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

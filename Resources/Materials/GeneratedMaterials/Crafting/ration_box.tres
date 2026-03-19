@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dt28bxtxqr8qy"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_rs7bl"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_84obe"]
+
+[resource]
+script = ExtResource("2_84obe")
+item_name = "Ration Box"
+description = "A hard-sided travel box fitted for dried food, crumbs, and precious leftovers. It keeps supplies drier than a sack and safer than hope."
+gold_cost = 14
+icon = ExtResource("1_rs7bl")
+category = "Crafting"

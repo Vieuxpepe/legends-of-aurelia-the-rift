@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://dit4g20tmiupv"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_2crr4"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_actdx"]
+[ext_resource type="Resource" uid="uid://brxuikm2m2p4u" path="res://Resources/Skills/Generated/Mage/Skill_mage_agi_1.tres" id="3_15l6o"]
+[ext_resource type="Resource" uid="uid://0k211nufw51d" path="res://Resources/Skills/Generated/Mage/Skill_mage_arcane_shift.tres" id="4_watil"]
+[ext_resource type="Resource" uid="uid://d12dde8fuc12h" path="res://Resources/Skills/Generated/Mage/Skill_mage_fireball.tres" id="5_0nqee"]
+[ext_resource type="Resource" uid="uid://lgomsjnxawxj" path="res://Resources/Skills/Generated/Mage/Skill_mage_hp_1.tres" id="6_4uol6"]
+[ext_resource type="Resource" uid="uid://bujgbyy2sxl3r" path="res://Resources/Skills/Generated/Mage/Skill_mage_mag_1.tres" id="7_t71xt"]
+[ext_resource type="Resource" uid="uid://lp5o104yip8l" path="res://Resources/Skills/Generated/Mage/Skill_mage_mag_2.tres" id="8_l6gcs"]
+[ext_resource type="Resource" uid="uid://c51s16be88n0y" path="res://Resources/Skills/Generated/Mage/Skill_mage_mag_3.tres" id="9_6y702"]
+[ext_resource type="Resource" uid="uid://bu7l8nbkmi42m" path="res://Resources/Skills/Generated/Mage/Skill_mage_mag_4.tres" id="10_u10mk"]
+[ext_resource type="Resource" uid="uid://bsmm4smrid5h1" path="res://Resources/Skills/Generated/Mage/Skill_mage_meteor_storm.tres" id="11_ypved"]
+[ext_resource type="Resource" uid="uid://b8jm3x64q3v6e" path="res://Resources/Skills/Generated/Mage/Skill_mage_res_1.tres" id="12_swg2n"]
+[ext_resource type="Resource" uid="uid://cuf5qygt6bf2b" path="res://Resources/Skills/Generated/Mage/Skill_mage_res_2.tres" id="13_xudoo"]
+[ext_resource type="Resource" uid="uid://xciy3f4wc4gi" path="res://Resources/Skills/Generated/Mage/Skill_mage_res_3.tres" id="14_17cfg"]
+[ext_resource type="Resource" uid="uid://mlxhxr3g2wbs" path="res://Resources/Skills/Generated/Mage/Skill_mage_spd_1.tres" id="15_anaho"]
+[ext_resource type="Resource" uid="uid://ssy5a48a7akh" path="res://Resources/Skills/Generated/Mage/Skill_mage_spd_2.tres" id="16_wa1hf"]
+[ext_resource type="Resource" uid="uid://bimlggkdd5knf" path="res://Resources/Skills/Generated/Mage/Skill_mage_spd_3.tres" id="17_ow5su"]
+
+[resource]
+script = ExtResource("1_2crr4")
+skills = Array[ExtResource("2_actdx")]([ExtResource("3_15l6o"), ExtResource("4_watil"), ExtResource("5_0nqee"), ExtResource("6_4uol6"), ExtResource("7_t71xt"), ExtResource("8_l6gcs"), ExtResource("9_6y702"), ExtResource("10_u10mk"), ExtResource("11_ypved"), ExtResource("12_swg2n"), ExtResource("13_xudoo"), ExtResource("14_17cfg"), ExtResource("15_anaho"), ExtResource("16_wa1hf"), ExtResource("17_ow5su")])
+metadata/_custom_type_script = "uid://cedoicamottly"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://crw2ccmofa1o5"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_bh4dn"]
+
+[resource]
+script = ExtResource("1_bh4dn")
+skill_id = "cleric_spd_3"
+skill_name = "Celerity III"
+description = "Increases Speed by +2."
+required_skill_id = "cleric_res_2"
+grid_position = Vector2(5, 0)
+stat_to_boost = "spd"
+boost_amount = 2

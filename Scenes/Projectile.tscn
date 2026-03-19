@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://dxjloy0f3ts3k"]
+
+[ext_resource type="Texture2D" uid="uid://b1mwhfhj2v6rb" path="res://animations/ShotLoop-Sheet.png" id="1_lal66"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_k1cl8"]
+atlas = ExtResource("1_lal66")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_y0kec"]
+atlas = ExtResource("1_lal66")
+region = Rect2(64, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0tri7"]
+atlas = ExtResource("1_lal66")
+region = Rect2(128, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ds7j7"]
+atlas = ExtResource("1_lal66")
+region = Rect2(192, 0, 64, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_5i1ty"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_k1cl8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_y0kec")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0tri7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ds7j7")
+}],
+"loop": true,
+"name": &"default",
+"speed": 15.0
+}]
+
+[node name="Projectile" type="AnimatedSprite2D" unique_id=925353777]
+sprite_frames = SubResource("SpriteFrames_5i1ty")
+frame_progress = 0.72278833

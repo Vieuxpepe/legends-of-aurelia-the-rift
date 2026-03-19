@@ -1,0 +1,143 @@
+[gd_scene format=3 uid="uid://juqp3heiqh1j"]
+
+[ext_resource type="Script" uid="uid://dfu3hdf7q3i44" path="res://Transition2.gd" id="1_2anef"]
+[ext_resource type="AudioStream" uid="uid://3p1l6v7bea1i" path="res://SoundEffects/Music/Emberwood BGM.mp3" id="2_pg1an"]
+[ext_resource type="AudioStream" uid="uid://bnu50h5hefoay" path="res://SoundEffects/Music/camp_music Transition2.mp3" id="3_k8gl4"]
+[ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="4_hbgfe"]
+[ext_resource type="Texture2D" uid="uid://bxdcdvymmbc34" path="res://Scenes/UI/image-removebg-preview (75).png" id="5_5xke7"]
+[ext_resource type="Texture2D" uid="uid://y07cjcn4utug" path="res://Scenes/UI/image-removebg-preview (77).png" id="6_raoch"]
+[ext_resource type="Texture2D" uid="uid://wfmt8ky70k6g" path="res://Scenes/UI/image-removebg-preview (76).png" id="7_51tgu"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_x1g40"]
+load_path = "res://.godot/imported/burning_village.png-755645171ad14dd1e9d8b1a2291577c4.ctex"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pilxr"]
+bg_color = Color(0, 0, 0, 0.6509804)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="StorySequence" type="Control" unique_id=1413827111]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 25.0
+offset_right = -50.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_2anef")
+forest_music = ExtResource("2_pg1an")
+camp_music = ExtResource("3_k8gl4")
+
+[node name="Background" type="TextureRect" parent="." unique_id=799297873]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -31.0
+offset_top = -32.0
+offset_right = 87.0
+offset_bottom = -29.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("CompressedTexture2D_x1g40")
+
+[node name="PortraitLeft" type="TextureRect" parent="." unique_id=1069547199]
+layout_mode = 0
+offset_left = 362.0
+offset_top = 421.0
+offset_right = 715.0
+offset_bottom = 860.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PortraitRight" type="TextureRect" parent="." unique_id=828102323]
+layout_mode = 0
+offset_left = 1155.0
+offset_top = 368.0
+offset_right = 1485.0
+offset_bottom = 884.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PortraitRightSmall" type="TextureRect" parent="." unique_id=1970121703]
+layout_mode = 0
+offset_left = 1013.0
+offset_top = 322.0
+offset_right = 1637.0
+offset_bottom = 995.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DialoguePanel" type="Panel" parent="." unique_id=935142828]
+layout_mode = 0
+offset_left = 230.0
+offset_top = 800.0
+offset_right = 1680.0
+offset_bottom = 1060.0
+
+[node name="SpeakerLabel" type="Label" parent="DialoguePanel" unique_id=1777243566]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 20.0
+offset_right = 373.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 32
+
+[node name="DialogueText" type="RichTextLabel" parent="DialoguePanel" unique_id=696287306]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -553.0
+offset_top = -38.0
+offset_right = 599.0
+offset_bottom = 119.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/normal_font_size = 32
+
+[node name="NextIndicator" type="Label" parent="DialoguePanel" unique_id=1321370355]
+layout_mode = 0
+offset_left = 1350.0
+offset_top = 211.0
+offset_right = 1431.0
+offset_bottom = 249.0
+text = ">"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TextBlip" type="AudioStreamPlayer" parent="." unique_id=810225578]
+stream = ExtResource("4_hbgfe")
+volume_db = -19.86
+pitch_scale = 0.84
+
+[node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=703547916]
+volume_db = -21.262
+
+[node name="Panel" type="Panel" parent="." unique_id=412710219]
+z_index = -1
+layout_mode = 0
+offset_left = 232.0
+offset_top = 803.0
+offset_right = 1680.0
+offset_bottom = 1057.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_pilxr")
+
+[node name="SkipButton" type="TextureButton" parent="." unique_id=1298592132]
+modulate = Color(0.50339526, 0.45449364, 0.43819308, 1)
+layout_mode = 0
+offset_left = 1707.0
+offset_top = 50.0
+offset_right = 1823.0
+offset_bottom = 145.0
+texture_normal = ExtResource("5_5xke7")
+texture_pressed = ExtResource("6_raoch")
+texture_hover = ExtResource("7_51tgu")
+ignore_texture_size = true
+stretch_mode = 5

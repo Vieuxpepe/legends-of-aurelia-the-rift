@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dawf7x0n6kahc"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_5lw6r"]
+
+[resource]
+script = ExtResource("1_5lw6r")
+skill_id = "hp_res_1"
+skill_name = "Holy Knight II"
+description = "Grants +2 Resistance."
+required_skill_id = "hp_str_1"
+grid_position = Vector2(1, 0)
+stat_to_boost = "res"
+boost_amount = 2

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cd3iw8qq2sf7e"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_177nx"]
+
+[resource]
+script = ExtResource("1_177nx")
+skill_id = "monster_terrifying_roar"
+skill_name = "Terrifying Roar"
+description = "Emit a terrifying roar that lowers enemy morale and speed."
+required_skill_id = "monster_spd_1"
+grid_position = Vector2(3, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Terrifying Roar"

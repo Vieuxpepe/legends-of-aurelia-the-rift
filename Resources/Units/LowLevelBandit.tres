@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dvakb3otn7jtk"]
+
+[ext_resource type="Resource" uid="uid://fxvmgcknu8xh" path="res://Resources/Classes/Monster.tres" id="1_43vnt"]
+[ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_ivb58"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_43wc4"]
+[ext_resource type="Resource" uid="uid://c1wtvc4o2xk4x" path="res://Resources/Materials/bone.tres" id="4_c8n5d"]
+[ext_resource type="Resource" uid="uid://dm5s65gledy77" path="res://Resources/Materials/Wooden Plank.tres" id="5_cg0x1"]
+[ext_resource type="Texture2D" uid="uid://hn5d0n20il22" path="res://Assets/Portraits/Skeleton.png" id="6_ulhth"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="7_leet4"]
+[ext_resource type="Resource" uid="uid://cbugs1gjcxkm8" path="res://Resources/Weapons/IronSword.tres" id="8_nw6qi"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="9_ycdcj"]
+[ext_resource type="Texture2D" uid="uid://cd5ifv7us0ykr" path="res://Assets/Skeleton_sprite.png" id="10_dcme7"]
+
+[sub_resource type="Resource" id="Resource_6bxmx"]
+script = ExtResource("3_43wc4")
+item = ExtResource("4_c8n5d")
+drop_chance = 50.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_4eos1"]
+script = ExtResource("3_43wc4")
+item = ExtResource("4_c8n5d")
+drop_chance = 25.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_65wnc"]
+script = ExtResource("3_43wc4")
+item = ExtResource("5_cg0x1")
+drop_chance = 25.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[resource]
+script = ExtResource("7_leet4")
+display_name = "Skeleton"
+character_class = ExtResource("1_43vnt")
+starting_weapon = ExtResource("8_nw6qi")
+death_sound = ExtResource("2_ivb58")
+unit_sprite = ExtResource("10_dcme7")
+portrait = ExtResource("6_ulhth")
+visual_scale = 2.5
+strength = 4
+resistance = 2
+speed = 4
+agility = 1
+min_gold_drop = 5
+max_gold_drop = 10
+drops_equipped_weapon = true
+equipped_weapon_chance = 15
+extra_loot = Array[ExtResource("3_43wc4")]([SubResource("Resource_6bxmx"), SubResource("Resource_4eos1"), SubResource("Resource_65wnc")])
+metadata/_custom_type_script = "uid://3jului3v2v6"

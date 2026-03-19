@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cnlntsywi7wl1"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_0a8bu"]
+
+[resource]
+script = ExtResource("1_0a8bu")
+skill_id = "spellblade_mag_3"
+skill_name = "Arcane Training III"
+description = "Increases Magic by +2."
+required_skill_id = "spellblade_agi_1"
+grid_position = Vector2(5, 0)
+stat_to_boost = "mag"
+boost_amount = 2

@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://bsko5ov6s5xn5"]
+
+[ext_resource type="Script" uid="uid://bc4t1ov0h4134" path="res://Scripts/Core/EnemySpawner.gd" id="1_lg3hg"]
+[ext_resource type="Texture2D" uid="uid://80ubdcvjlq4o" path="res://Assets/Sprites/TentSpawner.png" id="2_vv4iy"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vv4iy"]
+bg_color = Color(0.34509805, 1, 0.078431375, 0.7764706)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="EnemyTent" type="Node2D" unique_id=826784224]
+script = ExtResource("1_lg3hg")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=999914863]
+position = Vector2(31, 32)
+scale = Vector2(0.26045305, 0.25735295)
+texture = ExtResource("2_vv4iy")
+
+[node name="HealthBar" type="ProgressBar" parent="." unique_id=1305361333]
+z_index = 3
+offset_left = -0.25
+offset_top = -25.0
+offset_right = 63.75
+offset_bottom = -6.0
+theme_override_colors/font_color = Color(0.95376474, 0.95517904, 0.8905288, 1)
+theme_override_styles/fill = SubResource("StyleBoxFlat_vv4iy")
+value = 100.0

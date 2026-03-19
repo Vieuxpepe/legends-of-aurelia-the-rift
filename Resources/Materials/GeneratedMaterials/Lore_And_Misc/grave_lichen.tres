@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dop7e00sq2i3x"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_sbotd"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_wu464"]
+
+[resource]
+script = ExtResource("2_wu464")
+rarity = "Uncommon"
+item_name = "Grave-Lichen"
+description = "Pale grey lichen peeled from old headstones and crypt walls. It feels cold even in warm hands and powders easily for occult brews."
+gold_cost = 38
+icon = ExtResource("1_sbotd")
+category = "Lore_And_Misc"

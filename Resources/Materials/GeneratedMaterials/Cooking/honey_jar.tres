@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://pswmt82ltxtc"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_xck28"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_y5w8j"]
+
+[resource]
+script = ExtResource("2_y5w8j")
+item_name = "Honey Jar"
+description = "A clay-sealed jar of amber honey that pours slowly in golden threads. It smells of summer flowers and old wooden hives."
+gold_cost = 12
+icon = ExtResource("1_xck28")
+category = "Cooking"

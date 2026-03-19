@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dx3fwc4fugea5"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_gkqtc"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_x2gn4"]
+
+[resource]
+script = ExtResource("2_x2gn4")
+rarity = "Rare"
+item_name = "Gargoyle Talon"
+description = "A chipped claw of black stone veined with iron-like sheen. It is colder than granite and heavier than it has any right to be."
+gold_cost = 95
+icon = ExtResource("1_gkqtc")
+category = "Lore_And_Misc"

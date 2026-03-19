@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bwkjsp1fuu52w"]
+
+[ext_resource type="Resource" uid="uid://basnwy3wbonr2" path="res://Resources/Classes/Mage.tres" id="1_rcrvv"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_5whr3"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_iof6p"]
+[ext_resource type="Resource" uid="uid://b6vwdya3y5lqw" path="res://Resources/GeneratedItems/Weapon_Apprentice_Tome.tres" id="4_owiih"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_8dlig"]
+
+[resource]
+script = ExtResource("3_iof6p")
+display_name = "Scriptor Mage"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_rcrvv")
+starting_weapon = ExtResource("4_owiih")
+max_hp = 19
+strength = 0
+magic = 8
+resistance = 5
+speed = 5
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

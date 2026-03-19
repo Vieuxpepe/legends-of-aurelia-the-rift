@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://6n21nfmuyb8l"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_6cv1y"]
+
+[resource]
+script = ExtResource("1_6cv1y")
+rarity = "Rare"
+description = "A brutal midgame axe favored by ambushers and reavers."
+weapon_name = "Raider's Splitter"
+gold_cost = 1950
+weapon_type = 2
+effect_amount = 0
+might = 10
+hit_bonus = -3
+max_durability = 28
+current_durability = 28

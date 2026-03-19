@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://whp70q4fjj12"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_bj1mu"]
+[ext_resource type="Texture2D" uid="uid://bdlpj8vw51u53" path="res://Assets/Sprites/UI/egg_icon.png" id="1_k525r"]
+
+[resource]
+script = ExtResource("1_bj1mu")
+rarity = "Epic"
+item_name = "Mystery Egg"
+gold_cost = 1000
+icon = ExtResource("1_k525r")
+metadata/_custom_type_script = "uid://67xkte2k6sun"

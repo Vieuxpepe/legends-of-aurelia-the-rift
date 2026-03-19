@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://blhe41ix0c6qr"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_xt8cd"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_pw6s1"]
+
+[resource]
+script = ExtResource("2_pw6s1")
+item_name = "Travel Rations"
+description = "A packed assortment of hard bread, dried meat, and coarse cheese. Not pleasant fare, but it keeps a body moving."
+icon = ExtResource("1_xt8cd")
+category = "Cooking"

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bqa20gy11xkbn"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_rgu7e"]
+
+[resource]
+script = ExtResource("1_rgu7e")
+skill_id = "bm_str_1"
+skill_name = "Sword Faire I"
+description = "Grants +2 Strength."
+stat_to_boost = "str"
+boost_amount = 2

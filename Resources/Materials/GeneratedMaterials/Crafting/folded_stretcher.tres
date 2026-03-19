@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cd4gn87gd25jb"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_xhddn"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_4svo0"]
+
+[resource]
+script = ExtResource("2_4svo0")
+rarity = "Uncommon"
+item_name = "Folded Stretcher"
+description = "A collapsible frame of wood and canvas for carrying the injured. Awkward to pack, but merciful when the march turns ugly."
+gold_cost = 30
+icon = ExtResource("1_xhddn")
+category = "Crafting"

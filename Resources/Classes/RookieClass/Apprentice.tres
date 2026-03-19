@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://c2autjygkg0ak"]
+
+[ext_resource type="Resource" uid="uid://gamngrn7altc" path="res://Resources/Skills/Generated/Rookie/Apprentice/ApprenticeTree.tres" id="1_oyfav"]
+[ext_resource type="Resource" uid="uid://basnwy3wbonr2" path="res://Resources/Classes/Mage.tres" id="2_k8gv3"]
+[ext_resource type="Resource" uid="uid://lifv7w6xb806" path="res://Resources/Classes/Cleric.tres" id="3_x6gd5"]
+[ext_resource type="Resource" uid="uid://cdsop8gwvpobe" path="res://Resources/Classes/Spellblade.tres" id="4_u7ypr"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="5_qeu85"]
+
+[resource]
+script = ExtResource("5_qeu85")
+job_name = "Apprentice"
+allowed_weapon_types = Array[int]([4])
+class_skill_tree = ExtResource("1_oyfav")
+promotion_options = Array[Resource]([ExtResource("2_k8gv3"), ExtResource("3_x6gd5"), ExtResource("4_u7ypr")])
+spd_bonus = 1
+mag_bonus = 2
+res_bonus = 1
+spd_growth_bonus = 5
+mag_growth_bonus = 10
+res_growth_bonus = 5

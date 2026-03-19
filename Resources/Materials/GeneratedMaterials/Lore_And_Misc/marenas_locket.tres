@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cn54svxobebio"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_8ikm1"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_u2hmd"]
+
+[resource]
+script = ExtResource("2_u2hmd")
+rarity = "Epic"
+item_name = "Marena's Locket"
+description = "A small silver locket once belonging to Marena before she became Lady Vespera. The inside contains a faded scrap tied to Lyell and the first whispers of rebellion against those who guarded the Veil."
+gold_cost = 318
+icon = ExtResource("1_8ikm1")
+category = "Lore_And_Misc"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://blk8ovggqul76"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_lhvor"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_kj5d4"]
+
+[resource]
+script = ExtResource("2_kj5d4")
+rarity = "Uncommon"
+item_name = "Compass"
+description = "A brass compass with a scratched lid and a nervous needle. Tiny, silent, and deeply comforting when landmarks vanish."
+gold_cost = 32
+icon = ExtResource("1_lhvor")
+category = "Crafting"

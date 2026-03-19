@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://4fe8nbo28l0"]
+
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="1_y7yl4"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_6lc5d"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_vtuo1"]
+[ext_resource type="Texture2D" uid="uid://duig44qfuyrnm" path="res://Assets/Portraits/Darian Portrait.png" id="3_xye04"]
+[ext_resource type="Resource" uid="uid://b2gc7nh4cg7nu" path="res://Resources/GeneratedItems/Weapon_Travelers_Blade.tres" id="4_xye04"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_jrgl8"]
+[ext_resource type="Texture2D" uid="uid://bifp0yv4xhthq" path="res://Assets/Sprites/Darian Battle Sprite.png" id="7_jrgl8"]
+
+[resource]
+script = ExtResource("3_vtuo1")
+display_name = "Darian"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["What an ugly end for a man so devoted to better exits.", "Well… at least I had the decency to fall dramatically.", "If you speak of me later, do try to improve the poetry.", "So this is sincerity without performance. How unfortunate."])
+level_up_quotes = Array[String](["Well now, that was almost enough to make hardship feel artistically worthwhile.", "Good. Grace is best supported by actual competence.", "I do adore progress when it arrives dressed this well."])
+support_personality = "flamboyant"
+character_class = ExtResource("1_y7yl4")
+starting_weapon = ExtResource("4_xye04")
+unit_sprite = ExtResource("7_jrgl8")
+portrait = ExtResource("3_xye04")
+max_hp = 24
+strength = 8
+magic = 1
+defense = 6
+resistance = 3
+speed = 10
+agility = 9
+hp_growth = 65
+str_growth = 45
+def_growth = 25
+spd_growth = 60
+agi_growth = 60

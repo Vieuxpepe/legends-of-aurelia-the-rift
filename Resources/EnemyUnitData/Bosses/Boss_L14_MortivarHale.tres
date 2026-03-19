@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://briwyoi8lkmxj"]
+
+[ext_resource type="Resource" uid="uid://cadv2qi1rxorv" path="res://Resources/Classes/PromotedClass/DeathKnight.tres" id="1_fmnbk"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_1vsi3"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_2htjs"]
+[ext_resource type="Resource" uid="uid://8i1urt4qs1og" path="res://Resources/GeneratedItems/Weapon_Blackened_Lance.tres" id="4_d5cly"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_l6rdv"]
+
+[resource]
+script = ExtResource("3_2htjs")
+display_name = "Mortivar Hale"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["At last… an order I can obey by ending."])
+character_class = ExtResource("1_fmnbk")
+starting_weapon = ExtResource("4_d5cly")
+ability = "grave_muster"
+max_hp = 50
+strength = 19
+magic = 3
+defense = 18
+resistance = 11
+speed = 10
+agility = 15
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

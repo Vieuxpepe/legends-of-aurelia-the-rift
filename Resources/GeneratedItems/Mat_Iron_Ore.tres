@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dc33sfsu3jg5l"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_10km7"]
+
+[resource]
+script = ExtResource("1_10km7")
+item_name = "Iron Ore"
+description = "Basic ore used for forging common weapons."
+gold_cost = 50

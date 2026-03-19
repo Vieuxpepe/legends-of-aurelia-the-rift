@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dcj6u0ya360so"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_r6543"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_2tmgt"]
+
+[resource]
+script = ExtResource("2_2tmgt")
+rarity = "Uncommon"
+item_name = "Hush Stone"
+description = "A polished stone from a Veil-disturbed cavern that deadens nearby sound for a few breaths. It is prized by spies, heretics, and terrified scholars of forbidden lore."
+gold_cost = 46
+icon = ExtResource("1_r6543")
+category = "Lore_And_Misc"

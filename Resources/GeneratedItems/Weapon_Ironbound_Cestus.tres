@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dne4i0qbxk6vi"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_kw8om"]
+
+[resource]
+script = ExtResource("1_kw8om")
+rarity = "Rare"
+description = "A heavier striking set for trained brawlers and war monks."
+weapon_name = "Ironbound Cestus"
+gold_cost = 1600
+weapon_type = 8
+effect_amount = 0
+might = 7
+hit_bonus = 10
+max_durability = 32
+current_durability = 32

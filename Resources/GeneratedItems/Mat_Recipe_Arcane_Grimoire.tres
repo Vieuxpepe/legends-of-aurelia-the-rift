@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bg131jf3fdkiy"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_16u8g"]
+
+[resource]
+script = ExtResource("1_16u8g")
+rarity = "Uncommon"
+item_name = "Recipe: Arcane Grimoire"
+description = "Instructions to craft an Arcane Grimoire."
+gold_cost = 220

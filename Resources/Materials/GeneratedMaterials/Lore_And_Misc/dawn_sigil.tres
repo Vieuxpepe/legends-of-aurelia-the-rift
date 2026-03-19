@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://duee85xlr4r5j"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_b7wjn"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_x3o3m"]
+
+[resource]
+script = ExtResource("2_x3o3m")
+rarity = "Uncommon"
+item_name = "Dawn Sigil"
+description = "A bronze insignia once worn by the Order of the Dawn during the last years before the Shattering War. Its sunburst edge is dulled by age, but the creed of Greyspire's wardens is still etched into the back."
+gold_cost = 44
+icon = ExtResource("1_b7wjn")
+category = "Lore_And_Misc"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://65p0kk15uvwr"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_2rxla"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_le8wq"]
+
+[resource]
+script = ExtResource("2_le8wq")
+rarity = "Uncommon"
+item_name = "Mortar Cup"
+description = "A small stone cup with a matching pestle for grinding herbs and powders. Heavy for its size, but invaluable to practical hands."
+gold_cost = 23
+icon = ExtResource("1_2rxla")
+category = "Crafting"

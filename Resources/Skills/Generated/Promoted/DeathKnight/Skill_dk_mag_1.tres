@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://352g5giabxc7"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_kb5v7"]
+
+[resource]
+script = ExtResource("1_kb5v7")
+skill_id = "dk_mag_1"
+skill_name = "Dark Aura"
+description = "Grants +3 Magic."
+stat_to_boost = "mag"
+boost_amount = 3

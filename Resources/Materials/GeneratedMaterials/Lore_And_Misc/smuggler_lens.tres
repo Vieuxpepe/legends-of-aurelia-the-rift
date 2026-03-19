@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bt0ctvos5wb46"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_jj8x2"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_c7vm1"]
+
+[resource]
+script = ExtResource("2_c7vm1")
+rarity = "Uncommon"
+item_name = "Smuggler Lens"
+description = "A compact optical lens traded among Vharian Merchant League runners moving forbidden cargo at night. It carries a maker's stamp scratched away by order of the Luminous Table."
+gold_cost = 48
+icon = ExtResource("1_jj8x2")
+category = "Lore_And_Misc"

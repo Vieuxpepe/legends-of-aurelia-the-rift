@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://hr3rrx36lg01"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_t4ln7"]
+
+[resource]
+script = ExtResource("1_t4ln7")
+skill_id = "spellblade_blink_step"
+skill_name = "Blink Step"
+description = "Instantly blink behind an enemy, increasing critical chance."
+required_skill_id = "spellblade_spd_2"
+grid_position = Vector2(3, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Blink Step"

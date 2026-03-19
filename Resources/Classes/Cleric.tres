@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://lifv7w6xb806"]
+
+[ext_resource type="Resource" uid="uid://d08sn5e7me4qv" path="res://Resources/Classes/PromotedClass/HighPaladin.tres" id="1_55m4a"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_242a2"]
+[ext_resource type="Resource" uid="uid://cu706faere6ll" path="res://Resources/Skills/ClericTree.tres" id="1_fcnqx"]
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="2_fcnqx"]
+
+[resource]
+script = ExtResource("1_242a2")
+job_name = "Cleric"
+allowed_weapon_types = Array[int]([4])
+can_use_healing_staff = true
+can_use_buff_staff = true
+can_use_debuff_staff = true
+class_skill_tree = ExtResource("1_fcnqx")
+promotion_options = Array[Resource]([ExtResource("1_55m4a"), ExtResource("2_fcnqx")])
+hp_bonus = 9
+mag_bonus = 3
+res_bonus = 4
+hp_growth_bonus = 10
+mag_growth_bonus = 10
+res_growth_bonus = 20
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

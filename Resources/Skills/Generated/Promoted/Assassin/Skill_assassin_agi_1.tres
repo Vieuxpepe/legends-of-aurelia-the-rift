@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://5gxx88kba4w"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_0avnk"]
+
+[resource]
+script = ExtResource("1_0avnk")
+skill_id = "assassin_agi_1"
+skill_name = "Ghost Cloak"
+description = "Grants +2 Agility (Crit/Evasion)."
+required_skill_id = "assassin_spd_1"
+grid_position = Vector2(1, 0)
+stat_to_boost = "agi"
+boost_amount = 2

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bxne1rxxxb1vn"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_ufi2v"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_s0f7r"]
+
+[resource]
+script = ExtResource("2_s0f7r")
+item_name = "Dried Peas"
+description = "Small green peas hardened by drying and age. Plain to look at, but they swell into hearty soup with time and patience."
+gold_cost = 6
+icon = ExtResource("1_ufi2v")
+category = "Cooking"

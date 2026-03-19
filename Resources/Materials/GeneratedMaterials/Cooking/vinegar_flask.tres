@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cbc17sj3esnil"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_tpxyv"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_17tod"]
+
+[resource]
+script = ExtResource("2_17tod")
+item_name = "Vinegar Flask"
+description = "A squat bottle of sour, clear liquid that bites at the nose. It preserves food, cleans wounds, and improves little else."
+gold_cost = 8
+icon = ExtResource("1_tpxyv")
+category = "Cooking"

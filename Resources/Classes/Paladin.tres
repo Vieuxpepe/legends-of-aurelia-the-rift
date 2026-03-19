@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dripsbbvug6em"]
+
+[ext_resource type="Resource" uid="uid://bvnf84qfhi258" path="res://Resources/Skills/PaladinTree.tres" id="1_13vgw"]
+[ext_resource type="Resource" uid="uid://d08sn5e7me4qv" path="res://Resources/Classes/PromotedClass/HighPaladin.tres" id="1_fasrx"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_s7ydd"]
+[ext_resource type="Resource" uid="uid://cmwue2g0kcnl4" path="res://Resources/Classes/PromotedClass/GreatKnight.tres" id="2_13vgw"]
+[ext_resource type="Resource" uid="uid://cadv2qi1rxorv" path="res://Resources/Classes/PromotedClass/DeathKnight.tres" id="3_2dk1v"]
+
+[resource]
+script = ExtResource("1_s7ydd")
+job_name = "Paladin"
+move_type = 1
+allowed_weapon_types = Array[int]([0, 1])
+can_use_healing_staff = true
+class_skill_tree = ExtResource("1_13vgw")
+promotion_options = Array[Resource]([ExtResource("1_fasrx"), ExtResource("2_13vgw"), ExtResource("3_2dk1v")])
+hp_bonus = 13
+str_bonus = 1
+def_bonus = 2
+spd_bonus = -1
+agi_bonus = -1
+mag_bonus = 1
+res_bonus = 2
+hp_growth_bonus = 10
+str_growth_bonus = 5
+res_growth_bonus = 10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

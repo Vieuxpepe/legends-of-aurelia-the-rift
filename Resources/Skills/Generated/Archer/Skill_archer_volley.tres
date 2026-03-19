@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cq5f2munlavqw"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ejoyi"]
+
+[resource]
+script = ExtResource("1_ejoyi")
+skill_id = "archer_volley"
+skill_name = "Volley"
+description = "Fires multiple arrows at once to hit enemies in a small area."
+required_skill_id = "archer_agi_1"
+grid_position = Vector2(3, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Volley"

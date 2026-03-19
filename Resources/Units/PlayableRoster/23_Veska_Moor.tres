@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bdkhalmhsg3mv"]
+
+[ext_resource type="Resource" uid="uid://yi8w2a8kj00d" path="res://Resources/Classes/Knight.tres" id="1_ibxhc"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_o6o2g"]
+[ext_resource type="Texture2D" uid="uid://covqyawchqsy3" path="res://Assets/Portraits/Veska Portrait.png" id="3_3b1h4"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_5pue1"]
+[ext_resource type="Resource" uid="uid://bbtlv0w1gnat1" path="res://Resources/GeneratedItems/Weapon_Knights_Halberd.tres" id="4_3b1h4"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_xsd48"]
+[ext_resource type="Texture2D" uid="uid://bxoa6hh65xh6x" path="res://Assets/Sprites/Veska Battle Sprite.png" id="7_xsd48"]
+
+[resource]
+script = ExtResource("3_5pue1")
+display_name = "Veska Moor"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["I held as long as I could; now you hold.", "The wall doesn’t mourn. It stands.", "Don’t make speeches. Close the gap.", "If I fall, then someone else plants their feet here."])
+level_up_quotes = Array[String](["Better. I won’t bend as easily.", "Good. More weight to put between danger and the others.", "That helps. Simple as that."])
+support_personality = "stoic"
+character_class = ExtResource("1_ibxhc")
+starting_weapon = ExtResource("4_3b1h4")
+unit_sprite = ExtResource("7_xsd48")
+portrait = ExtResource("3_3b1h4")
+max_hp = 33
+strength = 11
+defense = 13
+resistance = 4
+speed = 4
+agility = 8
+hp_growth = 80
+str_growth = 50
+mag_growth = 5
+def_growth = 55
+spd_growth = 20
+agi_growth = 40

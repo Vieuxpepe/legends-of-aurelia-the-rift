@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c8tejr1skdntq"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_5num3"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ui34g"]
+
+[resource]
+script = ExtResource("2_ui34g")
+rarity = "Epic"
+item_name = "Sun-Gold Phial"
+description = "A contraband flask of concentrated sacramental oil refined for elite rites in Valeron. It burns with unnaturally clear flame and is rumored to be used in interrogations by the Purifiers."
+gold_cost = 226
+icon = ExtResource("1_5num3")
+category = "Lore_And_Misc"

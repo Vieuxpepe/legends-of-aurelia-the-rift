@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cd0nwtra8li55"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_roido"]
+
+[resource]
+script = ExtResource("1_roido")
+rarity = "Uncommon"
+item_name = "Recipe: Steel Sword"
+description = "Blueprint for forging a Steel Sword."
+gold_cost = 200

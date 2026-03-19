@@ -1,0 +1,474 @@
+Yes — and that layer is probably the **most useful** one to add after the playable cast.
+
+Because right now, if the world only contains:
+
+* player units
+* enemies
+* a few hub NPCs
+
+then even a strong setting can start to feel too binary.
+
+What you want are **player-side allies who are not fully part of the permanent roster**. That gives you:
+
+* battlefield variety
+* faction texture
+* moral nuance
+* political realism
+* and the feeling that the army does not carry the whole continent alone
+
+That fits your canon very well, because Aurelia is already built around fractured factions, coalition politics, local authorities, reformists, protectors, and people trying to survive between systems. Valeron, the League, and Edranor each already contain internal splits, which is perfect for non-roster allies who can help the player temporarily, conditionally, or politically.
+
+## Best kinds of allies to add
+
+I would divide them into 5 useful categories:
+
+* **temporary battle allies**
+* **conditional faction allies**
+* **hub / logistical allies**
+* **political allies**
+* **dangerous allies** who help you, but never feel fully safe
+
+---
+
+# 1. Temporary battle allies
+
+These are green units, escorts, local defenders, reformists, scouts, wardens, militia captains.
+
+They should not just be “extra units.”
+They should embody a place, a faction split, or a local moral reality.
+
+## 1.1 Captain Mirelle Dorn
+
+**Type:** Temporary battle ally
+**Faction:** Edranor local command / reform-leaning officer
+**Best maps:** 7, 8, or 17
+
+### Who she is
+
+Mirelle is a field captain responsible for roads, wagons, and civilian corridors in a famine-strained border district. She is not a heroine from legend. She is the woman who keeps bridges open, refugees moving, and hungry soldiers from becoming bandits.
+
+She still serves Edranor, but not blindly. She has learned that central command speaks in banners while local officers count graves and sacks of grain.
+
+### Why she works
+
+She fits the canon of Edranor as a kingdom torn between stewardship, famine politics, traditionalists, reformers, and opportunists. She gives you an Edranor ally who is not noble, not playable, and not decorative. 
+
+### Personality
+
+* dry
+* practical
+* overworked
+* morally stubborn
+* not charmed by speeches
+
+### What she does in gameplay
+
+* appears with a few green escort soldiers
+* initially neutral or cautious
+* becomes allied if the player protects civilians, grain, or roads properly
+* can retreat if the player acts too destructively
+
+### Why she is memorable
+
+She makes the player feel that local authority exists beyond kings and bosses.
+
+---
+
+## 1.2 Warden Thane Ors
+
+**Type:** Temporary / recurring route ally
+**Faction:** none formally; road-warden network
+**Best maps:** 4, 8, 9A, world transitions
+
+### Who he is
+
+Thane protects old imperial roads, passes, and convoy routes with a loose band of wardens and scouts. He does not care much for crowns or councils. He cares whether people make it through the pass alive.
+
+### Why he works
+
+Aurelia is full of broken roads, ruined fortresses, and isolated settlements. Someone has to live in that in-between space. He makes the travel network feel real.
+
+### Gameplay role
+
+* can appear as green units defending a route
+* may provide alternative deployment routes
+* can unlock safer movement if fame is high or if the player treated refugees well before
+
+### Emotional role
+
+He gives Kaelen, Branik, Rufus, and Inez someone they naturally respect.
+
+---
+
+# 2. Conditional faction allies
+
+These are the most important “the world is not binary” allies.
+
+They belong to a faction that may oppose the player at one point, but specific people within it can help.
+
+## 2.1 Queen Seraphine Valedorn
+
+**Type:** Major conditional ally
+**Faction:** Edranor
+**Best maps:** 17, epilogue route, major late-campaign scenes
+
+### Who she is
+
+The High Queen of Edranor, rider-mage of the harvest line, warplate sovereign, and battlefield ruler of a starving kingdom. She is not just symbolic royalty; she is a real strategic and martial force. 
+
+### Why she works as an ally
+
+She should not join the roster, but she absolutely should be a **true player ally** if Edranor is persuaded. Not a cameo. A real coalition force.
+
+### Gameplay role
+
+* grants cavalry, field wards, banners, or defensive reinforcements
+* can alter deployment conditions in Level 17 or later
+* may create special “hold this line with Seraphine’s riders” moments
+
+### Why she is interesting
+
+Because she is helpful without becoming submissive to the protagonist. She remains sovereign.
+
+---
+
+## 2.2 Lysandra Solmere
+
+**Type:** Major conditional ally
+**Faction:** Valeron moderates
+**Best maps:** 9A, 17, endgame coalition
+
+### Who she is
+
+A high-ranking moderate in Valeron who genuinely believes dangerous truths must be handled carefully, but not buried under fear forever. She is the face of what is still worth preserving in the church.
+
+### Why she works
+
+Valeron explicitly contains moderates, purifiers, and pragmatists. A moderate ally is not only plausible, it is necessary if Valeron is to feel like a civilization instead of only a boss factory.
+
+### Gameplay role
+
+* may provide healer escorts, sanctuary wards, civilian passage, or purification effects
+* can temporarily support the player in diplomacy-defense chapters
+* could send green clerics or shield-bearers in a major siege
+
+### Why she is interesting
+
+Because helping the player may genuinely cost her status, authority, and safety.
+
+---
+
+## 2.3 Consul Marcellus Veyne
+
+**Type:** Conditional League ally
+**Faction:** Vharian Merchant League reformist bloc
+**Best maps:** 11, 17
+
+### Who he is
+
+A League consul who understands that if trade survives but the world doesn’t, then nothing was actually saved. He is still a politician and negotiator, but one with a real instinct for stabilization rather than ownership.
+
+### Why he works
+
+The League canon explicitly includes reformists, predators, and technologists. Marcellus lets the League help the player without magically becoming morally pure.
+
+### Gameplay role
+
+* can provide guards, scouts, funding, transport, or intelligence
+* if preserved at the festival arc, he becomes a real coalition asset
+* can indirectly enable Sabine or other League-aligned support
+
+### Why he is interesting
+
+Because his help is always political help. Useful, but never free of implications.
+
+---
+
+# 3. Hub / logistical allies
+
+These are not just shopkeepers. These are the people who make your army feel like a moving society.
+
+## 3.1 Haldor the Traveling Blacksmith
+
+**Type:** Core hub ally
+**Faction:** none
+**Best maps:** 3 onward, Greyspire hub
+
+### Why he matters
+
+He already exists in canon and is one of the best examples of a non-playable ally with mechanical and emotional value. He is introduced organically, tied to scavenged sanctum supplies, and later becomes part of Greyspire’s functioning heart. 
+
+### What to deepen
+
+Do not leave him as just “the forge menu.”
+Make him a real ally through:
+
+* chapter-based forge dialogue
+* judgments on war materials and weapon quality
+* rare moments where he refuses to craft something he finds dishonorable
+* occasional practical insight no scholar would ever say
+
+He is the kind of ally who gives the army weight.
+
+---
+
+## 3.2 Mother Isca of the Lantern Steps
+
+**Type:** Refuge / recovery ally
+**Faction:** officially none, spiritually adjacent to Valeron but independent
+**Best maps:** between major travel arcs, post-battle recovery scenes
+
+### Who she is
+
+Abbess or caretaker of a roadside refuge-hospice that serves wounded, pilgrims, refugees, abandoned children, and deserters who leave their weapons outside.
+
+### Why she works
+
+Valeron’s public face includes hospitals, soup kitchens, schools, and sincere protectors of the poor. A character like this shows the church’s humane side without erasing its corruption.
+
+### Gameplay role
+
+* side base / stopover
+* healing, morale reset, civilian rescue scenes
+* can host temporary NPCs and survivors
+* can act as a quiet narrative checkpoint after brutal chapters
+
+### Why she is interesting
+
+She helps the player, but her real loyalty is to the vulnerable, not to the army.
+
+---
+
+## 3.3 Tomas Greycloth
+
+**Type:** Quartermaster ally
+**Faction:** refugee logistics / coalition support
+**Best use:** Greyspire and coalition prep
+
+### Who he is
+
+A civilian quartermaster who used to manage grain, blankets, records, names, and camp distribution for displaced populations. He is not glamorous, but he sees the war through numbers and shortages.
+
+### Gameplay role
+
+* informs resource strain
+* gives camp-side tasks
+* can surface consequences from player choices
+* turns “army growth” into something grounded
+
+### Why he is good
+
+He gives the player-side infrastructure a face.
+
+---
+
+# 4. Dangerous allies
+
+These are some of the best characters in dark fantasy because they help you while remaining morally unstable or politically costly.
+
+## 4.1 Cassian Valecourt
+
+**Type:** Dangerous political ally
+**Faction:** League
+**Best maps:** 11, 17, late diplomacy
+
+### Who he is
+
+League consul, shipping magnate, and one of the most dangerous political minds in Vharia. He is already in canon and should absolutely be used as an ally the player can work with, but never fully trust. 
+
+### Why he works
+
+He represents the League at its most brilliant and seductive, not just its rot. That makes his help compelling.
+
+### Gameplay role
+
+* provides access, transport, intelligence, funding, guards
+* may help avert chaos in one area while strengthening his own leverage elsewhere
+* can help secure coalition pieces in Level 17
+
+### Why he is interesting
+
+Because he can sincerely want the world not to collapse while still thinking in terms of controlled advantage.
+
+---
+
+## 4.2 Sister Aveline Marr
+
+**Type:** Dangerous occult/religious ally
+**Faction:** splinter Valeron operative
+**Best maps:** 15, 16, occult-heavy optional scenes
+
+### Who she is
+
+A former sacred investigator who still hunts genuine horrors, but no longer fully obeys church comfort. She is ruthless, deeply informed, and frighteningly calm.
+
+### Gameplay role
+
+* can appear as an ally against occult threats
+* may disable cursed zones, identify rituals, or neutralize abominations
+* but may push for hardline solutions the party finds disturbing
+
+### Why she is interesting
+
+She is useful precisely because she is willing to do things kinder people hesitate to do.
+
+---
+
+## 4.3 Varo Kestrel
+
+**Type:** Mercenary ally / antihero
+**Faction:** none
+**Best maps:** 7, 13, 17, optional contract scenes
+
+### Who he is
+
+Captain of a small free company. He is not noble, not loyal in a sentimental way, but not empty either. He respects competence, payment, clarity, and people who do not pretend war is clean.
+
+### Gameplay role
+
+* can show up as green units if hired / persuaded / previously helped
+* may refuse if the player’s reputation is weak or hypocritical
+* ideal for “we need bodies on this front now” moments
+
+### Why he is interesting
+
+He makes war feel like a lived profession, not only a moral crusade.
+
+---
+
+# 5. Civic and social allies
+
+These are the people who make cities and regions feel like they have social tissue.
+
+## 5.1 Della Wren
+
+**Type:** Social/civic ally
+**Faction:** festival administration / city records
+**Best map:** 11
+
+### Who she is
+
+An overworked registry clerk or cultural coordinator who knows which masks were issued, who was invited where, which performers vanished, and which noble guest lied.
+
+### Gameplay role
+
+* helps identify suspects
+* can provide alternate routes, lists, balconies, witness placement
+* helps make the assassination chapter feel investigative, not only combative
+
+### Why she is useful
+
+She gives the player an ally who wins through memory and bureaucracy.
+
+---
+
+## 5.2 Sera Quillhand
+
+**Type:** Scholar-craft ally
+**Faction:** ex-College artisan
+**Best maps:** 12 and Greyspire
+
+### Who she is
+
+A reliever/restorer of books and bindings who left the College rather than help lock truth behind elite gates.
+
+### Gameplay role
+
+* repairs codices
+* translates damaged pages
+* offers lore or route-specific side content
+* bridges Sorrel, Tariq, and Haldor-like craftsmanship values
+
+### Why she matters
+
+She shows that knowledge work in your world is not only done by grand mages and censors.
+
+---
+
+# 6. Battlefield ally model I recommend
+
+To keep this from getting too complex, I would use only **4 ally behaviors**.
+
+## A. Green defenders
+
+Local soldiers, wardens, reformist clergy, escort guards.
+They hold a line or protect civilians.
+
+## B. Conditional reinforcements
+
+They only arrive if:
+
+* fame is high enough
+* a side objective was completed
+* a political relationship is strong enough
+* a key NPC survived
+
+## C. Temporary controllable allies
+
+Rare. Maybe only a few maps.
+A named ally enters under player control for part of a mission without joining permanently.
+
+## D. Off-map strategic allies
+
+They never appear as units often, but alter:
+
+* deployment slots
+* supplies
+* morale
+* terrain prep
+* reinforcements
+* diplomatic outcomes
+
+This prevents ally bloat.
+
+---
+
+# 7. My strongest recommendations
+
+If you want the cleanest, best first implementation, I would lock these **7 player-side allies** first:
+
+## Must-have
+
+* **Queen Seraphine Valedorn** — major Edranor coalition ally
+* **Lysandra Solmere** — moderate Valeron ally
+* **Consul Marcellus Veyne** — reformist League ally
+* **Haldor** — core hub ally
+* **Mother Isca of the Lantern Steps** — humanitarian refuge ally
+* **Captain Mirelle Dorn** — local battle ally
+* **Varo Kestrel** — mercenary wildcard ally
+
+## Dangerous but excellent
+
+* **Cassian Valecourt** — political ally you should never fully trust
+* **Sister Aveline Marr** — occult antihero ally
+
+These give you:
+
+* one strong ally face for each major faction
+* one grounded local ally
+* one hub ally
+* one humanitarian ally
+* one wildcard mercenary
+* one dangerous political partner
+* one dangerous spiritual hunter
+
+That is enough to make the player side feel like it has a real ecosystem.
+
+---
+
+# Final answer
+
+So yes — you absolutely should add **allies for the player**, but not as extra roster clutter.
+
+The best version is:
+
+* **non-playable but meaningful**
+* **sometimes green units**
+* **sometimes political backers**
+* **sometimes logistical anchors**
+* **sometimes morally risky helpers**
+
+That way the player’s army stops feeling like an isolated bubble and starts feeling like the center of a fragile, living coalition in a continent that is bigger than them. That matches your tone almost perfectly: intimate even when political, found-family without flattening the world, and morally layered without becoming messy for no reason.
+
+I can turn this into a **production table** next:
+**Name | Ally type | Faction | First appearance | Recurrence | Gameplay role | Narrative role | Risk / cost | Whether they can become green units**

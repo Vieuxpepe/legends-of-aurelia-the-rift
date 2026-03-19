@@ -1,0 +1,110 @@
+Yes — here is the full 20-enemy death monologue set, written as single-line SRPG death quotes and tuned to the identities in your Enemy Bible: Vespera as tragic ideological cataclysm, Caldris/Cassian/Halwen as sacred order weaponized in different forms, Rhex/Nerez/Noemi as League elegance and predation, Mortivar/Enric/Naeva as death and ritual corruption, Roen/Edda/Alric/Septen as human political failure, and the Witness as non-human scale. 
+
+LegendOfAurelia_EnemyBible
+
+ 
+
+LegendOfAurelia_EnemyBible
+
+Full enemy death lines
+
+1. Lady Vespera
+“So this is where my will breaks… not before the world, but before what it made of us.”
+
+2. Master Enric
+“Remarkable… even at the threshold, decay still refuses to become elegant.”
+
+3. Captain Selene
+“Tch… precision fails only once, and the body remembers forever.”
+
+4. Ephrem the Zealot
+“No — this fire was meant to cleanse, not leave the guilty standing.”
+
+5. Mother Caldris Vein
+“So mercy wins at last… may it survive the people foolish enough to praise it.”
+
+6. Port-Master Rhex Valcero
+“Damn you… do you have any idea what a city costs to keep obedient?”
+
+7. Mortivar Hale
+“Then my watch ends here… though discipline deserved a worthier age.”
+
+8. Preceptor Cassian Vow
+“How tedious… to die in the service of people too small to deserve order.”
+
+9. Auditor Nerez Sable
+“So the account closes here… and still none of you understand the price of chaos.”
+
+10. Juno Kest
+“Heh — guess I rang one bell too many.”
+
+11. Lord Septen Harrow
+“You call this justice? Try feeding a realm before you bury the men who kept it standing.”
+
+12. Thorn-Captain Edda Fen
+“Then the forest will judge between us… and I doubt it will be kind.”
+
+13. Justicar Halwen Serast
+“If this is judgment, let the sun remember that I did not kneel.”
+
+14. Noemi Veyr
+“So… the mask slips at last; pity the truth beneath it was sharper.”
+
+15. Provost Serik Quill
+“You break locks so easily… and never once ask why the doors were sealed.”
+
+16. Roen Halbrecht
+“I told myself betrayal was duty in harder armor… God help me, I almost believed it.”
+
+17. The Ash Adjudicator
+“Sentence… interrupted; yet the old oath still weighs upon the living.”
+
+18. Duke Alric Thornmere
+“If I fall, then Edranor belongs to louder men and lesser blood.”
+
+19. Naeva, Marrow-Seer of the Dark Tide
+“The hymn does not end with me… it only passes deeper below.”
+
+20. The Witness Without Eyes
+“…”
+
+Stronger alternate lines for the standouts
+
+These are the ones I would most seriously consider as “final picks” because they hit the cleanest.
+
+Lady Vespera
+“I wanted to break the chain, and instead I became its final link.”
+
+Mother Caldris Vein
+“Mercy is always beautiful from the mouths of those someone else protected.” 
+
+LegendOfAurelia_EnemyBible
+
+Mortivar Hale
+“At last… an order I can obey by ending.” 
+
+LegendOfAurelia_EnemyBible
+
+Roen Halbrecht
+“I sold honor piece by piece and called the bargain necessary.” 
+
+LegendOfAurelia_EnemyBible
+
+Naeva
+“You hear it now, don’t you… the tide beneath the world.” 
+
+LegendOfAurelia_EnemyBible
+
+The Witness Without Eyes
+“[No voice. The air folds inward.]”
+
+Bonus: Vespera Ascendant phase-specific death line
+
+Since the finale treats Vespera Ascendant as a distinct endgame phase, she benefits from a separate line. 
+
+legends_of_aurelia_master_narra…
+
+Vespera Ascendant
+“Lyell… I reached for godhood only to find the same cold hands waiting there.”
+
+If you want, I can do the matching intro quote set for all 20 enemies in the same style so every boss has an arrival line and a death line pair.

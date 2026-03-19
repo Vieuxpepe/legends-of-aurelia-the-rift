@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://cy133ei5evdek"]
+
+[ext_resource type="Resource" uid="uid://65824dtkeqp2" path="res://Resources/Skills/Generated/Promoted/WildWarden/WildWardenTree.tres" id="1_5kj2o"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="2_8e3x6"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_xqpvu"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="3_33fq4"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="4_agm2f"]
+
+[resource]
+script = ExtResource("2_xqpvu")
+job_name = "Wild Warden"
+move_range = 6
+allowed_weapon_types = Array[int]([2, 3])
+class_skill_tree = ExtResource("1_5kj2o")
+promotion_options = Array[Resource]([ExtResource("2_8e3x6"), ExtResource("3_33fq4"), ExtResource("4_agm2f")])
+promo_hp_bonus = 3
+promo_str_bonus = 2
+promo_def_bonus = 2
+promo_spd_bonus = 0
+promo_agi_bonus = 0

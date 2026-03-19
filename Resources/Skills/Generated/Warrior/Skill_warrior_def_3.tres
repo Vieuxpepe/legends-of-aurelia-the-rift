@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://c2y62qgich4t5"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_j2gha"]
+
+[resource]
+script = ExtResource("1_j2gha")
+skill_id = "warrior_def_3"
+skill_name = "Defense III"
+description = "Increases Defense by +2."
+required_skill_id = "warrior_def_2"
+grid_position = Vector2(4, 1)
+stat_to_boost = "def"
+boost_amount = 2

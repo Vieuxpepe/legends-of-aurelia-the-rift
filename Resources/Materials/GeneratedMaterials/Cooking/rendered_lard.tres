@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c2fsvu4jnwqus"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_r40io"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_mrlsu"]
+
+[resource]
+script = ExtResource("2_mrlsu")
+item_name = "Rendered Lard"
+description = "A crock of white cooking fat, smooth and dense beneath its lid. It smells faintly porky and turns humble dough into something worth eating."
+gold_cost = 9
+icon = ExtResource("1_r40io")
+category = "Cooking"

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dv53cekfw3l5p"]
+
+[ext_resource type="Resource" uid="uid://c7eqg71p8jfwb" path="res://Resources/Classes/Flier.tres" id="1_2wyx0"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_xu0lt"]
+[ext_resource type="Texture2D" uid="uid://deo8ng28kyd3c" path="res://Assets/Portraits/Maela Portrait.png" id="3_36isk"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_ty4cx"]
+[ext_resource type="Resource" uid="uid://d26qot2mbnidd" path="res://Resources/GeneratedItems/Weapon_Old_Spear.tres" id="4_36isk"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_klp3f"]
+[ext_resource type="Texture2D" uid="uid://7n0ucfoxakqn" path="res://Assets/Sprites/Maela Battle Sprite.png" id="7_klp3f"]
+
+[resource]
+script = ExtResource("3_ty4cx")
+display_name = "Maela Thorn"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Damn… I really thought I had one more sky left in me.", "Heh… tell me that at least looked impressive.", "So that’s it. Ground finally caught me.", "Don’t slow down because of me. Fly harder."])
+level_up_quotes = Array[String](["Oh, that’s lovely. I feel faster already.", "Ha! That’s what momentum’s supposed to feel like.", "Good luck catching me now."])
+support_personality = "spirited"
+character_class = ExtResource("1_2wyx0")
+starting_weapon = ExtResource("4_36isk")
+unit_sprite = ExtResource("7_klp3f")
+portrait = ExtResource("3_36isk")
+max_hp = 24
+strength = 8
+defense = 5
+resistance = 6
+speed = 13
+agility = 10
+hp_growth = 55
+str_growth = 40
+mag_growth = 10
+res_growth = 25
+spd_growth = 70
+agi_growth = 55

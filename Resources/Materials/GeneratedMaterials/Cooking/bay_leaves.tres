@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cp72dunjbfrrd"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_sv02b"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_cysqn"]
+
+[resource]
+script = ExtResource("2_cysqn")
+item_name = "Bay Leaves"
+description = "Flat dried leaves with a warm, bitter fragrance that deepens in hot broth. One or two is enough to make a pot smell richer than it is."
+gold_cost = 9
+icon = ExtResource("1_sv02b")
+category = "Cooking"

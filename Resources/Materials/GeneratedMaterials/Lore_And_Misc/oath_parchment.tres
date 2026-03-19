@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://h7ju5tqkwab2"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_3utrk"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_61bt2"]
+
+[resource]
+script = ExtResource("2_61bt2")
+rarity = "Rare"
+item_name = "Oath Parchment"
+description = "A brittle vow-scroll signed by knights of the Order of the Dawn before riding into the Shattering War. The wax seal bears the old mark of Greyspire and a warning about the Veil."
+gold_cost = 96
+icon = ExtResource("1_3utrk")
+category = "Lore_And_Misc"

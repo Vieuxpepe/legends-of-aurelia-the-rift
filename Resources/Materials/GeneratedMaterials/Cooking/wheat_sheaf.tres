@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b7vn2u01a1u2"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_0mukt"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ga0r7"]
+
+[resource]
+script = ExtResource("2_ga0r7")
+item_name = "Wheat Sheaf"
+description = "A bound cluster of dried grain stalks, dusty with chaff. Ground fine, it becomes bread enough to quiet a camp for a night."
+gold_cost = 6
+icon = ExtResource("1_0mukt")
+category = "Cooking"

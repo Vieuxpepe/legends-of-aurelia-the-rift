@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://m5wl0vru66sf"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_sjo5n"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_g5jnr"]
+
+[resource]
+script = ExtResource("2_g5jnr")
+rarity = "Uncommon"
+item_name = "Snow Goggles"
+description = "Simple slitted eye shields of wood and leather used against glare and blowing frost. Crude to behold, but kind to the eyes."
+gold_cost = 21
+icon = ExtResource("1_sjo5n")
+category = "Crafting"

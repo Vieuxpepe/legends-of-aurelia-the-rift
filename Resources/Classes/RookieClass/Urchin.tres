@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://30vlmdpj6o62"]
+
+[ext_resource type="Resource" uid="uid://eew8t4ya54ns" path="res://Resources/Skills/Generated/Rookie/Urchin/UrchinTree.tres" id="1_age72"]
+[ext_resource type="Resource" uid="uid://ckj67pxqohcw7" path="res://Resources/Classes/Thief.tres" id="2_343kx"]
+[ext_resource type="Resource" uid="uid://b4i33x0fw7f17" path="res://Resources/Classes/Archer.tres" id="3_23875"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="4_5j3w5"]
+[ext_resource type="Resource" uid="uid://bf5wjkxyjgrvo" path="res://Resources/Classes/Dancer.tres" id="4_343kx"]
+
+[resource]
+script = ExtResource("4_5j3w5")
+job_name = "Urchin"
+move_range = 5
+allowed_weapon_types = Array[int]([6, 3])
+class_skill_tree = ExtResource("1_age72")
+promotion_options = Array[Resource]([ExtResource("2_343kx"), ExtResource("3_23875"), ExtResource("4_343kx")])
+spd_bonus = 1
+agi_bonus = 2
+spd_growth_bonus = 10
+agi_growth_bonus = 10

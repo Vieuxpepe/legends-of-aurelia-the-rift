@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bmd3mcvfso4kp"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_4ttp4"]
+
+[resource]
+script = ExtResource("1_4ttp4")
+skill_id = "thief_def_1"
+skill_name = "Evasion I"
+description = "Increases Defense by +1."
+required_skill_id = "thief_agi_1"
+grid_position = Vector2(1, 1)
+stat_to_boost = "def"
+boost_amount = 1

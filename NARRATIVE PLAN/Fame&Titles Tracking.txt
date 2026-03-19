@@ -1,0 +1,242 @@
+Yes — that’s a **very good system**, and it’s smarter than making villagers only a yes/no recruitment gate.
+
+## Why global fame works well
+
+Saving villagers in Level 1 giving **global fame** does a few great things:
+
+* it makes the player feel that mercy has **world consequences**
+* it avoids making the first map too punishing
+* it gives you a stateless reward that can matter later without bloating the tutorial
+* it helps the campaign feel interconnected
+
+So instead of:
+
+* “you failed the escort puzzle, too bad”
+
+it becomes:
+
+* “you survived, but how much of your humanity and reputation did you preserve?”
+
+That is much better design. Very tasty.
+
+---
+
+## Titles are an excellent next layer
+
+Yes, adding **titles** later is a really strong idea.
+
+Because fame is broad, while titles are **specific**.
+
+### Example difference:
+
+* **Global Fame** = how widely known/respected/feared the party is
+* **Titles** = what the world specifically remembers you for
+
+That gives you two levers:
+
+### Fame answers:
+
+* “How much does the world know your name?”
+
+### Titles answer:
+
+* “What does the world think your name means?”
+
+That distinction is gold for an SRPG campaign.
+
+---
+
+## Example Level 1 title ideas
+
+If villagers survive in Oakhaven, later you could unlock titles like:
+
+* **Ash-Savior**
+* **Kindlekeeper**
+* **The Unburned**
+* **Lantern of Oakhaven**
+* **Smoke-Walker**
+* **Bearer of the Last Dawn**
+
+Some could be public/noble titles, others secret/internal flags.
+
+### Public-style titles
+
+These affect:
+
+* NPC trust
+* town reactions
+* shop prices
+* refugee willingness to help
+* neutral ally attitudes
+
+### Hidden/story titles
+
+These affect:
+
+* secret scenes
+* rare recruits
+* alternate dialogue
+* hidden side objectives
+* relic unlocks
+* faction interpretations
+
+---
+
+## Best way to design it
+
+I would **not** make every little action give a title.
+That becomes achievement soup.
+
+Instead, make titles:
+
+* rarer
+* memorable
+* tied to major chapter behavior
+* sometimes mutually exclusive
+
+That makes them feel legendary instead of checklist sludge.
+
+---
+
+## A clean structure you could use
+
+### 1. Global Fame
+
+A single running value, maybe:
+
+* negative to positive
+* or 0 to 100+
+* raised by rescues, public victories, honorable acts
+* lowered by cruelty, failures, panic, betrayal, collateral damage
+
+### 2. Hidden Reputation Axes
+
+Optional later:
+
+* **Mercy**
+* **Dread**
+* **Faith**
+* **Pragmatism**
+* **Defiance**
+* **Legitimacy**
+
+These stay hidden or semi-hidden.
+
+### 3. Titles
+
+Unlocked by combinations of:
+
+* specific map outcomes
+* thresholds
+* who survived
+* who was present
+* what choice was made
+
+So a title is not just:
+`fame >= 20`
+
+It’s more like:
+`Saved 3+ villagers in Level 1 + Kaelen survived + no house looting event triggered`
+
+That makes titles feel earned.
+
+---
+
+## Excellent uses for titles
+
+Titles can unlock:
+
+* hidden shops
+* special support conversations
+* alternate recruitment conditions
+* unique camp dialogue
+* extra neutral reinforcements
+* secret map routes
+* relics or blessings
+* special epilogue text
+* tower content
+* faction-specific reactions
+
+That is way more interesting than just “+5 avoid” slapped on a menu badge.
+
+---
+
+## Best rule for your game
+
+For **Legends of Aurelia**, titles should mostly do **narrative-mechanical unlocking**, not raw stat boosts.
+
+So titles should feel like:
+
+* the world remembers you
+* doors open differently
+* people interpret you differently
+* secrets become reachable
+
+Rather than:
+
+* “Ash-Savior: +2 DEF”
+
+The second one is okay sometimes, but the first one is much richer for your campaign.
+
+---
+
+## For Level 1 specifically
+
+Your current idea could be:
+
+### Fame reward
+
+* each villager saved gives small **global fame**
+
+### Hidden flag
+
+* `oakhaven_villagers_saved_count`
+
+### Possible later title
+
+Unlocked if enough are saved:
+
+* **Lantern of Oakhaven**
+  or
+* **Ash-Savior**
+
+### Later effects
+
+* Mira trusts you faster
+* refugees recognize you
+* a hidden camp dialogue with Kaelen
+* one neutral ally references Oakhaven survivors
+* a later village shelters your party more willingly
+* secret relic/scene tied to remembered mercy
+
+That’s a very elegant chain.
+
+---
+
+## My recommendation
+
+Do this:
+
+* **Use fame now**
+* **Track hidden chapter outcome flags now**
+* **Add titles later as curated milestone rewards**
+
+That way you don’t block progress, but you also future-proof the system beautifully.
+
+A nice simple formula is:
+
+* Level 1 now tracks:
+
+  * villagers saved
+  * fame gained
+  * Mira unlock flag
+
+* Later you layer:
+
+  * title unlocks
+  * secret reactions
+  * hidden content branches
+
+That gives you design flexibility without overbuilding the first chapter into a flaming spreadsheet.
+
+The next strong step would be designing a **Fame / Titles framework** before we continue map-by-map, so each level can plant future flags consistently.

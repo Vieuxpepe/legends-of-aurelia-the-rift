@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cbdlyulp26g7a"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_3837r"]
+
+[resource]
+script = ExtResource("1_3837r")
+skill_id = "monk_serenity_strike"
+skill_name = "Serenity Strike"
+description = "Deliver a calm yet powerful strike that bypasses defenses."
+required_skill_id = "monk_mag_2"
+grid_position = Vector2(6, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Serenity Strike"

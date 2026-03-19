@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://5sikr2kyceu6"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_p22me"]
+
+[resource]
+script = ExtResource("1_p22me")
+skill_id = "hero_hp_1"
+skill_name = "Frontline Leader"
+required_skill_id = "hero_str_1"
+grid_position = Vector2(1, 0)

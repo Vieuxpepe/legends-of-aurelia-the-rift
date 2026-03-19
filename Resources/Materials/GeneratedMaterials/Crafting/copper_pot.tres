@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bq4irdtjqroje"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_bq34a"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_fd6ms"]
+
+[resource]
+script = ExtResource("2_fd6ms")
+rarity = "Uncommon"
+item_name = "Copper Pot"
+description = "A dented but serviceable pot with soot darkening its underside. It heats evenly and carries the smell of a hundred past suppers."
+gold_cost = 30
+icon = ExtResource("1_bq34a")
+category = "Crafting"

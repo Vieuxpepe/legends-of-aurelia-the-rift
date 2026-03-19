@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://388d4odlo6kc"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_eeo1a"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_pakhd"]
+[ext_resource type="AudioStream" uid="uid://bdeegw5de3glv" path="res://Resources/Music Discs/Old Crazy Wizard Theme.mp3" id="3_eeo1a"]
+
+[resource]
+script = ExtResource("2_pakhd")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+gold_cost = 100
+icon = ExtResource("1_eeo1a")
+unlocked_music_track = ExtResource("3_eeo1a")
+track_title = "Old Crazy Wizard Theme"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

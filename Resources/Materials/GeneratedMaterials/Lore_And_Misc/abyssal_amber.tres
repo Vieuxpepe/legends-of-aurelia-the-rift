@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://vhswfu3480rn"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_23uq8"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_1gl85"]
+
+[resource]
+script = ExtResource("2_1gl85")
+rarity = "Epic"
+item_name = "Abyssal Amber"
+description = "A chunk of pitch-dark amber with tiny pale shapes trapped inside. Held to flame, it seems to swallow the light instead of reflecting it."
+gold_cost = 185
+icon = ExtResource("1_23uq8")
+category = "Lore_And_Misc"

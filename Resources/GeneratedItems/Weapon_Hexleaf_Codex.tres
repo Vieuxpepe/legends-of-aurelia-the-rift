@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cfgnrv5umr08w"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_wq0ta"]
+
+[resource]
+script = ExtResource("1_wq0ta")
+rarity = "Uncommon"
+description = "A compact grimoire of spite, ash, and petty malediction."
+weapon_name = "Hexleaf Codex"
+gold_cost = 980
+damage_type = 1
+weapon_type = 10
+affected_stat = "magic"
+effect_amount = 0
+might = 6
+hit_bonus = 8
+max_range = 2
+max_durability = 32
+current_durability = 32

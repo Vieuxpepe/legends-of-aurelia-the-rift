@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dbyj0dec6p8o6"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_tqi5h"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_7o5wo"]
+
+[resource]
+script = ExtResource("2_7o5wo")
+rarity = "Rare"
+item_name = "Wyrm Scale"
+description = "A palm-sized scale hard as fired tile, dark green with bronze edges. It smells faintly of sulfur and old blood when heated."
+gold_cost = 102
+icon = ExtResource("1_tqi5h")
+category = "Lore_And_Misc"

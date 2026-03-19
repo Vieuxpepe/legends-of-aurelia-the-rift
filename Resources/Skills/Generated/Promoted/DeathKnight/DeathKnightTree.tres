@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://cbqcun3kdd580"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_746t2"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_1doni"]
+[ext_resource type="Resource" uid="uid://c7uosakiecuh8" path="res://Resources/Skills/Generated/Promoted/DeathKnight/Skill_dk_def_1.tres" id="3_ng3kw"]
+[ext_resource type="Resource" uid="uid://cihxs1aoyq830" path="res://Resources/Skills/Generated/Promoted/DeathKnight/Skill_dk_hp_1.tres" id="4_frqfl"]
+[ext_resource type="Resource" uid="uid://352g5giabxc7" path="res://Resources/Skills/Generated/Promoted/DeathKnight/Skill_dk_mag_1.tres" id="5_3c4r3"]
+[ext_resource type="Resource" uid="uid://ndvkpi42aepo" path="res://Resources/Skills/Generated/Promoted/DeathKnight/Skill_dk_mastery.tres" id="6_vfmo7"]
+[ext_resource type="Resource" uid="uid://cy70i5xmrjcfr" path="res://Resources/Skills/Generated/Promoted/DeathKnight/Skill_dk_str_1.tres" id="7_pu7c5"]
+
+[resource]
+script = ExtResource("1_746t2")
+skills = Array[ExtResource("2_1doni")]([ExtResource("3_ng3kw"), ExtResource("4_frqfl"), ExtResource("5_3c4r3"), ExtResource("6_vfmo7"), ExtResource("7_pu7c5")])
+metadata/_custom_type_script = "uid://cedoicamottly"

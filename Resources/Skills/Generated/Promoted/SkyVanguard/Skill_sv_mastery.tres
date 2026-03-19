@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://1lv3lg4oykl4"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_yjiwy"]
+
+[resource]
+script = ExtResource("1_yjiwy")
+skill_id = "sv_mastery"
+skill_name = "Mastery: Storm Standard"
+description = "Rallies allies with a thunderous banner call from the sky."
+required_skill_id = "sv_spd_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Vanguard's Rally"

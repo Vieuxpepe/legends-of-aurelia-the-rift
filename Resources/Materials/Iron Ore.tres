@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c0il6t8gl6tv7"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_cotei"]
+[ext_resource type="Texture2D" uid="uid://p8tss6q1ac5c" path="res://Resources/Materials/Icons/Iron Ore.png" id="1_o3cfc"]
+
+[resource]
+script = ExtResource("1_cotei")
+item_name = "Iron Ore"
+description = "A crafting material."
+icon = ExtResource("1_o3cfc")
+metadata/_custom_type_script = "uid://dxefrus755705"

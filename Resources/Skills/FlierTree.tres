@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://6s6aslgoucmp"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_cadfr"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_gc2g5"]
+[ext_resource type="Resource" uid="uid://dwy7trfkp1ans" path="res://Resources/Skills/Generated/Flier/Skill_flier_hp_1.tres" id="3_e37hb"]
+[ext_resource type="Resource" uid="uid://8ufrf2q6sxux" path="res://Resources/Skills/Generated/Flier/Skill_flier_str_1.tres" id="4_y6i8v"]
+[ext_resource type="Resource" uid="uid://cj35djy5y7w3g" path="res://Resources/Skills/Generated/Flier/Skill_flier_spd_1.tres" id="5_se48t"]
+[ext_resource type="Resource" uid="uid://cq015yqk2odsl" path="res://Resources/Skills/Generated/Flier/Skill_flier_res_1.tres" id="6_48g2d"]
+[ext_resource type="Resource" uid="uid://c6frv3c4666px" path="res://Resources/Skills/Generated/Flier/Skill_flier_str_2.tres" id="7_ifhsl"]
+[ext_resource type="Resource" uid="uid://buvi5pgnabrt7" path="res://Resources/Skills/Generated/Flier/Skill_flier_agi_1.tres" id="8_64iku"]
+[ext_resource type="Resource" uid="uid://brrfhryjhsts3" path="res://Resources/Skills/Generated/Flier/Skill_flier_res_2.tres" id="9_otpcb"]
+[ext_resource type="Resource" uid="uid://cnwd0r4rc4r4x" path="res://Resources/Skills/Generated/Flier/Skill_flier_charge.tres" id="10_q1a06"]
+[ext_resource type="Resource" uid="uid://cvboly5vjykkf" path="res://Resources/Skills/Generated/Flier/Skill_flier_spd_2.tres" id="11_ureyb"]
+[ext_resource type="Resource" uid="uid://c1oklq0pduqfd" path="res://Resources/Skills/Generated/Flier/Skill_flier_hp_2.tres" id="12_5evf2"]
+[ext_resource type="Resource" uid="uid://nbppj8yrwhub" path="res://Resources/Skills/Generated/Flier/Skill_flier_str_3.tres" id="13_188cl"]
+[ext_resource type="Resource" uid="uid://c7h1l6acxwrhc" path="res://Resources/Skills/Generated/Flier/Skill_flier_agi_2.tres" id="14_qjigx"]
+[ext_resource type="Resource" uid="uid://d2rnkkvlar1io" path="res://Resources/Skills/Generated/Flier/Skill_flier_def_1.tres" id="15_ke3k1"]
+[ext_resource type="Resource" uid="uid://fxffyy50o0s" path="res://Resources/Skills/Generated/Flier/Skill_flier_res_3.tres" id="16_6k02y"]
+[ext_resource type="Resource" uid="uid://dbkitvxm57oea" path="res://Resources/Skills/Generated/Flier/Skill_flier_raptors_rush.tres" id="17_q0uvc"]
+
+[resource]
+script = ExtResource("1_cadfr")
+tree_name = "Flier Tree"
+skills = Array[ExtResource("2_gc2g5")]([ExtResource("3_e37hb"), ExtResource("4_y6i8v"), ExtResource("5_se48t"), ExtResource("6_48g2d"), ExtResource("7_ifhsl"), ExtResource("8_64iku"), ExtResource("9_otpcb"), ExtResource("10_q1a06"), ExtResource("11_ureyb"), ExtResource("12_5evf2"), ExtResource("13_188cl"), ExtResource("14_qjigx"), ExtResource("15_ke3k1"), ExtResource("16_6k02y"), ExtResource("17_q0uvc")])

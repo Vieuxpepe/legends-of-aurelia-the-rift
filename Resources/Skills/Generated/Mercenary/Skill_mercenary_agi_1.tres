@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dah665xquis6y"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_6qk8c"]
+
+[resource]
+script = ExtResource("1_6qk8c")
+skill_id = "mercenary_agi_1"
+skill_name = "Agility I"
+description = "Increases Agility by +1."
+required_skill_id = "mercenary_battle_cry"
+grid_position = Vector2(4, 0)
+stat_to_boost = "agi"
+boost_amount = 1

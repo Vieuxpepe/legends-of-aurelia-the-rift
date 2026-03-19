@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bl0fig177brb1"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_k2qih"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_1dl0x"]
+[ext_resource type="Resource" uid="uid://d1byti4l26qm4" path="res://Resources/Skills/Generated/Promoted/HeavyArcher/Skill_ha_agi_1.tres" id="3_gxnkh"]
+[ext_resource type="Resource" uid="uid://dvmbk57tprljf" path="res://Resources/Skills/Generated/Promoted/HeavyArcher/Skill_ha_def_1.tres" id="4_j2cb3"]
+[ext_resource type="Resource" uid="uid://bwcava2gvgji5" path="res://Resources/Skills/Generated/Promoted/HeavyArcher/Skill_ha_hp_1.tres" id="5_pgu2g"]
+[ext_resource type="Resource" uid="uid://ch4fb6gt4qypw" path="res://Resources/Skills/Generated/Promoted/HeavyArcher/Skill_ha_mastery.tres" id="6_5ati6"]
+[ext_resource type="Resource" uid="uid://bn2nnsgswr6hp" path="res://Resources/Skills/Generated/Promoted/HeavyArcher/Skill_ha_str_1.tres" id="7_dc5st"]
+
+[resource]
+script = ExtResource("1_k2qih")
+skills = Array[ExtResource("2_1dl0x")]([ExtResource("3_gxnkh"), ExtResource("4_j2cb3"), ExtResource("5_pgu2g"), ExtResource("6_5ati6"), ExtResource("7_dc5st")])
+metadata/_custom_type_script = "uid://cedoicamottly"

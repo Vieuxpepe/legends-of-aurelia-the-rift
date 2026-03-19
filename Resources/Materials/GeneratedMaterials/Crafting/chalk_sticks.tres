@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c4oh7g6m4odpg"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_8drii"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_a41j6"]
+
+[resource]
+script = ExtResource("2_a41j6")
+item_name = "Chalk Sticks"
+description = "A packet of white chalk wrapped in cloth to keep it from crumbling. Ideal for marking tunnels, trails, and poor choices."
+gold_cost = 5
+icon = ExtResource("1_8drii")
+category = "Crafting"

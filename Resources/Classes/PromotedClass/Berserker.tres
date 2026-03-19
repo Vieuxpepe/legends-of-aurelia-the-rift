@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dytneeqlng3tj"]
+
+[ext_resource type="Resource" uid="uid://ddn4nt7wjidjj" path="res://Resources/Skills/Generated/Promoted/Berserker/BerserkerTree.tres" id="1_p4yen"]
+[ext_resource type="Texture2D" uid="uid://fbp70kgaj0pm" path="res://Assets/Sprites/Promoted Battle Sprites/Berserker.png" id="1_yl6tj"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_p4yen"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_ck44h"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_xwull"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_jysvo"]
+
+[resource]
+script = ExtResource("2_p4yen")
+job_name = "Berserker"
+allowed_weapon_types = Array[int]([2])
+class_skill_tree = ExtResource("1_p4yen")
+promotion_options = Array[Resource]([ExtResource("3_ck44h"), ExtResource("4_xwull"), ExtResource("5_jysvo")])
+promoted_battle_sprite = ExtResource("1_yl6tj")
+promo_hp_bonus = 4
+promo_str_bonus = 2
+promo_res_bonus = 0
+promo_agi_bonus = 0
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://bqdkvp4liu4s2"]
+
+[ext_resource type="Resource" uid="uid://vtmfjngmsrtt" path="res://Resources/Skills/Generated/Promoted/Hero/HeroTree.tres" id="1_1ykpg"]
+[ext_resource type="Texture2D" uid="uid://bthkyw1fv16gr" path="res://Assets/Sprites/Promoted Battle Sprites/Hero Battle Sprite.png" id="1_8qreg"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_ibev2"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_jpcab"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_tl1tb"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_xmgjy"]
+
+[resource]
+script = ExtResource("1_ibev2")
+job_name = "Hero"
+allowed_weapon_types = Array[int]([0, 2])
+class_skill_tree = ExtResource("1_1ykpg")
+promotion_options = Array[Resource]([ExtResource("3_jpcab"), ExtResource("4_tl1tb"), ExtResource("5_xmgjy")])
+promoted_battle_sprite = ExtResource("1_8qreg")
+promo_str_bonus = 2
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://86n6sgirct6w"]
+
+[ext_resource type="Resource" uid="uid://cadv2qi1rxorv" path="res://Resources/Classes/PromotedClass/DeathKnight.tres" id="1_qi32s"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ne770"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_xmn20"]
+[ext_resource type="Resource" uid="uid://8i1urt4qs1og" path="res://Resources/GeneratedItems/Weapon_Blackened_Lance.tres" id="4_jaqhe"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_cekur"]
+
+[resource]
+script = ExtResource("3_xmn20")
+display_name = "Revenant Rider"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_qi32s")
+starting_weapon = ExtResource("4_jaqhe")
+max_hp = 36
+strength = 12
+magic = 3
+defense = 10
+resistance = 6
+speed = 5
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

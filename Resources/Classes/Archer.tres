@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://b4i33x0fw7f17"]
+
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_7paor"]
+[ext_resource type="Resource" uid="uid://bbos8871jtmsj" path="res://Resources/Classes/PromotedClass/BowKnight.tres" id="1_bv0cp"]
+[ext_resource type="Resource" uid="uid://hfs5y8ps03b" path="res://Resources/Skills/ArcherTree.tres" id="1_s1e66"]
+[ext_resource type="Resource" uid="uid://b5ptobcqxnny3" path="res://Resources/Classes/PromotedClass/HeavyArcher.tres" id="2_s1e66"]
+[ext_resource type="Resource" uid="uid://krdfn8n4hwu8" path="res://Resources/Classes/PromotedClass/Assassin.tres" id="3_8td44"]
+
+[resource]
+script = ExtResource("1_7paor")
+job_name = "Archer"
+allowed_weapon_types = Array[int]([3])
+class_skill_tree = ExtResource("1_s1e66")
+promotion_options = Array[Resource]([ExtResource("1_bv0cp"), ExtResource("2_s1e66"), ExtResource("3_8td44")])
+hp_bonus = 10
+str_bonus = 2
+spd_bonus = 2
+agi_bonus = 3
+str_growth_bonus = 5
+spd_growth_bonus = 15
+agi_growth_bonus = 10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

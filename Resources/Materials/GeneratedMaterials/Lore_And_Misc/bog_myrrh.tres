@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://47d81o1bmn7w"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_lonfu"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_fvrbj"]
+
+[resource]
+script = ExtResource("2_fvrbj")
+rarity = "Uncommon"
+item_name = "Bog Myrrh"
+description = "Clots of dark resin gathered from drowned groves and wrapped in moss. Burned slowly, it masks rot with a solemn, temple-like perfume."
+gold_cost = 30
+icon = ExtResource("1_lonfu")
+category = "Lore_And_Misc"

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://q05k1a0lue5q"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_7ns6h"]
+
+[resource]
+script = ExtResource("1_7ns6h")
+description = "Grants +1 agility for the next battle."
+item_name = "Minor Agility Tea"
+heal_amount = 0
+gold_cost = 110
+agi_boost = 1

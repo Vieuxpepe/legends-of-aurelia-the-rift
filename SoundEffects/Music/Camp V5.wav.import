@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dhtvwu5lbmx8e"
+path="res://.godot/imported/Camp V5.wav-618f38e22dddbb032eeecace035abc55.sample"
+
+[deps]
+
+source_file="res://SoundEffects/Music/Camp V5.wav"
+dest_files=["res://.godot/imported/Camp V5.wav-618f38e22dddbb032eeecace035abc55.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

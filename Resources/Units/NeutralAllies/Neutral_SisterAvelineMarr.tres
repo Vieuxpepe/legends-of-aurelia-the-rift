@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://c8fsqu1itwi8t"]
+
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="1_nu6ck"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_82syl"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_65pex"]
+[ext_resource type="Resource" uid="uid://ck4o47f5w7ont" path="res://Resources/GeneratedItems/Weapon_Censure_Staff.tres" id="4_r16jg"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_shk4h"]
+
+[resource]
+script = ExtResource("3_65pex")
+display_name = "Sister Aveline Marr"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_nu6ck")
+starting_weapon = ExtResource("4_r16jg")
+max_hp = 39
+strength = 2
+magic = 20
+defense = 8
+resistance = 18
+speed = 11
+agility = 16
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

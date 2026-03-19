@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://r83xtf4ys5gi"]
+
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="1_xdvgt"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_510c6"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_y05xn"]
+[ext_resource type="Resource" uid="uid://br00c8om3de56" path="res://Resources/GeneratedItems/Weapon_Silence_Staff.tres" id="4_a3tho"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_jmxl0"]
+
+[resource]
+script = ExtResource("3_y05xn")
+display_name = "Mother Caldris Vein"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Mercy is always beautiful from the mouths of those someone else protected."])
+character_class = ExtResource("1_xdvgt")
+starting_weapon = ExtResource("4_a3tho")
+ability = "litany_of_restraint"
+max_hp = 46
+strength = 2
+magic = 20
+defense = 8
+resistance = 18
+speed = 14
+agility = 18
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

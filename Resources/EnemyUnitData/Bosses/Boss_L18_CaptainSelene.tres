@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bd6xi3i6434pf"]
+
+[ext_resource type="Resource" uid="uid://krdfn8n4hwu8" path="res://Resources/Classes/PromotedClass/Assassin.tres" id="1_inoq5"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ap8lc"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_n7kgk"]
+[ext_resource type="Resource" uid="uid://c8dpt1dyr1kjf" path="res://Resources/GeneratedItems/Weapon_Shadowglass_Knives.tres" id="4_ub748"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_nha0l"]
+
+[resource]
+script = ExtResource("3_n7kgk")
+display_name = "Captain Selene"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Tch… precision fails only once, and the body remembers forever."])
+character_class = ExtResource("1_inoq5")
+starting_weapon = ExtResource("4_ub748")
+ability = "umbra_step"
+max_hp = 42
+strength = 18
+defense = 9
+resistance = 10
+speed = 23
+agility = 21
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

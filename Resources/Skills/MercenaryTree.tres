@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bxheb7ls0hsh4"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_rr8sl"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_jl3ak"]
+[ext_resource type="Resource" uid="uid://dah665xquis6y" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_agi_1.tres" id="3_1spta"]
+[ext_resource type="Resource" uid="uid://ce0ry5pamcp2q" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_battle_cry.tres" id="4_q4g46"]
+[ext_resource type="Resource" uid="uid://p48v31o77o0e" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_blade_tempest.tres" id="5_mp81c"]
+[ext_resource type="Resource" uid="uid://bob218ekdnvk4" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_def_1.tres" id="6_xvv37"]
+[ext_resource type="Resource" uid="uid://5emxrdbfrgb6" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_def_2.tres" id="7_snpun"]
+[ext_resource type="Resource" uid="uid://xwq8efpq7ej6" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_def_3.tres" id="8_0dore"]
+[ext_resource type="Resource" uid="uid://cfrjpiy5nrt1u" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_flurry_strike.tres" id="9_6snfd"]
+[ext_resource type="Resource" uid="uid://l4tow8xeo4kn" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_hp_1.tres" id="10_elky2"]
+[ext_resource type="Resource" uid="uid://bks78jrfg6tq6" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_hp_2.tres" id="11_lnphk"]
+[ext_resource type="Resource" uid="uid://do4kq5vplsuqv" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_spd_1.tres" id="12_e2utf"]
+[ext_resource type="Resource" uid="uid://bkfdwhyovdqmy" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_spd_2.tres" id="13_m6iyi"]
+[ext_resource type="Resource" uid="uid://dux613w7jdj8t" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_spd_3.tres" id="14_q0xxv"]
+[ext_resource type="Resource" uid="uid://hdeb2w7td2hg" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_str_1.tres" id="15_nv3xv"]
+[ext_resource type="Resource" uid="uid://rw1s24jbjtk7" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_str_2.tres" id="16_hoylk"]
+[ext_resource type="Resource" uid="uid://pow2cvtokicu" path="res://Resources/Skills/Generated/Mercenary/Skill_mercenary_str_3.tres" id="17_51ifr"]
+
+[resource]
+script = ExtResource("1_rr8sl")
+skills = Array[ExtResource("2_jl3ak")]([ExtResource("3_1spta"), ExtResource("4_q4g46"), ExtResource("5_mp81c"), ExtResource("6_xvv37"), ExtResource("7_snpun"), ExtResource("8_0dore"), ExtResource("9_6snfd"), ExtResource("10_elky2"), ExtResource("11_lnphk"), ExtResource("12_e2utf"), ExtResource("13_m6iyi"), ExtResource("14_q0xxv"), ExtResource("15_nv3xv"), ExtResource("16_hoylk"), ExtResource("17_51ifr")])
+metadata/_custom_type_script = "uid://cedoicamottly"

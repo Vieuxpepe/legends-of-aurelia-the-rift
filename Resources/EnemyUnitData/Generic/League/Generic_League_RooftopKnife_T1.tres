@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://drohyts6608l1"]
+
+[ext_resource type="Resource" uid="uid://ckj67pxqohcw7" path="res://Resources/Classes/Thief.tres" id="1_jtncx"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_igc82"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_5vftp"]
+[ext_resource type="Resource" uid="uid://cfq4xt7bqmvwh" path="res://Resources/GeneratedItems/Weapon_Street_Dirk.tres" id="4_pyekx"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_klx58"]
+
+[resource]
+script = ExtResource("3_5vftp")
+display_name = "Rooftop Knife"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_jtncx")
+starting_weapon = ExtResource("4_pyekx")
+max_hp = 18
+strength = 6
+resistance = 2
+speed = 8
+agility = 8
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

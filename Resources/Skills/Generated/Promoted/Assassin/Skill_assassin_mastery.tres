@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://d3qys2diihl5x"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_oc8kw"]
+
+[resource]
+script = ExtResource("1_oc8kw")
+skill_id = "assassin_mastery"
+skill_name = "Mastery: Shadow Pin"
+description = "Cripples the target, reducing their speed to 0 and preventing counter-attacks."
+required_skill_id = "assassin_hp_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Shadow Pin"

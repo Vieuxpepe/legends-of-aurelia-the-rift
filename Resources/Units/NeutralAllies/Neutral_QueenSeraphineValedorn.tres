@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://c6sg8i5q2e4a"]
+
+[ext_resource type="Resource" uid="uid://cmwue2g0kcnl4" path="res://Resources/Classes/PromotedClass/GreatKnight.tres" id="1_dcdss"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_t33bj"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_myopo"]
+[ext_resource type="Resource" uid="uid://dyy30mxh0mxc7" path="res://Resources/GeneratedItems/Weapon_Holy_Lance.tres" id="4_6tlea"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_fksmb"]
+
+[resource]
+script = ExtResource("3_myopo")
+display_name = "Queen Seraphine Valedorn"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_dcdss")
+starting_weapon = ExtResource("4_6tlea")
+max_hp = 48
+strength = 18
+magic = 8
+defense = 15
+resistance = 14
+speed = 11
+agility = 14
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

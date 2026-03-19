@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://ctq2vyrxg0s2l"]
+
+[ext_resource type="Resource" uid="uid://dw6xbp4oqav3p" path="res://Resources/Classes/Warrior.tres" id="1_tch7y"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_op0ko"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_ejh7u"]
+[ext_resource type="Resource" uid="uid://b4p6p6hup4ie3" path="res://Resources/GeneratedItems/Weapon_Steel_Axe.tres" id="4_aqo0v"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_bncgv"]
+
+[resource]
+script = ExtResource("3_ejh7u")
+display_name = "Axebark Raider"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_tch7y")
+starting_weapon = ExtResource("4_aqo0v")
+max_hp = 28
+strength = 10
+defense = 5
+resistance = 2
+speed = 5
+agility = 5
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 7
+max_gold_drop = 12
+drops_equipped_weapon = true
+equipped_weapon_chance = 14

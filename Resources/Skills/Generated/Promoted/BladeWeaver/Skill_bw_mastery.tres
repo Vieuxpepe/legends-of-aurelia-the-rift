@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://daqnvswpkepyf"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_j42jf"]
+
+[resource]
+script = ExtResource("1_j42jf")
+skill_id = "bw_mastery"
+skill_name = "Mastery: Aether Bind"
+description = "Harvests raw magic to temporarily massively boost attack power."
+required_skill_id = "bw_str_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Aether Bind"

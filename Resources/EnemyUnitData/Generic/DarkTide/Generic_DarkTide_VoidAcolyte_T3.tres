@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://4uqee1nfbbys"]
+
+[ext_resource type="Resource" uid="uid://basnwy3wbonr2" path="res://Resources/Classes/Mage.tres" id="1_f28b6"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_qm0mg"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_y6d7u"]
+[ext_resource type="Resource" uid="uid://cc4ge88nh13qp" path="res://Resources/GeneratedItems/Weapon_Gloam_Primer.tres" id="4_rg3x0"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_si1kj"]
+
+[resource]
+script = ExtResource("3_y6d7u")
+display_name = "Void Acolyte"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_f28b6")
+starting_weapon = ExtResource("4_rg3x0")
+max_hp = 22
+strength = 0
+magic = 10
+resistance = 6
+speed = 5
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

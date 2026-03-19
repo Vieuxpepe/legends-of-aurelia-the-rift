@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bkoq22vqag8fw"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_muc3f"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_8c5cs"]
+[ext_resource type="Resource" uid="uid://2nknvvn07ti7" path="res://Resources/Skills/Generated/Promoted/FireSage/Skill_fs_hp_1.tres" id="3_ur4lv"]
+[ext_resource type="Resource" uid="uid://bj48024pygp82" path="res://Resources/Skills/Generated/Promoted/FireSage/Skill_fs_mag_1.tres" id="4_6uwox"]
+[ext_resource type="Resource" uid="uid://cfl4ufld113pm" path="res://Resources/Skills/Generated/Promoted/FireSage/Skill_fs_mastery.tres" id="5_v4fl1"]
+[ext_resource type="Resource" uid="uid://d0q7gyv7cynm5" path="res://Resources/Skills/Generated/Promoted/FireSage/Skill_fs_res_1.tres" id="6_k7cas"]
+[ext_resource type="Resource" uid="uid://dj5rwiiwf042q" path="res://Resources/Skills/Generated/Promoted/FireSage/Skill_fs_spd_1.tres" id="7_44s87"]
+
+[resource]
+script = ExtResource("1_muc3f")
+skills = Array[ExtResource("2_8c5cs")]([ExtResource("3_ur4lv"), ExtResource("4_6uwox"), ExtResource("5_v4fl1"), ExtResource("6_k7cas"), ExtResource("7_44s87")])
+metadata/_custom_type_script = "uid://cedoicamottly"

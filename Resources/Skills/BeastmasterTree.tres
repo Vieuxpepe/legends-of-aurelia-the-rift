@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bf71bq3u0lmss"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_8hu44"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_t35ob"]
+[ext_resource type="Resource" uid="uid://c5j7tlthu8i5b" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_hp_1.tres" id="3_w0pju"]
+[ext_resource type="Resource" uid="uid://duk7lnqnxu1m3" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_str_1.tres" id="4_8orl2"]
+[ext_resource type="Resource" uid="uid://2oh4mrt5wuu1" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_spd_1.tres" id="5_h471j"]
+[ext_resource type="Resource" uid="uid://dk46dvekfca7h" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_def_1.tres" id="6_hemmu"]
+[ext_resource type="Resource" uid="uid://cdgo32lhaqfr7" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_str_2.tres" id="7_p4t1w"]
+[ext_resource type="Resource" uid="uid://cgcd07kdc1mwj" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_agi_1.tres" id="8_l7lxn"]
+[ext_resource type="Resource" uid="uid://bhfi2ltyuc0s0" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_hp_2.tres" id="9_sgk5t"]
+[ext_resource type="Resource" uid="uid://cxftm0e4i5nkr" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_alpha_roar.tres" id="10_w47ah"]
+[ext_resource type="Resource" uid="uid://dk56rb5qf83ax" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_spd_2.tres" id="11_ahfj5"]
+[ext_resource type="Resource" uid="uid://dwo0asrawyk5u" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_def_2.tres" id="12_6qswt"]
+[ext_resource type="Resource" uid="uid://bxb5qj7qr67sp" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_str_3.tres" id="13_xyvji"]
+[ext_resource type="Resource" uid="uid://bimkqhicunbkw" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_agi_2.tres" id="14_axysu"]
+[ext_resource type="Resource" uid="uid://btataw63xf0hn" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_res_1.tres" id="15_mn4ku"]
+[ext_resource type="Resource" uid="uid://ttxya2mt81vc" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_hp_3.tres" id="16_dasv3"]
+[ext_resource type="Resource" uid="uid://bsy4852vf0hiy" path="res://Resources/Skills/Generated/Beastmaster/Skill_beastmaster_apex_predator.tres" id="17_w0667"]
+
+[resource]
+script = ExtResource("1_8hu44")
+tree_name = "Beastmaster Tree"
+skills = Array[ExtResource("2_t35ob")]([ExtResource("3_w0pju"), ExtResource("4_8orl2"), ExtResource("5_h471j"), ExtResource("6_hemmu"), ExtResource("7_p4t1w"), ExtResource("8_l7lxn"), ExtResource("9_sgk5t"), ExtResource("10_w47ah"), ExtResource("11_ahfj5"), ExtResource("12_6qswt"), ExtResource("13_xyvji"), ExtResource("14_axysu"), ExtResource("15_mn4ku"), ExtResource("16_dasv3"), ExtResource("17_w0667")])

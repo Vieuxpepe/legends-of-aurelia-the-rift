@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://c7eqg71p8jfwb"]
+
+[ext_resource type="Resource" uid="uid://6s6aslgoucmp" path="res://Resources/Skills/FlierTree.tres" id="1_40yi3"]
+[ext_resource type="Resource" uid="uid://ypsagmxqepij" path="res://Resources/Classes/PromotedClass/FalconKnight.tres" id="2_ltv71"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_t8nd4"]
+[ext_resource type="Resource" uid="uid://b1ole5gb6fkbb" path="res://Resources/Classes/PromotedClass/SkyVanguard.tres" id="3_cdtpk"]
+
+[resource]
+script = ExtResource("2_t8nd4")
+job_name = "Flier"
+move_range = 7
+move_type = 2
+allowed_weapon_types = Array[int]([1])
+class_skill_tree = ExtResource("1_40yi3")
+promotion_options = Array[Resource]([ExtResource("2_ltv71"), ExtResource("3_cdtpk")])
+hp_bonus = 10
+str_bonus = 2
+spd_bonus = 3
+agi_bonus = 2
+res_bonus = 3
+hp_growth_bonus = 5
+str_growth_bonus = 5
+spd_growth_bonus = 15
+agi_growth_bonus = 10
+res_growth_bonus = 10

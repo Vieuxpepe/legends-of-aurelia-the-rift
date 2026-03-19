@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b3yxm5itav8ck"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_ockia"]
+
+[resource]
+script = ExtResource("1_ockia")
+item_name = "Recipe: Apprentice Tome"
+description = "Instructions to craft an Apprentice Tome."
+gold_cost = 80

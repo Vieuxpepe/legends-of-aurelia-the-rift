@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bvvilgo6s1n7t"]
+
+[ext_resource type="Resource" uid="uid://cy133ei5evdek" path="res://Resources/Classes/PromotedClass/WildWarden.tres" id="1_6o37l"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_8i2ju"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_jncry"]
+[ext_resource type="Resource" uid="uid://b4p6p6hup4ie3" path="res://Resources/GeneratedItems/Weapon_Steel_Axe.tres" id="4_gcwuk"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_t7pvp"]
+
+[resource]
+script = ExtResource("3_jncry")
+display_name = "Thorn-Captain Edda Fen"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Then the forest will judge between us… and I doubt it will be kind."])
+character_class = ExtResource("1_6o37l")
+starting_weapon = ExtResource("4_gcwuk")
+ability = "timberline_snare"
+max_hp = 40
+strength = 14
+defense = 10
+resistance = 8
+speed = 12
+agility = 16
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

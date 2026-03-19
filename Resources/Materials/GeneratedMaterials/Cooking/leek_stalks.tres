@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://3qvmae4ghru0"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_7g5vg"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_88wdo"]
+
+[resource]
+script = ExtResource("2_88wdo")
+item_name = "Leek Stalks"
+description = "Long pale stalks with green tops and a mild onion scent. They soften into broth and lend sweetness to otherwise tired meals."
+gold_cost = 8
+icon = ExtResource("1_7g5vg")
+category = "Cooking"

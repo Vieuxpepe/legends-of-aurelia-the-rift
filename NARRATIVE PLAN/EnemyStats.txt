@@ -1,0 +1,397 @@
+Yes. For enemies, I would **not** mirror playable-unit growth design exactly. Bosses and recurring rivals work better as **fixed encounter packages** with deliberate re-scaling per appearance. Your Enemy Bible already separates them into major antagonists, recurring retreat-rivals, chapter bosses, and endgame entities, with distinct deployments and gimmicks; that is the right backbone for balance.   
+
+## Step 1: Enemy roster balance strategy
+
+I would split the 20 enemies into four gameplay families:
+
+**1. Scripted terror / nonstandard bosses**
+Vespera on Level 1, Vespera Ascendant, and the Witness should not play like normal “kill boss” units. They need phase rules, capped damage windows, map pressure, and ritual anchors. That matches their intended role as reality-warping or cosmic threats.  
+
+**2. Recurring rivals who retreat**
+Caldris, Rhex, Mortivar, Cassian, Nerez, and Selene should usually **escape before full defeat** on earlier maps. They are stronger as long-term faces than as one-and-done stat blocks. Your file already frames several of them that way. 
+
+**3. Chapter bosses with one strong map identity**
+Ephrem, Juno, Septen, Edda, Halwen, Noemi, Serik, Roen, Ash Adjudicator, Alric, Naeva, and Enric should each represent one dominant pressure axis: zeal, alarms, famine logistics, forest control, arena spectacle, infiltration, lockdown, betrayal, trials, cavalry command, ritual tide, and marsh necromancy.  
+
+**4. Pressure distribution rule**
+Do not stack too many “miserable” mechanics too early.
+Early game should introduce:
+
+* one untouchable horror,
+* one pursuit controller,
+* one zeal bruiser,
+* one reinforcement economy boss.
+
+Midgame can add stealth, extractions, alarms, and lockout tools.
+Late game is where multi-boss maps and spatial manipulation should peak. This lines up well with your map-by-map placement. 
+
+---
+
+## Step 2: Full enemy sheets
+
+I’m using this format:
+
+* **Class**
+* **Encounter Level(s)**
+* **Base Stats**
+* **Weapon**
+* **Boss Skill**
+* **Personal Passive**
+* **Retreat / Death Rule**
+
+---
+
+### 1) Lady Vespera — scripted catastrophe / final ascendant
+
+Appears on Levels 1, 18, and 19 as the primary rupture archmage and ritual centerpiece. 
+
+**Class:** `FireSage.tres` on Levels 1 and 18, `VoidStrider.tres` on Level 19
+**Encounter Levels:** L1: 18 / L18: 20 / L19: 20
+
+**Base Stats**
+
+* **Level 1 apparition:** HP 38, STR 0, MAG 17, SKL 14, SPD 12, LCK 8, DEF 7, RES 16, MOV 6
+* **Level 18:** HP 52, STR 0, MAG 22, SKL 18, SPD 15, LCK 10, DEF 9, RES 20, MOV 6
+* **Level 19 Ascendant:** HP 68, STR 4, MAG 26, SKL 21, SPD 17, LCK 12, DEF 12, RES 24, MOV 6
+
+**Weapon:** Rift Rite Tome
+**Boss Skill:** **Cataclysmic Locus** — every 3 turns, one altar ignites; she teleports, summons a Rift Shade, and corrupts nearby terrain
+**Personal Passive:** **Reality Buckles** — takes -50% damage unless standing near a broken ritual anchor; corrupted tiles give her +20 Avoid
+**Retreat / Death Rule:** Unkillable on L1; may phase out on L18 once ritual HP gate is reached; true defeat only on L19
+
+---
+
+### 2) Master Enric — marsh necromancer / terrain inversion boss
+
+Appears on Level 15 as the necromancer-savant whose map turns against the player. 
+
+**Class:** `DivineSage.tres`
+**Encounter Level:** 17
+
+**Base Stats:** HP 44, STR 0, MAG 20, SKL 15, SPD 8, LCK 4, DEF 6, RES 15, MOV 5
+**Weapon:** Grave Thesis
+**Boss Skill:** **Dissertation of Rot** — reanimates one dead unit per cycle as a half-stat Husk
+**Personal Passive:** **Marsh Dominion** — after each spell, adjacent ground becomes mire, costing +1 MOV and -20 Avoid
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 3) Captain Selene — mobile execution rival
+
+Appears on Levels 13 and 18 as the precision blade to Vespera’s cataclysm. 
+
+**Class:** `Assassin.tres`
+**Encounter Levels:** L13: 14 / L18: 19
+
+**Base Stats**
+
+* **Level 13:** HP 33, STR 14, MAG 0, SKL 18, SPD 20, LCK 8, DEF 7, RES 8, MOV 7
+* **Level 18:** HP 42, STR 18, MAG 0, SKL 21, SPD 23, LCK 10, DEF 9, RES 10, MOV 7
+
+**Weapon:** Shadowglass Knives
+**Boss Skill:** **Umbra Step** — dash through shadow tiles and strike again if target is a backliner
+**Personal Passive:** **Cull the Weak** — +4 damage and +20 Hit against isolated units
+**Retreat / Death Rule:** Retreats on L13 at 20% HP; dies on L18
+
+---
+
+### 4) Ephrem the Zealot — early doctrinal bruiser
+
+Appears on Level 3 as the sincere, terrifying zealot boss. 
+
+**Class:** `Monk.tres`
+**Encounter Level:** 8
+
+**Base Stats:** HP 28, STR 9, MAG 6, SKL 8, SPD 7, LCK 2, DEF 7, RES 8, MOV 5
+**Weapon:** Censer Rod
+**Boss Skill:** **Mark of Cinder** — brands one unit; zeal units gain bonus damage and hit against branded targets
+**Personal Passive:** **Fanatic’s Sermon** — adjacent allies gain +2 STR/MAG and immunity to Fear
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 5) Mother Caldris Vein — anti-heal inquisitor rival
+
+Appears on Levels 2, 10, and 17 as the cold face of hardline Valeron doctrine. 
+
+**Class:** `DivineSage.tres`
+**Encounter Levels:** L2: 10 / L10: 15 / L17: 18
+
+**Base Stats**
+
+* **Level 2:** HP 30, STR 1, MAG 12, SKL 13, SPD 10, LCK 4, DEF 5, RES 12, MOV 5
+* **Level 10:** HP 38, STR 1, MAG 16, SKL 16, SPD 12, LCK 5, DEF 6, RES 15, MOV 5
+* **Level 17:** HP 46, STR 2, MAG 20, SKL 18, SPD 14, LCK 7, DEF 8, RES 18, MOV 5
+
+**Weapon:** Silence Staff
+**Boss Skill:** **Litany of Restraint** — cross-shaped silence + anti-heal field for 2 turns
+**Personal Passive:** **Polite Cruelty** — enemies with Silence, Seal, or Heal Block suffer -10 Avoid
+**Retreat / Death Rule:** Retreats on L2 and L10; dies on L17
+
+---
+
+### 6) Port-Master Rhex Valcero — reinforcement economy boss
+
+Appears on Levels 4 and 5 as the League’s clean corruption made flesh. 
+
+**Class:** `BowKnight.tres`
+**Encounter Levels:** L4: 11 / L5: 13
+
+**Base Stats**
+
+* **Level 4:** HP 34, STR 11, MAG 0, SKL 13, SPD 9, LCK 6, DEF 8, RES 4, MOV 7
+* **Level 5:** HP 38, STR 13, MAG 0, SKL 15, SPD 10, LCK 7, DEF 9, RES 5, MOV 7
+
+**Weapon:** Broker’s Handgonne
+**Boss Skill:** **Bought Time** — once per map, purchases 2-3 mercenary reinforcements at map edges
+**Personal Passive:** **Everything Has a Price** — hired units within 3 tiles gain +15 Hit/Avoid
+**Retreat / Death Rule:** Retreats on L4; dies or falls from command on L5
+
+---
+
+### 7) Mortivar Hale — undead fortress marshal
+
+Appears on Levels 6 and 14 as disciplined necromantic military pressure. 
+
+**Class:** `DeathKnight.tres`
+**Encounter Levels:** L6: 13 / L14: 17
+
+**Base Stats**
+
+* **Level 6:** HP 42, STR 16, MAG 2, SKL 12, SPD 8, LCK 3, DEF 15, RES 9, MOV 7
+* **Level 14:** HP 50, STR 19, MAG 3, SKL 15, SPD 10, LCK 4, DEF 18, RES 11, MOV 7
+
+**Weapon:** Blackened Lance
+**Boss Skill:** **Grave Muster** — summons armored revenants at fixed muster points
+**Personal Passive:** **Marshal of the Dead** — undead allies within 3 tiles gain +3 DEF and cannot be Shoved
+**Retreat / Death Rule:** Retreats on L6; dies on L14
+
+---
+
+### 8) Preceptor Cassian Vow — diplomatic sabotage boss
+
+Appears on Levels 9A and 17 as “reasonable” atrocity. 
+
+**Class:** `DivineSage.tres`
+**Encounter Levels:** L9A: 12 / L17: 18
+
+**Base Stats**
+
+* **Level 9A:** HP 34, STR 0, MAG 15, SKL 15, SPD 10, LCK 5, DEF 4, RES 14, MOV 5
+* **Level 17:** HP 45, STR 0, MAG 20, SKL 18, SPD 12, LCK 7, DEF 6, RES 18, MOV 5
+
+**Weapon:** Edict Staff
+**Boss Skill:** **False Accord** — creates barrier zones and punishes failure to protect envoy NPCs
+**Personal Passive:** **Regrettable Necessity** — allied escorts take -30% chip damage while he lives
+**Retreat / Death Rule:** Retreats on L9A; dies on L17
+
+---
+
+### 9) Auditor Nerez Sable — extraction / contract control rival
+
+Appears on Levels 9B, 11, and 17 as League administrative violence. 
+
+**Class:** `BladeWeaver.tres`
+**Encounter Levels:** L9B: 13 / L11: 15 / L17: 18
+
+**Base Stats**
+
+* **Level 9B:** HP 32, STR 10, MAG 6, SKL 16, SPD 16, LCK 5, DEF 5, RES 8, MOV 6
+* **Level 11:** HP 36, STR 12, MAG 7, SKL 18, SPD 18, LCK 6, DEF 6, RES 9, MOV 6
+* **Level 17:** HP 44, STR 15, MAG 9, SKL 21, SPD 20, LCK 8, DEF 8, RES 11, MOV 6
+
+**Weapon:** Ledger Needle
+**Boss Skill:** **Collateral Clause** — locks a unit with a debt-mark; abductors can extract marked targets
+**Personal Passive:** **Administrative Violence** — debuffed enemies take +15 Hit from all allied attacks
+**Retreat / Death Rule:** Retreats on L9B and L11; dies on L17
+
+---
+
+### 10) Juno Kest — alarm engine sub-boss
+
+Appears on Level 5 as the tempo boss of the docks. 
+
+**Class:** `Thief.tres`
+**Encounter Level:** 12
+
+**Base Stats:** HP 30, STR 10, MAG 0, SKL 15, SPD 17, LCK 6, DEF 5, RES 4, MOV 7
+**Weapon:** Bellhook Knife
+**Boss Skill:** **Alarm Net** — activates towers, sirens, and crossfire reinforcements
+**Personal Passive:** **First Bell** — all enemies gain +1 MOV for 2 turns after the first alarm
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 11) Lord Septen Harrow — famine lord / defended logistics boss
+
+Appears on Level 7. 
+
+**Class:** `GreatKnight.tres`
+**Encounter Level:** 14
+
+**Base Stats:** HP 46, STR 16, MAG 0, SKL 10, SPD 6, LCK 5, DEF 15, RES 7, MOV 6
+**Weapon:** Knight’s Halberd
+**Boss Skill:** **Hoardfire** — ignites grain wagons or orders them moved to deny villages
+**Personal Passive:** **Hunger Tax** — nearby civilian/green units suffer -2 all stats and Panic-style AI drift
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 12) Thorn-Captain Edda Fen — forest control captain
+
+Appears on Level 8 as a pragmatic frontier occupier. 
+
+**Class:** `WildWarden.tres`
+**Encounter Level:** 14
+
+**Base Stats:** HP 40, STR 14, MAG 0, SKL 16, SPD 12, LCK 6, DEF 10, RES 8, MOV 6
+**Weapon:** Steel Axe
+**Boss Skill:** **Timberline Snare** — plants trap tiles and orders woodsmen to cut or fortify forest routes
+**Personal Passive:** **Frontier Law** — forest allies gain +20 Avoid and +3 damage
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 13) Justicar Halwen Serast — arena spectacle executioner
+
+Appears on Level 10 as the golden tribunal boss. 
+
+**Class:** `HighPaladin.tres`
+**Encounter Level:** 15
+
+**Base Stats:** HP 48, STR 17, MAG 6, SKL 15, SPD 11, LCK 7, DEF 14, RES 12, MOV 7
+**Weapon:** Judgment Pike
+**Boss Skill:** **Verdict of Flame** — outer arena rings ignite at HP thresholds
+**Personal Passive:** **Crowd of Witnesses** — gains +10 Crit/Avoid while audience pylons remain active
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 14) Noemi Veyr — infiltration assassin boss
+
+Appears on Level 11 as the mask-and-festival killer. 
+
+**Class:** `Assassin.tres`
+**Encounter Level:** 15
+
+**Base Stats:** HP 34, STR 15, MAG 0, SKL 20, SPD 22, LCK 8, DEF 6, RES 9, MOV 7
+**Weapon:** Masquerade Needle
+**Boss Skill:** **Fifth Mask** — swaps with disguised civilian clones and resets aggro lines
+**Personal Passive:** **Nobody There** — +30 Avoid until first successful hit received
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 15) Provost Serik Quill — lockdown scholar boss
+
+Appears on Level 12 as the keeper of chained knowledge. 
+
+**Class:** `DivineSage.tres`
+**Encounter Level:** 16
+
+**Base Stats:** HP 37, STR 0, MAG 18, SKL 17, SPD 9, LCK 4, DEF 6, RES 15, MOV 5
+**Weapon:** Chain-Key Staff
+**Boss Skill:** **Archive Lock** — seals corridors, toggles lifts, and reroutes automatons
+**Personal Passive:** **Curated Knowledge** — constructs and tome-users within 4 tiles gain +15 Hit
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 16) Roen Halbrecht — betrayal fortress commander
+
+Appears on Level 14 as the painfully human traitor boss. 
+
+**Class:** `General.tres`
+**Encounter Level:** 16
+
+**Base Stats:** HP 50, STR 18, MAG 0, SKL 12, SPD 7, LCK 5, DEF 17, RES 8, MOV 5
+**Weapon:** Pike of Valor
+**Boss Skill:** **Betrayer’s Lever** — opens prison cells, portcullises, and side routes mid-map
+**Personal Passive:** **Hold the Breach** — adjacent allies gain +3 DEF and cannot be repositioned
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 17) The Ash Adjudicator — trial boss / institutional remnant
+
+Appears on Level 16 as an iconographic spectral judge. 
+
+**Class:** `Dreadnought.tres`
+**Encounter Level:** 18
+
+**Base Stats:** HP 55, STR 19, MAG 8, SKL 18, SPD 10, LCK 0, DEF 18, RES 16, MOV 5
+**Weapon:** Verdict Blade
+**Boss Skill:** **Trial Mirror** — summons spectral copies using 70% of a chosen unit’s stats
+**Personal Passive:** **Sentence Unbroken** — cannot lose more than 25% HP in one player phase until trial seals are destroyed
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 18) Duke Alric Thornmere — coalition breaker cavalry lord
+
+Appears on Level 17. 
+
+**Class:** `HighPaladin.tres`
+**Encounter Level:** 18
+
+**Base Stats:** HP 52, STR 19, MAG 0, SKL 17, SPD 13, LCK 9, DEF 15, RES 10, MOV 8
+**Weapon:** Silver Lance
+**Boss Skill:** **Banner Break** — ordered cavalry line charge; allies gain +1 MOV and +10 Hit on same turn
+**Personal Passive:** **Noble Momentum** — +3 damage after moving 4+ tiles before attacking
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 19) Naeva, Marrow-Seer of the Dark Tide — ritual sub-finalist
+
+Appears on Level 18 as the altar and void-pool controller.  
+
+**Class:** `VoidStrider.tres`
+**Encounter Level:** 19
+
+**Base Stats:** HP 48, STR 0, MAG 24, SKL 18, SPD 15, LCK 4, DEF 8, RES 20, MOV 6
+**Weapon:** Dark Tide Grimoire
+**Boss Skill:** **Marrow Hymn** — altars pulse buffs for cultists and debuffs for player units
+**Personal Passive:** **Tidebound Rite** — each intact altar spawns a void pool every other turn
+**Retreat / Death Rule:** Dies on map
+
+---
+
+### 20) The Witness Without Eyes — pseudo-boss cosmic endgame entity
+
+Appears on Level 19 as the non-human final pressure body.  
+
+**Class:** `RiftArchon.tres`
+**Encounter Level:** 20
+
+**Base Stats:** HP 72, STR 18, MAG 26, SKL 20, SPD 14, LCK 0, DEF 20, RES 24, MOV 6
+**Weapon:** Null Hymn
+**Boss Skill:** **Unmake the Grid** — deletes tiles, shoves units off the central glyph, and fires map-wide ruin pulses
+**Personal Passive:** **Non-Human Geometry** — first lethal hit each turn reduces it to 1 HP unless 3 anchors are broken
+**Retreat / Death Rule:** True final kill condition only after anchors collapse
+
+---
+
+## Tight balancing notes
+
+A few tuning choices matter a lot:
+
+**Do not let Caldris fully anti-heal-lock the player on Level 2.**
+Her early version should hit only a small cross or one lane.
+
+**Rhex should be dangerous because he buys time, not because he personally one-rounds units.**
+His threat comes from reinforcements and map tempo.
+
+**Mortivar must be durable, but slow enough that positioning still beats him.**
+If he becomes both wall and sweeper too early, he invalidates tactical play.
+
+**Noemi and Selene should kill careless backliners, not everybody.**
+Their danger should reward formation discipline.
+
+**Ash Adjudicator and Witness should be phase bosses, not raw-stat bricks.**
+Their identity is stronger when the player solves conditions, not just DPS races.
+
+**Vespera should always feel unfair in a deliberate, authored way.**
+Not random unfairness—ritual unfairness.
+
+The cleanest next step is a **Godot-ready boss database array** with exact dictionary syntax for all 20, including invented weapons and passive/skill IDs.

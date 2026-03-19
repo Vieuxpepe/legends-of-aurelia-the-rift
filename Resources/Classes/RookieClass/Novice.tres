@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://b88gmubtjkwgd"]
+
+[ext_resource type="Resource" uid="uid://btivcajnuaff3" path="res://Resources/Skills/Generated/Rookie/Novice/NoviceTree.tres" id="1_vrd5q"]
+[ext_resource type="Resource" uid="uid://dekndssahuvia" path="res://Resources/Classes/Monk.tres" id="2_vgvyl"]
+[ext_resource type="Resource" uid="uid://dripsbbvug6em" path="res://Resources/Classes/Paladin.tres" id="3_byrpm"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="4_if65m"]
+[ext_resource type="Resource" uid="uid://c7eqg71p8jfwb" path="res://Resources/Classes/Flier.tres" id="4_vgvyl"]
+
+[resource]
+script = ExtResource("4_if65m")
+job_name = "Novice"
+allowed_weapon_types = Array[int]([8, 4])
+can_use_healing_staff = true
+can_use_buff_staff = true
+class_skill_tree = ExtResource("1_vrd5q")
+promotion_options = Array[Resource]([ExtResource("2_vgvyl"), ExtResource("3_byrpm"), ExtResource("4_vgvyl")])
+hp_bonus = 1
+str_bonus = 1
+spd_bonus = 1
+res_bonus = 1
+hp_growth_bonus = 5
+str_growth_bonus = 5
+spd_growth_bonus = 5
+res_growth_bonus = 5

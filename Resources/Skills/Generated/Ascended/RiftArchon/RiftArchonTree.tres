@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://cnbrpseqmpqqk"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_f6wek"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_cndi5"]
+[ext_resource type="Resource" uid="uid://deq45cryu2bn7" path="res://Resources/Skills/Generated/Ascended/RiftArchon/Skill_ra_mag_1.tres" id="3_vr6gm"]
+[ext_resource type="Resource" uid="uid://du58vuf4htu3s" path="res://Resources/Skills/Generated/Ascended/RiftArchon/Skill_ra_res_1.tres" id="4_7opr8"]
+[ext_resource type="Resource" uid="uid://5vnsvmgnijd8" path="res://Resources/Skills/Generated/Ascended/RiftArchon/Skill_ra_hp_1.tres" id="5_dt5vh"]
+[ext_resource type="Resource" uid="uid://ve1ocs8utpfp" path="res://Resources/Skills/Generated/Ascended/RiftArchon/Skill_ra_spd_1.tres" id="6_qk3kw"]
+[ext_resource type="Resource" uid="uid://b55c1nrmp8uia" path="res://Resources/Skills/Generated/Ascended/RiftArchon/Skill_ra_agi_1.tres" id="7_k36sk"]
+
+[resource]
+script = ExtResource("1_f6wek")
+tree_name = "RiftArchon Tree"
+skills = Array[ExtResource("2_cndi5")]([ExtResource("3_vr6gm"), ExtResource("4_7opr8"), ExtResource("5_dt5vh"), ExtResource("6_qk3kw"), ExtResource("7_k36sk")])

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://dsq32qbwmsnwr"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_37mw8"]
+
+[resource]
+script = ExtResource("1_37mw8")
+rarity = "Legendary"
+description = "Permanently increases strength by 5."
+item_name = "Power Band"
+heal_amount = 0
+gold_cost = 5000
+str_boost = 5

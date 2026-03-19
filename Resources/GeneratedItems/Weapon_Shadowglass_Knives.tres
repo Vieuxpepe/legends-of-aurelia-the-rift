@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://c8dpt1dyr1kjf"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_t617x"]
+
+[resource]
+script = ExtResource("1_t617x")
+rarity = "Legendary"
+description = "Twin void-dark knives that vanish into motion before the eye can follow."
+weapon_name = "Shadowglass Knives"
+gold_cost = 7600
+weapon_type = 6
+effect_amount = 0
+might = 10
+hit_bonus = 22
+max_range = 2
+max_durability = 18
+current_durability = 18

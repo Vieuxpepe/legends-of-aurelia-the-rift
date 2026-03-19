@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dbilnt3rl3i31"]
+
+[ext_resource type="Resource" uid="uid://bf71bq3u0lmss" path="res://Resources/Skills/BeastmasterTree.tres" id="1_5orfg"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_kuxf6"]
+[ext_resource type="Resource" uid="uid://cy133ei5evdek" path="res://Resources/Classes/PromotedClass/WildWarden.tres" id="2_rntp0"]
+[ext_resource type="Resource" uid="uid://biuxcd8bb3urx" path="res://Resources/Classes/PromotedClass/PackLeader.tres" id="3_oos2m"]
+
+[resource]
+script = ExtResource("2_kuxf6")
+job_name = "Beastmaster"
+move_range = 6
+allowed_weapon_types = Array[int]([2, 3])
+class_skill_tree = ExtResource("1_5orfg")
+promotion_options = Array[Resource]([ExtResource("2_rntp0"), ExtResource("3_oos2m")])
+hp_bonus = 12
+str_bonus = 3
+def_bonus = 1
+spd_bonus = 2
+agi_bonus = 2
+hp_growth_bonus = 10
+str_growth_bonus = 10
+def_growth_bonus = 5
+spd_growth_bonus = 10
+agi_growth_bonus = 10

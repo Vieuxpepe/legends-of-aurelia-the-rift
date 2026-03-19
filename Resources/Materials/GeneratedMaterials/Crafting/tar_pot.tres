@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dl2cboatwkvkh"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_t7fcs"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_c0e7g"]
+
+[resource]
+script = ExtResource("2_c0e7g")
+rarity = "Uncommon"
+item_name = "Tar Pot"
+description = "A sealed clay pot of thick black tar that softens over heat. Used for patching boots, sealing seams, and weatherproofing gear."
+gold_cost = 20
+icon = ExtResource("1_t7fcs")
+category = "Crafting"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://ywl2rpv0h228"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_w80ih"]
+
+[resource]
+script = ExtResource("1_w80ih")
+skill_id = "thief_str_2"
+skill_name = "Strength II"
+description = "Increases Strength by +2."
+required_skill_id = "thief_backstab"
+grid_position = Vector2(4, -1)
+stat_to_boost = "str"
+boost_amount = 2

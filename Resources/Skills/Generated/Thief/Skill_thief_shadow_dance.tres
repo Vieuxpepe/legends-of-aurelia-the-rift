@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bn6yowpd3dwge"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ht3lo"]
+
+[resource]
+script = ExtResource("1_ht3lo")
+skill_id = "thief_shadow_dance"
+skill_name = "Shadow Dance"
+description = "Disappear into the shadows and perform a flurry of attacks across the battlefield."
+required_skill_id = "thief_agi_4"
+grid_position = Vector2(6, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Shadow Dance"

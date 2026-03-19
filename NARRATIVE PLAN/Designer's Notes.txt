@@ -1,0 +1,106 @@
+AI Upgrades (Flier Logic):
+Implemented core logic — needs playtest tuning
+
+Refine AI Logic
+
+Just needs to make sure the enemies are made for the base defenses
+
+dragon weapons should only be used by dragons, and not tradeable
+
+Crits, should be snappier, like getting back a bit for "charging" the attack while shaking a bit, and strike VERY fast, stay there on the enemy for a bit, and go back to original tile afterwards
+
+3. Fast cinematic cut-ins
+Instead of full duel scenes, do:
+portrait cut-in for abilities
+weapon / sigil / dragon-eye flash
+black speed lines or stylized overlays
+short quote before or after impact
+
+faction-colored impact frame
+
+Sometimes the AI doesnt attack at all ? And sometimes it streamlines towards another character that is wounded and ignores the other characters close by 
+
+Crafting UI
+
+Alchemist/Druid that helps you grow plants for mixing potions and stuff
+
+2. Emerging Synergy: The "Herder" and the "Barricades"
+Think about your Herder idea. What if the baby dragons are weak and need protection to grow?
+
+The player has to build a "nest" of barricades and fortifications around the dragon herder.
+
+Now, the "Engineering" isn't just for defense; it’s a Resource Protection mechanic.
+
+MAJOR OVERHAUL : The player can put their fortifications and stuff. But before the game starts, a script can calculate the best place to place the enemy unit based on the player's positions ?
+
+2. Fatigue and Tavern Morale System
+To capture the tension of games like Darkest Dungeon, you can implement a fatigue system that forces the player to utilize their entire roster rather than relying on a single overpowered team.
+
+Deployment Cost: Deploying a unit builds fatigue. If it reaches a threshold, their stats drop.
+
+Work on the UI of the hp, exp, etc of the unit.tscn 
+
+Track time for passive income every day through Silentwolf ? Hard to implement I bet
+
+Achievements
+
+Make sure The arena level works well
+
+enchanting
+
+Worldmap script needs a lot of work
+
+Can we add a temple where the player has to choose a god from 3 gods, that is permanent ? they can interchange the chosen god, in the Grand City
+
+Slowly reveal that Kaelen is so cautious and protective is because he lost his family, so he tries to better himself so it doesn't happen again to his loved ones
+
+-Swordmaster can dual wield
+
+Canoneer could have long range weapons but take a turn to reload, but can retaliate with their fists ?
+
+Placing traps 
+
+Issue of characters dying in encounters maybe ?
+
+Base/camp upgrades to increase the number of deployable units
+
+Bard selling songs disc but the player must win mini-games first
+
+Max support rank can defy death if the other unit is close by
+
+Player accounts
+
+Dungeons/Tower of Valni for grinding Variant
+
+Adding fire spreading mechanic
+
+Might add some villagers that can be recruited sometimes and they're given an automatic name, portrait, maybe battle sprite
+
+Poise is a bit acting strange
+
+Maybe add a fate gambler in the grand tavern that can change the next battlefield ?
+
+Make encounters interconnect between characters
+
+Small icon floating on top of level nodes in WorldMap.gd to show that clearing that node as skirmish, you get bonus loot at the end
+
+Death log/cemetary where players can see the info of their characters death with a small quote
+====================================
+PRESQUE FINI :
+====================================
+Skill trees (DONE, manque juste les icons)
+Rendu aux sides quests (Semi terminé ?)
+
+
+Arena :
+
+Can get titles
+
+Bug :
+
+promoted hero static sparks are massive
+
+API KEYS:
+
+	var my_api_key = "9nUCdzXpftaLyust60GNQ62GDKSzbzqM1xQtJHgn"
+	var my_game_id = "tacticalrpgmultiplayer"

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cm00svfg0spld"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_q1ljg"]
+
+[resource]
+script = ExtResource("1_q1ljg")
+rarity = "Rare"
+description = "A massive axe requiring two hands."
+weapon_name = "Great Axe"
+gold_cost = 3400
+weapon_type = 2
+effect_amount = 0
+might = 14
+hit_bonus = 12
+max_durability = 23
+current_durability = 23

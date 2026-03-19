@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c5pqumkfiprue"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_jspie"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_cir8a"]
+
+[resource]
+script = ExtResource("2_cir8a")
+rarity = "Rare"
+item_name = "Ashen Pearl"
+description = "A dull grey pearl with a smoke-like swirl trapped at its center. It feels smooth, lifeless, and strangely warm."
+gold_cost = 84
+icon = ExtResource("1_jspie")
+category = "Lore_And_Misc"

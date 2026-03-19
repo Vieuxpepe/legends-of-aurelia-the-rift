@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cb0ieqjeabfcb"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_kxkwk"]
+
+[resource]
+script = ExtResource("1_kxkwk")
+rarity = "Rare"
+description = "A sword engulfed in perpetual flames."
+weapon_name = "Flame Blade"
+gold_cost = 3500
+damage_type = 1
+affected_stat = "magic"
+effect_amount = 0
+might = 14
+hit_bonus = 18
+max_range = 2
+max_durability = 24
+current_durability = 24

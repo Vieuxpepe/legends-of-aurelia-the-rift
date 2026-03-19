@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dxa1ub5urob6s"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_mmoyv"]
+
+[resource]
+script = ExtResource("1_mmoyv")
+description = "A bright little instrument whose chime unsettles enemy rhythm."
+weapon_name = "Festival Bell"
+gold_cost = 650
+damage_type = 1
+weapon_type = 9
+affected_stat = "magic"
+effect_amount = 0
+might = 4
+hit_bonus = 14
+max_range = 2
+max_durability = 38
+current_durability = 38

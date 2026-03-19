@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://duk7lnqnxu1m3"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_o5yyn"]
+
+[resource]
+script = ExtResource("1_o5yyn")
+skill_id = "beastmaster_str_1"
+skill_name = "Handler's Strength I"
+description = "Increases Strength by +1."
+required_skill_id = "beastmaster_hp_1"
+grid_position = Vector2(1, -1)
+stat_to_boost = "str"
+boost_amount = 1

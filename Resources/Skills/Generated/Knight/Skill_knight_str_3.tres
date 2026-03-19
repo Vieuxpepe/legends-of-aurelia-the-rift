@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://4fd27x0sijxq"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_gg34f"]
+
+[resource]
+script = ExtResource("1_gg34f")
+skill_id = "knight_str_3"
+skill_name = "Strength Training III"
+description = "Increases Strength by +2."
+required_skill_id = "knight_charge"
+grid_position = Vector2(4, -1)
+stat_to_boost = "str"
+boost_amount = 2

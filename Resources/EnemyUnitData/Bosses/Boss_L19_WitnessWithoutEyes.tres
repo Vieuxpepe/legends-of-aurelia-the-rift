@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://ece8ti7u07lg"]
+
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="1_fiwee"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_xg55h"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_ax8uf"]
+[ext_resource type="Resource" uid="uid://c6kuubav2sym8" path="res://Resources/GeneratedItems/Weapon_Null_Hymn.tres" id="4_1rhdx"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_1t7k8"]
+
+[resource]
+script = ExtResource("3_ax8uf")
+display_name = "The Witness Without Eyes"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["[No voice. The air folds inward.]"])
+character_class = ExtResource("1_fiwee")
+starting_weapon = ExtResource("4_1rhdx")
+ability = "unmake_the_grid"
+max_hp = 72
+strength = 18
+magic = 26
+defense = 20
+resistance = 24
+speed = 14
+agility = 20
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

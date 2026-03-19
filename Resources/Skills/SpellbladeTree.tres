@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://dpfi0ml7kea6v"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_b5l4p"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_sqdrq"]
+[ext_resource type="Resource" uid="uid://dr7do0tmp1nal" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_agi_1.tres" id="3_lb7it"]
+[ext_resource type="Resource" uid="uid://hr3rrx36lg01" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_blink_step.tres" id="4_5mr4s"]
+[ext_resource type="Resource" uid="uid://30hqdyfkvium" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_def_1.tres" id="5_k4afj"]
+[ext_resource type="Resource" uid="uid://pt4uhre0gsks" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_elemental_convergence.tres" id="6_m55yd"]
+[ext_resource type="Resource" uid="uid://si8e5e606une" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_flame_blade.tres" id="7_waa3n"]
+[ext_resource type="Resource" uid="uid://sabpsxk8i3r6" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_hp_1.tres" id="8_qcg6s"]
+[ext_resource type="Resource" uid="uid://nddpjute545c" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_mag_1.tres" id="9_l7yuc"]
+[ext_resource type="Resource" uid="uid://da2sjkb3sopsc" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_mag_2.tres" id="10_b5sc4"]
+[ext_resource type="Resource" uid="uid://cnlntsywi7wl1" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_mag_3.tres" id="11_esgmv"]
+[ext_resource type="Resource" uid="uid://bivc06nak352g" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_res_1.tres" id="12_iq0y0"]
+[ext_resource type="Resource" uid="uid://dd53uw6opoqrk" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_res_2.tres" id="13_m5vhj"]
+[ext_resource type="Resource" uid="uid://bk828xtpx2of8" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_spd_1.tres" id="14_dgwvs"]
+[ext_resource type="Resource" uid="uid://dl5ytaa1iq1rd" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_spd_2.tres" id="15_lc60k"]
+[ext_resource type="Resource" uid="uid://brtaep1bgdlkt" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_str_1.tres" id="16_bmuss"]
+[ext_resource type="Resource" uid="uid://clqjuu3cirmsg" path="res://Resources/Skills/Generated/Spellblade/Skill_spellblade_str_2.tres" id="17_5fpmg"]
+
+[resource]
+script = ExtResource("1_b5l4p")
+skills = Array[ExtResource("2_sqdrq")]([ExtResource("3_lb7it"), ExtResource("4_5mr4s"), ExtResource("5_k4afj"), ExtResource("6_m55yd"), ExtResource("7_waa3n"), ExtResource("8_qcg6s"), ExtResource("9_l7yuc"), ExtResource("10_b5sc4"), ExtResource("11_esgmv"), ExtResource("12_iq0y0"), ExtResource("13_m5vhj"), ExtResource("14_dgwvs"), ExtResource("15_lc60k"), ExtResource("16_bmuss"), ExtResource("17_5fpmg")])
+metadata/_custom_type_script = "uid://cedoicamottly"

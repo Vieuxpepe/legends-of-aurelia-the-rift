@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b1gbxdxmtu087"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_bijvo"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_bhgmm"]
+
+[resource]
+script = ExtResource("2_bhgmm")
+rarity = "Rare"
+item_name = "Binder's Phial"
+description = "A stoppered phial of pale fluid used by Master Enric to suspend soul residue between death and command. It is traded only among the most trusted necromancers of the Obsidian Circle."
+gold_cost = 131
+icon = ExtResource("1_bijvo")
+category = "Lore_And_Misc"

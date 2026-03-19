@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://fxffyy50o0s"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_4gcv5"]
+
+[resource]
+script = ExtResource("1_4gcv5")
+skill_id = "flier_res_3"
+skill_name = "Wind Ward III"
+description = "Increases Resistance by +2."
+required_skill_id = "flier_agi_2"
+grid_position = Vector2(5, 0)
+stat_to_boost = "res"
+boost_amount = 2

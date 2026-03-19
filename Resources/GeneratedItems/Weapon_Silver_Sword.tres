@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cmvia7o0211hv"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_amjat"]
+
+[resource]
+script = ExtResource("1_amjat")
+rarity = "Rare"
+description = "A shining sword that strikes true."
+weapon_name = "Silver Sword"
+gold_cost = 3000
+effect_amount = 0
+might = 12
+hit_bonus = 20
+max_durability = 25
+current_durability = 25

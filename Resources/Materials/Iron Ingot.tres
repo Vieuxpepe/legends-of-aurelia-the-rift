@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dmey7mkorpekf"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_f5ww5"]
+[ext_resource type="Texture2D" uid="uid://yvu8g6cphy83" path="res://Resources/Materials/Icons/Iron Ingot.png" id="1_o5h56"]
+
+[resource]
+script = ExtResource("1_f5ww5")
+item_name = "Iron Ingot"
+description = "A crafting material."
+icon = ExtResource("1_o5h56")
+metadata/_custom_type_script = "uid://dxefrus755705"

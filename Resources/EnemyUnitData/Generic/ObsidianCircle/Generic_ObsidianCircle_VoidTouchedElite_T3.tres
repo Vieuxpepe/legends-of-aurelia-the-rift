@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://exykuk6gm67r"]
+
+[ext_resource type="Resource" uid="uid://crrxowmyf6sgg" path="res://Resources/Classes/PromotedClass/FireSage.tres" id="1_av7wq"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_8cwys"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_o7vi5"]
+[ext_resource type="Resource" uid="uid://cc4ge88nh13qp" path="res://Resources/GeneratedItems/Weapon_Gloam_Primer.tres" id="4_3c6fa"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_x0up4"]
+
+[resource]
+script = ExtResource("3_o7vi5")
+display_name = "Void-Touched Elite"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_av7wq")
+starting_weapon = ExtResource("4_3c6fa")
+max_hp = 34
+strength = 2
+magic = 13
+defense = 5
+resistance = 9
+speed = 6
+agility = 8
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

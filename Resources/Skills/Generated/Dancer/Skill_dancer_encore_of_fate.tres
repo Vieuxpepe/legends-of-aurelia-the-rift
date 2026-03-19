@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dswnemkt1gqya"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_00o77"]
+
+[resource]
+script = ExtResource("1_00o77")
+skill_id = "dancer_encore_of_fate"
+skill_name = "Encore of Fate"
+description = "Unlocks Miracle through impossible timing and presence."
+required_skill_id = "dancer_res_3"
+grid_position = Vector2(6, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Miracle"

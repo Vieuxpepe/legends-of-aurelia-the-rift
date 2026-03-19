@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bi0h5bh5alq4t"]
+
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="1_mphjn"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_5js71"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_11uyf"]
+[ext_resource type="Resource" uid="uid://d064jmrr7geum" path="res://Resources/GeneratedItems/Weapon_Elysian_Staff.tres" id="4_gpoxr"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_l4q7p"]
+
+[resource]
+script = ExtResource("3_11uyf")
+display_name = "Lysandra Solmere"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_mphjn")
+starting_weapon = ExtResource("4_gpoxr")
+max_hp = 36
+strength = 1
+magic = 18
+defense = 7
+resistance = 17
+speed = 10
+agility = 15
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

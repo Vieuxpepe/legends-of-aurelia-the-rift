@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://eew8t4ya54ns"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_xow7m"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_vlefb"]
+[ext_resource type="Resource" uid="uid://b343pvbocg6n5" path="res://Resources/Skills/Generated/Rookie/Urchin/Skill_urchin_spd_1.tres" id="3_xx67h"]
+[ext_resource type="Resource" uid="uid://bjpvcufq0dniv" path="res://Resources/Skills/Generated/Rookie/Urchin/Skill_urchin_agi_1.tres" id="4_c873l"]
+[ext_resource type="Resource" uid="uid://b5rcw6byoj6jt" path="res://Resources/Skills/Generated/Rookie/Urchin/Skill_urchin_str_1.tres" id="5_w4bg8"]
+[ext_resource type="Resource" uid="uid://ehtmxrr1n1nf" path="res://Resources/Skills/Generated/Rookie/Urchin/Skill_urchin_hp_1.tres" id="6_tsx4m"]
+[ext_resource type="Resource" uid="uid://c0syey7cjsao2" path="res://Resources/Skills/Generated/Rookie/Urchin/Skill_urchin_mastery.tres" id="7_hm7jd"]
+
+[resource]
+script = ExtResource("1_xow7m")
+tree_name = "Urchin Rookie Tree"
+skills = Array[ExtResource("2_vlefb")]([ExtResource("3_xx67h"), ExtResource("4_c873l"), ExtResource("5_w4bg8"), ExtResource("6_tsx4m"), ExtResource("7_hm7jd")])

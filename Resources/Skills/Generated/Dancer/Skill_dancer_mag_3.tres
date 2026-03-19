@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://13bjxd1eeiqh"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_4b1dq"]
+
+[resource]
+script = ExtResource("1_4b1dq")
+skill_id = "dancer_mag_3"
+skill_name = "Stagecraft III"
+description = "Increases Magic by +2."
+required_skill_id = "dancer_battle_cry"
+grid_position = Vector2(4, -1)
+stat_to_boost = "mag"
+boost_amount = 2

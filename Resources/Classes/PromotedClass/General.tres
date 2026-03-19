@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://l1toh3q5rgcb"]
+
+[ext_resource type="Resource" uid="uid://cm18mhwyaffa6" path="res://Resources/Skills/Generated/Promoted/General/GeneralTree.tres" id="1_0tn76"]
+[ext_resource type="Texture2D" uid="uid://d2o5japtr28ur" path="res://Assets/Sprites/Promoted Battle Sprites/General.png" id="1_f1vwr"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_ulua5"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_qb7r3"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_3es7i"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_yqxd7"]
+
+[resource]
+script = ExtResource("1_ulua5")
+job_name = "General"
+move_range = 3
+move_type = 1
+allowed_weapon_types = Array[int]([1])
+class_skill_tree = ExtResource("1_0tn76")
+promotion_options = Array[Resource]([ExtResource("3_qb7r3"), ExtResource("4_3es7i"), ExtResource("5_yqxd7")])
+promoted_battle_sprite = ExtResource("1_f1vwr")
+promo_hp_bonus = 4
+promo_str_bonus = 0
+promo_def_bonus = 3
+promo_res_bonus = 0
+promo_spd_bonus = 0
+promo_agi_bonus = 0
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

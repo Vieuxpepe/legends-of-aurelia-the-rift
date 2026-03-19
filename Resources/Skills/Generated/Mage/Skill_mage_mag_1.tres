@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bujgbyy2sxl3r"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_e7tle"]
+
+[resource]
+script = ExtResource("1_e7tle")
+skill_id = "mage_mag_1"
+skill_name = "Arcane Mastery I"
+description = "Increases Magic by +1."
+stat_to_boost = "mag"
+boost_amount = 1

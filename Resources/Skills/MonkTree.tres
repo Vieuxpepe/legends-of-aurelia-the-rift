@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bod8a3oqqldc5"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_b1yyn"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_p8ivt"]
+[ext_resource type="Resource" uid="uid://c2hwpxrpdwi0u" path="res://Resources/Skills/Generated/Monk/Skill_monk_agi_1.tres" id="3_lcewr"]
+[ext_resource type="Resource" uid="uid://d22ut3b46g0rp" path="res://Resources/Skills/Generated/Monk/Skill_monk_chi_burst.tres" id="4_0jag1"]
+[ext_resource type="Resource" uid="uid://cbkb45aeuguu0" path="res://Resources/Skills/Generated/Monk/Skill_monk_hp_1.tres" id="5_dawpr"]
+[ext_resource type="Resource" uid="uid://df5tn4ivnllmt" path="res://Resources/Skills/Generated/Monk/Skill_monk_hp_2.tres" id="6_8dsoj"]
+[ext_resource type="Resource" uid="uid://broco0v2jw78y" path="res://Resources/Skills/Generated/Monk/Skill_monk_mag_1.tres" id="7_gdy6a"]
+[ext_resource type="Resource" uid="uid://cxsny1h8kpsul" path="res://Resources/Skills/Generated/Monk/Skill_monk_mag_2.tres" id="8_he8gq"]
+[ext_resource type="Resource" uid="uid://dxpubyjmrhn1u" path="res://Resources/Skills/Generated/Monk/Skill_monk_meditate.tres" id="9_iqc8w"]
+[ext_resource type="Resource" uid="uid://d0jkogmwvlfqv" path="res://Resources/Skills/Generated/Monk/Skill_monk_res_1.tres" id="10_hdw22"]
+[ext_resource type="Resource" uid="uid://falv1agc863" path="res://Resources/Skills/Generated/Monk/Skill_monk_res_2.tres" id="11_wykd3"]
+[ext_resource type="Resource" uid="uid://o5skxhnhpa3x" path="res://Resources/Skills/Generated/Monk/Skill_monk_res_3.tres" id="12_kigls"]
+[ext_resource type="Resource" uid="uid://cbdlyulp26g7a" path="res://Resources/Skills/Generated/Monk/Skill_monk_serenity_strike.tres" id="13_bj4o6"]
+[ext_resource type="Resource" uid="uid://dhb7u3trs2wak" path="res://Resources/Skills/Generated/Monk/Skill_monk_spd_1.tres" id="14_21kne"]
+[ext_resource type="Resource" uid="uid://dpg6y11cvqi0" path="res://Resources/Skills/Generated/Monk/Skill_monk_spd_2.tres" id="15_wh01q"]
+[ext_resource type="Resource" uid="uid://cu34qktq76jll" path="res://Resources/Skills/Generated/Monk/Skill_monk_str_1.tres" id="16_pjh21"]
+[ext_resource type="Resource" uid="uid://3yjdthru7aav" path="res://Resources/Skills/Generated/Monk/Skill_monk_str_2.tres" id="17_i578n"]
+
+[resource]
+script = ExtResource("1_b1yyn")
+skills = Array[ExtResource("2_p8ivt")]([ExtResource("3_lcewr"), ExtResource("4_0jag1"), ExtResource("5_dawpr"), ExtResource("6_8dsoj"), ExtResource("7_gdy6a"), ExtResource("8_he8gq"), ExtResource("9_iqc8w"), ExtResource("10_hdw22"), ExtResource("11_wykd3"), ExtResource("12_kigls"), ExtResource("13_bj4o6"), ExtResource("14_21kne"), ExtResource("15_wh01q"), ExtResource("16_pjh21"), ExtResource("17_i578n")])
+metadata/_custom_type_script = "uid://cedoicamottly"

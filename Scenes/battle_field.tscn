@@ -1,0 +1,752 @@
+[gd_scene format=3 uid="uid://d0q6a8agt7s5k"]
+
+[ext_resource type="Script" uid="uid://cnyqke0qc3nky" path="res://Scripts/Core/BattleField.gd" id="1_6aoib"]
+[ext_resource type="PackedScene" uid="uid://b0e8x5ik3udyx" path="res://Resources/Unit.tscn" id="2_ggeex"]
+[ext_resource type="Texture2D" uid="uid://cswwokf4sdrtd" path="res://Assets/UI/Enemy Phase.png" id="3_1tafb"]
+[ext_resource type="Resource" uid="uid://dsqvm3j3p6ghd" path="res://Resources/Units/Scout.tres" id="3_056fk"]
+[ext_resource type="Resource" uid="uid://bu07uyhbuqebs" path="res://Resources/Units/Skeleton.tres" id="3_ggeex"]
+[ext_resource type="Script" uid="uid://sovkfestdmi6" path="res://Scripts/AI/AIController.gd" id="4_4ni4y"]
+[ext_resource type="Resource" uid="uid://ox3bt8qixae0" path="res://Resources/Units/Goblin.tres" id="6_gyv7a"]
+[ext_resource type="PackedScene" uid="uid://cetahoju8x645" path="res://Scenes/Wall.tscn" id="7_gyv7a"]
+[ext_resource type="PackedScene" uid="uid://btlrorrpwhiot" path="res://Resources/Destructibles/DestructibleCrate.tscn" id="7_i3oho"]
+[ext_resource type="Script" uid="uid://djo6c6w1w1k52" path="res://Scenes/Cursor.gd" id="8_8trww"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="8_j5eh6"]
+[ext_resource type="AudioStream" uid="uid://dsp5o7ag1fdq1" path="res://SoundEffects/LevelUP.mp3" id="8_j6t04"]
+[ext_resource type="AudioStream" uid="uid://cgynkshwm42ew" path="res://SoundEffects/CriticalHit.mp3" id="9_kgjw3"]
+[ext_resource type="Texture2D" uid="uid://dbin1ytierqja" path="res://Assets/UI/Cursor.png" id="9_ovlqa"]
+[ext_resource type="AudioStream" uid="uid://c4nwvlm2s188l" path="res://SoundEffects/The Dungeon Master’s Anthem (Players Gone Wild).mp3" id="10_dsul6"]
+[ext_resource type="Texture2D" uid="uid://cfig6wee7qtmg" path="res://Assets/UI/Bottom Bar UI.png" id="11_isduc"]
+[ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="11_qryvh"]
+[ext_resource type="AudioStream" uid="uid://c1l68wat5t453" path="res://SoundEffects/attacking_a_unit_in__#3-1771002816393.wav" id="12_ne017"]
+[ext_resource type="Texture2D" uid="uid://wd7yasg4yc66" path="res://Assets/UI/End Turn Button Resized.png" id="13_fxhft"]
+[ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="13_ne017"]
+[ext_resource type="Texture2D" uid="uid://cv4fglc1d6q36" path="res://Assets/UI/Player Phase.png" id="14_5opl8"]
+[ext_resource type="Texture2D" uid="uid://bw056fsyabudc" path="res://Assets/UI/Frame.png" id="14_vnxeq"]
+[ext_resource type="AudioStream" uid="uid://by4tbnm1u6fkg" path="res://SoundEffects/next-turn.mp3" id="15_1tafb"]
+[ext_resource type="Texture2D" uid="uid://bmooroi84873o" path="res://Assets/UI/Inventory Button Resized.png" id="15_br6j4"]
+[ext_resource type="PackedScene" uid="uid://bykrititb8c5c" path="res://Scenes/settings_menu.tscn" id="16_ovlqa"]
+[ext_resource type="AudioStream" uid="uid://7tprk5jnxe44" path="res://SoundEffects/Epic_Level_up_sound.wav" id="18_blsh6"]
+[ext_resource type="PackedScene" uid="uid://2dixucjj1jf1" path="res://Resources/Chests/treasure_chest.tscn" id="21_upysf"]
+[ext_resource type="Texture2D" uid="uid://dc5tksv7qa76g" path="res://Assets/Backgrounds/Default Background.png" id="24_niuv0"]
+
+[sub_resource type="Resource" id="Resource_upysf"]
+script = ExtResource("8_j5eh6")
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_br6j4"]
+texture = ExtResource("13_fxhft")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_fxhft"]
+texture = ExtResource("13_fxhft")
+modulate_color = Color(0.25720835, 0.2519765, 1.4439226e-07, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_niuv0"]
+texture = ExtResource("13_fxhft")
+modulate_color = Color(0.49811357, 0.48375148, 0, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_vnxeq"]
+texture = ExtResource("15_br6j4")
+modulate_color = Color(1, 1, 0.89411765, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ih6s3"]
+texture = ExtResource("15_br6j4")
+modulate_color = Color(0.25882354, 0.2509804, 0, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_5opl8"]
+texture = ExtResource("15_br6j4")
+modulate_color = Color(0.49803922, 0.48235294, 0, 1)
+
+[node name="BattleField" type="Node2D" unique_id=1694060677]
+position = Vector2(2, 0)
+script = ExtResource("1_6aoib")
+player_phase_texture = ExtResource("14_5opl8")
+enemy_phase_texture = ExtResource("3_1tafb")
+
+[node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
+
+[node name="Unit" parent="PlayerUnits" unique_id=280754570 instance=ExtResource("2_ggeex")]
+is_custom_avatar = true
+
+[node name="Unit2" parent="PlayerUnits" unique_id=814773553 instance=ExtResource("2_ggeex")]
+position = Vector2(64, 64)
+data = ExtResource("3_056fk")
+
+[node name="EnemyUnits" type="Node" parent="." unique_id=147621801]
+
+[node name="Unit" parent="EnemyUnits" unique_id=2101487745 instance=ExtResource("2_ggeex")]
+modulate = Color(0.7226095, 0.015482219, 0.06441463, 1)
+position = Vector2(64, 192)
+ai_intelligence = 4
+ai_behavior = 2
+data = ExtResource("3_ggeex")
+
+[node name="AIController" type="Node" parent="EnemyUnits/Unit" unique_id=2022311975]
+script = ExtResource("4_4ni4y")
+
+[node name="Unit2" parent="EnemyUnits" unique_id=292937692 instance=ExtResource("2_ggeex")]
+modulate = Color(0.7226095, 0.015482219, 0.06441463, 1)
+position = Vector2(192, 192)
+ai_intelligence = 4
+ai_behavior = 1
+data = ExtResource("6_gyv7a")
+
+[node name="AIController" type="Node" parent="EnemyUnits/Unit2" unique_id=1565639326]
+script = ExtResource("4_4ni4y")
+
+[node name="Destructibles" type="Node2D" parent="." unique_id=564123352]
+
+[node name="DestructibleCrate" parent="Destructibles" unique_id=1565693868 instance=ExtResource("7_i3oho")]
+position = Vector2(256, 0)
+
+[node name="DestructibleCrate3" parent="Destructibles" unique_id=1438371481 instance=ExtResource("7_i3oho")]
+position = Vector2(384, 192)
+
+[node name="DestructibleCrate2" parent="Destructibles" unique_id=1087933582 instance=ExtResource("7_i3oho")]
+position = Vector2(0, 128)
+drop_loot = Array[Resource]([SubResource("Resource_upysf")])
+
+[node name="Chests" type="Node2D" parent="." unique_id=375350885]
+
+[node name="TreasureChest" parent="Chests" unique_id=1534988436 instance=ExtResource("21_upysf")]
+position = Vector2(64, 0)
+
+[node name="Walls" type="Node" parent="." unique_id=1895756778]
+
+[node name="Wall" parent="Walls" unique_id=1854400237 instance=ExtResource("7_gyv7a")]
+position = Vector2(192, 64)
+
+[node name="Wall2" parent="Walls" unique_id=669221005 instance=ExtResource("7_gyv7a")]
+position = Vector2(128, 64)
+
+[node name="Wall3" parent="Walls" unique_id=908397178 instance=ExtResource("7_gyv7a")]
+position = Vector2(64, 128)
+
+[node name="Cursor" type="Node2D" parent="." unique_id=1225840119]
+script = ExtResource("8_8trww")
+
+[node name="Sprite2D" type="Sprite2D" parent="Cursor" unique_id=1113693562]
+z_index = 10
+position = Vector2(33.999996, 31.999998)
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("9_ovlqa")
+offset = Vector2(-30, -60)
+
+[node name="TargetCursor" type="Node2D" parent="." unique_id=1637663937]
+visible = false
+script = ExtResource("8_8trww")
+
+[node name="Sprite2D" type="Sprite2D" parent="TargetCursor" unique_id=32332719]
+modulate = Color(0.8627451, 0, 0.019607844, 0.83137256)
+z_index = 10
+position = Vector2(33.999996, 31.999998)
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("9_ovlqa")
+offset = Vector2(-30, -60)
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1026948820]
+
+[node name="PhaseBanner" type="TextureRect" parent="UI" unique_id=210525857]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1002.0
+offset_top = -222.0
+offset_right = 998.0
+offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("14_5opl8")
+
+[node name="PhaseSound" type="AudioStreamPlayer" parent="UI/PhaseBanner" unique_id=1781328300]
+stream = ExtResource("15_1tafb")
+
+[node name="SkipButton" type="Button" parent="UI" unique_id=1891939481]
+offset_left = 1340.0
+offset_top = 789.0
+offset_right = 1467.5
+offset_bottom = 820.0
+scale = Vector2(2, 2)
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_br6j4")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_fxhft")
+theme_override_styles/hover = SubResource("StyleBoxTexture_niuv0")
+
+[node name="GameOverPanel" type="Panel" parent="UI" unique_id=1818562013]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -575.0
+offset_top = -325.0
+offset_right = 575.0
+offset_bottom = 325.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ResultLabel" type="Label" parent="UI/GameOverPanel" unique_id=1948835274]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -132.5
+offset_top = 50.0
+offset_right = 132.5
+offset_bottom = 138.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 64
+text = "VICTORY"
+
+[node name="RestartButton" type="Button" parent="UI/GameOverPanel" unique_id=1603561574]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -83.5
+offset_top = -117.0
+offset_right = 83.5
+offset_bottom = -64.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Play Again"
+
+[node name="ContinueButton" type="Button" parent="UI/GameOverPanel" unique_id=1799033972]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -156.0
+offset_top = -175.0
+offset_right = 156.0
+offset_bottom = -122.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Continue Campaign"
+
+[node name="Panel" type="Panel" parent="UI" unique_id=2066919623]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="UnitInfoPanel" type="Panel" parent="UI" unique_id=386978376]
+offset_left = 31.0
+offset_top = 808.0
+offset_right = 281.0
+offset_bottom = 1008.0
+
+[node name="NameLabel" type="Label" parent="UI/UnitInfoPanel" unique_id=1194250262]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 6.0
+offset_right = 93.0
+offset_bottom = 29.0
+theme_override_colors/font_color = Color(1, 1, 0.24705882, 1)
+text = "Unit Name"
+
+[node name="HPLabel" type="Label" parent="UI/UnitInfoPanel" unique_id=1157104476]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 34.0
+offset_right = 100.0
+offset_bottom = 57.0
+theme_override_font_sizes/font_size = 20
+text = "HP: 10/10"
+
+[node name="StatsLabel" type="Label" parent="UI/UnitInfoPanel" unique_id=1298292390]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 61.0
+offset_right = 137.0
+offset_bottom = 84.0
+theme_override_font_sizes/font_size = 18
+text = "ATK: 2  MOV: 4"
+
+[node name="OpenInvButton" type="Button" parent="UI/UnitInfoPanel" unique_id=348568466]
+layout_mode = 0
+offset_left = 290.0
+offset_top = -91.0
+offset_right = 385.0
+offset_bottom = -38.0
+theme_override_font_sizes/font_size = 32
+text = "Items"
+
+[node name="PortraitRect" type="TextureRect" parent="UI/UnitInfoPanel" unique_id=1818529915]
+layout_mode = 0
+offset_left = 305.0
+offset_top = 5.0
+offset_right = 600.0
+offset_bottom = 199.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LevelUpPanel" type="Panel" parent="UI" unique_id=91360996]
+visible = false
+z_index = 10
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -150.0
+offset_right = 150.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(150, 150)
+
+[node name="TitleLabel" type="Label" parent="UI/LevelUpPanel" unique_id=1415069693]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -33.5
+offset_top = 20.0
+offset_right = 33.5
+offset_bottom = 43.0
+grow_horizontal = 2
+text = "Level Up"
+
+[node name="StatsLabel" type="RichTextLabel" parent="UI/LevelUpPanel" unique_id=1404586400]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -100.0
+offset_right = 100.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+text = "Stats"
+horizontal_alignment = 1
+
+[node name="UnitQuoteLabel" type="Label" parent="UI/LevelUpPanel" unique_id=1358677212]
+layout_mode = 0
+offset_left = 75.0
+offset_top = 255.0
+offset_right = 232.0
+offset_bottom = 278.0
+text = "I can feel the power!"
+
+[node name="CombatForecastPanel" type="Panel" parent="UI" unique_id=1043626365]
+visible = false
+z_index = 10
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -400.0
+offset_bottom = 250.0
+grow_horizontal = 0
+
+[node name="AtkName" type="Label" parent="UI/CombatForecastPanel" unique_id=1697778780]
+layout_mode = 0
+offset_left = 57.0
+offset_top = 16.0
+offset_right = 157.0
+offset_bottom = 39.0
+text = "AtkName"
+
+[node name="AtkHP" type="Label" parent="UI/CombatForecastPanel" unique_id=1614919921]
+layout_mode = 0
+offset_left = 59.0
+offset_top = 56.0
+offset_right = 107.0
+offset_bottom = 79.0
+text = "AtkHP"
+
+[node name="AtkDMG" type="Label" parent="UI/CombatForecastPanel" unique_id=180339391]
+layout_mode = 0
+offset_left = 56.0
+offset_top = 130.0
+offset_right = 121.0
+offset_bottom = 153.0
+text = "AtkDMG"
+
+[node name="DefName" type="Label" parent="UI/CombatForecastPanel" unique_id=1338329443]
+layout_mode = 0
+offset_left = 227.0
+offset_top = 15.0
+offset_right = 301.0
+offset_bottom = 38.0
+text = "DefName"
+
+[node name="DefHP" type="Label" parent="UI/CombatForecastPanel" unique_id=1566117638]
+layout_mode = 0
+offset_left = 231.0
+offset_top = 55.0
+offset_right = 280.0
+offset_bottom = 78.0
+text = "DefHP"
+
+[node name="DefDMG" type="Label" parent="UI/CombatForecastPanel" unique_id=1581826685]
+layout_mode = 0
+offset_left = 229.0
+offset_top = 129.0
+offset_right = 294.0
+offset_bottom = 152.0
+text = "DefDMG"
+
+[node name="AtkHit" type="Label" parent="UI/CombatForecastPanel" unique_id=360347709]
+layout_mode = 0
+offset_left = 58.0
+offset_top = 82.0
+offset_right = 123.0
+offset_bottom = 105.0
+text = "AtkHit"
+
+[node name="AtkCrit" type="Label" parent="UI/CombatForecastPanel" unique_id=1723762135]
+layout_mode = 0
+offset_left = 58.0
+offset_top = 106.0
+offset_right = 123.0
+offset_bottom = 129.0
+text = "AtkCrit"
+
+[node name="DefHit" type="Label" parent="UI/CombatForecastPanel" unique_id=2036682212]
+layout_mode = 0
+offset_left = 233.0
+offset_top = 79.0
+offset_right = 298.0
+offset_bottom = 102.0
+text = "DefHit"
+
+[node name="DefCrit" type="Label" parent="UI/CombatForecastPanel" unique_id=1728209217]
+layout_mode = 0
+offset_left = 233.0
+offset_top = 104.0
+offset_right = 298.0
+offset_bottom = 127.0
+text = "DefCrit"
+
+[node name="ConfirmButton" type="Button" parent="UI/CombatForecastPanel" unique_id=352302112]
+layout_mode = 0
+offset_left = 116.0
+offset_top = 201.0
+offset_right = 174.0
+offset_bottom = 232.0
+text = "Attack"
+
+[node name="CancelButton" type="Button" parent="UI/CombatForecastPanel" unique_id=1209900532]
+layout_mode = 0
+offset_left = 211.0
+offset_top = 200.0
+offset_right = 271.0
+offset_bottom = 231.0
+text = "Cancel"
+
+[node name="AtkWeapon" type="Label" parent="UI/CombatForecastPanel" unique_id=1635087488]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 164.0
+offset_right = 150.0
+offset_bottom = 187.0
+text = "AtkWeapon"
+
+[node name="DefWeapon" type="Label" parent="UI/CombatForecastPanel" unique_id=1080535074]
+layout_mode = 0
+offset_left = 229.0
+offset_top = 161.0
+offset_right = 269.0
+offset_bottom = 184.0
+text = "DefWeapon"
+
+[node name="AtkAdvantage" type="Label" parent="UI/CombatForecastPanel" unique_id=62154483]
+layout_mode = 0
+offset_left = 161.0
+offset_top = 165.0
+offset_right = 201.0
+offset_bottom = 188.0
+text = "ADV"
+
+[node name="DefAdvantage" type="Label" parent="UI/CombatForecastPanel" unique_id=609233000]
+layout_mode = 0
+offset_left = 328.0
+offset_top = 161.0
+offset_right = 368.0
+offset_bottom = 184.0
+text = "ADV"
+
+[node name="AtkDoubleLabel" type="Label" parent="UI/CombatForecastPanel" unique_id=1386028954]
+layout_mode = 0
+offset_left = 133.0
+offset_top = 131.0
+offset_right = 173.0
+offset_bottom = 154.0
+theme_override_colors/font_color = Color(0.09803922, 0.21568628, 1, 1)
+
+[node name="DefDoubleLabel" type="Label" parent="UI/CombatForecastPanel" unique_id=154766481]
+layout_mode = 0
+offset_left = 302.0
+offset_top = 130.0
+offset_right = 342.0
+offset_bottom = 153.0
+theme_override_colors/font_color = Color(0, 0.15686275, 1, 0.7137255)
+
+[node name="GoldLabel" type="Label" parent="UI" unique_id=1799618721]
+offset_left = 1386.0
+offset_top = 996.0
+offset_right = 1493.0
+offset_bottom = 1041.0
+theme_override_font_sizes/font_size = 32
+text = "Gold: 0"
+
+[node name="InventoryPanel" type="Panel" parent="UI" unique_id=1557118817]
+visible = false
+z_index = 10
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -337.0
+offset_right = 250.0
+offset_bottom = 163.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ItemList" type="ItemList" parent="UI/InventoryPanel" unique_id=1617138117]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 499.0
+offset_bottom = 499.0
+
+[node name="EquipButton" type="Button" parent="UI/InventoryPanel" unique_id=1138857740]
+layout_mode = 0
+offset_left = 127.0
+offset_top = 434.0
+offset_right = 179.0
+offset_bottom = 465.0
+text = "Equip"
+
+[node name="CloseButton" type="Button" parent="UI/InventoryPanel" unique_id=2104990699]
+layout_mode = 0
+offset_left = 315.0
+offset_top = 431.0
+offset_right = 365.0
+offset_bottom = 462.0
+text = "Close"
+
+[node name="UseButton" type="Button" parent="UI/InventoryPanel" unique_id=565261468]
+layout_mode = 0
+offset_left = 227.0
+offset_top = 432.0
+offset_right = 264.0
+offset_bottom = 463.0
+text = "Use"
+
+[node name="LootWindow" type="Panel" parent="UI" unique_id=74811440]
+visible = false
+z_index = 9
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -382.0
+offset_top = -387.0
+offset_right = 373.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="UI/LootWindow" unique_id=2016024176]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -48.0
+offset_top = 7.0
+offset_right = 48.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Battle Spoils"
+
+[node name="ItemList" type="ItemList" parent="UI/LootWindow" unique_id=401031098]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -333.5
+offset_top = -206.5
+offset_right = 333.5
+offset_bottom = 206.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CloseLootButton" type="Button" parent="UI/LootWindow" unique_id=1215758263]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -38.0
+offset_top = -31.0
+offset_right = 38.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Claim All"
+
+[node name="SettingsButton" type="Button" parent="UI" unique_id=2038460845]
+offset_left = 1813.0
+offset_top = 25.0
+offset_right = 1883.0
+offset_bottom = 56.0
+text = "Settings"
+
+[node name="SettingsMenu" parent="UI" unique_id=1584989396 instance=ExtResource("16_ovlqa")]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 1.0
+offset_top = 8.0
+offset_right = 1.0
+offset_bottom = 8.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ConvoyButton" type="Button" parent="UI" unique_id=1399456563]
+offset_left = 1340.0
+offset_top = 853.0
+offset_right = 1596.0
+offset_bottom = 917.0
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_vnxeq")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_ih6s3")
+theme_override_styles/hover = SubResource("StyleBoxTexture_5opl8")
+
+[node name="BattleLogPanel" type="Panel" parent="UI" unique_id=459143294]
+z_index = 9
+offset_left = 675.0
+offset_top = 808.0
+offset_right = 1307.0
+offset_bottom = 1008.0
+
+[node name="ColorRect" type="ColorRect" parent="UI/BattleLogPanel" unique_id=1515764803]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 7.0
+offset_right = 2.0
+offset_bottom = 7.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.4627451)
+
+[node name="RichTextLabel" type="RichTextLabel" parent="UI/BattleLogPanel" unique_id=274162276]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 11.0
+offset_right = 624.0
+offset_bottom = 200.0
+bbcode_enabled = true
+scroll_following = true
+
+[node name="BottomBarUI" type="TextureRect" parent="UI" unique_id=1662985434]
+z_index = -10
+offset_left = -80.0
+offset_top = 462.0
+offset_right = 1414.0
+offset_bottom = 1081.0
+mouse_filter = 2
+texture = ExtResource("11_isduc")
+
+[node name="ColorRect" type="ColorRect" parent="UI" unique_id=2100416853]
+z_index = -10
+offset_left = 35.0
+offset_top = 808.0
+offset_right = 285.0
+offset_bottom = 1008.0
+mouse_filter = 2
+color = Color(0.2457025, 0.24568033, 0.19086143, 0.7058824)
+
+[node name="ColorRect2" type="ColorRect" parent="UI" unique_id=2045346889]
+z_index = -10
+offset_left = 333.0
+offset_top = 808.0
+offset_right = 633.0
+offset_bottom = 1015.0
+mouse_filter = 2
+color = Color(0.2457025, 0.24568033, 0.19086143, 0.7058824)
+
+[node name="FramePortrait" type="TextureRect" parent="UI" unique_id=409764386]
+modulate = Color(0.8992584, 0.8992584, 0.8992584, 1)
+z_index = -5
+offset_left = 291.0
+offset_top = 781.0
+offset_right = 682.0
+offset_bottom = 1046.0
+texture = ExtResource("14_vnxeq")
+
+[node name="LevelUpSound" type="AudioStreamPlayer" parent="." unique_id=311466524]
+process_mode = 3
+stream = ExtResource("8_j6t04")
+
+[node name="MainCamera" type="Camera2D" parent="." unique_id=633617077]
+anchor_mode = 0
+position_smoothing_enabled = true
+
+[node name="CritSound" type="AudioStreamPlayer" parent="." unique_id=342712717]
+stream = ExtResource("9_kgjw3")
+
+[node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1925426781]
+process_mode = 3
+stream = ExtResource("10_dsul6")
+volume_db = -16.756
+autoplay = true
+
+[node name="SelectSound" type="AudioStreamPlayer" parent="." unique_id=1470166540]
+stream = ExtResource("11_qryvh")
+
+[node name="AttackSound" type="AudioStreamPlayer" parent="." unique_id=1761563384]
+stream = ExtResource("12_ne017")
+
+[node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
+stream = ExtResource("13_ne017")
+
+[node name="PathLine" type="Line2D" parent="." unique_id=271209550]
+width = 4.0
+
+[node name="HoverGlow" type="ColorRect" parent="." unique_id=990792456]
+z_index = -1
+offset_right = 64.0
+offset_bottom = 64.0
+mouse_filter = 2
+color = Color(0, 0.4745098, 0.7607843, 0.49411765)
+
+[node name="EpicLevelUpSound" type="AudioStreamPlayer2D" parent="." unique_id=1441114684]
+stream = ExtResource("18_blsh6")
+
+[node name="BackgroundTexture" type="TextureRect" parent="." unique_id=2082738900]
+visible = false
+modulate = Color(0.47788018, 0.47788012, 0.47788012, 1)
+z_index = -100
+offset_left = -10.0
+offset_top = -5.0
+offset_right = 1933.0
+offset_bottom = 1187.0
+texture = ExtResource("24_niuv0")
+
+[connection signal="pressed" from="UI/SkipButton" to="." method="_on_skip_button_pressed"]
+[connection signal="pressed" from="UI/GameOverPanel/RestartButton" to="." method="_on_restart_button_pressed"]
+[connection signal="pressed" from="UI/GameOverPanel/ContinueButton" to="." method="_on_continue_button_pressed"]

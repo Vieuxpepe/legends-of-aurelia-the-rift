@@ -1,0 +1,139 @@
+[gd_scene format=3 uid="uid://de383xh1qspyj"]
+
+[ext_resource type="Script" uid="uid://cmimhd4rc8sc4" path="res://story_sequence.gd" id="1_7rg7f"]
+[ext_resource type="AudioStream" uid="uid://bug5gwmdwqqod" path="res://SoundEffects/Music/Story recap V2.wav" id="2_fwfcp"]
+[ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="3_rt4if"]
+[ext_resource type="Texture2D" uid="uid://2p00v4hk0esp" path="res://Scenes/UI/image-removebg-preview (81).png" id="4_7ra5n"]
+[ext_resource type="AudioStream" uid="uid://wufkyv3b0a6k" path="res://SoundEffects/Music/First Vampire Boss V2.wav" id="4_fwfcp"]
+[ext_resource type="Texture2D" uid="uid://bxdcdvymmbc34" path="res://Scenes/UI/image-removebg-preview (75).png" id="5_bqmul"]
+[ext_resource type="Texture2D" uid="uid://bxucr37wnwxyr" path="res://Scenes/UI/image-removebg-preview (80).png" id="5_ti3gu"]
+[ext_resource type="Texture2D" uid="uid://bvof2hllsqoba" path="res://Scenes/UI/image-removebg-preview (79).png" id="6_esmas"]
+[ext_resource type="Texture2D" uid="uid://y07cjcn4utug" path="res://Scenes/UI/image-removebg-preview (77).png" id="6_vgxkw"]
+[ext_resource type="Texture2D" uid="uid://wfmt8ky70k6g" path="res://Scenes/UI/image-removebg-preview (76).png" id="7_1gcd3"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_x1g40"]
+load_path = "res://.godot/imported/burning_village.png-755645171ad14dd1e9d8b1a2291577c4.ctex"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pilxr"]
+bg_color = Color(0, 0, 0, 0.6509804)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="StorySequence" type="Control" unique_id=1413827111]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_7rg7f")
+peaceful_music = ExtResource("2_fwfcp")
+tense_music = ExtResource("4_fwfcp")
+vespera_music = ExtResource("4_fwfcp")
+
+[node name="Background" type="TextureRect" parent="." unique_id=799297873]
+z_index = -1
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.998
+anchor_bottom = 1.0
+offset_left = -35.0
+offset_top = -3.0
+offset_right = 23.839966
+offset_bottom = -45.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("CompressedTexture2D_x1g40")
+stretch_mode = 5
+
+[node name="PortraitLeft" type="TextureRect" parent="." unique_id=1069547199]
+layout_mode = 0
+offset_left = 319.0
+offset_top = 307.0
+offset_right = 772.0
+offset_bottom = 849.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PortraitRight" type="TextureRect" parent="." unique_id=828102323]
+layout_mode = 0
+offset_left = 1109.0
+offset_top = 279.0
+offset_right = 1562.0
+offset_bottom = 904.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DialoguePanel" type="Panel" parent="." unique_id=935142828]
+layout_mode = 0
+offset_left = 230.0
+offset_top = 800.0
+offset_right = 1680.0
+offset_bottom = 1060.0
+
+[node name="SpeakerLabel" type="Label" parent="DialoguePanel" unique_id=1777243566]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 20.0
+offset_right = 373.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 32
+
+[node name="DialogueText" type="RichTextLabel" parent="DialoguePanel" unique_id=696287306]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -556.0
+offset_top = -56.0
+offset_right = 596.0
+offset_bottom = 101.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/normal_font_size = 32
+
+[node name="NextIndicator" type="TextureButton" parent="DialoguePanel" unique_id=329751703]
+layout_mode = 0
+offset_left = 1346.0
+offset_top = 177.0
+offset_right = 1419.0
+offset_bottom = 220.0
+texture_normal = ExtResource("4_7ra5n")
+texture_pressed = ExtResource("5_ti3gu")
+texture_hover = ExtResource("6_esmas")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="TextBlip" type="AudioStreamPlayer" parent="." unique_id=810225578]
+stream = ExtResource("3_rt4if")
+volume_db = -19.86
+pitch_scale = 0.84
+
+[node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=703547916]
+volume_db = -21.262
+
+[node name="Panel" type="Panel" parent="." unique_id=412710219]
+z_index = -1
+layout_mode = 0
+offset_left = 232.0
+offset_top = 803.0
+offset_right = 1680.0
+offset_bottom = 1057.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_pilxr")
+
+[node name="SkipButton" type="TextureButton" parent="." unique_id=266631070]
+modulate = Color(0.50339526, 0.45449364, 0.43819308, 1)
+layout_mode = 0
+offset_left = 1707.0
+offset_top = 50.0
+offset_right = 1823.0
+offset_bottom = 145.0
+texture_normal = ExtResource("5_bqmul")
+texture_pressed = ExtResource("6_vgxkw")
+texture_hover = ExtResource("7_1gcd3")
+ignore_texture_size = true
+stretch_mode = 5

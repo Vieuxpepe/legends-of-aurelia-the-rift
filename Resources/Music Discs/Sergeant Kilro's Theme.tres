@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://vjxc5ls1j3mf"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_ecpl1"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_3fgtc"]
+[ext_resource type="AudioStream" uid="uid://wqvitxw0xyuk" path="res://Resources/Music Discs/Sergeant Kilro's Theme.mp3" id="3_ecpl1"]
+
+[resource]
+script = ExtResource("2_3fgtc")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+gold_cost = 100
+icon = ExtResource("1_ecpl1")
+unlocked_music_track = ExtResource("3_ecpl1")
+track_title = "Sergeant Kilro's Theme"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

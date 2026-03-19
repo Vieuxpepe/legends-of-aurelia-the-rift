@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dv7bh5q7w0hwv"]
+
+[ext_resource type="Resource" uid="uid://d08sn5e7me4qv" path="res://Resources/Classes/PromotedClass/HighPaladin.tres" id="1_sqixd"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_7txoo"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_iqc12"]
+[ext_resource type="Resource" uid="uid://bkknxp83iqitf" path="res://Resources/GeneratedItems/Weapon_Judgment_Pike.tres" id="4_xbpef"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_7q0n4"]
+
+[resource]
+script = ExtResource("3_iqc12")
+display_name = "Justicar Halwen Serast"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["If this is judgment, let the sun remember that I did not kneel."])
+character_class = ExtResource("1_sqixd")
+starting_weapon = ExtResource("4_xbpef")
+ability = "verdict_of_flame"
+max_hp = 48
+strength = 17
+magic = 6
+defense = 14
+resistance = 12
+speed = 11
+agility = 15
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

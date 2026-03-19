@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://bpctjy170531c"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_0sc6i"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_78x8h"]
+[ext_resource type="AudioStream" uid="uid://bgr5jqqapsj0e" path="res://Resources/Music Discs/Villain Theme 1.mp3" id="3_0sc6i"]
+
+[resource]
+script = ExtResource("2_78x8h")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+gold_cost = 100
+icon = ExtResource("1_0sc6i")
+unlocked_music_track = ExtResource("3_0sc6i")
+track_title = "Villain Theme 1"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

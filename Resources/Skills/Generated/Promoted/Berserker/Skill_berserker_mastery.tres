@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://b42c0jq7y1h8l"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_aoutn"]
+
+[resource]
+script = ExtResource("1_aoutn")
+skill_id = "berserker_mastery"
+skill_name = "Mastery: Savage Toss"
+description = "Deals massive damage and hurls the enemy backward up to 3 tiles."
+required_skill_id = "berserker_spd_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Savage Toss"

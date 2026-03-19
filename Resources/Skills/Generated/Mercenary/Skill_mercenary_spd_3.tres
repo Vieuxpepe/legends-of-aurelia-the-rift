@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dux613w7jdj8t"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_7l1gu"]
+
+[resource]
+script = ExtResource("1_7l1gu")
+skill_id = "mercenary_spd_3"
+skill_name = "Quick Draw III"
+description = "Increases Speed by +2."
+required_skill_id = "mercenary_agi_1"
+grid_position = Vector2(5, 0)
+stat_to_boost = "spd"
+boost_amount = 2

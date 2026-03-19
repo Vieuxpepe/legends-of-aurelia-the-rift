@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dpn37j4gy7xhg"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_w8tc1"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_kclcr"]
+
+[resource]
+script = ExtResource("2_kclcr")
+item_name = "Yeast Cake"
+description = "A damp cake of living starter wrapped in parchment and cloth. It smells warm, sour, and faintly alive when broken apart."
+gold_cost = 11
+icon = ExtResource("1_w8tc1")
+category = "Cooking"

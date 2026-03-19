@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cimi6e1egxb8r"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_q2pbt"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_724j2"]
+
+[resource]
+script = ExtResource("2_724j2")
+rarity = "Epic"
+item_name = "Veilkeeper Plate"
+description = "A ceremonial chestplate fragment hammered with the doctrine that the Order of the Dawn kept hidden from Aurelia. It was crafted to honor those who died preserving the lie surrounding the Veil."
+gold_cost = 301
+icon = ExtResource("1_q2pbt")
+category = "Lore_And_Misc"

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bv2w8hilx3m78"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_551cq"]
+
+[resource]
+script = ExtResource("1_551cq")
+rarity = "Rare"
+item_name = "Recipe: Flame Tome"
+description = "Instructions for crafting a Flame Tome."
+gold_cost = 400

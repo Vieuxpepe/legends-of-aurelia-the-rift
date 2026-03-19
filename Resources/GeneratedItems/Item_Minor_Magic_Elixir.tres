@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cbelauedbidgs"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_txape"]
+
+[resource]
+script = ExtResource("1_txape")
+description = "Grants +1 magic for the next battle."
+item_name = "Minor Magic Elixir"
+heal_amount = 0
+gold_cost = 120
+mag_boost = 1

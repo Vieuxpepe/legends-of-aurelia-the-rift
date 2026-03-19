@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://bbos8871jtmsj"]
+
+[ext_resource type="Texture2D" uid="uid://b2dirv8nnpj88" path="res://Assets/Sprites/Promoted Battle Sprites/BowKnight.png" id="1_7aqji"]
+[ext_resource type="Resource" uid="uid://xg4ypf6xawc3" path="res://Resources/Skills/Generated/Promoted/BowKnight/BowKnightTree.tres" id="1_f8y2u"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_xbckr"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_j1i5o"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_dsc4b"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_mq85p"]
+
+[resource]
+script = ExtResource("1_xbckr")
+job_name = "BowKnight"
+move_range = 6
+move_type = 1
+allowed_weapon_types = Array[int]([3, 0])
+class_skill_tree = ExtResource("1_f8y2u")
+promotion_options = Array[Resource]([ExtResource("3_j1i5o"), ExtResource("4_dsc4b"), ExtResource("5_mq85p")])
+promoted_battle_sprite = ExtResource("1_7aqji")
+promo_agi_bonus = 2
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

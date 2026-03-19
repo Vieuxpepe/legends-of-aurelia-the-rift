@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://ct3mbjduprten"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_rxf2s"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_bvvk4"]
+[ext_resource type="AudioStream" uid="uid://dmsagesli12i0" path="res://Resources/Music Discs/Overworld Theme 2.mp3" id="3_rxf2s"]
+
+[resource]
+script = ExtResource("2_bvvk4")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+gold_cost = 100
+icon = ExtResource("1_rxf2s")
+unlocked_music_track = ExtResource("3_rxf2s")
+track_title = "Overworld Theme 2"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

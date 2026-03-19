@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://d4ls710uxj5hp"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_c7kwg"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_yjn1g"]
+
+[resource]
+script = ExtResource("2_yjn1g")
+item_name = "Tinder Fungus"
+description = "A dry, fibrous shelf fungus cut for catching sparks quickly. Light as bark, brittle as old parchment, and wonderful in rain-soaked lands."
+gold_cost = 6
+icon = ExtResource("1_c7kwg")
+category = "Crafting"

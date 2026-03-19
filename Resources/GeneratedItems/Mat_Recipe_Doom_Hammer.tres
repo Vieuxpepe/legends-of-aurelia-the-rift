@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://du0l6cbigd5mb"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_ryiqu"]
+
+[resource]
+script = ExtResource("1_ryiqu")
+rarity = "Legendary"
+item_name = "Recipe: Doom Hammer"
+description = "Blueprint for forging a Doom Hammer."
+gold_cost = 1500

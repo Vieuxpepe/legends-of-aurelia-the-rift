@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://hfs5y8ps03b"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_hmpbc"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_y8eyc"]
+[ext_resource type="Resource" uid="uid://kqowefvstc3b" path="res://Resources/Skills/Generated/Archer/Skill_archer_agi_1.tres" id="3_yqqki"]
+[ext_resource type="Resource" uid="uid://dfrf5vsj8c3a" path="res://Resources/Skills/Generated/Archer/Skill_archer_agi_2.tres" id="4_kjrj8"]
+[ext_resource type="Resource" uid="uid://bloseb43v2xiq" path="res://Resources/Skills/Generated/Archer/Skill_archer_deadeye_shot.tres" id="5_4rsid"]
+[ext_resource type="Resource" uid="uid://dd0fre2d0sl4u" path="res://Resources/Skills/Generated/Archer/Skill_archer_def_1.tres" id="6_5xj5o"]
+[ext_resource type="Resource" uid="uid://cxehlacrc3m2m" path="res://Resources/Skills/Generated/Archer/Skill_archer_hp_1.tres" id="7_tuom7"]
+[ext_resource type="Resource" uid="uid://w153nqevyxr4" path="res://Resources/Skills/Generated/Archer/Skill_archer_hp_2.tres" id="8_ojgf2"]
+[ext_resource type="Resource" uid="uid://lirg51wdy0g7" path="res://Resources/Skills/Generated/Archer/Skill_archer_hp_3.tres" id="9_ljtyl"]
+[ext_resource type="Resource" uid="uid://cr40hp2xnawpt" path="res://Resources/Skills/Generated/Archer/Skill_archer_rain_of_arrows.tres" id="10_qjgts"]
+[ext_resource type="Resource" uid="uid://cfwsy4e60b37y" path="res://Resources/Skills/Generated/Archer/Skill_archer_res_1.tres" id="11_w6uig"]
+[ext_resource type="Resource" uid="uid://0arn4maqd5id" path="res://Resources/Skills/Generated/Archer/Skill_archer_spd_1.tres" id="12_jld3r"]
+[ext_resource type="Resource" uid="uid://dry8n2ewhh2ty" path="res://Resources/Skills/Generated/Archer/Skill_archer_spd_2.tres" id="13_kj3ph"]
+[ext_resource type="Resource" uid="uid://dt0tavrs43on6" path="res://Resources/Skills/Generated/Archer/Skill_archer_spd_3.tres" id="14_0crys"]
+[ext_resource type="Resource" uid="uid://bo4hyn73y2cxk" path="res://Resources/Skills/Generated/Archer/Skill_archer_str_1.tres" id="15_o84gb"]
+[ext_resource type="Resource" uid="uid://gg5l178mql5q" path="res://Resources/Skills/Generated/Archer/Skill_archer_str_2.tres" id="16_7wwe2"]
+[ext_resource type="Resource" uid="uid://cq5f2munlavqw" path="res://Resources/Skills/Generated/Archer/Skill_archer_volley.tres" id="17_sdddw"]
+
+[resource]
+script = ExtResource("1_hmpbc")
+skills = Array[ExtResource("2_y8eyc")]([ExtResource("3_yqqki"), ExtResource("4_kjrj8"), ExtResource("5_4rsid"), ExtResource("6_5xj5o"), ExtResource("7_tuom7"), ExtResource("8_ojgf2"), ExtResource("9_ljtyl"), ExtResource("10_qjgts"), ExtResource("11_w6uig"), ExtResource("12_jld3r"), ExtResource("13_kj3ph"), ExtResource("14_0crys"), ExtResource("15_o84gb"), ExtResource("16_7wwe2"), ExtResource("17_sdddw")])
+metadata/_custom_type_script = "uid://cedoicamottly"

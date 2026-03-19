@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dcb7jbjysnybg"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_cshdw"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_2amu3"]
+
+[resource]
+script = ExtResource("2_2amu3")
+item_name = "Egg Basket"
+description = "A straw-lined basket of fragile eggs in pale brown and cream. Delicate cargo, but one of the most useful things a kitchen can keep."
+icon = ExtResource("1_cshdw")
+category = "Cooking"

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://krdfn8n4hwu8"]
+
+[ext_resource type="Texture2D" uid="uid://nmi4en0atos0" path="res://Assets/Sprites/Promoted Battle Sprites/Assassin.png" id="1_2c3mc"]
+[ext_resource type="Resource" uid="uid://mpsyikedog18" path="res://Resources/Skills/Generated/Promoted/Assassin/AssassinTree.tres" id="1_nctuj"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_nctuj"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_tsi5e"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_156gb"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_8f2oi"]
+
+[resource]
+script = ExtResource("2_nctuj")
+job_name = "Assassin"
+allowed_weapon_types = Array[int]([6])
+class_skill_tree = ExtResource("1_nctuj")
+promotion_options = Array[Resource]([ExtResource("3_tsi5e"), ExtResource("4_156gb"), ExtResource("5_8f2oi")])
+promoted_battle_sprite = ExtResource("1_2c3mc")
+promo_hp_bonus = 1
+promo_spd_bonus = 2
+promo_agi_bonus = 2
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

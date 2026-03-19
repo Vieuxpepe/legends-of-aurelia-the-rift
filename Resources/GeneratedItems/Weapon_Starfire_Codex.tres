@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://8b0epbxuqef4"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_rw6es"]
+
+[resource]
+script = ExtResource("1_rw6es")
+rarity = "Legendary"
+description = "A late-game codex burning with cold celestial fire."
+weapon_name = "Starfire Codex"
+gold_cost = 9000
+damage_type = 1
+weapon_type = 4
+affected_stat = "magic"
+effect_amount = 0
+might = 13
+hit_bonus = 16
+max_range = 2
+max_durability = 20
+current_durability = 20

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://bmge3tdi8ymys"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_xe2rg"]
+
+[resource]
+script = ExtResource("1_xe2rg")
+rarity = "Uncommon"
+description = "A heavier sword that rewards solid strength and timing."
+weapon_name = "Steel Sword"
+gold_cost = 980
+effect_amount = 0
+might = 7
+hit_bonus = 4
+max_durability = 34
+current_durability = 34

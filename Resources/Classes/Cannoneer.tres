@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://bgn6crnbbgtve"]
+
+[ext_resource type="Resource" uid="uid://b8r4kwxsceb46" path="res://Resources/Skills/CannoneerTree.tres" id="1_lgfle"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_57xxe"]
+[ext_resource type="Resource" uid="uid://chha3mvyfbtp5" path="res://Resources/Classes/PromotedClass/SiegeMaster.tres" id="2_y0s3b"]
+[ext_resource type="Resource" uid="uid://8fin17512ug8" path="res://Resources/Classes/PromotedClass/Dreadnought.tres" id="3_ujl7a"]
+
+[resource]
+script = ExtResource("2_57xxe")
+job_name = "Cannoneer"
+move_type = 1
+allowed_weapon_types = Array[int]([7])
+class_skill_tree = ExtResource("1_lgfle")
+promotion_options = Array[Resource]([ExtResource("2_y0s3b"), ExtResource("3_ujl7a")])
+hp_bonus = 12
+str_bonus = 4
+def_bonus = 3
+spd_bonus = -2
+agi_bonus = -2
+res_bonus = -1
+hp_growth_bonus = 15
+str_growth_bonus = 15
+def_growth_bonus = 10
+spd_growth_bonus = -10
+agi_growth_bonus = -10

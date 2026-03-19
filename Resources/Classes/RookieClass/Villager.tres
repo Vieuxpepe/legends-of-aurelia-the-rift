@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://cl0u7ta7ydubg"]
+
+[ext_resource type="Resource" uid="uid://bs6shs7i4x8jp" path="res://Resources/Skills/Generated/Rookie/Villager/VillagerTree.tres" id="1_lpkab"]
+[ext_resource type="Resource" uid="uid://fxvmgcknu8xh" path="res://Resources/Classes/Monster.tres" id="2_pb1th"]
+[ext_resource type="Resource" uid="uid://dbilnt3rl3i31" path="res://Resources/Classes/Beastmaster.tres" id="2_sb0ro"]
+[ext_resource type="Resource" uid="uid://bgn6crnbbgtve" path="res://Resources/Classes/Cannoneer.tres" id="3_i0tmq"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="3_sb0ro"]
+
+[resource]
+script = ExtResource("3_sb0ro")
+job_name = "Villager"
+allowed_weapon_types = Array[int]([2, 3])
+class_skill_tree = ExtResource("1_lpkab")
+promotion_options = Array[Resource]([ExtResource("2_sb0ro"), ExtResource("3_i0tmq"), ExtResource("2_pb1th")])
+hp_bonus = 2
+str_bonus = 1
+def_bonus = 1
+agi_bonus = 1
+hp_growth_bonus = 5
+str_growth_bonus = 5
+def_growth_bonus = 5
+agi_growth_bonus = 5

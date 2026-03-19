@@ -1,0 +1,219 @@
+# PlayerTurnState.gd
+#
+# Handles player input during player phase: unit selection, move, attack/forecast,
+# defend, trade, and chest open. Entry: handle_input(event). Clear selection via
+# clear_active_unit() or ui_cancel / right-click.
+
+extends GameState
+class_name PlayerTurnState
+
+var is_waiting_for_defend_confirm: bool = false
+var active_unit: Node2D = null
+var original_pos: Vector2i = Vector2i.ZERO
+var is_forecasting: bool = false
+var targeted_enemy: Node2D = null
+var trade_target_ally: Node2D = null
+
+
+func clear_active_unit() -> void:
+	"""Clears the current unit selection, resets defend flow, and rebuilds grid/ranges."""
+	if is_instance_valid(active_unit):
+		active_unit.set_selected_glow(false)
+		active_unit.set_selected(false)
+	active_unit = null
+	is_waiting_for_defend_confirm = false
+	if battlefield != null:
+		battlefield.rebuild_grid()
+		battlefield.clear_ranges()
+
+
+func handle_input(event: InputEvent) -> void:
+	if battlefield == null:
+		return
+
+	# --- Toggle danger zone ---
+	if event is InputEventKey and event.keycode == KEY_SHIFT and event.pressed and not event.echo:
+		battlefield.toggle_danger_zone()
+		return
+
+	# --- Undo / deselect (Right-click or Escape) ---
+	if event.is_action_pressed("ui_cancel") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed):
+		if is_forecasting:
+			return
+		if battlefield.trade_popup.visible:
+			battlefield.hide_trade_popup()
+			trade_target_ally = null
+			return
+		if active_unit != null:
+			if active_unit.has_moved:
+				active_unit.position = Vector2(original_pos.x * battlefield.CELL_SIZE.x, original_pos.y * battlefield.CELL_SIZE.y)
+				active_unit.has_moved = false
+			battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+			clear_active_unit()
+		else:
+			battlefield.clear_ranges()
+		return
+
+	# --- Forecasting: confirm or cancel with click ---
+	if is_forecasting:
+		if event is InputEventMouseButton and event.pressed:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				if targeted_enemy != null and is_instance_valid(targeted_enemy) and battlefield.cursor_grid_pos == battlefield.get_grid_pos(targeted_enemy):
+					battlefield.play_ui_sfx(BattleField.UISfx.TARGET_OK)
+					battlefield._on_forecast_confirm()
+				else:
+					battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+			elif event.button_index == MOUSE_BUTTON_RIGHT:
+				battlefield._on_forecast_cancel()
+		return
+
+	# --- Left click only from here ---
+	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed):
+		return
+
+	var cursor_pos: Vector2i = battlefield.cursor_grid_pos
+
+	if battlefield.trade_popup.visible:
+		battlefield.hide_trade_popup()
+		trade_target_ally = null
+
+	# --- No unit selected: try select unit or show enemy threat ---
+	if active_unit == null:
+		_handle_click_with_no_selection(cursor_pos)
+		return
+
+	# --- Unit selected: same tile = defend, else move or action ---
+	if battlefield.get_grid_pos(active_unit) == cursor_pos:
+		_handle_defend_click()
+		return
+
+	is_waiting_for_defend_confirm = false
+
+	# --- Action targeting (ally trade, chest, enemy/heal) ---
+	var target_node: Node2D = battlefield.get_occupant_at(cursor_pos)
+	if target_node != null and target_node != active_unit:
+		var handled: bool = await _handle_action_target_click(cursor_pos, target_node)
+		if handled:
+			return
+
+	# --- Move ---
+	if active_unit.has_moved:
+		clear_active_unit()
+		return
+
+	var start_pos: Vector2i = battlefield.get_grid_pos(active_unit)
+	var path: Array = battlefield.get_unit_path(active_unit, start_pos, cursor_pos)
+	var move_range_val: float = float(active_unit.move_range)
+
+	if path.size() > 0 and battlefield.get_path_move_cost(path, active_unit) <= move_range_val and battlefield.reachable_tiles.has(cursor_pos):
+		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
+		battlefield.clear_ranges()
+		await active_unit.move_along_path(path)
+		battlefield.update_fog_of_war()
+		battlefield.rebuild_grid()
+		battlefield.calculate_ranges(active_unit)
+	else:
+		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		clear_active_unit()
+
+
+func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
+	var unit: Node2D = battlefield.get_unit_at(cursor_pos)
+	var enemy: Node2D = battlefield.get_enemy_at(cursor_pos)
+
+	if unit != null and not unit.is_exhausted:
+		active_unit = unit
+		original_pos = battlefield.get_grid_pos(active_unit)
+		active_unit.set_selected_glow(true)
+		battlefield.astar.set_point_solid(cursor_pos, false)
+		battlefield.calculate_ranges(active_unit)
+		if battlefield.select_sound != null and battlefield.select_sound.stream != null:
+			battlefield.select_sound.pitch_scale = randf_range(0.95, 1.05)
+			battlefield.select_sound.play()
+	elif enemy != null:
+		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
+		battlefield.calculate_enemy_threat_range(enemy)
+	else:
+		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		battlefield.clear_ranges()
+
+
+func _handle_defend_click() -> void:
+	if not is_waiting_for_defend_confirm:
+		is_waiting_for_defend_confirm = true
+		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
+		battlefield.spawn_loot_text("DEFEND?", Color.YELLOW, active_unit.global_position + Vector2(32, -32))
+		return
+
+	if battlefield.defend_sound != null:
+		battlefield.defend_sound.pitch_scale = randf_range(0.9, 1.1)
+		battlefield.defend_sound.play()
+	active_unit.trigger_defend()
+	battlefield.animate_shield_drop(active_unit)
+	clear_active_unit()
+
+
+func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> bool:
+	var wpn: Resource = active_unit.equipped_weapon
+	var targets_allies: bool = wpn != null and (wpn.get("is_healing_staff") == true or wpn.get("is_buff_staff") == true)
+
+	var parent_node: Node = target_node.get_parent()
+	var parent_name: String = parent_node.name if parent_node != null else ""
+
+	# --- Clicked on ally: heal (fall through) or trade ---
+	if parent_name == "PlayerUnits":
+		if targets_allies:
+			pass
+		elif battlefield.get_distance(active_unit, target_node) == 1:
+			battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
+			trade_target_ally = target_node
+			battlefield.show_trade_popup(target_node)
+			return true
+		else:
+			return false
+
+	# --- Clicked on chest ---
+	if target_node is TreasureChest:
+		if battlefield.get_distance(active_unit, target_node) == 1:
+			battlefield.play_ui_sfx(BattleField.UISfx.TARGET_OK)
+			battlefield._on_chest_opened(target_node, active_unit)
+			active_unit.finish_turn()
+			clear_active_unit()
+		else:
+			battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		return true
+
+	# --- Clicked on enemy or healable target in range ---
+	if not battlefield.is_in_range(active_unit, target_node):
+		return false
+
+	battlefield.play_ui_sfx(BattleField.UISfx.TARGET_OK)
+	is_forecasting = true
+	targeted_enemy = target_node
+
+	var forecast_data: Array = await battlefield.show_combat_forecast(active_unit, target_node)
+
+	is_forecasting = false
+	targeted_enemy = null
+
+	if forecast_data.size() < 2:
+		return true
+
+	var action: String = str(forecast_data[0])
+	var used_ability: bool = bool(forecast_data[1])
+
+	if action == "cancel":
+		return true
+	if action == "talk":
+		battlefield.execute_talk(active_unit, target_node)
+	elif action == "confirm":
+		await battlefield.execute_combat(active_unit, target_node, used_ability)
+
+	if is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:
+		while is_instance_valid(battlefield) and battlefield.get_tree().paused:
+			await battlefield.get_tree().process_frame
+
+	if is_instance_valid(active_unit):
+		active_unit.finish_turn()
+	clear_active_unit()
+	return true

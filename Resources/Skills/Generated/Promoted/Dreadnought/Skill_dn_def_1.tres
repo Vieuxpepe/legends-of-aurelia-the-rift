@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bytrdoxmi5a0d"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_1w00q"]
+
+[resource]
+script = ExtResource("1_1w00q")
+skill_id = "dn_def_1"
+skill_name = "Adamant Plating"
+description = "Grants +3 Defense."
+required_skill_id = "dn_hp_1"
+grid_position = Vector2(1, 0)
+stat_to_boost = "def"
+boost_amount = 3

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://crrxowmyf6sgg"]
+
+[ext_resource type="Texture2D" uid="uid://dvgqsvmtg7go6" path="res://Assets/Sprites/Promoted Battle Sprites/Fire Sage.png" id="1_g84y7"]
+[ext_resource type="Resource" uid="uid://4gcahl7fvfj6" path="res://Resources/Skills/Generated/Promoted/FireSage/FireSageTree.tres" id="1_gm8yr"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_gm8yr"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_lii7r"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_gi3jd"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_1ewr3"]
+
+[resource]
+script = ExtResource("2_gm8yr")
+job_name = "Fire Sage"
+allowed_weapon_types = Array[int]([4])
+class_skill_tree = ExtResource("1_gm8yr")
+promotion_options = Array[Resource]([ExtResource("3_lii7r"), ExtResource("4_gi3jd"), ExtResource("5_1ewr3")])
+promoted_battle_sprite = ExtResource("1_g84y7")
+promo_str_bonus = 0
+promo_mag_bonus = 2
+promo_res_bonus = 2
+promo_spd_bonus = 0
+promo_agi_bonus = 0
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

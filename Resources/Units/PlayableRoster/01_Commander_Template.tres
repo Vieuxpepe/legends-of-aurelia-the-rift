@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bamal04ka58kq"]
+
+[ext_resource type="Resource" uid="uid://bjqsfivdqe818" path="res://Resources/Classes/RookieClass/Recruit.tres" id="1_pri7o"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_lgvut"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_mkhw6"]
+[ext_resource type="Resource" uid="uid://b2gc7nh4cg7nu" path="res://Resources/GeneratedItems/Weapon_Travelers_Blade.tres" id="4_xxwyk"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_54alb"]
+
+[resource]
+script = ExtResource("3_mkhw6")
+display_name = "Commander"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["So this is where my road ends… then make sure it leads somewhere kinder.", "If I can’t go on, then go farther than I did.", "Don’t let my ending become an excuse to stop.", "I wanted to save something small and human… promise me that still matters."])
+level_up_quotes = Array[String](["Then I can carry a little more than I could before.", "Good. I’m not the same person who left Oakhaven.", "If this strength means anything, I’ll make it mean protection."])
+support_personality = "heroic"
+character_class = ExtResource("1_pri7o")
+starting_weapon = ExtResource("4_xxwyk")
+max_hp = 19
+strength = 5
+defense = 4
+resistance = 2
+speed = 6
+agility = 6
+hp_growth = 75
+str_growth = 45
+def_growth = 35
+res_growth = 25
+spd_growth = 50
+agi_growth = 55

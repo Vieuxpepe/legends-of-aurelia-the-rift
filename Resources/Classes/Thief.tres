@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://ckj67pxqohcw7"]
+
+[ext_resource type="Resource" uid="uid://b5ptobcqxnny3" path="res://Resources/Classes/PromotedClass/HeavyArcher.tres" id="1_1qjuh"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_68ox5"]
+[ext_resource type="Resource" uid="uid://dfbdd1bkgsq86" path="res://Resources/Skills/ThiefTree.tres" id="1_86v5e"]
+[ext_resource type="Resource" uid="uid://krdfn8n4hwu8" path="res://Resources/Classes/PromotedClass/Assassin.tres" id="2_86v5e"]
+
+[resource]
+script = ExtResource("1_68ox5")
+job_name = "Thief"
+move_range = 5
+allowed_weapon_types = Array[int]([6])
+class_skill_tree = ExtResource("1_86v5e")
+promotion_options = Array[Resource]([ExtResource("1_1qjuh"), ExtResource("2_86v5e")])
+hp_bonus = 8
+def_bonus = -1
+spd_bonus = 4
+agi_bonus = 4
+str_growth_bonus = -10
+spd_growth_bonus = 20
+agi_growth_bonus = 20
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

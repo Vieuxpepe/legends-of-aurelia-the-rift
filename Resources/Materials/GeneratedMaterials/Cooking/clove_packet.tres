@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b0qhqowb5wyym"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_crtbj"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_nvjpl"]
+
+[resource]
+script = ExtResource("2_nvjpl")
+rarity = "Uncommon"
+item_name = "Clove Packet"
+description = "A tiny wrapped packet of dark flower buds with an intense, medicinal spice. Strong enough that a few pieces can scent an entire kitchen."
+gold_cost = 26
+icon = ExtResource("1_crtbj")
+category = "Cooking"

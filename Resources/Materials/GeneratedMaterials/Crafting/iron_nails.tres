@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://diejqxfb1c4h8"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_sygux"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_sce54"]
+
+[resource]
+script = ExtResource("2_sce54")
+item_name = "Iron Nails"
+description = "A fistful of blackened nails, rough at the head and sharp at the tip. Essential for patching doors, wagons, and coffins alike."
+icon = ExtResource("1_sygux")
+category = "Crafting"

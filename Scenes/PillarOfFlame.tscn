@@ -1,0 +1,130 @@
+[gd_scene format=3 uid="uid://dfp48c6q2o7fs"]
+
+[ext_resource type="Texture2D" uid="uid://cdkwqoo77768x" path="res://animations/PillarofFlame.png" id="1_m23c7"]
+[ext_resource type="Script" uid="uid://djmuo0yk0rxg0" path="res://PillarOfFlame.gd" id="2_ifas2"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rvaxp"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(0, 0, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_a0ler"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(169, 0, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_y6vh7"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(338, 0, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4catk"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(507, 0, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2ose0"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(0, 92, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2w4mx"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(169, 92, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_oftdx"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(338, 92, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3h2gq"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(507, 92, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_333bi"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(0, 184, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cnpmb"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(169, 184, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vakh1"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(338, 184, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wne0l"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(507, 184, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hgtqr"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(0, 276, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7qpbn"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(169, 276, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ibrc4"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(338, 276, 169, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nsm74"]
+atlas = ExtResource("1_m23c7")
+region = Rect2(507, 276, 169, 92)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_6xbp5"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rvaxp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_a0ler")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_y6vh7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4catk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2ose0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2w4mx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_oftdx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3h2gq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_333bi")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cnpmb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vakh1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wne0l")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_hgtqr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7qpbn")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ibrc4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nsm74")
+}],
+"loop": false,
+"name": &"default",
+"speed": 20.0
+}]
+
+[node name="PillarOfFlame" type="AnimatedSprite2D" unique_id=854187993]
+sprite_frames = SubResource("SpriteFrames_6xbp5")
+frame = 15
+frame_progress = 1.0
+script = ExtResource("2_ifas2")

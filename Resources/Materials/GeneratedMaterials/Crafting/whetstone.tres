@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://25mevcjdiw2c"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_8r7bq"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_6nblx"]
+
+[resource]
+script = ExtResource("2_6nblx")
+item_name = "Whetstone"
+description = "A flat sharpening stone wrapped in oiled cloth against cracking. It leaves steel cleaner, keener, and more honest."
+icon = ExtResource("1_8r7bq")
+category = "Crafting"

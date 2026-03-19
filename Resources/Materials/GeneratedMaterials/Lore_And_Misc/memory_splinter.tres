@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c2k3vdkgym0qj"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_aml87"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_a4hbv"]
+
+[resource]
+script = ExtResource("2_a4hbv")
+rarity = "Rare"
+item_name = "Memory Splinter"
+description = "A crystalline sliver that induces flashes of lives not entirely one's own. The College of Seekers believes these form where the Veil rubs against buried grief left from the Shattering War."
+gold_cost = 138
+icon = ExtResource("1_aml87")
+category = "Lore_And_Misc"

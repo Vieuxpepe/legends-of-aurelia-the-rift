@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c62w7r25romur"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_6djnd"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_pobne"]
+
+[resource]
+script = ExtResource("2_pobne")
+rarity = "Uncommon"
+item_name = "Grappling Hook"
+description = "A four-pronged hook of forged iron with a ring for rope. It clatters loudly, bites hard, and inspires risky confidence."
+gold_cost = 28
+icon = ExtResource("1_6djnd")
+category = "Crafting"

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c2s6xn5xsi6ul"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_chshn"]
+
+[resource]
+script = ExtResource("1_chshn")
+rarity = "Legendary"
+item_name = "Mythril Ingot"
+description = "A rare metal used for legendary weapons."
+gold_cost = 1500

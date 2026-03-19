@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bt0hff4yt4klc"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_gblxs"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_seehl"]
+
+[resource]
+script = ExtResource("2_seehl")
+rarity = "Epic"
+item_name = "Greyspire Reliquary"
+description = "A small reliquary box stolen from the ruined chapels of Greyspire after necromancy defiled the stronghold. Ash and old incense cling to it beneath the smell of opened crypts."
+gold_cost = 248
+icon = ExtResource("1_gblxs")
+category = "Lore_And_Misc"

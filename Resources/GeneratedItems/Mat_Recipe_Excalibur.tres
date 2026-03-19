@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dmm4kiavgsowa"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_hwgje"]
+
+[resource]
+script = ExtResource("1_hwgje")
+rarity = "Legendary"
+item_name = "Recipe: Excalibur"
+description = "Blueprint for forging Excalibur."
+gold_cost = 1500

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://b8jm3x64q3v6e"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_eini0"]
+
+[resource]
+script = ExtResource("1_eini0")
+skill_id = "mage_res_1"
+skill_name = "Ward I"
+description = "Increases Resistance by +1."
+required_skill_id = "mage_mag_1"
+grid_position = Vector2(1, 1)
+stat_to_boost = "res"
+boost_amount = 1

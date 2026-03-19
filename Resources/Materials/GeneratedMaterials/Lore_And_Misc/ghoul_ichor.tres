@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://brtp8u68tebd6"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_7f5go"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ovqgk"]
+
+[resource]
+script = ExtResource("2_ovqgk")
+rarity = "Rare"
+item_name = "Ghoul Ichor"
+description = "A tar-thick secretion sealed in waxed glass, green-brown and sluggish. Its smell is sweet at first, then horrifying."
+gold_cost = 68
+icon = ExtResource("1_7f5go")
+category = "Lore_And_Misc"

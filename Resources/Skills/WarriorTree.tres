@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://cx4judmq6c7ht"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_cicdm"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_qdjmg"]
+[ext_resource type="Resource" uid="uid://cf36e2udh8tq2" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_adrenaline_rush.tres" id="3_nw71b"]
+[ext_resource type="Resource" uid="uid://b6fo2tj6wg1q4" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_agi_1.tres" id="4_jytvv"]
+[ext_resource type="Resource" uid="uid://qcfon7wbjxqq" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_def_1.tres" id="5_i8r57"]
+[ext_resource type="Resource" uid="uid://klgu6pgbwaxi" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_def_2.tres" id="6_gjxh1"]
+[ext_resource type="Resource" uid="uid://c2y62qgich4t5" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_def_3.tres" id="7_r4lcf"]
+[ext_resource type="Resource" uid="uid://b25t86ycjxms3" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_earthshatter.tres" id="8_x8ohf"]
+[ext_resource type="Resource" uid="uid://2c330alio2sm" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_hp_1.tres" id="9_adoaa"]
+[ext_resource type="Resource" uid="uid://d2c43hujf4o1b" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_hp_2.tres" id="10_l6tbe"]
+[ext_resource type="Resource" uid="uid://dd8lb0yfi8mw8" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_power_strike.tres" id="11_te47i"]
+[ext_resource type="Resource" uid="uid://dtpmcu06qy1a0" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_spd_1.tres" id="12_l035q"]
+[ext_resource type="Resource" uid="uid://g7xntxe2o3qb" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_spd_2.tres" id="13_nfmmg"]
+[ext_resource type="Resource" uid="uid://faqpddrh6sxm" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_str_1.tres" id="14_21gwk"]
+[ext_resource type="Resource" uid="uid://cqnt2g3k5f8fg" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_str_2.tres" id="15_bw7kf"]
+[ext_resource type="Resource" uid="uid://ds0u3iy3oy74y" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_str_3.tres" id="16_y7o6h"]
+[ext_resource type="Resource" uid="uid://de3o7j3h4kbxg" path="res://Resources/Skills/Generated/Warrior/Skill_warrior_str_4.tres" id="17_ld7r6"]
+
+[resource]
+script = ExtResource("1_cicdm")
+skills = Array[ExtResource("2_qdjmg")]([ExtResource("3_nw71b"), ExtResource("4_jytvv"), ExtResource("5_i8r57"), ExtResource("6_gjxh1"), ExtResource("7_r4lcf"), ExtResource("8_x8ohf"), ExtResource("9_adoaa"), ExtResource("10_l6tbe"), ExtResource("11_te47i"), ExtResource("12_l035q"), ExtResource("13_nfmmg"), ExtResource("14_21gwk"), ExtResource("15_bw7kf"), ExtResource("16_y7o6h"), ExtResource("17_ld7r6")])
+metadata/_custom_type_script = "uid://cedoicamottly"

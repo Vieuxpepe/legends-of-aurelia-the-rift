@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://bkknxp83iqitf"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_nlmls"]
+
+[resource]
+script = ExtResource("1_nlmls")
+rarity = "Legendary"
+description = "A ceremonial execution pike with unnerving reach."
+weapon_name = "Judgment Pike"
+gold_cost = 9000
+weapon_type = 1
+effect_amount = 0
+might = 13
+hit_bonus = 6
+max_range = 2
+max_durability = 22
+current_durability = 22

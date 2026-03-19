@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cd47ipiwkjxod"
+path="res://.godot/imported/Sergeant Kilro's Theme.mp3-64053742d0bd707c9ffbc7ec260004a4.mp3str"
+
+[deps]
+
+source_file="res://SoundEffects/Music/music discs/Sergeant Kilro's Theme.mp3"
+dest_files=["res://.godot/imported/Sergeant Kilro's Theme.mp3-64053742d0bd707c9ffbc7ec260004a4.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

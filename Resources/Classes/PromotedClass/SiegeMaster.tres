@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://chha3mvyfbtp5"]
+
+[ext_resource type="Resource" uid="uid://dy2calwuivxy0" path="res://Resources/Skills/Generated/Promoted/SiegeMaster/SiegeMasterTree.tres" id="1_afuio"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_0jqir"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="2_3ps5h"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="3_fo1p6"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="4_g56b0"]
+
+[resource]
+script = ExtResource("2_0jqir")
+job_name = "Siege Master"
+move_type = 1
+allowed_weapon_types = Array[int]([7])
+class_skill_tree = ExtResource("1_afuio")
+promotion_options = Array[Resource]([ExtResource("2_3ps5h"), ExtResource("3_fo1p6"), ExtResource("4_g56b0")])
+promo_str_bonus = 2
+promo_def_bonus = 2
+promo_res_bonus = 0
+promo_spd_bonus = 0

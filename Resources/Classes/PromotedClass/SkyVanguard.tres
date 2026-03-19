@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://b1ole5gb6fkbb"]
+
+[ext_resource type="Resource" uid="uid://030y3bv5dsxx" path="res://Resources/Skills/Generated/Promoted/SkyVanguard/SkyVanguardTree.tres" id="1_4y0r8"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="2_7t3v6"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_q0vwa"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="3_b42ri"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="4_h7iyt"]
+
+[resource]
+script = ExtResource("2_q0vwa")
+job_name = "Sky Vanguard"
+move_range = 8
+move_type = 2
+allowed_weapon_types = Array[int]([1])
+class_skill_tree = ExtResource("1_4y0r8")
+promotion_options = Array[Resource]([ExtResource("2_7t3v6"), ExtResource("3_b42ri"), ExtResource("4_h7iyt")])
+promo_str_bonus = 2
+promo_def_bonus = 2
+promo_res_bonus = 0

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://65824dtkeqp2"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_phty5"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_fmkdp"]
+[ext_resource type="Resource" uid="uid://0fyjjdo2yr7l" path="res://Resources/Skills/Generated/Promoted/WildWarden/Skill_ww_hp_1.tres" id="3_iqh70"]
+[ext_resource type="Resource" uid="uid://b0wfyl6nnb74y" path="res://Resources/Skills/Generated/Promoted/WildWarden/Skill_ww_def_1.tres" id="4_dg3ux"]
+[ext_resource type="Resource" uid="uid://phwvj0ksrbet" path="res://Resources/Skills/Generated/Promoted/WildWarden/Skill_ww_str_1.tres" id="5_molqx"]
+[ext_resource type="Resource" uid="uid://vssuhdei0dl8" path="res://Resources/Skills/Generated/Promoted/WildWarden/Skill_ww_res_1.tres" id="6_0dw4d"]
+[ext_resource type="Resource" uid="uid://dcu6tbm15upf8" path="res://Resources/Skills/Generated/Promoted/WildWarden/Skill_ww_mastery.tres" id="7_h841r"]
+
+[resource]
+script = ExtResource("1_phty5")
+tree_name = "WildWarden Tree"
+skills = Array[ExtResource("2_fmkdp")]([ExtResource("3_iqh70"), ExtResource("4_dg3ux"), ExtResource("5_molqx"), ExtResource("6_0dw4d"), ExtResource("7_h841r")])

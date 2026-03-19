@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://bf5wjkxyjgrvo"]
+
+[ext_resource type="Resource" uid="uid://bf0e3nhqpk8xh" path="res://Resources/Skills/DancerTree.tres" id="1_0vmjo"]
+[ext_resource type="Resource" uid="uid://tudq6fxg0xwb" path="res://Resources/Classes/PromotedClass/Muse.tres" id="2_n3x2a"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_uskc7"]
+[ext_resource type="Resource" uid="uid://062ns6pbxte3" path="res://Resources/Classes/PromotedClass/BladeDancer.tres" id="3_ygpd6"]
+
+[resource]
+script = ExtResource("2_uskc7")
+job_name = "Dancer"
+move_range = 5
+allowed_weapon_types = Array[int]([9])
+can_use_healing_staff = true
+can_use_buff_staff = true
+class_skill_tree = ExtResource("1_0vmjo")
+promotion_options = Array[Resource]([ExtResource("2_n3x2a"), ExtResource("3_ygpd6")])
+hp_bonus = 6
+str_bonus = -2
+def_bonus = -1
+spd_bonus = 4
+agi_bonus = 3
+mag_bonus = 1
+res_bonus = 2
+str_growth_bonus = -10
+def_growth_bonus = -5
+spd_growth_bonus = 20
+agi_growth_bonus = 15
+mag_growth_bonus = 5
+res_growth_bonus = 10

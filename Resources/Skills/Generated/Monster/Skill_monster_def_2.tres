@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bhlul4gpbhgp5"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_7iwra"]
+
+[resource]
+script = ExtResource("1_7iwra")
+skill_id = "monster_def_2"
+skill_name = "Thick Hide II"
+description = "Increases Defense by +1."
+required_skill_id = "monster_hp_2"
+grid_position = Vector2(3, 1)
+stat_to_boost = "def"
+boost_amount = 1

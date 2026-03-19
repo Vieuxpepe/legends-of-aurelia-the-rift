@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cpwrewhjhybhh"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_w05ut"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_rlsmx"]
+
+[resource]
+script = ExtResource("2_rlsmx")
+rarity = "Uncommon"
+item_name = "Copper Wire"
+description = "A coil of reddish wire, soft enough to twist and stubborn enough to hold. Favored by tinkers, trappers, and grave robbers with patience."
+gold_cost = 22
+icon = ExtResource("1_w05ut")
+category = "Crafting"

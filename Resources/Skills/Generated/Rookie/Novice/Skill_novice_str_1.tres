@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cgaska4em8x20"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ivpxx"]
+
+[resource]
+script = ExtResource("1_ivpxx")
+skill_id = "novice_str_1"
+skill_name = "Disciplined Form"
+description = "Grants +1 Strength."
+required_skill_id = "novice_spd_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "str"
+boost_amount = 1

@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d30jcgismmjym"
+path="res://.godot/imported/Berserker Hero 1.mp3-27dd6a8ae2767fcb9de0f87a83c27981.mp3str"
+
+[deps]
+
+source_file="res://Resources/Music Discs/Berserker Hero 1.mp3"
+dest_files=["res://.godot/imported/Berserker Hero 1.mp3-27dd6a8ae2767fcb9de0f87a83c27981.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://de8y1jjueyj71"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_8pdyx"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_3jqaj"]
+
+[resource]
+script = ExtResource("2_3jqaj")
+item_name = "Flint Kit"
+description = "A pouch holding flint, steel, and dry tinder scraps. The contents are humble until a wet night makes them priceless."
+gold_cost = 8
+icon = ExtResource("1_8pdyx")
+category = "Crafting"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://d1sjo0l2mbey4"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_toms0"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_o7grr"]
+
+[resource]
+script = ExtResource("2_o7grr")
+rarity = "Uncommon"
+item_name = "Peppercorn Pouch"
+description = "A small pouch of dark, fragrant peppercorns that rattle when shaken. A modest luxury that transforms bland food into something memorable."
+gold_cost = 21
+icon = ExtResource("1_toms0")
+category = "Cooking"

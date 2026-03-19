@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://ccyk40com7whw"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_fwqjo"]
+
+[resource]
+script = ExtResource("1_fwqjo")
+rarity = "Legendary"
+description = "A tome containing ultimate spells."
+weapon_name = "Celestial Tome"
+gold_cost = 9200
+damage_type = 1
+weapon_type = 3
+affected_stat = "magic"
+effect_amount = 0
+might = 22
+hit_bonus = 27
+max_range = 3
+max_durability = 21
+current_durability = 21

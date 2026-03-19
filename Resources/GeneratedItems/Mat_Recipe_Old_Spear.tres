@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dusaf5bxv6krr"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_s5me0"]
+
+[resource]
+script = ExtResource("1_s5me0")
+item_name = "Recipe: Old Spear"
+description = "Blueprint for forging an Old Spear."
+gold_cost = 70

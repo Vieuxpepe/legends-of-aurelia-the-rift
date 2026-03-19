@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b8svalnsbyba8"]
+
+[ext_resource type="AudioStream" uid="uid://cgt87be6a6q7q" path="res://SoundEffects/FireBallImpact.mp3" id="1_x8obj"]
+[ext_resource type="Texture2D" uid="uid://drpaypcqkdq0k" path="res://Assets/Fire Beam Tome.png" id="2_o6fl8"]
+[ext_resource type="PackedScene" uid="uid://by1bh3a8vnyll" path="res://Scenes/ImpactEffect.tscn" id="3_2ib4s"]
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="4_0mkkw"]
+[ext_resource type="PackedScene" uid="uid://d06n2jgldq4ln" path="res://Scenes/FireBeam.tscn" id="4_l8qas"]
+
+[resource]
+script = ExtResource("4_0mkkw")
+description = "A fire tome."
+weapon_name = "Fire Beam Tome"
+damage_type = 1
+weapon_type = 3
+projectile_scene = ExtResource("4_l8qas")
+impact_scene = ExtResource("3_2ib4s")
+projectile_scale = 1.0
+custom_hit_sound = ExtResource("1_x8obj")
+might = 6
+max_range = 2
+icon = ExtResource("2_o6fl8")
+metadata/_custom_type_script = "uid://b1atwvdvhdm0s"

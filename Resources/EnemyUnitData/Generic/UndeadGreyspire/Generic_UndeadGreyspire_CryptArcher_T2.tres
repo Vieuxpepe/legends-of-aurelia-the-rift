@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://l8bx7a76jerl"]
+
+[ext_resource type="Resource" uid="uid://b4i33x0fw7f17" path="res://Resources/Classes/Archer.tres" id="1_0ty6y"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_uuns1"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_v0ao4"]
+[ext_resource type="Resource" uid="uid://bo7k0ofeb70uw" path="res://Resources/GeneratedItems/Weapon_Reinforced_Bow.tres" id="4_2bkbx"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_qy5mb"]
+
+[resource]
+script = ExtResource("3_v0ao4")
+display_name = "Crypt Archer"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_0ty6y")
+starting_weapon = ExtResource("4_2bkbx")
+max_hp = 22
+strength = 8
+defense = 4
+resistance = 2
+speed = 5
+agility = 5
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 7
+max_gold_drop = 12
+drops_equipped_weapon = true
+equipped_weapon_chance = 14

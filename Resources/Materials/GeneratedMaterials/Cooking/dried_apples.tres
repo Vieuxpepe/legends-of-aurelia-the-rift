@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c8xftsyhdc010"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_ghrgw"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_p82dv"]
+
+[resource]
+script = ExtResource("2_p82dv")
+item_name = "Dried Apples"
+description = "Wrinkled slices of apple, tart and leathery with a touch of sweetness. They keep well on long roads and soften nicely in porridge."
+gold_cost = 8
+icon = ExtResource("1_ghrgw")
+category = "Cooking"

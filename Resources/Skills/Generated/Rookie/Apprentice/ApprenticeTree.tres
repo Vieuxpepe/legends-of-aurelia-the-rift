@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://gamngrn7altc"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_x0e5p"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_l5vti"]
+[ext_resource type="Resource" uid="uid://cr7ithp3086o2" path="res://Resources/Skills/Generated/Rookie/Apprentice/Skill_apprentice_mag_1.tres" id="3_j1pri"]
+[ext_resource type="Resource" uid="uid://dqrkxyo7ej00d" path="res://Resources/Skills/Generated/Rookie/Apprentice/Skill_apprentice_res_1.tres" id="4_fuwjl"]
+[ext_resource type="Resource" uid="uid://b6pd0l2p0pk01" path="res://Resources/Skills/Generated/Rookie/Apprentice/Skill_apprentice_spd_1.tres" id="5_mff0f"]
+[ext_resource type="Resource" uid="uid://b8qe7rirpaxlt" path="res://Resources/Skills/Generated/Rookie/Apprentice/Skill_apprentice_hp_1.tres" id="6_unqbu"]
+[ext_resource type="Resource" uid="uid://beffmd1oodwjd" path="res://Resources/Skills/Generated/Rookie/Apprentice/Skill_apprentice_mastery.tres" id="7_w20kn"]
+
+[resource]
+script = ExtResource("1_x0e5p")
+tree_name = "Apprentice Rookie Tree"
+skills = Array[ExtResource("2_l5vti")]([ExtResource("3_j1pri"), ExtResource("4_fuwjl"), ExtResource("5_mff0f"), ExtResource("6_unqbu"), ExtResource("7_w20kn")])

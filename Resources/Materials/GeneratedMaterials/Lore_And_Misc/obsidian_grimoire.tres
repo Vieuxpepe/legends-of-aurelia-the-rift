@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://ce2ol2x3dgmpp"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_ghfw3"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_v71lb"]
+
+[resource]
+script = ExtResource("2_v71lb")
+rarity = "Legendary"
+item_name = "Obsidian Grimoire"
+description = "A chained ritual book carried by senior circle adepts when preparing a breach near the Veil. Its margins contain Lady Vespera's revisions correcting older doctrines about Vel'golath."
+gold_cost = 820
+icon = ExtResource("1_ghfw3")
+category = "Lore_And_Misc"

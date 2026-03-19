@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cgqcb2tacelge"]
+
+[ext_resource type="Texture2D" uid="uid://ce6ec71ovalmy" path="res://Assets/Vulnerary.png" id="1_aifie"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_ber65"]
+
+[resource]
+script = ExtResource("1_ber65")
+heal_amount = 10
+icon = ExtResource("1_aifie")
+metadata/_custom_type_script = "uid://67xkte2k6sun"

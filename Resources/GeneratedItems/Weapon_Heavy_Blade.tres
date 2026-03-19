@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b1xo6cncputsb"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_rf5og"]
+
+[resource]
+script = ExtResource("1_rf5og")
+rarity = "Uncommon"
+description = "A larger sword that requires strength to wield."
+weapon_name = "Heavy Blade"
+gold_cost = 1100
+effect_amount = 0
+might = 9
+hit_bonus = 10
+max_durability = 28
+current_durability = 28

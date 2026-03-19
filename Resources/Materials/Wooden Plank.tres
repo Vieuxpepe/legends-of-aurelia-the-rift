@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dm5s65gledy77"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_8iesw"]
+[ext_resource type="Texture2D" uid="uid://bdkw61ay8gvik" path="res://Resources/Materials/Icons/Wooden Plank.png" id="1_rar8t"]
+
+[resource]
+script = ExtResource("1_8iesw")
+item_name = "Wooden Plank"
+description = "A crafting material."
+gold_cost = 5
+icon = ExtResource("1_rar8t")
+metadata/_custom_type_script = "uid://dxefrus755705"

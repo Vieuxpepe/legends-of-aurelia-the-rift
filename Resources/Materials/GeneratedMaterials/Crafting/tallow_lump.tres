@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cc18eshwvybeo"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_yeq8q"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_nphfo"]
+
+[resource]
+script = ExtResource("2_nphfo")
+item_name = "Tallow Lump"
+description = "A greasy block of rendered animal fat wrapped in stained paper. It burns with a sour odor, but it burns all the same."
+gold_cost = 5
+icon = ExtResource("1_yeq8q")
+category = "Crafting"

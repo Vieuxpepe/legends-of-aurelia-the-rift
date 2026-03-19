@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dftep5n38rl6d"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_u7tlu"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_kjk4s"]
+
+[resource]
+script = ExtResource("2_kjk4s")
+rarity = "Rare"
+item_name = "Cinder Bloom"
+description = "A black-petaled flower that opens only in the ash beds of Emberwood after violent heat. Apothecaries prize it for stimulants, and cultists for less merciful infusions."
+gold_cost = 84
+icon = ExtResource("1_u7tlu")
+category = "Lore_And_Misc"

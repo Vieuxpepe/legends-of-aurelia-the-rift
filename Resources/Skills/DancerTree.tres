@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bf0e3nhqpk8xh"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_e0ptv"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_toncs"]
+[ext_resource type="Resource" uid="uid://bpos575k3qfiv" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_hp_1.tres" id="3_xudqw"]
+[ext_resource type="Resource" uid="uid://dpwi07br86dh6" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_mag_1.tres" id="4_02ogs"]
+[ext_resource type="Resource" uid="uid://bxdvnnpaj68ty" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_spd_1.tres" id="5_f3qt4"]
+[ext_resource type="Resource" uid="uid://bp1hdlc661j5i" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_res_1.tres" id="6_65hye"]
+[ext_resource type="Resource" uid="uid://b7wfl7jhmdbng" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_mag_2.tres" id="7_fc2e0"]
+[ext_resource type="Resource" uid="uid://d2prngw4ps6cs" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_agi_1.tres" id="8_y5r2c"]
+[ext_resource type="Resource" uid="uid://besq36o7nhl0t" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_res_2.tres" id="9_ytry4"]
+[ext_resource type="Resource" uid="uid://bh21uyvfps84d" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_battle_cry.tres" id="10_piamj"]
+[ext_resource type="Resource" uid="uid://b1oc022vtt3ku" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_spd_2.tres" id="11_d5unx"]
+[ext_resource type="Resource" uid="uid://bqmmeu3stburh" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_hp_2.tres" id="12_kfpfi"]
+[ext_resource type="Resource" uid="uid://13bjxd1eeiqh" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_mag_3.tres" id="13_fio8j"]
+[ext_resource type="Resource" uid="uid://wwrxbvjo5nbd" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_agi_2.tres" id="14_6ic6s"]
+[ext_resource type="Resource" uid="uid://wmggm2kdkc7q" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_def_1.tres" id="15_bkxp6"]
+[ext_resource type="Resource" uid="uid://twi75xoqbv65" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_res_3.tres" id="16_qhbns"]
+[ext_resource type="Resource" uid="uid://dswnemkt1gqya" path="res://Resources/Skills/Generated/Dancer/Skill_dancer_encore_of_fate.tres" id="17_f5hhl"]
+
+[resource]
+script = ExtResource("1_e0ptv")
+tree_name = "Dancer Tree"
+skills = Array[ExtResource("2_toncs")]([ExtResource("3_xudqw"), ExtResource("4_02ogs"), ExtResource("5_f3qt4"), ExtResource("6_65hye"), ExtResource("7_fc2e0"), ExtResource("8_y5r2c"), ExtResource("9_ytry4"), ExtResource("10_piamj"), ExtResource("11_d5unx"), ExtResource("12_kfpfi"), ExtResource("13_fio8j"), ExtResource("14_6ic6s"), ExtResource("15_bkxp6"), ExtResource("16_qhbns"), ExtResource("17_f5hhl")])

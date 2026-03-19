@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dh2i8gubad2us"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_63hu5"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_imsff"]
+
+[resource]
+script = ExtResource("2_imsff")
+rarity = "Uncommon"
+item_name = "Pack Harness"
+description = "A leather harness rigged with rings and adjustable straps for carrying burden across beasts or backs. It creaks softly with every step."
+gold_cost = 27
+icon = ExtResource("1_63hu5")
+category = "Crafting"

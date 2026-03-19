@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dqny00rbv2h0k"]
+
+[ext_resource type="AudioStream" uid="uid://bmh3ebl1gwv17" path="res://SoundEffects/ArrowImpact.mp3" id="1_nh32d"]
+[ext_resource type="Texture2D" uid="uid://suclp80ewuwk" path="res://Assets/Crude Bow.png" id="1_synlh"]
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_wjing"]
+[ext_resource type="PackedScene" uid="uid://pnj6nmwntq4y" path="res://Scenes/ArrowProjectile.tscn" id="3_n7dc8"]
+
+[resource]
+script = ExtResource("1_wjing")
+weapon_name = "Simple Bow"
+weapon_type = 3
+projectile_scene = ExtResource("3_n7dc8")
+projectile_scale = 0.5
+custom_hit_sound = ExtResource("1_nh32d")
+effect_amount = 0
+hit_bonus = 5
+max_range = 3
+icon = ExtResource("1_synlh")
+metadata/_custom_type_script = "uid://b1atwvdvhdm0s"

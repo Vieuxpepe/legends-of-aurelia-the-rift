@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://7n0gr62jk2jf"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_ypvnb"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_inkwj"]
+
+[resource]
+script = ExtResource("2_inkwj")
+rarity = "Uncommon"
+item_name = "Rice Pouch"
+description = "A cloth pouch of pale rice grains, dry and faintly nutty. It cooks cleanly and fills bowls with little waste."
+gold_cost = 22
+icon = ExtResource("1_ypvnb")
+category = "Cooking"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c455vkm2t7i0g"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_msf7u"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_f66c1"]
+
+[resource]
+script = ExtResource("2_f66c1")
+rarity = "Epic"
+item_name = "Tideglass Ore"
+description = "A blue-black mineral mined from sea caves battered by storms along the Black Coast. The Vharian Merchant League uses it in experimental devices descended from forgotten technology."
+gold_cost = 207
+icon = ExtResource("1_msf7u")
+category = "Lore_And_Misc"

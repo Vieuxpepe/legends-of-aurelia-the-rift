@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://ssy5a48a7akh"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_egaeh"]
+
+[resource]
+script = ExtResource("1_egaeh")
+skill_id = "mage_spd_2"
+skill_name = "Quick Cast II"
+description = "Increases Speed by +1."
+required_skill_id = "mage_spd_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "spd"
+boost_amount = 1

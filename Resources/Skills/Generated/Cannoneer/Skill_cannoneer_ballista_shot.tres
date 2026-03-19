@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://djxsmjemm1j7w"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_5el4i"]
+
+[resource]
+script = ExtResource("1_5el4i")
+skill_id = "cannoneer_ballista_shot"
+skill_name = "Ballista Shot"
+description = "Unlocks Ballista Shot for crushing siege impact."
+required_skill_id = "cannoneer_def_3"
+grid_position = Vector2(6, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Ballista Shot"

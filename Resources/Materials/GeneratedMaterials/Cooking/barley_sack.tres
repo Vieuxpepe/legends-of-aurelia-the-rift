@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://uprmf6sb2b8g"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_e2w2d"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_0lcyu"]
+
+[resource]
+script = ExtResource("2_0lcyu")
+item_name = "Barley Sack"
+description = "A rough sack of pale grain that rattles softly when shifted. It feeds livestock, brews cheap ale, and stretches a poor stew."
+gold_cost = 9
+icon = ExtResource("1_e2w2d")
+category = "Cooking"

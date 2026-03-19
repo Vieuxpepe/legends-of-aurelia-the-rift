@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://hxmvua1s50at"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_jcwtb"]
+
+[resource]
+script = ExtResource("1_jcwtb")
+rarity = "Uncommon"
+description = "Grants +3 speed for the next battle."
+item_name = "Speed Brew"
+heal_amount = 0
+gold_cost = 350
+spd_boost = 3

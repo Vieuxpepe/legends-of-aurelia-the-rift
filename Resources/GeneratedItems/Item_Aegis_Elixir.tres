@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://bpj5qpnroalt7"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_yo5ub"]
+
+[resource]
+script = ExtResource("1_yo5ub")
+rarity = "Legendary"
+description = "Permanently increases resistance by 5."
+item_name = "Aegis Elixir"
+heal_amount = 0
+gold_cost = 5000
+res_boost = 5

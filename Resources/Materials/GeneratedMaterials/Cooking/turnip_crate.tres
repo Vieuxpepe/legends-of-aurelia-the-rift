@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cqai1st16o20r"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_eeon7"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_bksnj"]
+
+[resource]
+script = ExtResource("2_bksnj")
+item_name = "Turnip Crate"
+description = "A crate of dirt-dusted turnips with cracked purple tops. Sturdy fare for stew pots, cellars, and winter tables."
+gold_cost = 9
+icon = ExtResource("1_eeon7")
+category = "Cooking"

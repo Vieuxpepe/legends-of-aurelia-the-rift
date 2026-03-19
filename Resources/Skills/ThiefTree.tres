@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://dfbdd1bkgsq86"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_go2rf"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_1xl4h"]
+[ext_resource type="Resource" uid="uid://dyb51hcsdm7er" path="res://Resources/Skills/Generated/Thief/Skill_thief_agi_1.tres" id="3_0chhr"]
+[ext_resource type="Resource" uid="uid://kwdfdhsnea5f" path="res://Resources/Skills/Generated/Thief/Skill_thief_agi_2.tres" id="4_v2x0c"]
+[ext_resource type="Resource" uid="uid://bbgqt0r1xvj5i" path="res://Resources/Skills/Generated/Thief/Skill_thief_agi_3.tres" id="5_vfck3"]
+[ext_resource type="Resource" uid="uid://dlbu0t06ja0u1" path="res://Resources/Skills/Generated/Thief/Skill_thief_agi_4.tres" id="6_dtcvh"]
+[ext_resource type="Resource" uid="uid://ch1wxbwmdd0mw" path="res://Resources/Skills/Generated/Thief/Skill_thief_backstab.tres" id="7_hom33"]
+[ext_resource type="Resource" uid="uid://bmd3mcvfso4kp" path="res://Resources/Skills/Generated/Thief/Skill_thief_def_1.tres" id="8_ijl7f"]
+[ext_resource type="Resource" uid="uid://cwuoubps2uudo" path="res://Resources/Skills/Generated/Thief/Skill_thief_def_2.tres" id="9_dnjmf"]
+[ext_resource type="Resource" uid="uid://bdw1y23ifoarf" path="res://Resources/Skills/Generated/Thief/Skill_thief_pickpocket.tres" id="10_5gotx"]
+[ext_resource type="Resource" uid="uid://bcm4ehh3wjcmm" path="res://Resources/Skills/Generated/Thief/Skill_thief_res_1.tres" id="11_kr3lk"]
+[ext_resource type="Resource" uid="uid://bn6yowpd3dwge" path="res://Resources/Skills/Generated/Thief/Skill_thief_shadow_dance.tres" id="12_ip6qy"]
+[ext_resource type="Resource" uid="uid://dhm3f2btqp2x" path="res://Resources/Skills/Generated/Thief/Skill_thief_spd_1.tres" id="13_hgp5h"]
+[ext_resource type="Resource" uid="uid://bje55nlwifbj5" path="res://Resources/Skills/Generated/Thief/Skill_thief_spd_2.tres" id="14_ow2c0"]
+[ext_resource type="Resource" uid="uid://cj5vvlg3ewqld" path="res://Resources/Skills/Generated/Thief/Skill_thief_spd_3.tres" id="15_cb8fj"]
+[ext_resource type="Resource" uid="uid://cm5gq5cojimss" path="res://Resources/Skills/Generated/Thief/Skill_thief_str_1.tres" id="16_ebppi"]
+[ext_resource type="Resource" uid="uid://ywl2rpv0h228" path="res://Resources/Skills/Generated/Thief/Skill_thief_str_2.tres" id="17_fhca8"]
+
+[resource]
+script = ExtResource("1_go2rf")
+skills = Array[ExtResource("2_1xl4h")]([ExtResource("3_0chhr"), ExtResource("4_v2x0c"), ExtResource("5_vfck3"), ExtResource("6_dtcvh"), ExtResource("7_hom33"), ExtResource("8_ijl7f"), ExtResource("9_dnjmf"), ExtResource("10_5gotx"), ExtResource("11_kr3lk"), ExtResource("12_ip6qy"), ExtResource("13_hgp5h"), ExtResource("14_ow2c0"), ExtResource("15_cb8fj"), ExtResource("16_ebppi"), ExtResource("17_fhca8")])
+metadata/_custom_type_script = "uid://cedoicamottly"

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://br1d8n82dqdti"
+path="res://.godot/imported/Character Creation V2.wav-e91b22d78df5f0227ce86cd5f8904f00.sample"
+
+[deps]
+
+source_file="res://SoundEffects/Music/Character Creation V2.wav"
+dest_files=["res://.godot/imported/Character Creation V2.wav-e91b22d78df5f0227ce86cd5f8904f00.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

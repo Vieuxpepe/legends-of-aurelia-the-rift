@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dlvo2tlmijw4u"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_t55jy"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_lcor4"]
+
+[resource]
+script = ExtResource("2_lcor4")
+rarity = "Uncommon"
+item_name = "Pickling Brine"
+description = "A sealed jug of salty, spiced brine ready for vegetables or fish. Sour on the nose and invaluable when winter draws near."
+gold_cost = 20
+icon = ExtResource("1_t55jy")
+category = "Cooking"

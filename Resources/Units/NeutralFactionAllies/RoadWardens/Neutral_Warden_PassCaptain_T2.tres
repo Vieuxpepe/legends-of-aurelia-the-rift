@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://c2oy4b1nimmdp"]
+
+[ext_resource type="Resource" uid="uid://bbos8871jtmsj" path="res://Resources/Classes/PromotedClass/BowKnight.tres" id="1_bs1nv"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_lydk0"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_uccfx"]
+[ext_resource type="Resource" uid="uid://ckb12c5bq4x00" path="res://Resources/GeneratedItems/Weapon_Longbow.tres" id="4_w2r5d"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_gllp4"]
+
+[resource]
+script = ExtResource("3_uccfx")
+display_name = "Road-Warden Pass Captain"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_bs1nv")
+starting_weapon = ExtResource("4_w2r5d")
+max_hp = 31
+strength = 11
+defense = 8
+resistance = 6
+speed = 10
+agility = 10
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

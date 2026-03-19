@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://ox3bt8qixae0"]
+
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="1_6sarp"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="1_p8ocb"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_aydvf"]
+[ext_resource type="AudioStream" uid="uid://cdnaiwtsm0rwt" path="res://SoundEffects/Death Human.mp3" id="2_p7vwf"]
+[ext_resource type="Texture2D" uid="uid://5ccpec7r5em6" path="res://Assets/Sprites/Goblin.png" id="5_aydvf"]
+[ext_resource type="Resource" uid="uid://dqny00rbv2h0k" path="res://Resources/Weapons/Crude Bow.tres" id="5_p7vwf"]
+
+[resource]
+script = ExtResource("1_p8ocb")
+display_name = "Goblin"
+character_class = ExtResource("1_6sarp")
+starting_weapon = ExtResource("5_p7vwf")
+death_sound = ExtResource("2_p7vwf")
+unit_sprite = ExtResource("5_aydvf")
+visual_scale = 2.5
+drops_equipped_weapon = true
+metadata/_custom_type_script = "uid://3jului3v2v6"

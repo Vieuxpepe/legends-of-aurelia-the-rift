@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://b32v6dqnkwglg"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_xfw3w"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_7hvh3"]
+
+[resource]
+script = ExtResource("2_7hvh3")
+item_name = "Canvas Patch"
+description = "A stack of rough canvas squares cut for aprons, sacks, or repairs. Stiff at first, but durable once stitched in place."
+icon = ExtResource("1_xfw3w")
+category = "Crafting"

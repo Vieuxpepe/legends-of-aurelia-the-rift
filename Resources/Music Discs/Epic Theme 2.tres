@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://e0h5o8lmv8cu"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_4cieo"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_nkia7"]
+[ext_resource type="AudioStream" uid="uid://bwwj52uvtxltt" path="res://Resources/Music Discs/Epic Theme 2.mp3" id="3_4cieo"]
+
+[resource]
+script = ExtResource("2_nkia7")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+gold_cost = 100
+icon = ExtResource("1_4cieo")
+unlocked_music_track = ExtResource("3_4cieo")
+track_title = "Epic Theme 2"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

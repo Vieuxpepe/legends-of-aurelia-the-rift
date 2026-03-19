@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://brc57hpgmssm"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_o0efl"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_t1hgu"]
+
+[resource]
+script = ExtResource("2_t1hgu")
+rarity = "Rare"
+item_name = "Edran Grain Writ"
+description = "A sealed transport charter authorizing hidden grain diversion from famine-starved Edranor estates. Noble stewards hoard these under false names while villages go hungry."
+gold_cost = 88
+icon = ExtResource("1_o0efl")
+category = "Lore_And_Misc"

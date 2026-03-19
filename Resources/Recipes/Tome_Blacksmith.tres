@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dq6dsge6ychy0"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_d12no"]
+[ext_resource type="Texture2D" uid="uid://c4h3ww3c0rnwf" path="res://Resources/Recipes/Blacksmith's Tome.png" id="1_klx46"]
+
+[resource]
+script = ExtResource("1_d12no")
+rarity = "Epic"
+item_name = "Blacksmith's Tome"
+icon = ExtResource("1_klx46")
+metadata/_custom_type_script = "uid://dxefrus755705"

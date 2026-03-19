@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dsi6fvbgjcsod"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_tegoq"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_avvu1"]
+
+[resource]
+script = ExtResource("2_avvu1")
+rarity = "Uncommon"
+item_name = "Charcoal Sack"
+description = "A soot-black sack of brittle charcoal chunks that mark anything they touch. It serves smiths, alchemists, and mapmakers in equal measure."
+gold_cost = 20
+icon = ExtResource("1_tegoq")
+category = "Crafting"

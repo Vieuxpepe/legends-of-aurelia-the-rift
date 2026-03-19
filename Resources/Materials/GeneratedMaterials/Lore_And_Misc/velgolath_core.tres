@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dy4r7jyjuxqdu"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_7vkl5"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_1l2u8"]
+
+[resource]
+script = ExtResource("2_1l2u8")
+rarity = "Legendary"
+item_name = "Vel'golath Core"
+description = "A pulsing anomaly recovered only from the deepest ritual scars near the Sunken Spire. Its surface shows impossible depth, and every witness describes a different shape within."
+gold_cost = 900
+icon = ExtResource("1_7vkl5")
+category = "Lore_And_Misc"

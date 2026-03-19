@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cd3nd483166xd"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_h2pe4"]
+
+[resource]
+script = ExtResource("1_h2pe4")
+description = "A basic healing staff for early sustain and stability."
+weapon_name = "Heal Staff"
+gold_cost = 520
+damage_type = 1
+weapon_type = 4
+is_healing_staff = true
+affected_stat = "magic"
+effect_amount = 8
+might = 0
+hit_bonus = 18
+max_range = 2
+max_durability = 40
+current_durability = 40

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://djna4xayhnkcu"]
+
+[ext_resource type="Resource" uid="uid://ckj67pxqohcw7" path="res://Resources/Classes/Thief.tres" id="1_kabk7"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_hdrrb"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_bjivk"]
+[ext_resource type="Resource" uid="uid://cjjnad8i3tfwi" path="res://Resources/GeneratedItems/Weapon_Scrap_Knife.tres" id="4_gspwt"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_g2b3q"]
+
+[resource]
+script = ExtResource("3_bjivk")
+display_name = "Trapkeeper"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_kabk7")
+starting_weapon = ExtResource("4_gspwt")
+max_hp = 20
+strength = 7
+defense = 3
+resistance = 2
+speed = 7
+agility = 7
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

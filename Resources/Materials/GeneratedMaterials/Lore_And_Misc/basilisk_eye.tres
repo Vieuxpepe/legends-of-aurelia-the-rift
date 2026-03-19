@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://be5vqhvd6vn20"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_nevfl"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_raodj"]
+
+[resource]
+script = ExtResource("2_raodj")
+rarity = "Rare"
+item_name = "Basilisk Eye"
+description = "A preserved yellow eye floating in brine, slit-pupiled and hateful even in death. The jar clouds around it as if refusing to look directly."
+gold_cost = 118
+icon = ExtResource("1_nevfl")
+category = "Lore_And_Misc"

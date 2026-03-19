@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bd4b3y8iqs6ta"]
+
+[ext_resource type="Resource" uid="uid://c2autjygkg0ak" path="res://Resources/Classes/RookieClass/Apprentice.tres" id="1_ivkjo"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_s0bgt"]
+[ext_resource type="Texture2D" uid="uid://hc7estpuv7lo" path="res://Assets/Portraits/Tamsin Portrait.png" id="3_di873"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_duja6"]
+[ext_resource type="Resource" uid="uid://dybujbv48f05e" path="res://Resources/GeneratedItems/Weapon_Beginners_Staff.tres" id="4_di873"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_e8s10"]
+[ext_resource type="Texture2D" uid="uid://bp08q2cfmebyr" path="res://Assets/Sprites/Tamsin Battle Sprite.png" id="7_e8s10"]
+
+[resource]
+script = ExtResource("3_duja6")
+display_name = "Tamsin Reed"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["No, no — don’t stop because of me… there are still people who need you.", "It’s all right… help the ones you still can.", "Please don’t waste time grieving while someone else is bleeding.", "I know I’m scared. Just… don’t let that be what survives of me."])
+level_up_quotes = Array[String](["Oh. Oh, that’s… actually very encouraging.", "All right, breathe. I can use this.", "Good. Maybe next time I’ll panic a little less first."])
+support_personality = "compassionate"
+character_class = ExtResource("1_ivkjo")
+starting_weapon = ExtResource("4_di873")
+unit_sprite = ExtResource("7_e8s10")
+portrait = ExtResource("3_di873")
+max_hp = 16
+strength = 0
+magic = 5
+defense = 1
+resistance = 6
+speed = 4
+agility = 5
+hp_growth = 45
+str_growth = 0
+mag_growth = 65
+def_growth = 10
+res_growth = 60
+spd_growth = 40
+agi_growth = 50

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://2b8a4eg7vugw"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_xo4uy"]
+
+[resource]
+script = ExtResource("1_xo4uy")
+rarity = "Rare"
+description = "A refined instrument whose notes bite deeper than they should."
+weapon_name = "Court Lute"
+gold_cost = 1750
+damage_type = 1
+weapon_type = 9
+affected_stat = "magic"
+effect_amount = 0
+might = 6
+hit_bonus = 16
+max_range = 2
+max_durability = 32
+current_durability = 32

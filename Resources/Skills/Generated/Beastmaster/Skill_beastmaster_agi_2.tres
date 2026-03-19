@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bimkqhicunbkw"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ifwr1"]
+
+[resource]
+script = ExtResource("1_ifwr1")
+skill_id = "beastmaster_agi_2"
+skill_name = "Pack Sense II"
+description = "Increases Agility by +2."
+required_skill_id = "beastmaster_spd_2"
+grid_position = Vector2(4, 0)
+stat_to_boost = "agi"
+boost_amount = 2

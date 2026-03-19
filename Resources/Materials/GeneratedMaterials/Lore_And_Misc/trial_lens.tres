@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://by8tuieq4pyk5"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_pwiat"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ck61j"]
+
+[resource]
+script = ExtResource("2_ck61j")
+rarity = "Epic"
+item_name = "Trial Lens"
+description = "A polished crystal used in the old virtue trials of the Order of the Dawn. When held to candlelight, faint script from before the Shattering War blooms across its face."
+gold_cost = 214
+icon = ExtResource("1_pwiat")
+category = "Lore_And_Misc"

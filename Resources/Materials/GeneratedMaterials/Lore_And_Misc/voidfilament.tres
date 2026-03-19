@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://d3h8tqsk0r00j"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_vbb28"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_pd74s"]
+
+[resource]
+script = ExtResource("2_pd74s")
+rarity = "Epic"
+item_name = "Voidfilament"
+description = "A trembling strand of matter that appears where reality frays near the Sunken Spire. It reflects no light, yet its outline stings the eye like a remembered wound."
+gold_cost = 241
+icon = ExtResource("1_vbb28")
+category = "Lore_And_Misc"

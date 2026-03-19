@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://oov20wyuyrue"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_ih0ko"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_70r5v"]
+
+[resource]
+script = ExtResource("2_70r5v")
+rarity = "Rare"
+item_name = "Vespera's Ink"
+description = "A black-red ritual ink brewed for the Obsidian Circle under Lady Vespera's supervision. It dries with a metallic sheen and is used to bind names into blood rites."
+gold_cost = 112
+icon = ExtResource("1_ih0ko")
+category = "Lore_And_Misc"

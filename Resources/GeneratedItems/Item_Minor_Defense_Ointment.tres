@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://bwaourt5tl2vr"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_nrsyc"]
+
+[resource]
+script = ExtResource("1_nrsyc")
+description = "Grants +1 defense for the next battle."
+item_name = "Minor Defense Ointment"
+heal_amount = 0
+gold_cost = 110
+def_boost = 1

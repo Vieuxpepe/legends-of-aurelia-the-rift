@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="ChestKeyData" format=3 uid="uid://ckitvh4grj5oh"]
+
+[ext_resource type="Texture2D" uid="uid://dj64lwvxidoko" path="res://Assets/Iron Key.png" id="1_alp5g"]
+[ext_resource type="Script" uid="uid://bys0mwfk4dytf" path="res://Resources/Chests/ChestKeyData.gd" id="1_t8kd4"]
+
+[resource]
+script = ExtResource("1_t8kd4")
+icon = ExtResource("1_alp5g")
+metadata/_custom_type_script = "uid://bys0mwfk4dytf"

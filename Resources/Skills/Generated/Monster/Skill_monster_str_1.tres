@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://hkrek5nf3ujp"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_jrh70"]
+
+[resource]
+script = ExtResource("1_jrh70")
+skill_id = "monster_str_1"
+skill_name = "Brute Strength I"
+description = "Increases Strength by +1."
+required_skill_id = "monster_hp_1"
+grid_position = Vector2(1, -1)
+stat_to_boost = "str"
+boost_amount = 1

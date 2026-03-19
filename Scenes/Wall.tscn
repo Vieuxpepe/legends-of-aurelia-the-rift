@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://cetahoju8x645"]
+
+[ext_resource type="Texture2D" uid="uid://b0nrlhbu32a08" path="res://Assets/Wall.png" id="1_2p0br"]
+
+[node name="Wall" type="Node2D" unique_id=1854400237]
+z_index = -4
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=301981195]
+position = Vector2(32, 30)
+scale = Vector2(0.24, 0.24)
+texture = ExtResource("1_2p0br")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=873511676]
+visible = false
+offset_right = 64.0
+offset_bottom = 64.0
+color = Color(0, 0, 0, 1)

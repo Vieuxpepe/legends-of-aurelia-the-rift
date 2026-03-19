@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://kclgpopk23ut"]
+
+[ext_resource type="Resource" uid="uid://basnwy3wbonr2" path="res://Resources/Classes/Mage.tres" id="1_qo61j"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_pem5g"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_tyeoi"]
+[ext_resource type="Texture2D" uid="uid://ce7qb8pgc348i" path="res://Assets/Portraits/Sorrel Portrait.png" id="3_ufkhd"]
+[ext_resource type="Resource" uid="uid://b6vwdya3y5lqw" path="res://Resources/GeneratedItems/Weapon_Apprentice_Tome.tres" id="4_ufkhd"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_w33vf"]
+[ext_resource type="Texture2D" uid="uid://c4ul0q2wguxsv" path="res://Assets/Sprites/Sorrel Battle Sprite.png" id="7_w33vf"]
+
+[resource]
+script = ExtResource("3_tyeoi")
+display_name = "Sorrel"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["So much left unread… promise me ignorance won’t inherit this.", "There were still answers here… do not let fools bury them.", "Ah. So inquiry ends, but consequence does not.", "If you learn anything from this, let it be something worth the cost."])
+level_up_quotes = Array[String](["Remarkable. Applied survival continues to produce useful outcomes.", "Ah. That is a meaningful improvement, not merely a flattering one.", "Excellent. I should like to remain alive long enough to study this further."])
+support_personality = "scholarly"
+character_class = ExtResource("1_qo61j")
+starting_weapon = ExtResource("4_ufkhd")
+unit_sprite = ExtResource("7_w33vf")
+portrait = ExtResource("3_ufkhd")
+max_hp = 17
+strength = 0
+magic = 8
+defense = 1
+resistance = 6
+speed = 6
+agility = 7
+hp_growth = 45
+str_growth = 5
+mag_growth = 70
+def_growth = 10
+res_growth = 40
+spd_growth = 45
+agi_growth = 55

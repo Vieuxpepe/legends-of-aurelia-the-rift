@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cb8xp41y0s72c"]
+
+[ext_resource type="Resource" uid="uid://b4i33x0fw7f17" path="res://Resources/Classes/Archer.tres" id="1_hxltj"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_vxpri"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_2t6c0"]
+[ext_resource type="Resource" uid="uid://beb6loqw5sewd" path="res://Resources/GeneratedItems/Weapon_Ash_Shortbow.tres" id="4_8sr3k"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_1i5y5"]
+
+[resource]
+script = ExtResource("3_2t6c0")
+display_name = "Cinder Archer"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_hxltj")
+starting_weapon = ExtResource("4_8sr3k")
+max_hp = 19
+strength = 7
+defense = 3
+resistance = 2
+speed = 5
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b6vwdya3y5lqw"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_wic0d"]
+
+[resource]
+script = ExtResource("1_wic0d")
+description = "A simple practice tome for basic offensive casting."
+weapon_name = "Apprentice Tome"
+gold_cost = 420
+damage_type = 1
+weapon_type = 4
+affected_stat = "magic"
+effect_amount = 0
+might = 4
+hit_bonus = 12
+max_range = 2
+max_durability = 40
+current_durability = 40

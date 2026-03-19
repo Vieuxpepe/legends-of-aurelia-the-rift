@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dplnbukwwvmgi"]
+
+[ext_resource type="Resource" uid="uid://bf5wjkxyjgrvo" path="res://Resources/Classes/Dancer.tres" id="1_7bhyg"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_8wqe4"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_kox1h"]
+[ext_resource type="Texture2D" uid="uid://d1jovrkowms0l" path="res://Assets/Portraits/Yselle Portrait.png" id="3_ty1x5"]
+[ext_resource type="Resource" uid="uid://b2n1yyh8oryok" path="res://Resources/GeneratedItems/Weapon_Silken_Fan.tres" id="4_ty1x5"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_brwx0"]
+[ext_resource type="Texture2D" uid="uid://h2xd7tbjd0g5" path="res://Assets/Sprites/Yselle Battle Sprite.png" id="7_brwx0"]
+
+[resource]
+script = ExtResource("3_kox1h")
+display_name = "Yselle Maris"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["If I must leave the stage, at least let the living remember why beauty mattered.", "Do not let war make ugliness your only language.", "I spent my life teaching people to look — now make them see.", "If the curtain falls, let it fall on something worth remembering."])
+level_up_quotes = Array[String](["Ah. A stronger step, and a room that will feel it.", "Delightful. Survival continues to reward polish.", "Good. Beauty is far more persuasive when it can endure."])
+support_personality = "flamboyant"
+character_class = ExtResource("1_7bhyg")
+starting_weapon = ExtResource("4_ty1x5")
+unit_sprite = ExtResource("7_brwx0")
+portrait = ExtResource("3_ty1x5")
+max_hp = 22
+strength = 2
+magic = 3
+defense = 3
+resistance = 8
+speed = 12
+agility = 7
+hp_growth = 45
+str_growth = 10
+mag_growth = 30
+def_growth = 15
+res_growth = 40
+spd_growth = 70
+agi_growth = 45

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cihxs1aoyq830"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_soh16"]
+
+[resource]
+script = ExtResource("1_soh16")
+skill_id = "dk_hp_1"
+skill_name = "Undead Vigor"
+description = "Grants +8 Max HP."
+required_skill_id = "dk_def_1"
+grid_position = Vector2(3, 0)
+boost_amount = 8

@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://v40da3eq84fm"]
+
+[ext_resource type="Script" uid="uid://dafwuctxkwyqa" path="res://Scenes/Levels/EscortConvoy.gd" id="1_ftmj5"]
+[ext_resource type="Texture2D" uid="uid://ghwjd5typha3" path="res://Assets/Sprites/Donkey cart/unnamed__23_-removebg-preview.png" id="2_eos42"]
+[ext_resource type="Texture2D" uid="uid://b2jo3fu0d204t" path="res://Assets/Sprites/Donkey cart/unnamed__24_-removebg-preview.png" id="3_84ujr"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hjnmn"]
+bg_color = Color(0.34509805, 1, 0.078431375, 0.57254905)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="DonkeyCart" type="Node2D" unique_id=867810033]
+script = ExtResource("1_ftmj5")
+move_range = 2
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=20205367]
+position = Vector2(64, 64.5)
+scale = Vector2(0.256, 0.254)
+texture = ExtResource("2_eos42")
+
+[node name="Sprite2D2" type="Sprite2D" parent="." unique_id=1413632173]
+position = Vector2(64, 134)
+scale = Vector2(0.182, 0.18200001)
+texture = ExtResource("3_84ujr")
+
+[node name="Sprite2D3" type="Sprite2D" parent="." unique_id=588398422]
+modulate = Color(0, 0, 0, 0.7137255)
+z_index = -1
+position = Vector2(77, 65.99999)
+scale = Vector2(0.256, 0.254)
+skew = 0.20071286
+texture = ExtResource("2_eos42")
+
+[node name="Sprite2D4" type="Sprite2D" parent="." unique_id=15373719]
+modulate = Color(0, 0, 0, 0.6509804)
+z_index = -1
+position = Vector2(71, 135)
+scale = Vector2(0.182, 0.18200001)
+skew = 0.20071286
+texture = ExtResource("3_84ujr")
+
+[node name="HealthBar" type="ProgressBar" parent="." unique_id=951600867]
+z_index = 10
+offset_top = -50.0
+offset_right = 170.0
+offset_bottom = 4.0
+scale = Vector2(0.75, 0.75)
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+theme_override_styles/fill = SubResource("StyleBoxFlat_hjnmn")

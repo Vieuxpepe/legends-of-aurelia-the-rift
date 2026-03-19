@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cun0n65a8rgfs"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_oixlp"]
+
+[resource]
+script = ExtResource("1_oixlp")
+rarity = "Rare"
+description = "Restores a large amount of HP."
+item_name = "Elixir"
+heal_amount = 35
+gold_cost = 600

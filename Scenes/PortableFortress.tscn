@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://td7wlhmojryj"]
+
+[ext_resource type="Texture2D" uid="uid://d2vv0jttrxc0" path="res://Assets/Sprites/Fortress.png" id="1_fbefo"]
+
+[node name="PortableFortress" type="Node2D" unique_id=882630736]
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=2085763224]
+visible = false
+z_index = -6
+offset_right = 64.0
+offset_bottom = 64.0
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=587590149]
+position = Vector2(33.25, 33.000004)
+scale = Vector2(0.16300002, 0.16)
+texture = ExtResource("1_fbefo")

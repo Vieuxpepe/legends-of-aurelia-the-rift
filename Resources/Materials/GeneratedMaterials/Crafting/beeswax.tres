@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dvmdndabfm1t3"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_hpey8"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_c0bs8"]
+
+[resource]
+script = ExtResource("2_c0bs8")
+rarity = "Uncommon"
+item_name = "Beeswax"
+description = "Golden cakes of wax, warm-smelling and faintly sweet. Used for candles, seals, and the careful waterproofing of gear."
+gold_cost = 24
+icon = ExtResource("1_hpey8")
+category = "Crafting"

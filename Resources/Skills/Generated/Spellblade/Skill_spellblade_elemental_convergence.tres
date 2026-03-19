@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://pt4uhre0gsks"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_lobpu"]
+
+[resource]
+script = ExtResource("1_lobpu")
+skill_id = "spellblade_elemental_convergence"
+skill_name = "Elemental Convergence"
+description = "Unleash a fusion of elements causing massive damage in a large area."
+required_skill_id = "spellblade_mag_3"
+grid_position = Vector2(6, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Elemental Convergence"

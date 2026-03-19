@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cfkckyat3a8q8"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_1vrph"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_6xuca"]
+
+[resource]
+script = ExtResource("2_6xuca")
+rarity = "Uncommon"
+item_name = "Wolf Pelt"
+description = "A heavy hide with coarse fur and a lingering wild scent. It warms the living and decorates the cruel."
+gold_cost = 35
+icon = ExtResource("1_1vrph")
+category = "Crafting"

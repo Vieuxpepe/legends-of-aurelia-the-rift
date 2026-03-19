@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://brnehtie1apjt"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_nyh3s"]
+
+[resource]
+script = ExtResource("1_nyh3s")
+skill_id = "cleric_mag_1"
+skill_name = "Faith I"
+description = "Increases Magic by +1."
+required_skill_id = "cleric_hp_1"
+grid_position = Vector2(1, -1)
+stat_to_boost = "mag"
+boost_amount = 1

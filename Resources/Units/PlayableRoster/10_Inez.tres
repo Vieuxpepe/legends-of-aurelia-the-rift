@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://ooelakg2jfwv"]
+
+[ext_resource type="Resource" uid="uid://dbilnt3rl3i31" path="res://Resources/Classes/Beastmaster.tres" id="1_vqtsf"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_21ip5"]
+[ext_resource type="Texture2D" uid="uid://c3a23haxmb4e2" path="res://Assets/Portraits/Inez Portrait.png" id="3_cjmld"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_qclc4"]
+[ext_resource type="Resource" uid="uid://d14ws3ckfm156" path="res://Resources/GeneratedItems/Weapon_Hatchet.tres" id="4_cjmld"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_ffc2l"]
+[ext_resource type="Texture2D" uid="uid://dujrs0x4mc500" path="res://Assets/Sprites/Inez Battle Sprite.png" id="7_ffc2l"]
+
+[resource]
+script = ExtResource("3_qclc4")
+display_name = "Inez"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Listen to the ground… it will tell you what still needs protecting.", "The land keeps score. Don’t fail it.", "Stay quiet. Watch the trees. Live.", "I’m done. The wild isn’t."])
+level_up_quotes = Array[String](["Better. I won’t fall behind the hunt.", "The body learns, or it dies. Good.", "Useful. The woods favor those who notice change."])
+support_personality = "wild"
+character_class = ExtResource("1_vqtsf")
+starting_weapon = ExtResource("4_cjmld")
+unit_sprite = ExtResource("7_ffc2l")
+portrait = ExtResource("3_cjmld")
+max_hp = 25
+strength = 8
+defense = 5
+resistance = 4
+speed = 10
+agility = 10
+hp_growth = 60
+str_growth = 45
+mag_growth = 15
+def_growth = 25
+res_growth = 25
+spd_growth = 60
+agi_growth = 55

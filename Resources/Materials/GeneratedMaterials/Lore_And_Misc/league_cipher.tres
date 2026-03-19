@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://lb2yd376qoa3"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_dvinf"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_6vug7"]
+
+[resource]
+script = ExtResource("2_6vug7")
+rarity = "Rare"
+item_name = "League Cipher"
+description = "A rotating brass code wheel used by Vharian Merchant League brokers tied to the Luminous Table. Its notches conceal shipping routes, debt markers, and smuggling contacts along the Black Coast."
+gold_cost = 124
+icon = ExtResource("1_dvinf")
+category = "Lore_And_Misc"

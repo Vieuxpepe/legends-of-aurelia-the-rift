@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://4glsktf02voy"]
+
+[ext_resource type="Resource" uid="uid://bgn6crnbbgtve" path="res://Resources/Classes/Cannoneer.tres" id="1_37eu0"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_6fabc"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_lafd6"]
+[ext_resource type="Texture2D" uid="uid://b5pcmagp3vgov" path="res://Assets/Portraits/OrenPike Portrait.png" id="3_ubtfw"]
+[ext_resource type="Resource" uid="uid://c1f5hwch5rt7c" path="res://Resources/GeneratedItems/Weapon_Ramshackle_Culverin.tres" id="4_ubtfw"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_1dfr5"]
+[ext_resource type="Texture2D" uid="uid://jafsoqfj1dck" path="res://Assets/Sprites/OrenPike Battle Sprite.png" id="7_1dfr5"]
+
+[resource]
+script = ExtResource("3_lafd6")
+display_name = "Oren Pike"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Tch… don’t waste this; I’d hate to die and still be surrounded by incompetence.", "Use the tools properly. I refuse to haunt idiots.", "Wonderful. I expire once, and now all the maintenance becomes your problem.", "If this line collapses after I’m gone, I will be deeply annoyed."])
+level_up_quotes = Array[String](["There. Tangible results. Imagine that.", "Good. At least something around here improves on schedule.", "Mm. Functional, efficient, and not entirely embarrassing."])
+support_personality = "pragmatic"
+character_class = ExtResource("1_37eu0")
+starting_weapon = ExtResource("4_ubtfw")
+unit_sprite = ExtResource("7_1dfr5")
+portrait = ExtResource("3_ubtfw")
+max_hp = 28
+strength = 9
+defense = 9
+resistance = 2
+agility = 11
+hp_growth = 70
+str_growth = 45
+mag_growth = 5
+def_growth = 40
+res_growth = 15
+spd_growth = 15
+agi_growth = 60

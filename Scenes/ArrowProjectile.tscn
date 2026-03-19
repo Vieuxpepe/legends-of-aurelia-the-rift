@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://pnj6nmwntq4y"]
+
+[ext_resource type="Texture2D" uid="uid://crmjgedi5x07e" path="res://animations/ArrowProjectile.png" id="1_g260g"]
+[ext_resource type="Script" uid="uid://dd6hmi851yqug" path="res://arrow_projectile.gd" id="2_7jhqb"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dy2xm"]
+atlas = ExtResource("1_g260g")
+region = Rect2(0, 0, 169, 369)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1dp5r"]
+atlas = ExtResource("1_g260g")
+region = Rect2(169, 0, 169, 369)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ugawe"]
+atlas = ExtResource("1_g260g")
+region = Rect2(338, 0, 169, 369)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4dwxy"]
+atlas = ExtResource("1_g260g")
+region = Rect2(507, 0, 169, 369)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_sty0i"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dy2xm")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1dp5r")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ugawe")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4dwxy")
+}],
+"loop": false,
+"name": &"default",
+"speed": 15.0
+}]
+
+[node name="ArrowProjectile" type="AnimatedSprite2D" unique_id=1767408945]
+sprite_frames = SubResource("SpriteFrames_sty0i")
+frame = 3
+frame_progress = 1.0
+script = ExtResource("2_7jhqb")

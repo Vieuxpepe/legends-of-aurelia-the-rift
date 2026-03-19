@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://ddgm6ne7ijunq"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_8wvfj"]
+
+[resource]
+script = ExtResource("1_8wvfj")
+skill_id = "bk_mastery"
+skill_name = "Mastery: Parting Shot"
+description = "Fires a devastating shot and instantly retreats one tile backward."
+required_skill_id = "bk_hp_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Parting Shot"

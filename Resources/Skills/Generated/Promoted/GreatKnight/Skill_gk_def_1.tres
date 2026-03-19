@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://rwx4ribhuk8l"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_rbqlr"]
+
+[resource]
+script = ExtResource("1_rbqlr")
+skill_id = "gk_def_1"
+skill_name = "Heavy Cavalry I"
+description = "Grants +3 Defense."
+stat_to_boost = "def"
+boost_amount = 3

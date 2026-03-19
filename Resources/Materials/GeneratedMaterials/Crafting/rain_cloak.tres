@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bdiet4a5iaoce"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_er8lf"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_vlbu3"]
+
+[resource]
+script = ExtResource("2_vlbu3")
+item_name = "Rain Cloak"
+description = "A waxed traveling cloak that sheds water and keeps the worst of the wind off. It smells faintly of oil, wool, and road mud."
+gold_cost = 15
+icon = ExtResource("1_er8lf")
+category = "Crafting"

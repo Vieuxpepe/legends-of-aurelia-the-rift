@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://d08sn5e7me4qv"]
+
+[ext_resource type="Texture2D" uid="uid://b8w0tp84wxps" path="res://Assets/Sprites/Promoted Battle Sprites/High Paladin.png" id="1_1cpab"]
+[ext_resource type="Resource" uid="uid://bocots5kt18xk" path="res://Resources/Skills/Generated/Promoted/HighPaladin/HighPaladinTree.tres" id="1_n2vcc"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_n2vcc"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_jul2t"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_s54du"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_8d86b"]
+
+[resource]
+script = ExtResource("2_n2vcc")
+job_name = "High Paladin"
+move_range = 6
+move_type = 3
+allowed_weapon_types = Array[int]([0, 1])
+can_use_healing_staff = true
+can_use_buff_staff = true
+class_skill_tree = ExtResource("1_n2vcc")
+promotion_options = Array[Resource]([ExtResource("3_jul2t"), ExtResource("4_s54du"), ExtResource("5_8d86b")])
+promoted_battle_sprite = ExtResource("1_1cpab")
+promo_res_bonus = 2
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

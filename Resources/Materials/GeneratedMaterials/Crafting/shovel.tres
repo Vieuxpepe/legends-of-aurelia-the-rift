@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://uv0uflkwvlk2"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_qm0vy"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_do4yu"]
+
+[resource]
+script = ExtResource("2_do4yu")
+item_name = "Shovel"
+description = "A short travel shovel with a wood handle and iron blade. Good for campfires, graves, and anything that starts with digging."
+gold_cost = 14
+icon = ExtResource("1_qm0vy")
+category = "Crafting"

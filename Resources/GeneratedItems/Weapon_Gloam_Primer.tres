@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cc4ge88nh13qp"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_b8vuh"]
+
+[resource]
+script = ExtResource("1_b8vuh")
+description = "A beginner's dark text that whispers more than it teaches."
+weapon_name = "Gloam Primer"
+gold_cost = 500
+damage_type = 1
+weapon_type = 10
+affected_stat = "magic"
+effect_amount = 0
+hit_bonus = 6
+max_range = 2
+max_durability = 34
+current_durability = 34

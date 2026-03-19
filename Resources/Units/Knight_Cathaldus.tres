@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cb87d1kw1f2fn"]
+
+[ext_resource type="Resource" uid="uid://yi8w2a8kj00d" path="res://Resources/Classes/Knight.tres" id="1_qd2hi"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_sylgr"]
+[ext_resource type="AudioStream" uid="uid://cdnaiwtsm0rwt" path="res://SoundEffects/Death Human.mp3" id="2_wuh3h"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_wuh3h"]
+[ext_resource type="Resource" uid="uid://do11gpbrk6afy" path="res://Resources/Weapons/FireTome.tres" id="4_8aym1"]
+[ext_resource type="Texture2D" uid="uid://b33lla158thcj" path="res://Assets/Sprites/Gemini_Generated_Image_dntvrgdntvrgdntv-removebg-preview.png" id="6_wuh3h"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="6_ygjrm"]
+[ext_resource type="Resource" uid="uid://bt3ts5lcdbk0b" path="res://Resources/SupportConversations/Avatar_Kaelen.tres" id="7_qd2hi"]
+
+[resource]
+script = ExtResource("3_wuh3h")
+display_name = "Knight Cathaldus"
+character_class = ExtResource("1_qd2hi")
+starting_weapon = ExtResource("4_8aym1")
+death_sound = ExtResource("2_wuh3h")
+supports = Array[ExtResource("6_ygjrm")]([ExtResource("7_qd2hi")])
+unit_sprite = ExtResource("6_wuh3h")
+visual_scale = 2.0
+max_hp = 0
+strength = 0
+defense = 0
+speed = 0
+agility = 0
+extra_loot = Array[ExtResource("2_sylgr")]([null])
+metadata/_custom_type_script = "uid://3jului3v2v6"

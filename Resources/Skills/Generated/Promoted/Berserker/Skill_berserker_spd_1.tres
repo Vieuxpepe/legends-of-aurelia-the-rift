@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://clr7r4rp12fhp"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_rdhrw"]
+
+[resource]
+script = ExtResource("1_rdhrw")
+skill_id = "berserker_spd_1"
+skill_name = "Unstoppable Force"
+description = "Grants +2 Speed."
+required_skill_id = "berserker_agi_1"
+grid_position = Vector2(3, 0)
+stat_to_boost = "spd"
+boost_amount = 2

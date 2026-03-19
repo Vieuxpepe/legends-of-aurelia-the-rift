@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://catdeo47prkm4"]
+
+[ext_resource type="Resource" uid="uid://cdsop8gwvpobe" path="res://Resources/Classes/Spellblade.tres" id="1_4378u"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_5drgs"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_hncib"]
+[ext_resource type="Resource" uid="uid://b2gc7nh4cg7nu" path="res://Resources/GeneratedItems/Weapon_Travelers_Blade.tres" id="4_rpra8"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_bxdlg"]
+
+[resource]
+script = ExtResource("3_hncib")
+display_name = "Consul Marcellus Veyne"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_4378u")
+starting_weapon = ExtResource("4_rpra8")
+max_hp = 35
+strength = 11
+magic = 9
+defense = 7
+resistance = 10
+speed = 13
+agility = 15
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

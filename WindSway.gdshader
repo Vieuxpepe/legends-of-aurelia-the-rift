@@ -1,0 +1,31 @@
+shader_type canvas_item;
+
+uniform float speed = 1.2;        // How fast the wind changes
+uniform float min_sway = 1.0;     // The constant, gentle baseline breeze
+uniform float max_sway = 12.0;    // The hard push of a strong gust
+uniform float stiffness = 2.5;    // Higher = stiffer trunk, only the leaves move
+uniform float direction = 1.0;    // 1.0 for right, -1.0 for left
+
+void vertex() {
+    // 1. TRUNK STIFFNESS
+    // UV.y goes from 0 to 1. By raising it to the power of 'stiffness', 
+    // the bottom of the tree stays perfectly still and the top whips around.
+    float bend = pow(1.0 - UV.y, stiffness);
+
+    // 2. ERRATIC NOISE (The Gusts)
+    // By adding three mismatched sine waves together, we create chaotic, unpredictable movement
+    float noise = sin(TIME * speed) + sin(TIME * speed * 2.2) + cos(TIME * speed * 3.8);
+    
+    // Normalize the noise so it stays between 0.0 and 1.0 (It never swings backwards!)
+    noise = (noise + 3.0) / 6.0; 
+    
+    // Square the noise to create "snappy" gusts with calm pauses in between
+    noise = pow(noise, 2.0);
+
+    // 3. APPLY THE WIND
+    // Mix between the gentle breeze and the hard gust based on our erratic noise
+    float current_sway = mix(min_sway, max_sway, noise);
+
+    // Apply the final movement in the correct direction!
+    VERTEX.x += current_sway * bend * direction;
+}

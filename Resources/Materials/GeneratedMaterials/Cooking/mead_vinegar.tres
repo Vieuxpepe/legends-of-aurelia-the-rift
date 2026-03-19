@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c3uori51gg4s0"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_lxm7j"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_yt7pn"]
+
+[resource]
+script = ExtResource("2_yt7pn")
+item_name = "Mead Vinegar"
+description = "A bottle of pale vinegar with a sweet edge beneath its sour bite. Used for pickling, cleaning, and reviving tired sauces."
+gold_cost = 8
+icon = ExtResource("1_lxm7j")
+category = "Cooking"

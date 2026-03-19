@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://c80ef0dbdtjjb"]
+
+[ext_resource type="Script" uid="uid://jr06guuk5km4" path="res://Scenes/Levels/FireGlow.gd" id="1_7t4fp"]
+
+[sub_resource type="Gradient" id="Gradient_i2y6i"]
+offsets = PackedFloat32Array(0, 0.99715906)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ei2gl"]
+gradient = SubResource("Gradient_i2y6i")
+width = 256
+height = 256
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.8, 0.5)
+
+[node name="FireGlow" type="PointLight2D" unique_id=933684048]
+color = Color(1, 0.47843137, 0, 1)
+energy = 1.2
+texture = SubResource("GradientTexture2D_ei2gl")
+texture_scale = 2.0
+script = ExtResource("1_7t4fp")

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bj48024pygp82"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_mnofp"]
+
+[resource]
+script = ExtResource("1_mnofp")
+skill_id = "fs_mag_1"
+skill_name = "Inferno I"
+description = "Grants +4 Magic."
+stat_to_boost = "mag"
+boost_amount = 4

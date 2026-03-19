@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bclwdbygdbcma"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_w0jtk"]
+
+[resource]
+script = ExtResource("1_w0jtk")
+skill_id = "bm_mastery"
+skill_name = "Mastery: Severing Strike"
+description = "A flurry of three absolute precision cuts."
+required_skill_id = "bm_hp_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Severing Strike"

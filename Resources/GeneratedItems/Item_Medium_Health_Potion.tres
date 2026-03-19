@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cin0tuua75mnx"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_o0pa2"]
+
+[resource]
+script = ExtResource("1_o0pa2")
+rarity = "Uncommon"
+description = "Restores a moderate amount of HP."
+item_name = "Medium Health Potion"
+heal_amount = 25
+gold_cost = 300

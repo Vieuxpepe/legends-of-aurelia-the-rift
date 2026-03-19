@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://o5skxhnhpa3x"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_1l3ed"]
+
+[resource]
+script = ExtResource("1_1l3ed")
+skill_id = "monk_res_3"
+skill_name = "Resilience III"
+description = "Increases Resistance by +2."
+required_skill_id = "monk_res_2"
+grid_position = Vector2(4, 1)
+stat_to_boost = "res"
+boost_amount = 2

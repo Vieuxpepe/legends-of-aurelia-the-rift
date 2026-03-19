@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://kde5cq3dxm15"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_bwm65"]
+
+[resource]
+script = ExtResource("1_bwm65")
+rarity = "Uncommon"
+description = "A staff imbued with stronger healing magic."
+weapon_name = "Healing Staff"
+gold_cost = 1300
+damage_type = 1
+weapon_type = 3
+is_healing_staff = true
+affected_stat = "magic"
+effect_amount = 0
+might = 0
+hit_bonus = 20
+max_range = 2
+max_durability = 33
+current_durability = 33

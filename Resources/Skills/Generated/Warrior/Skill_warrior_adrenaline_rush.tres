@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cf36e2udh8tq2"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_b24aa"]
+
+[resource]
+script = ExtResource("1_b24aa")
+skill_id = "warrior_adrenaline_rush"
+skill_name = "Adrenaline Rush"
+description = "Surge of adrenaline increases your speed and attack temporarily."
+required_skill_id = "warrior_agi_1"
+grid_position = Vector2(3, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Adrenaline Rush"

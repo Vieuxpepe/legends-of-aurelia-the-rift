@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dre1776v71ugi"]
+
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="1_iew0f"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_hlach"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_pvyly"]
+[ext_resource type="Resource" uid="uid://b2gc7nh4cg7nu" path="res://Resources/GeneratedItems/Weapon_Travelers_Blade.tres" id="4_lv6hy"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_gqafg"]
+
+[resource]
+script = ExtResource("3_pvyly")
+display_name = "League Guard"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_iew0f")
+starting_weapon = ExtResource("4_lv6hy")
+max_hp = 24
+strength = 8
+defense = 6
+resistance = 4
+speed = 7
+agility = 7
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

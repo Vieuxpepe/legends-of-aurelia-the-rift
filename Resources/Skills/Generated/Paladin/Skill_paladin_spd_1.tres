@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cc5002htyv7eb"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_fm11j"]
+
+[resource]
+script = ExtResource("1_fm11j")
+skill_id = "paladin_spd_1"
+skill_name = "Holy March I"
+description = "Increases Speed by +1."
+required_skill_id = "paladin_holy_ward"
+grid_position = Vector2(4, 0)
+stat_to_boost = "spd"
+boost_amount = 1

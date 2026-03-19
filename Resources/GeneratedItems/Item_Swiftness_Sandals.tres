@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://j20s2j6mfwtw"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_scpo5"]
+
+[resource]
+script = ExtResource("1_scpo5")
+rarity = "Legendary"
+description = "Permanently increases speed by 5."
+item_name = "Swiftness Sandals"
+heal_amount = 0
+gold_cost = 5000
+spd_boost = 5

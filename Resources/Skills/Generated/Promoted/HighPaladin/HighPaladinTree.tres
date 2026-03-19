@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bocots5kt18xk"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_un7wd"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_pkeb5"]
+[ext_resource type="Resource" uid="uid://ckbbnxn7vf4l1" path="res://Resources/Skills/Generated/Promoted/HighPaladin/Skill_hp_def_1.tres" id="3_opbhr"]
+[ext_resource type="Resource" uid="uid://bxmyx7qw00kg4" path="res://Resources/Skills/Generated/Promoted/HighPaladin/Skill_hp_hp_1.tres" id="4_f8ir1"]
+[ext_resource type="Resource" uid="uid://cwwlsqdllpwok" path="res://Resources/Skills/Generated/Promoted/HighPaladin/Skill_hp_mastery.tres" id="5_fg135"]
+[ext_resource type="Resource" uid="uid://dawf7x0n6kahc" path="res://Resources/Skills/Generated/Promoted/HighPaladin/Skill_hp_res_1.tres" id="6_2ei32"]
+[ext_resource type="Resource" uid="uid://dfjdbdcso76tu" path="res://Resources/Skills/Generated/Promoted/HighPaladin/Skill_hp_str_1.tres" id="7_fl5hp"]
+
+[resource]
+script = ExtResource("1_un7wd")
+skills = Array[ExtResource("2_pkeb5")]([ExtResource("3_opbhr"), ExtResource("4_f8ir1"), ExtResource("5_fg135"), ExtResource("6_2ei32"), ExtResource("7_fl5hp")])
+metadata/_custom_type_script = "uid://cedoicamottly"

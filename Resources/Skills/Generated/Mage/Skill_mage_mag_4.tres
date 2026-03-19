@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bu7l8nbkmi42m"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_mw0ys"]
+
+[resource]
+script = ExtResource("1_mw0ys")
+skill_id = "mage_mag_4"
+skill_name = "Arcane Mastery IV"
+description = "Increases Magic by +2."
+required_skill_id = "mage_fireball"
+grid_position = Vector2(4, -1)
+stat_to_boost = "mag"
+boost_amount = 2

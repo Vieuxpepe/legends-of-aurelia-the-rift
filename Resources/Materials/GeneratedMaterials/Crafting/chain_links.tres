@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://baoctwwmop64u"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_uw1yh"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_ic61c"]
+
+[resource]
+script = ExtResource("2_ic61c")
+rarity = "Uncommon"
+item_name = "Chain Links"
+description = "A short length of repair chain, cold and heavy in the hand. Good for securing gates, wagons, prisoners, or suspicious chests."
+gold_cost = 25
+icon = ExtResource("1_uw1yh")
+category = "Crafting"

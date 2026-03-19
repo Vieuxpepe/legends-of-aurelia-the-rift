@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bjpvqo5sgxkvu"]
+
+[ext_resource type="Resource" uid="uid://b5ptobcqxnny3" path="res://Resources/Classes/PromotedClass/HeavyArcher.tres" id="1_8dgik"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_v4vky"]
+[ext_resource type="Texture2D" uid="uid://bnntr5t6ev68e" path="res://Assets/Portraits/Sabine Portrait.png" id="3_0v44y"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_6fv6n"]
+[ext_resource type="Resource" uid="uid://bo7k0ofeb70uw" path="res://Resources/GeneratedItems/Weapon_Reinforced_Bow.tres" id="4_0v44y"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_p12xs"]
+[ext_resource type="Texture2D" uid="uid://1tgna48ljrp0" path="res://Assets/Sprites/Sabine Battle Sprite.png" id="7_p12xs"]
+
+[resource]
+script = ExtResource("3_6fv6n")
+display_name = "Sabine Varr"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Do not turn this into sentiment; secure the line, then grieve properly.", "Focus. Emotion after the perimeter holds.", "If my death creates disorder, then you learned nothing from me.", "Stay sharp. The threat does not pause for mourning."])
+level_up_quotes = Array[String](["Improvement confirmed.", "Good. Precision should never remain static.", "Useful. I prefer growth that can be verified."])
+support_personality = "severe"
+character_class = ExtResource("1_8dgik")
+starting_weapon = ExtResource("4_0v44y")
+unit_sprite = ExtResource("7_p12xs")
+portrait = ExtResource("3_0v44y")
+max_hp = 30
+strength = 12
+defense = 9
+resistance = 4
+speed = 6
+agility = 13
+hp_growth = 60
+str_growth = 45
+mag_growth = 5
+def_growth = 30
+spd_growth = 25
+agi_growth = 55

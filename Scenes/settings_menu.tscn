@@ -1,0 +1,321 @@
+[gd_scene format=3 uid="uid://bykrititb8c5c"]
+
+[ext_resource type="Script" uid="uid://ys66hj6lpj2k" path="res://settings_menu.gd" id="1_ufg0w"]
+[ext_resource type="Texture2D" uid="uid://bbh2fwtb8y5ux" path="res://Scenes/UI/image-removebg-preview (85).png" id="2_fe37x"]
+[ext_resource type="Texture2D" uid="uid://de1ekxh23ddr5" path="res://Scenes/UI/image-removebg-preview (78).png" id="2_h2y1r"]
+[ext_resource type="Texture2D" uid="uid://bqyjm8ee3vbju" path="res://Scenes/UI/image-removebg-preview (83).png" id="3_3etfd"]
+[ext_resource type="Texture2D" uid="uid://bbl5j3ocy1885" path="res://Scenes/UI/image-removebg-preview (87).png" id="3_jjs6x"]
+[ext_resource type="Texture2D" uid="uid://wnvbiy44ghhi" path="res://Scenes/UI/image-removebg-preview (86).png" id="4_fsgis"]
+[ext_resource type="Texture2D" uid="uid://d0im37tmwcd0u" path="res://Scenes/UI/image-removebg-preview (82).png" id="4_rahb6"]
+[ext_resource type="Texture2D" uid="uid://dgcj0knugjqkh" path="res://Assets/Backgrounds/Gemini_Generated_Image_ll4p69ll4p69ll4p-removebg-preview.png" id="8_jjs6x"]
+
+[node name="SettingsMenu" type="Control" unique_id=1584989396]
+process_mode = 3
+z_index = 100
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ufg0w")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=248251516]
+unique_name_in_owner = true
+layer = 128
+
+[node name="HeaderControls" type="Control" parent="CanvasLayer" unique_id=690054291]
+z_index = 1000
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CloseButton" type="TextureButton" parent="CanvasLayer/HeaderControls" unique_id=2067364303]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 0
+offset_left = 745.0
+offset_top = 243.0
+offset_right = 1212.0
+offset_bottom = 343.0
+texture_normal = ExtResource("2_fe37x")
+texture_pressed = ExtResource("3_jjs6x")
+texture_hover = ExtResource("4_fsgis")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="QuitToTitleButton" type="TextureButton" parent="CanvasLayer/HeaderControls" unique_id=1422376015]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 100)
+layout_mode = 0
+offset_left = 743.0
+offset_top = 375.0
+offset_right = 1210.0
+offset_bottom = 475.0
+texture_normal = ExtResource("2_h2y1r")
+texture_pressed = ExtResource("3_3etfd")
+texture_hover = ExtResource("4_rahb6")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer" unique_id=866228181]
+z_index = 100
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -27.0
+offset_bottom = -27.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.3137255)
+
+[node name="ColorRect2" type="TextureRect" parent="CanvasLayer" unique_id=635556223]
+modulate = Color(1.6852883, 1.6852883, 1.6852883, 1)
+z_index = -1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -630.0
+offset_top = -641.75
+offset_right = 630.0
+offset_bottom = 641.75
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("8_jjs6x")
+expand_mode = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer" unique_id=1993941047]
+offset_left = 515.0
+offset_top = 483.0
+offset_right = 1406.0
+offset_bottom = 902.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/ScrollContainer" unique_id=570924535]
+unique_name_in_owner = true
+z_index = 1
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+theme_override_constants/separation = 20
+
+[node name="Master Volume" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=989467648]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Master Volume"
+
+[node name="VolumeSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1679641637]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_stretch_ratio = 1.34
+max_value = 1.0
+step = 0.01
+value = 0.5
+
+[node name="Label" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=630265801]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Camera Speed"
+
+[node name="CameraSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1871637802]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 200.0
+max_value = 1200.0
+step = 25.0
+value = 600.0
+
+[node name="Label2" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1990042730]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Unit Move Speed"
+
+[node name="MoveSpeedSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1494337249]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 0.05
+max_value = 0.5
+step = 0.05
+value = 0.3
+
+[node name="FeedbackTitle" type="LineEdit" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1425217206]
+layout_mode = 2
+placeholder_text = "Subject of the feedback"
+
+[node name="FeedbackBody" type="TextEdit" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=576083879]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+placeholder_text = "Write your feedback here ! Thanks !"
+
+[node name="SubmitFeedbackButton" type="Button" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=871342545]
+layout_mode = 2
+text = "Submit"
+
+[node name="ViewFeedbackButton" type="Button" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=208966237]
+layout_mode = 2
+text = "VIEW COMMUNITY REPORTS"
+
+[node name="Label3" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1965084206]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Minimap Opacity Slider"
+
+[node name="MinimapOpacitySlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1148600827]
+layout_mode = 2
+
+[node name="Label4" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1112763235]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Zoom Step Slider"
+
+[node name="ZoomStepSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=202864692]
+layout_mode = 2
+
+[node name="Label5" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=961551901]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Min Zoom Slider"
+
+[node name="MinZoomSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=797014196]
+layout_mode = 2
+
+[node name="Label6" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=294731218]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Max Zoom Slider"
+
+[node name="MaxZoomSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=458430623]
+layout_mode = 2
+
+[node name="ZoomToCursorToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=68792953]
+layout_mode = 2
+
+[node name="Label7" type="Label" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1107834893]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Edge Margin Slider"
+
+[node name="EdgeMarginSlider" type="HSlider" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1058464689]
+layout_mode = 2
+
+[node name="MinimapToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=470851361]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Minimap Toggle"
+
+[node name="DangerZoneToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=441167894]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Danger Toggle Zone"
+
+[node name="FollowEnemyToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=72007145]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_stretch_ratio = 0.89
+theme_override_font_sizes/font_size = 32
+button_pressed = true
+text = "  Camera Follows Enemies"
+alignment = 1
+icon_alignment = 1
+
+[node name="ShowGridToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1935796451]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Show Grid Toggle"
+
+[node name="ShowEnemyThreatToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=517325443]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Show Enemy Threat Toggle"
+
+[node name="ShowFactionTilesToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1921670525]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Show Faction Tiles Toggle"
+
+[node name="ShowPathToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1631363591]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Show Path Toggle"
+
+[node name="PathPulseToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1886625533]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Path Pulse Toggle"
+
+[node name="ShowBattleLogToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=723908198]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Show Battle Log Toggle"
+
+[node name="AllowFogToggle" type="CheckBox" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=1149274053]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Allow Fog Toggle"
+
+[node name="ResetDefaultsButton" type="Button" parent="CanvasLayer/ScrollContainer/VBoxContainer" unique_id=2017681716]
+custom_minimum_size = Vector2(200, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 32
+text = "Reset to Default Settings"
+
+[node name="FeedbackBoard" type="Panel" parent="CanvasLayer" unique_id=1980899199]
+visible = false
+offset_left = 1262.0
+offset_top = 196.0
+offset_right = 1705.0
+offset_bottom = 903.0
+
+[node name="FeedbackScroll" type="ScrollContainer" parent="CanvasLayer/FeedbackBoard" unique_id=1230828063]
+custom_minimum_size = Vector2(200, 500)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="FeedbackList" type="VBoxContainer" parent="CanvasLayer/FeedbackBoard/FeedbackScroll" unique_id=1784165890]
+custom_minimum_size = Vector2(400, 500)
+layout_mode = 2
+
+[node name="CloseBoardButton" type="Button" parent="CanvasLayer/FeedbackBoard" unique_id=320171928]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -4.0
+offset_top = -8.0
+offset_right = 4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Close"
+
+[node name="RefreshBoardButton" type="Button" parent="CanvasLayer/FeedbackBoard" unique_id=1297330152]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 655.0
+offset_right = 257.0
+offset_bottom = 678.0
+text = "Refresh"

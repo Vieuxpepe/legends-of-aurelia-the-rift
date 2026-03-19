@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://vb5lsq1wvl4r"]
+
+[ext_resource type="Texture2D" uid="uid://c51seqfja4vpo" path="res://Resources/Materials/Icons/Parchment.png" id="1_7ttud"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_0ufiq"]
+
+[resource]
+script = ExtResource("2_0ufiq")
+rarity = "Uncommon"
+item_name = "Recipe: Bone Sword"
+description = "Recipe for the Bone Sword."
+gold_cost = 750
+icon = ExtResource("1_7ttud")
+metadata/_custom_type_script = "uid://dxefrus755705"

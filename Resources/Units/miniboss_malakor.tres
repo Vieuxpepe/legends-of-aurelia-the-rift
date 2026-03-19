@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://b5h6wydjfhdy8"]
+
+[ext_resource type="Resource" uid="uid://fxvmgcknu8xh" path="res://Resources/Classes/Monster.tres" id="1_fflsa"]
+[ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_08eyg"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_0wv4x"]
+[ext_resource type="Resource" uid="uid://ckitvh4grj5oh" path="res://Resources/Chests/Keys/Iron Key.tres" id="4_gukrx"]
+[ext_resource type="Texture2D" uid="uid://bgwrhbndk35qp" path="res://Assets/Portraits/Portrait Malakor.png" id="6_g8qon"]
+[ext_resource type="Resource" uid="uid://c88l0i4cfojj" path="res://Resources/Materials/Scrap Iron.tres" id="6_lmmra"]
+[ext_resource type="Resource" uid="uid://bmge3tdi8ymys" path="res://Resources/GeneratedItems/Weapon_Steel_Sword.tres" id="8_fflsa"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="8_j1s6b"]
+[ext_resource type="Texture2D" uid="uid://didwxhrlvx0u0" path="res://Assets/Sprites/Sprite Malakor.png" id="10_08eyg"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="10_exx01"]
+
+[sub_resource type="Resource" id="Resource_6bxmx"]
+script = ExtResource("3_0wv4x")
+item = ExtResource("4_gukrx")
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_cnqmn"]
+script = ExtResource("3_0wv4x")
+item = ExtResource("6_lmmra")
+drop_chance = 50.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[resource]
+script = ExtResource("8_j1s6b")
+display_name = "Malakor"
+character_class = ExtResource("1_fflsa")
+starting_weapon = ExtResource("8_fflsa")
+death_sound = ExtResource("2_08eyg")
+unit_sprite = ExtResource("10_08eyg")
+portrait = ExtResource("6_g8qon")
+visual_scale = 1.35
+max_hp = 40
+strength = 12
+defense = 7
+resistance = 3
+speed = 5
+agility = 4
+min_gold_drop = 2
+max_gold_drop = 10
+drops_equipped_weapon = true
+equipped_weapon_chance = 15
+extra_loot = Array[ExtResource("3_0wv4x")]([SubResource("Resource_6bxmx"), SubResource("Resource_cnqmn"), SubResource("Resource_cnqmn")])
+metadata/_custom_type_script = "uid://3jului3v2v6"

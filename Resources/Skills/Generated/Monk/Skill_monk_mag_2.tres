@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cxsny1h8kpsul"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_n6oe3"]
+
+[resource]
+script = ExtResource("1_n6oe3")
+skill_id = "monk_mag_2"
+skill_name = "Inner Power II"
+description = "Increases Magic by +2."
+required_skill_id = "monk_spd_2"
+grid_position = Vector2(5, 0)
+stat_to_boost = "mag"
+boost_amount = 2

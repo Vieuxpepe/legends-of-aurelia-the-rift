@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://buacxmjljgyrd"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_nb3nc"]
+
+[resource]
+script = ExtResource("1_nb3nc")
+skill_id = "sm_agi_1"
+skill_name = "Rangefinding"
+description = "Grants +2 Agility."
+required_skill_id = "sm_def_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "agi"
+boost_amount = 2

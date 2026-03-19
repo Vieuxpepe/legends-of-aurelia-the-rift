@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bmwtl70nlna6h"]
+
+[ext_resource type="Resource" uid="uid://dekndssahuvia" path="res://Resources/Classes/Monk.tres" id="1_l7oov"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_1syoq"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_syrnb"]
+[ext_resource type="Resource" uid="uid://cxx8s800eskj8" path="res://Resources/GeneratedItems/Weapon_Temple_Gauntlets.tres" id="4_6k1xl"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_g78l4"]
+
+[resource]
+script = ExtResource("3_syrnb")
+display_name = "Purifier Acolyte"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_l7oov")
+starting_weapon = ExtResource("4_6k1xl")
+max_hp = 20
+strength = 7
+magic = 2
+defense = 4
+resistance = 5
+speed = 5
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

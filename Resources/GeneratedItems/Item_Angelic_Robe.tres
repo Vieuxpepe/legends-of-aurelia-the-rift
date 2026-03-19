@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://d4fjf1fku02tf"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_e05i6"]
+
+[resource]
+script = ExtResource("1_e05i6")
+rarity = "Legendary"
+description = "Permanently increases max HP by 5."
+item_name = "Angelic Robe"
+heal_amount = 0
+gold_cost = 5000
+hp_boost = 5

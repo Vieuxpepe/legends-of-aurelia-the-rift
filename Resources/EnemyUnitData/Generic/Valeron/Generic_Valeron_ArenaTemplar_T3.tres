@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bp8yantyuh3t"]
+
+[ext_resource type="Resource" uid="uid://d08sn5e7me4qv" path="res://Resources/Classes/PromotedClass/HighPaladin.tres" id="1_jyhrh"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_3u3rn"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_t2633"]
+[ext_resource type="Resource" uid="uid://bkknxp83iqitf" path="res://Resources/GeneratedItems/Weapon_Judgment_Pike.tres" id="4_dn2su"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_dfqsd"]
+
+[resource]
+script = ExtResource("3_t2633")
+display_name = "Arena Templar"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_jyhrh")
+starting_weapon = ExtResource("4_dn2su")
+max_hp = 36
+strength = 13
+magic = 4
+defense = 10
+resistance = 8
+speed = 7
+agility = 8
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

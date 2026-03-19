@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://d3d5f2dk3mdlc"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_23h3d"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_tvmu7"]
+
+[resource]
+script = ExtResource("2_tvmu7")
+item_name = "Rosemary Sprig"
+description = "A pine-scented herb bundle with woody stems and narrow leaves. It perfumes kitchens, roast pans, and smoky stew pots alike."
+icon = ExtResource("1_23h3d")
+category = "Cooking"

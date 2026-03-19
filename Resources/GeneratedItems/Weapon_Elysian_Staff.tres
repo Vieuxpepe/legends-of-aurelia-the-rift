@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://d064jmrr7geum"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_bkihr"]
+
+[resource]
+script = ExtResource("1_bkihr")
+rarity = "Legendary"
+description = "A staff that can heal and protect en masse."
+weapon_name = "Elysian Staff"
+gold_cost = 9500
+damage_type = 1
+weapon_type = 3
+is_healing_staff = true
+is_buff_staff = true
+affected_stat = "resistance"
+effect_amount = 5
+might = 0
+hit_bonus = 28
+max_range = 3
+max_durability = 23
+current_durability = 23

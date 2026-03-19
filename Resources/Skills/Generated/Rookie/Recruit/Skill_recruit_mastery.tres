@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dd2u8ditaehol"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_w4vll"]
+
+[resource]
+script = ExtResource("1_w4vll")
+skill_id = "recruit_mastery"
+skill_name = "Graduate: Shield Clash"
+description = "Unlocks Shield Clash, a defensive technique learned through basic military training."
+required_skill_id = "recruit_spd_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Shield Clash"

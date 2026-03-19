@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://dy2calwuivxy0"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_7523e"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_fltaf"]
+[ext_resource type="Resource" uid="uid://fl4hglmgbn7u" path="res://Resources/Skills/Generated/Promoted/SiegeMaster/Skill_sm_str_1.tres" id="3_8hoe2"]
+[ext_resource type="Resource" uid="uid://bo3bepq0urvie" path="res://Resources/Skills/Generated/Promoted/SiegeMaster/Skill_sm_def_1.tres" id="4_65c1g"]
+[ext_resource type="Resource" uid="uid://buacxmjljgyrd" path="res://Resources/Skills/Generated/Promoted/SiegeMaster/Skill_sm_agi_1.tres" id="5_xwiys"]
+[ext_resource type="Resource" uid="uid://blh8swuu0rpg5" path="res://Resources/Skills/Generated/Promoted/SiegeMaster/Skill_sm_hp_1.tres" id="6_5ykfd"]
+[ext_resource type="Resource" uid="uid://d1k740er2x4mo" path="res://Resources/Skills/Generated/Promoted/SiegeMaster/Skill_sm_mastery.tres" id="7_nsdrn"]
+
+[resource]
+script = ExtResource("1_7523e")
+tree_name = "SiegeMaster Tree"
+skills = Array[ExtResource("2_fltaf")]([ExtResource("3_8hoe2"), ExtResource("4_65c1g"), ExtResource("5_xwiys"), ExtResource("6_5ykfd"), ExtResource("7_nsdrn")])

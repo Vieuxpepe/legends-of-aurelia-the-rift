@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://rqsihv3hwyvw"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_bb5es"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_60ira"]
+
+[resource]
+script = ExtResource("2_60ira")
+rarity = "Uncommon"
+item_name = "Widow Resin"
+description = "A dark resin burned by Obsidian Circle mourners before battlefield harvests. The smoke is sweet at first, then leaves the tongue bitter with grave dust."
+gold_cost = 52
+icon = ExtResource("1_bb5es")
+category = "Lore_And_Misc"

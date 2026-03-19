@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://bbtlv0w1gnat1"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_8jirx"]
+
+[resource]
+script = ExtResource("1_8jirx")
+rarity = "Rare"
+description = "A heavier polearm meant to punish armored foes."
+weapon_name = "Knight's Halberd"
+gold_cost = 2200
+weapon_type = 1
+effect_amount = 0
+might = 9
+hit_bonus = 2

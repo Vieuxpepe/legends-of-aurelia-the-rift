@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://0fyjjdo2yr7l"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_t78xq"]
+
+[resource]
+script = ExtResource("1_t78xq")
+skill_id = "ww_hp_1"
+skill_name = "Ancient Vitality"
+description = "Grants +8 Max HP."
+boost_amount = 8

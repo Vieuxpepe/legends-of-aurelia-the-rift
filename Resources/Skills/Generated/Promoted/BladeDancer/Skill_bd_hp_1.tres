@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dswuah1y6byu6"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_spfb6"]
+
+[resource]
+script = ExtResource("1_spfb6")
+skill_id = "bd_hp_1"
+skill_name = "Crimson Flourish"
+required_skill_id = "bd_str_1"
+grid_position = Vector2(3, 0)

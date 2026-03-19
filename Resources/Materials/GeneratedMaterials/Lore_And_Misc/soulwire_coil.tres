@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c4r67s74varyn"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_c1y5f"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_876t1"]
+
+[resource]
+script = ExtResource("2_876t1")
+rarity = "Epic"
+item_name = "Soulwire Coil"
+description = "A thin spool of silver-black filament used by Obsidian Circle necromancers to anchor spirits during dissection rites. It was found in field laboratories hidden beyond Greyspire's crypts."
+gold_cost = 233
+icon = ExtResource("1_c1y5f")
+category = "Lore_And_Misc"

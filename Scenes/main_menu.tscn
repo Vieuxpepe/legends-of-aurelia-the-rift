@@ -1,0 +1,382 @@
+[gd_scene format=3 uid="uid://ck2b7ngw1ojcx"]
+
+[ext_resource type="Script" uid="uid://chtc08xd0g160" path="res://MainMenu.gd" id="1_1ehe0"]
+[ext_resource type="Texture2D" uid="uid://htw76amfmtgk" path="res://Assets/UI/1771395085-8cec83fd.jpg" id="3_yhxw7"]
+[ext_resource type="Texture2D" uid="uid://c5xutvpax5tka" path="res://Assets/UI/image-removebg-preview (50).png" id="4_16hvj"]
+[ext_resource type="Texture2D" uid="uid://bf2nfmdmx0lrn" path="res://Assets/UI/image-removebg-preview (49).png" id="5_cp0ys"]
+[ext_resource type="Texture2D" uid="uid://dt6ju18h1s3qj" path="res://Assets/UI/871fa80c-9d9d-4614-aa71-213af42da7bb.png" id="5_n45e2"]
+[ext_resource type="Texture2D" uid="uid://d2r5o7cvi16ov" path="res://Assets/UI/image-removebg-preview (52).png" id="5_vr1f0"]
+[ext_resource type="Texture2D" uid="uid://drdd285jaim0c" path="res://Assets/UI/image-removebg-preview (47).png" id="5_yhxw7"]
+[ext_resource type="Texture2D" uid="uid://bt08jx0qfqniy" path="res://Assets/UI/image-removebg-preview (51).png" id="6_t1dhk"]
+[ext_resource type="Texture2D" uid="uid://dpoldpw07asm7" path="res://Assets/UI/image-removebg-preview (48).png" id="6_yhxw7"]
+[ext_resource type="Texture2D" uid="uid://d2otpr5538ngx" path="res://Assets/UI/image-removebg-preview (53).png" id="10_5egv6"]
+[ext_resource type="Texture2D" uid="uid://dqwsbqhpd7uxp" path="res://Assets/UI/image-removebg-preview (55).png" id="11_vtepg"]
+[ext_resource type="Texture2D" uid="uid://brkkw525pi5a7" path="res://Assets/UI/image-removebg-preview (54).png" id="12_8dnnj"]
+[ext_resource type="Texture2D" uid="uid://bfxcy4tljk5p4" path="res://Assets/UI/image-removebg-preview (56).png" id="14_m3bi6"]
+[ext_resource type="Texture2D" uid="uid://dk57p7omh0elb" path="res://Assets/UI/image-removebg-preview (58).png" id="15_wyh8j"]
+[ext_resource type="Texture2D" uid="uid://c4uj6qbkp5i7p" path="res://Assets/UI/image-removebg-preview (57).png" id="16_ujyyl"]
+[ext_resource type="Texture2D" uid="uid://c4y31s2cv1p8q" path="res://Assets/UI/image-removebg-preview (59).png" id="17_ujyyl"]
+[ext_resource type="Texture2D" uid="uid://dh7mpcrlehv0j" path="res://Assets/UI/image-removebg-preview (61).png" id="18_6dk6o"]
+[ext_resource type="Texture2D" uid="uid://fxetnqjtx4tx" path="res://Assets/UI/image-removebg-preview (60).png" id="18_mkpwh"]
+[ext_resource type="Texture2D" uid="uid://cq1uky3nx6e06" path="res://Assets/UI/image-removebg-preview (62).png" id="20_jr6u5"]
+[ext_resource type="Texture2D" uid="uid://cjeswjx5cm4wu" path="res://Assets/UI/image-removebg-preview (65).png" id="21_6m47u"]
+[ext_resource type="Texture2D" uid="uid://q6y4fdk5g62t" path="res://Assets/UI/image-removebg-preview (64).png" id="22_84iac"]
+[ext_resource type="Texture2D" uid="uid://rrvcle54emau" path="res://Assets/UI/ChatGPT_Image_18_févr._2026__21_20_48-removebg-preview.png" id="23_jr6u5"]
+[ext_resource type="Texture2D" uid="uid://c2wnkw0w4p2ew" path="res://Assets/UI/AutoSave.png" id="24_5n0dv"]
+[ext_resource type="Texture2D" uid="uid://dy2qjl0mq188e" path="res://Assets/Tilesets/tiles/1 Shadow/2.png" id="24_6m47u"]
+[ext_resource type="Texture2D" uid="uid://bjypt03j7j0h3" path="res://Assets/UI/FileSlot.png" id="24_84iac"]
+[ext_resource type="Texture2D" uid="uid://nhbjg87vtrab" path="res://Assets/UI/X Close Button.png" id="26_ne6ao"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_fmarx"]
+texture = ExtResource("24_5n0dv")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_5n0dv"]
+texture = ExtResource("24_84iac")
+texture_margin_top = 10.0
+texture_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_jw7lb"]
+texture = ExtResource("26_ne6ao")
+
+[node name="MainMenu" type="Control" unique_id=972171175]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_1ehe0")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1462349854]
+visible = false
+z_index = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -43.0
+offset_top = -57.0
+offset_right = 37.0
+offset_bottom = 63.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_n45e2")
+
+[node name="ColorRect" type="TextureRect" parent="." unique_id=377793913]
+z_index = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0000007
+offset_top = -123.0
+offset_right = -378.80017
+offset_bottom = -167.80005
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(1.25, 1.25)
+texture = ExtResource("3_yhxw7")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1142639590]
+visible = false
+z_index = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -304.99994
+offset_top = -82.99997
+offset_right = 421.0
+offset_bottom = 660.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.8, 0.8)
+theme_override_constants/separation = 50
+
+[node name="TitleLabel" type="Sprite2D" parent="VBoxContainer" unique_id=586463745]
+modulate = Color(0.72043425, 0.72043425, 0.72043425, 0.6862745)
+z_index = 200
+position = Vector2(368.74988, -321.25003)
+scale = Vector2(2.0562704, 2.1660538)
+texture = ExtResource("23_jr6u5")
+
+[node name="StartButton" type="TextureButton" parent="VBoxContainer" unique_id=611478781]
+layout_mode = 2
+texture_normal = ExtResource("4_16hvj")
+texture_pressed = ExtResource("5_vr1f0")
+texture_hover = ExtResource("6_t1dhk")
+stretch_mode = 5
+
+[node name="SettingsButton" type="TextureButton" parent="VBoxContainer" unique_id=414523919]
+layout_mode = 2
+texture_normal = ExtResource("5_yhxw7")
+texture_pressed = ExtResource("5_cp0ys")
+texture_hover = ExtResource("6_yhxw7")
+stretch_mode = 5
+
+[node name="QuitButton" type="TextureButton" parent="VBoxContainer" unique_id=1499939058]
+layout_mode = 2
+texture_normal = ExtResource("10_5egv6")
+texture_pressed = ExtResource("11_vtepg")
+texture_hover = ExtResource("12_8dnnj")
+stretch_mode = 5
+
+[node name="CampaignMenu" type="VBoxContainer" parent="." unique_id=864514463]
+z_index = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -490.00006
+offset_top = -422.0
+offset_right = 675.8823
+offset_bottom = 567.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.85, 0.85)
+theme_override_constants/separation = 50
+
+[node name="ContinueButton" type="TextureButton" parent="CampaignMenu" unique_id=472661891]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+texture_normal = ExtResource("14_m3bi6")
+texture_pressed = ExtResource("15_wyh8j")
+texture_hover = ExtResource("16_ujyyl")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="NewGameButton" type="TextureButton" parent="CampaignMenu" unique_id=1364955867]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+texture_normal = ExtResource("17_ujyyl")
+texture_pressed = ExtResource("18_6dk6o")
+texture_hover = ExtResource("18_mkpwh")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="LoadGameButton" type="TextureButton" parent="CampaignMenu" unique_id=811718210]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+texture_normal = ExtResource("20_jr6u5")
+texture_pressed = ExtResource("21_6m47u")
+texture_hover = ExtResource("22_84iac")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CampaignMenu" unique_id=796023840]
+custom_minimum_size = Vector2(200, 100)
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="AutoSlot1Button" type="Button" parent="CampaignMenu/HBoxContainer" unique_id=1540012668]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+theme_override_styles/normal = SubResource("StyleBoxTexture_fmarx")
+
+[node name="Slot1Button" type="Button" parent="CampaignMenu/HBoxContainer" unique_id=1626312602]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(850, 125)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 0, 1)
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxTexture_5n0dv")
+
+[node name="MarginContainer" type="MarginContainer" parent="CampaignMenu/HBoxContainer/Slot1Button" unique_id=505540067]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="HBox" type="HBoxContainer" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer" unique_id=1841185353]
+custom_minimum_size = Vector2(1000, 0)
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Portrait" type="TextureRect" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer/HBox" unique_id=784246713]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextVBox" type="VBoxContainer" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer/HBox" unique_id=375325112]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NameLabel" type="Label" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=110773405]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="LocationLabel" type="Label" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=1369249897]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="GoldLabel" type="Label" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer/HBox" unique_id=176288007]
+custom_minimum_size = Vector2(256, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="DeleteSlot1" type="Button" parent="CampaignMenu/HBoxContainer/Slot1Button/MarginContainer/HBox" unique_id=265080633]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxTexture_jw7lb")
+text = "X"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="CampaignMenu" unique_id=1554458125]
+custom_minimum_size = Vector2(200, 100)
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="AutoSlot2Button" type="Button" parent="CampaignMenu/HBoxContainer2" unique_id=527141916]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+theme_override_styles/normal = SubResource("StyleBoxTexture_fmarx")
+
+[node name="Slot2Button" type="Button" parent="CampaignMenu/HBoxContainer2" unique_id=1119414202]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(850, 125)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 0, 1)
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxTexture_5n0dv")
+
+[node name="MarginContainer" type="MarginContainer" parent="CampaignMenu/HBoxContainer2/Slot2Button" unique_id=1097098932]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="HBox" type="HBoxContainer" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer" unique_id=811711459]
+custom_minimum_size = Vector2(1000, 0)
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Portrait" type="TextureRect" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer/HBox" unique_id=1665046368]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextVBox" type="VBoxContainer" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer/HBox" unique_id=1386817060]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NameLabel" type="Label" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=673580330]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="LocationLabel" type="Label" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=162222765]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="GoldLabel" type="Label" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer/HBox" unique_id=878596356]
+custom_minimum_size = Vector2(256, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="DeleteSlot2" type="Button" parent="CampaignMenu/HBoxContainer2/Slot2Button/MarginContainer/HBox" unique_id=753237760]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxTexture_jw7lb")
+text = "X"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="CampaignMenu" unique_id=1637165024]
+custom_minimum_size = Vector2(200, 100)
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="AutoSlot3Button" type="Button" parent="CampaignMenu/HBoxContainer3" unique_id=595945696]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+theme_override_styles/normal = SubResource("StyleBoxTexture_fmarx")
+
+[node name="Slot3Button" type="Button" parent="CampaignMenu/HBoxContainer3" unique_id=662597964]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(850, 125)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 0, 1)
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxTexture_5n0dv")
+
+[node name="MarginContainer" type="MarginContainer" parent="CampaignMenu/HBoxContainer3/Slot3Button" unique_id=1842954856]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="HBox" type="HBoxContainer" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer" unique_id=407202899]
+custom_minimum_size = Vector2(1000, 0)
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Portrait" type="TextureRect" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer/HBox" unique_id=1014498999]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextVBox" type="VBoxContainer" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer/HBox" unique_id=1059867423]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NameLabel" type="Label" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=1360673290]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="LocationLabel" type="Label" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=769086424]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="GoldLabel" type="Label" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer/HBox" unique_id=620365230]
+custom_minimum_size = Vector2(256, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+
+[node name="DeleteSlot3" type="Button" parent="CampaignMenu/HBoxContainer3/Slot3Button/MarginContainer/HBox" unique_id=395225487]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxTexture_jw7lb")
+text = "X"
+
+[node name="DeleteConfirmation" type="ConfirmationDialog" parent="." unique_id=482545195]
+unique_name_in_owner = true
+
+[node name="OverwriteConfirmation" type="ConfirmationDialog" parent="." unique_id=1870114719]
+unique_name_in_owner = true
+
+[node name="2" type="Sprite2D" parent="." unique_id=1720970407]
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+position = Vector2(278, 436)
+texture = ExtResource("24_6m47u")
+
+[node name="3" type="Sprite2D" parent="." unique_id=2130604082]
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+position = Vector2(278, 436)
+texture = ExtResource("24_6m47u")

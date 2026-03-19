@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bi5o2wgt0xygl"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_m6vsf"]
+
+[resource]
+script = ExtResource("1_m6vsf")
+skill_id = "monster_agi_2"
+skill_name = "Swift Paws II"
+description = "Increases Agility by +2."
+required_skill_id = "monster_terrifying_roar"
+grid_position = Vector2(4, 0)
+stat_to_boost = "agi"
+boost_amount = 2

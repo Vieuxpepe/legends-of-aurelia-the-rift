@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dekndssahuvia"]
+
+[ext_resource type="Resource" uid="uid://bod8a3oqqldc5" path="res://Resources/Skills/MonkTree.tres" id="1_euqpc"]
+[ext_resource type="Resource" uid="uid://bqhyltkqmqfpx" path="res://Resources/Classes/PromotedClass/BladeWeaver.tres" id="1_feva4"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_qlsdm"]
+[ext_resource type="Resource" uid="uid://dytneeqlng3tj" path="res://Resources/Classes/PromotedClass/Berserker.tres" id="2_euqpc"]
+[ext_resource type="Resource" uid="uid://crrxowmyf6sgg" path="res://Resources/Classes/PromotedClass/FireSage.tres" id="3_pkwng"]
+
+[resource]
+script = ExtResource("1_qlsdm")
+job_name = "Monk"
+move_range = 5
+allowed_weapon_types = Array[int]([8])
+class_skill_tree = ExtResource("1_euqpc")
+promotion_options = Array[Resource]([ExtResource("1_feva4"), ExtResource("2_euqpc"), ExtResource("3_pkwng")])
+hp_bonus = 11
+str_bonus = 2
+def_bonus = 1
+spd_bonus = 1
+agi_bonus = 2
+res_bonus = 1
+hp_growth_bonus = 15
+spd_growth_bonus = 10
+agi_growth_bonus = 10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

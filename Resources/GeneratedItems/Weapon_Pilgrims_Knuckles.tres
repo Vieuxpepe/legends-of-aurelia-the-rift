@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cvv7yw08137uj"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_5ay1l"]
+
+[resource]
+script = ExtResource("1_5ay1l")
+description = "Simple knuckle irons used by wandering monks and zealots."
+weapon_name = "Pilgrim's Knuckles"
+gold_cost = 390
+weapon_type = 8
+effect_amount = 0
+might = 4
+hit_bonus = 14
+max_durability = 40
+current_durability = 40

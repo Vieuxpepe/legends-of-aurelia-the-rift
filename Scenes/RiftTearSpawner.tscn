@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://e0u8l1nqatoe"]
+
+[ext_resource type="Texture2D" uid="uid://d2w7ve0jhr8yh" path="res://Assets/Sprites/RiftSpawner.png" id="1_28hp2"]
+[ext_resource type="Script" uid="uid://bc4t1ov0h4134" path="res://Scripts/Core/EnemySpawner.gd" id="1_wf5r8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wf5r8"]
+bg_color = Color(0.34509805, 1, 0.078431375, 0.7764706)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="RiftTearSpawner" type="Node2D" unique_id=1224342683]
+script = ExtResource("1_wf5r8")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=118498636]
+modulate = Color(0.6156863, 1, 1, 1)
+position = Vector2(32.999996, 32)
+scale = Vector2(0.23076923, 0.22222224)
+texture = ExtResource("1_28hp2")
+
+[node name="HealthBar" type="ProgressBar" parent="." unique_id=1503937879]
+z_index = 2
+offset_top = -25.0
+offset_right = 64.0
+offset_bottom = -5.0
+theme_override_styles/fill = SubResource("StyleBoxFlat_wf5r8")
+value = 100.0

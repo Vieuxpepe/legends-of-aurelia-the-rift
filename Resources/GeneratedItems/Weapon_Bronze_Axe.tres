@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://c3f240328fbmh"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_gkdw3"]
+
+[resource]
+script = ExtResource("1_gkdw3")
+description = "A crude but effective axe for bruisers and labor fighters."
+weapon_name = "Bronze Axe"
+gold_cost = 360
+weapon_type = 2
+effect_amount = 0
+hit_bonus = 2
+max_durability = 42
+current_durability = 42

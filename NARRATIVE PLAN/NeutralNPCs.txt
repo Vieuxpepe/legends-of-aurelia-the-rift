@@ -1,0 +1,487 @@
+Oui — et c’est même une très bonne idée.
+
+Ton monde appelle naturellement des personnages qui ne sont ni simplement “alliés verts” ni “ennemis rouges”. Le canon repose déjà sur des **factions fracturées**, des **institutions divisées de l’intérieur**, des **chapitres d’exploration**, un **hub vivant à Greyspire**, une **renommée globale**, et une guerre où tout le monde n’a pas la même définition du bien commun. Donc ajouter des **neutres**, **alliés temporaires**, **anti-héros**, **autorités locales**, **civils influents**, **intermédiaires troubles** et **wildcards** est non seulement cohérent, mais presque nécessaire pour que le continent paraisse habité.
+
+Le plus important est que ces personnages aient chacun une **fonction claire** :
+
+* faire respirer une faction sans en être le porte-parole officiel,
+* complexifier un chapitre,
+* offrir des points de vue latéraux,
+* ou servir de pont entre guerre, politique, foi, commerce et survie.
+
+Je te propose une structure simple :
+
+* **Neutres** = gens qui ne veulent pas appartenir à un camp, ou qui servent une autre logique
+* **Alliés non jouables** = soutiens, patrons, protecteurs, figures de coalition
+* **Anti-héros / alliés ambigus** = utiles, fascinants, mais moralement risqués
+* **Présences secondaires “random” mais fortes** = pas centrales, mais mémorables et ancrées dans le monde
+
+---
+
+# 1. Neutres majeurs
+
+## 1.1. Magister Elowen Vey
+
+**Catégorie :** Neutre intellectuelle
+**Fonction :** médiatrice savante / gardienne de vérités fragmentaires
+**Filiation naturelle :** College of Seekers, mais non alignée aux censeurs
+
+### Concept
+
+Elowen est une érudite vieillissante du College of Seekers qui a cessé de croire que l’institution mérite automatiquement sa loyauté. Elle n’est pas révolutionnaire, mais elle a vu trop de vérités enchaînées, vendues ou ensevelies pour continuer à servir docilement. Elle vit dans une semi-retraite mobile entre archives abandonnées, sanctuaires ruinés et maisons sûres de vieux collègues.
+
+### Pourquoi elle fit dans l’histoire
+
+Le College est déjà conçu comme **officiellement neutre mais intérieurement divisé** entre protection du savoir, contrôle et marchandisation. Un personnage comme Elowen te permet de montrer cette fracture sans faire de toute l’institution un bloc abstrait. Elle s’insère particulièrement bien autour des chapitres 12, 16 et 17, où vérité, mémoire et usage politique du savoir deviennent centraux.
+
+### Personnalité
+
+* Extrêmement calme
+* Polie mais pas soumise
+* Esprit chirurgical
+* Une fatigue élégante, pas misérable
+* Elle ne donne jamais l’impression d’avoir peur, mais plutôt d’avoir déjà intégré le pire
+
+### Façon de parler
+
+* Très précise
+* Ne dramatise jamais
+* Peut être sèche sans hausser le ton
+* Quand elle dit quelque chose de grave, cela tombe comme une évidence, pas comme un twist
+
+### Fonction narrative
+
+* Elle donne des fragments de vérité sans tout révéler
+* Elle peut contredire à la fois Valeron, le College, et certaines versions de l’Ordre
+* Elle peut servir de **source fiable mais incomplète**, ce qui est bien meilleur qu’un simple lore dump
+
+### Fonction gameplay / exploration
+
+* PNJ récurrent d’exploration
+* Peut apparaître dans le hub ou dans des lieux cachés
+* Débloque :
+
+  * notes sur le Veil
+  * variantes de codex
+  * mini-quêtes d’archives
+  * options non létales ou intellectuelles
+
+### Angle émotionnel
+
+Sorrel, Tariq, Corvin, Liora et Kaelen réagiraient tous différemment à elle.
+
+### Pourquoi elle est intéressante
+
+Parce qu’elle n’est ni “bonne prof” ni “sage mystérieuse”. Elle est une femme qui a survécu assez longtemps pour comprendre que la vérité n’est jamais pure une fois qu’elle entre dans une institution.
+
+---
+
+## 1.2. Warden Thane Ors
+
+**Catégorie :** Neutre territorial
+**Fonction :** autorité locale rude / protecteur de routes / gardien non national
+**Filiation naturelle :** vieil ordre de routes impériales brisées
+
+### Concept
+
+Thane Ors dirige un petit réseau de gardes de routes, passeurs et survivants qui protègent certains tronçons oubliés d’anciennes voies impériales. Il ne sert ni Valeron, ni la League, ni Edranor. Pour lui, les routes appartiennent à ceux qui y meurent si personne ne les protège.
+
+### Pourquoi il fit dans l’histoire
+
+Aurelia est décrite comme un continent de **routes impériales brisées, forteresses ruinées, villages isolés et zones disputées**. Un personnage comme Thane rend visible tout ce tissu intermédiaire qui existe entre les États. Il s’insère très bien entre les niveaux 4 à 9, ou comme PNJ récurrent de world travel.
+
+### Personnalité
+
+* Dur
+* Taciturne
+* Très peu impressionné par les idéologies
+* Protecteur par fonction, pas par sentimentalisme
+* Respecte la fiabilité plus que les serments
+
+### Fonction narrative
+
+* Il rappelle que l’ordre local ne vient pas toujours des royaumes
+* Il donne un contrepoint à Garrick, Kaelen et Rufus
+* Il peut avoir des opinions cinglantes sur les trois grandes puissances
+
+### Fonction gameplay
+
+* Donne accès à des raccourcis, escortes, routes sûres, caches
+* Peut moduler des chapitres d’exploration selon la fame
+* Peut refuser l’aide si le groupe agit comme une force d’occupation
+
+### Pourquoi il est intéressant
+
+Parce qu’il n’est pas un “chef rebelle cool”. C’est un homme fatigué qui a remplacé l’État là où l’État a cessé d’exister.
+
+---
+
+# 2. Alliés non jouables majeurs
+
+## 2.1. Queen Seraphine Valedorn
+
+**Catégorie :** Alliée potentielle majeure
+**Fonction :** souveraine crédible / figure de coalition / puissance de guerre légitime
+**Filiation naturelle :** Edranor
+
+### Concept
+
+Tu l’as déjà dans le canon, et elle mérite d’être pleinement exploitée comme **alliée non jouable centrale**, pas seulement comme nom de bible. Elle est une reine cavalière-mage, liée à la terre, à la guerre, et à la survie d’un royaume affamé. Elle ne doit pas être “la bonne reine parfaite”, mais une souveraine formidable, lucide, parfois terrifiante, qui porte un pays en train de se fissurer. 
+
+### Pourquoi elle fit dans l’histoire
+
+Edranor n’est pas une simple monarchie générique : le canon insiste sur famine, héritage agraire, ordre chevaleresque, réformeurs et opportunistes. Seraphine peut être le visage du meilleur d’Edranor sans effacer sa crise.
+
+### Personnalité
+
+* Majestueuse sans vanité
+* Très concrète
+* Parle comme quelqu’un qui pense en récoltes, morts, chevaux, frontières et saisons
+* Peut être tendre, mais jamais légère
+* Profondément dangereuse quand on menace son peuple
+
+### Fonction narrative
+
+* Figure d’autorité qui crédibilise la coalition
+* Peut mettre Garrick, Darian, Inez et même l’Avatar sous pression morale
+* Permet de montrer une autorité qui n’est ni sacerdotale, ni marchande, ni occultiste
+
+### Fonction gameplay
+
+* Pas jouable, mais peut :
+
+  * prêter cavalerie ou supply
+  * accorder bonus de coalition
+  * influencer le final de Level 17
+  * apparaître dans des scènes montées / pré-bataille
+
+### Pourquoi elle est intéressante
+
+Parce qu’elle peut être admirable sans être confortable. Elle incarne le poids réel du pouvoir.
+
+---
+
+## 2.2. Cassian Valecourt
+
+**Catégorie :** Allié politique ambigu
+**Fonction :** consul de la League / mécène / partenaire dangereux
+**Filiation naturelle :** Vharian Merchant League
+
+### Concept
+
+Le canon le présente déjà comme un consul, magnat maritime et homme politiquement redoutable sans élever la voix. C’est exactement le type de personnage qu’il faut utiliser comme **allié temporaire non fiable**, parfois utile, parfois glacialement calculateur. 
+
+### Pourquoi il fit dans l’histoire
+
+La League a besoin d’un visage raffiné, civilisé, séduisant, qui ne soit ni Rhex le prédateur portuaire ni Nerez la violence administrative pure. Cassian peut représenter la version la plus persuasive du pouvoir marchand : cultivée, pragmatique, presque admirable, mais toujours comptable.
+
+### Personnalité
+
+* Charisme feutré
+* Toujours maître de lui
+* Brillant dans les salons comme dans les ports
+* Sait exactement comment flatter, rassurer ou encadrer
+* Semble raisonnable même quand il déplace des vies comme des marchandises
+
+### Fonction narrative
+
+* Peut aider au festival
+* Peut aider à la coalition
+* Peut donner des ressources tout en créant une dette politique
+* Peut faire ressortir le malaise de Nyx, Rufus, Sabine et Darian
+
+### Fonction gameplay
+
+* Donneur de quêtes politiques
+* Fournit du matériel ou de l’accès
+* Certaines aides ont des coûts cachés
+* Excellent pour les chapitres 11 et 17
+
+### Pourquoi il est intéressant
+
+Parce qu’il peut sincèrement vouloir éviter le pire… mais sans jamais cesser d’être un homme qui pense en leviers.
+
+---
+
+# 3. Anti-héros / alliés ambigus majeurs
+
+## 3.1. Sister Aveline Marr
+
+**Catégorie :** Anti-héroïne religieuse
+**Fonction :** chasseuse d’hérésies utile mais inquiétante
+**Filiation naturelle :** Valeron modéré / marge inquisitoriale
+
+### Concept
+
+Aveline est une ancienne enquêtrice sacrée de Valeron qui n’a pas quitté la foi, mais a quitté le confort doctrinal. Elle ne croit pas que tout soit pardonnable, ni que tout soit purifiable. Elle pense que certaines horreurs doivent être traquées, contenues et enterrées proprement — même si cela oblige à salir ses mains en silence.
+
+### Pourquoi elle fit dans l’histoire
+
+Valeron a déjà modérés, purificateurs et pragmatistes. Aveline te permet d’ajouter une figure **ni pure réformatrice, ni fanatique, ni repentie classique**. Quelqu’un qui combat réellement les choses terribles… mais dont les méthodes restent troublantes. C’est parfait pour un monde où foi et abus ne doivent jamais être trop simples.
+
+### Personnalité
+
+* Intensément calme
+* Juge très vite
+* Déteste le spectacle
+* N’a aucune patience pour la naïveté
+* Peut paraître plus proche de Meris ou Caldris avant qu’on comprenne où elle se sépare d’elles
+
+### Fonction narrative
+
+* Peut aider contre Enric ou certains cultistes
+* Peut détester Vespera sans aimer le groupe
+* Peut admirer Liora et la trouver dangereusement tendre
+* Peut être fascinée ou dégoûtée par l’Avatar
+
+### Fonction gameplay
+
+* PNJ d’escorte occasionnel
+* Peut intervenir sur une map comme tierce force
+* Peut offrir une aide très puissante contre l’occulte, au prix d’une scène moralement lourde
+
+### Pourquoi elle est intéressante
+
+Parce qu’elle n’est pas une “bonne inquisitrice”. Elle est une femme qui a gardé la foi, perdu l’innocence, et ne sait plus très bien si elle protège les vivants ou seulement les empêchent de voir trop.
+
+---
+
+## 3.2. Varo Kestrel
+
+**Catégorie :** Anti-héros mercenaire
+**Fonction :** capitaine de free company / concurrent / partenaire de nécessité
+**Filiation naturelle :** indépendant, vend ses services aux puissants sans leur appartenir
+
+### Concept
+
+Varo dirige une petite compagnie libre de vétérans, éclaireurs, brise-lignes et récupérateurs. Il n’a pas d’idéologie noble. Il croit que les États mentent, que les causes se salissent toujours, et qu’un soldat qui veut vivre doit parfois vendre sa lame avant qu’un prince ne la lui vole.
+
+### Pourquoi il fit dans l’histoire
+
+Ton armée prend de l’ampleur, traverse plusieurs zones, croise diplomatie, famines, forteresses et coalition. Il est très crédible qu’un tel monde contienne des compagnies non alignées. Varo permet d’ajouter un regard dur mais pas nihiliste sur la guerre. Il s’insère très bien autour des niveaux 7, 13 ou 17.
+
+### Personnalité
+
+* Très drôle à sec
+* Impitoyablement pragmatique
+* Pas cruel gratuitement
+* Respecte la compétence, la paie, la cohérence
+* Peut soudain montrer une morale enterrée sous l’ironie
+
+### Fonction narrative
+
+* Rival de terrain du groupe
+* Puis allié ponctuel
+* Puis wildcard à la coalition
+* Peut servir de miroir à Kaelen, Rufus et Branik
+
+### Fonction gameplay
+
+* Peut proposer des contrats secondaires
+* Peut sauver une situation si on l’a bien traité
+* Ou refuser d’aider si la fame est mauvaise ou si le groupe s’est montré hypocrite
+
+### Pourquoi il est intéressant
+
+Parce qu’il n’est pas “mercenaire cool cynique”. Il est la preuve que survivre honnêtement dans une guerre sale est déjà une position morale épuisante.
+
+---
+
+# 4. Wildcards / figures transversales très mémorables
+
+## 4.1. Mother Isca of the Lantern Steps
+
+**Catégorie :** Neutre sacrée / protectrice de seuils
+**Fonction :** abbesse d’un hospice-route / gardienne de passages et d’orphelins
+
+### Concept
+
+Isca dirige un hospice installé sur une ancienne route de pèlerinage, à mi-chemin entre sanctuaire, hôpital, refuge et poste d’observation. Officiellement, elle n’appartient à aucun camp. En pratique, tout le monde sait qu’elle a déjà menti à Valeron, caché des réfugiés à la League, et nourri des soldats ennemis tant qu’ils déposaient leurs armes à sa porte.
+
+### Pourquoi elle fit
+
+Valeron bâtit aussi hôpitaux, écoles et orphelinats, et le canon insiste sur le fait que toutes les institutions ne sont pas vides de bonté. Isca montre cette vérité sans blanchir le système.
+
+### Personnalité
+
+* Maternelle sans être molle
+* Regard qui transperce
+* Grande autorité morale
+* Peut humilier un noble avec une simple phrase
+* Très difficile à manipuler
+
+### Utilité
+
+* Refuge sur route
+* Quêtes de blessés / enfants / civils
+* Point de tension entre Liora, Meris, Alden, Kaelen, Avatar
+
+### Pourquoi elle marque
+
+Parce qu’elle fait sentir que la bonté existe encore, mais sous forme de discipline, de travail, de douleur et de choix quotidiens, pas de naïveté.
+
+---
+
+## 4.2. “Glass” Tovin Raal
+
+**Catégorie :** Wildcard urbain
+**Fonction :** contrebandier d’informations / fixeur / mémoire des bas-fonds
+
+### Concept
+
+Tovin est un homme de la League qu’on dit capable de trouver n’importe qui, n’importe quoi, pourvu qu’on paie le bon prix ou qu’on lui raconte la bonne histoire. Il n’est pas puissant politiquement, mais il est collé aux coutures du monde : quais, archives vendues, maisons de jeu, théâtres, arrière-salles, dettes, noms effacés.
+
+### Pourquoi il fit
+
+Le festival, les docks, les kidnappings, les masques, les réseaux : tout cela appelle des personnages qui vivent dans les interstices, pas seulement des consuls et des assassins.
+
+### Personnalité
+
+* Parle trop doucement
+* A l’air moins dangereux qu’il ne l’est
+* Très drôle quand il veut
+* Peut devenir glacial d’un coup
+* Respecte Nyx et se méfie d’elle
+
+### Utilité
+
+* Quêtes d’information
+* Accès à entrées cachées
+* Solutions sales mais pratiques
+* Vérités fragmentaires sur Nerez, Noemi, Rhex ou le Luminous Table
+
+### Pourquoi il marque
+
+Parce qu’il fait exister la ville comme organisme vivant.
+
+---
+
+# 5. Alliés de terrain / tiers partis sur map
+
+## 5.1. Captain Mirelle Dorn
+
+**Catégorie :** Alliée temporaire de terrain
+**Fonction :** officier locale qui n’adhère pas totalement à sa bannière
+**Filiation naturelle :** Edranor réformiste ou commandement secondaire de coalition
+
+### Concept
+
+Mirelle est une commandante de garnison ou de ravitaillement qui croit encore à l’idée de servir les gens, mais plus forcément à tous ses supérieurs. Elle peut apparaître sur une map comme **force tierce** : ni ennemi principal, ni alliée immédiate, mais quelqu’un qui décide au cours du combat si le groupe mérite son aide.
+
+### Pourquoi elle fit
+
+Ton jeu a plusieurs chapitres où la politique locale, les escortes, les négociations ou les safeholds comptent. Tout ne devrait pas être décidé par un boss principal. Des officiers intermédiaires crédibles rendent les cartes plus vivantes.
+
+### Utilité gameplay
+
+* unités vertes d’abord passives
+* deviennent alliées si certaines conditions sont remplies
+* peuvent aussi se retirer avec leurs gens si le joueur agit mal
+
+### Pourquoi elle marque
+
+Parce qu’elle montre que le monde n’attend pas toujours le héros pour avoir ses propres gens compétents.
+
+---
+
+# 6. “Randoms” mémorables, mais ancrés
+
+Tu m’as demandé d’en ajouter davantage aussi, donc voici une série de personnages secondaires plus “petits”, mais très utiles pour densifier l’univers.
+
+## 6.1. Old Fen Marrik
+
+**Catégorie :** Neutre local
+Vieil herboriste de marais, grincheux, pas du tout mystique, mais sachant reconnaître les signes de corruption avant les nobles et les prêtres. Très bon dans les chapitres de marais ou d’exploration.
+
+## 6.2. Della Wren
+
+**Catégorie :** Alliée civile
+Archiviste de festival qui cataloguait les invités, billets, masques et rumeurs. Peut aider dans le niveau 11 et devenir une excellente source de détails sociaux après coup.
+
+## 6.3. Brother Ceyn
+
+**Catégorie :** Neutre religieux
+Petit moine de route, terrifié mais courageux dans les moments clés. Pas un grand penseur, juste un homme qui continue de nourrir et laver les pauvres sans comprendre toute la guerre. Très utile pour humaniser Valeron.
+
+## 6.4. Hal Soot
+
+**Catégorie :** Anti-héros mineur
+Ferrailleur, récupérateur de bataille, vendeur d’objets “pas forcément maudits”. Fonctionne très bien autour de Greyspire et avec Haldor.
+
+## 6.5. Lady Mirenne Solt
+
+**Catégorie :** Alliée politique mineure
+Petite noble ruinée d’Edranor, plus utile en intrigue qu’en bataille. Peut servir de relais pour lettres, terres, greniers, mariages politiques ratés et rancunes de caste.
+
+## 6.6. Pate and Orli
+
+**Catégorie :** Duo neutre
+Deux convoyeurs toujours en retard, très drôles, toujours au mauvais endroit, mais qui voient tout. Ils apportent humanité, rythme et information légère.
+
+## 6.7. Sera Quillhand
+
+**Catégorie :** Neutre artisane
+Relieuse et restauratrice de manuscrits, ancienne du College, refusant de servir les censeurs. Très bonne pour Sorrel, Tariq, Elowen et le chapitre 12.
+
+## 6.8. Tomas Greycloth
+
+**Catégorie :** Allié local
+Quartermaster d’un camp de réfugiés. Pas héroïque, mais extraordinairement utile. Il rend visibles nourriture, couvertures, pertes, registres, et fatigue logistique.
+
+## 6.9. Veil-Bird Nessa
+
+**Catégorie :** Wildcard étrange
+Messagère quasi folklorique, apparaissant parfois avant des événements lourds. Peut être totalement humaine, ou simplement entourée de rumeurs. À utiliser avec parcimonie.
+
+## 6.10. Mikel Hearth
+
+**Catégorie :** Neutre chaleureux
+Aubergiste temporaire / intendant de route qui héberge soldats, réfugiés, et marchands. Idéal pour dialogues de respiration, disputes de table et petites scènes d’humanité.
+
+---
+
+# 7. Ma recommandation concrète
+
+Pour ne pas surcharger la prod, je te conseillerais de verrouiller d’abord :
+
+## Neutres / anti-héros / alliés les plus rentables
+
+* **Magister Elowen Vey** — neutre savante
+* **Queen Seraphine Valedorn** — alliée majeure non jouable
+* **Cassian Valecourt** — allié politique ambigu
+* **Sister Aveline Marr** — anti-héroïne religieuse
+* **Varo Kestrel** — anti-héros mercenaire
+* **Mother Isca of the Lantern Steps** — refuge moral et logistique
+* **Glass Tovin Raal** — fixeur urbain
+* **Captain Mirelle Dorn** — alliée de terrain conditionnelle
+
+Puis tu peux parsemer les “randoms” par chapitres.
+
+# 8. Pourquoi cette couche est utile
+
+Elle sert à remplir l’espace entre :
+
+* les grands antagonistes,
+* l’armée jouable,
+* et les grandes factions.
+
+Sans ces personnages, le monde risque de paraître composé seulement de :
+
+* boss,
+* recrues,
+* et armées.
+
+Avec eux, Aurelia devient un continent où vivent aussi :
+
+* des gens qui négocient sans régner,
+* des croyants sans fanatisme,
+* des survivants sans bannière,
+* des intermédiaires,
+* des gens fatigués,
+* des gens utiles,
+* et des gens dangereux sans être des boss.
+
+C’est exactement ce qui soutient le mieux un récit de **fracture politique, found family et horreur cosmique progressive**.
+
+Je peux maintenant te faire une **version ultra production-ready en tableau**, avec colonnes :
+**Nom | catégorie | faction réelle/apparente | chapitre d’introduction | rôle narratif | gameplay/exploration | lien avec le roster | potentiel de récurrence**.

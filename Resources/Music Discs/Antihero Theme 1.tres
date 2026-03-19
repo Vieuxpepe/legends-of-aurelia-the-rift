@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cd56wxdn2cvkn"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_ll2ec"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_hanww"]
+[ext_resource type="AudioStream" uid="uid://cqoa1c3uthd20" path="res://Resources/Music Discs/Antihero Theme 1.mp3" id="3_ll2ec"]
+
+[resource]
+script = ExtResource("2_hanww")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+gold_cost = 100
+icon = ExtResource("1_ll2ec")
+unlocked_music_track = ExtResource("3_ll2ec")
+track_title = "Epic Theme 1"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

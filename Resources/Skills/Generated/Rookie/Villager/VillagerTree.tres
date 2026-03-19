@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bs6shs7i4x8jp"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_mkwlo"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_a1bvu"]
+[ext_resource type="Resource" uid="uid://drra1pgr1r3rh" path="res://Resources/Skills/Generated/Rookie/Villager/Skill_villager_hp_1.tres" id="3_3v4qd"]
+[ext_resource type="Resource" uid="uid://cqwnq0jduw4s" path="res://Resources/Skills/Generated/Rookie/Villager/Skill_villager_str_1.tres" id="4_vn5b3"]
+[ext_resource type="Resource" uid="uid://c3ofndf127qm0" path="res://Resources/Skills/Generated/Rookie/Villager/Skill_villager_def_1.tres" id="5_7eq7o"]
+[ext_resource type="Resource" uid="uid://b30f860skt5bc" path="res://Resources/Skills/Generated/Rookie/Villager/Skill_villager_agi_1.tres" id="6_eiqmt"]
+[ext_resource type="Resource" uid="uid://y8l1vlyyy4hy" path="res://Resources/Skills/Generated/Rookie/Villager/Skill_villager_mastery.tres" id="7_725yg"]
+
+[resource]
+script = ExtResource("1_mkwlo")
+tree_name = "Villager Rookie Tree"
+skills = Array[ExtResource("2_a1bvu")]([ExtResource("3_3v4qd"), ExtResource("4_vn5b3"), ExtResource("5_7eq7o"), ExtResource("6_eiqmt"), ExtResource("7_725yg")])

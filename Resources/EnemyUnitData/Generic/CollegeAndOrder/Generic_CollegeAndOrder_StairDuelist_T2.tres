@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://5tftaq4ttelw"]
+
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="1_5e2qh"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_2rpwl"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_7ykno"]
+[ext_resource type="Resource" uid="uid://cwyb310lqugwb" path="res://Resources/GeneratedItems/Weapon_Iron_Sword.tres" id="4_0pif6"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_jjctj"]
+
+[resource]
+script = ExtResource("3_7ykno")
+display_name = "Stair Duelist"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_5e2qh")
+starting_weapon = ExtResource("4_0pif6")
+max_hp = 24
+strength = 8
+defense = 5
+resistance = 2
+speed = 6
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 7
+max_gold_drop = 12
+drops_equipped_weapon = true
+equipped_weapon_chance = 14

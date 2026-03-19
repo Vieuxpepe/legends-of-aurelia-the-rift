@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bbgqt0r1xvj5i"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_jcv8q"]
+
+[resource]
+script = ExtResource("1_jcv8q")
+skill_id = "thief_agi_3"
+skill_name = "Agility III"
+description = "Increases Agility by +2."
+required_skill_id = "thief_res_1"
+grid_position = Vector2(4, 1)
+stat_to_boost = "agi"
+boost_amount = 2

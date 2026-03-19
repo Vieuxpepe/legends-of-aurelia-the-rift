@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bcb1w5gmjudp7"]
+
+[ext_resource type="Resource" uid="uid://ddhvvub1fy7ex" path="res://Resources/Classes/PromotedClass/DivineSage.tres" id="1_1xivp"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ag2x0"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_4uyhf"]
+[ext_resource type="Resource" uid="uid://cnl1gsmcc2je6" path="res://Resources/GeneratedItems/Weapon_Grave_Thesis.tres" id="4_d3cpf"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_m68d3"]
+
+[resource]
+script = ExtResource("3_4uyhf")
+display_name = "Master Enric"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Remarkable… even at the threshold, decay still refuses to become elegant."])
+character_class = ExtResource("1_1xivp")
+starting_weapon = ExtResource("4_d3cpf")
+ability = "dissertation_of_rot"
+max_hp = 44
+strength = 0
+magic = 20
+defense = 6
+resistance = 15
+speed = 8
+agility = 15
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

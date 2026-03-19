@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://clcs3kigqyn4e"]
+
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="1_yb4a2"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_b7mu5"]
+[ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_xobid"]
+[ext_resource type="Resource" uid="uid://ckitvh4grj5oh" path="res://Resources/Chests/Keys/Iron Key.tres" id="3_xobid"]
+[ext_resource type="Texture2D" uid="uid://hn5d0n20il22" path="res://Assets/Portraits/Skeleton.png" id="4_lfuso"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="5_oytat"]
+[ext_resource type="Resource" uid="uid://0qwbfdhj407u" path="res://Resources/Weapons/Heal Staff.tres" id="6_yb4a2"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="7_b7mu5"]
+[ext_resource type="Texture2D" uid="uid://cd5ifv7us0ykr" path="res://Assets/Skeleton_sprite.png" id="7_wjsoo"]
+
+[sub_resource type="Resource" id="Resource_6bxmx"]
+script = ExtResource("2_b7mu5")
+item = ExtResource("3_xobid")
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[resource]
+script = ExtResource("5_oytat")
+display_name = "Skeleton"
+character_class = ExtResource("1_yb4a2")
+starting_weapon = ExtResource("6_yb4a2")
+death_sound = ExtResource("2_xobid")
+unit_sprite = ExtResource("7_wjsoo")
+portrait = ExtResource("4_lfuso")
+visual_scale = 2.5
+max_hp = 20
+drops_equipped_weapon = true
+extra_loot = Array[ExtResource("2_b7mu5")]([SubResource("Resource_6bxmx")])
+metadata/_custom_type_script = "uid://3jului3v2v6"

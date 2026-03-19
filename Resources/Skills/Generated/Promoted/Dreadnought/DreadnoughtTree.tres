@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://i2i233jex4xt"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_tyq5c"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_ofsap"]
+[ext_resource type="Resource" uid="uid://v0vus1cr0tgr" path="res://Resources/Skills/Generated/Promoted/Dreadnought/Skill_dn_hp_1.tres" id="3_55bvj"]
+[ext_resource type="Resource" uid="uid://bytrdoxmi5a0d" path="res://Resources/Skills/Generated/Promoted/Dreadnought/Skill_dn_def_1.tres" id="4_ow5it"]
+[ext_resource type="Resource" uid="uid://b5f2vqqccjchd" path="res://Resources/Skills/Generated/Promoted/Dreadnought/Skill_dn_str_1.tres" id="5_ngbkk"]
+[ext_resource type="Resource" uid="uid://cxy2woi5qt3ts" path="res://Resources/Skills/Generated/Promoted/Dreadnought/Skill_dn_res_1.tres" id="6_6rbmx"]
+[ext_resource type="Resource" uid="uid://8xf5fxx30hho" path="res://Resources/Skills/Generated/Promoted/Dreadnought/Skill_dn_mastery.tres" id="7_38l7f"]
+
+[resource]
+script = ExtResource("1_tyq5c")
+tree_name = "Dreadnought Tree"
+skills = Array[ExtResource("2_ofsap")]([ExtResource("3_55bvj"), ExtResource("4_ow5it"), ExtResource("5_ngbkk"), ExtResource("6_6rbmx"), ExtResource("7_38l7f")])

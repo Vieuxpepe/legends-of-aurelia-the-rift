@@ -1,0 +1,1732 @@
+[gd_scene format=3 uid="uid://eedl86tu0qe"]
+
+[ext_resource type="Script" uid="uid://bcgq45i3tn35a" path="res://Scenes/camp_menu.gd" id="1_he1cp"]
+[ext_resource type="AudioStream" uid="uid://dcjk4b6pkhxvm" path="res://audio/CampAmbient.mp3" id="2_1j8br"]
+[ext_resource type="Texture2D" uid="uid://k2b3buf38kt0" path="res://Assets/Portraits/HaldorNormal.png" id="3_d80hf"]
+[ext_resource type="Texture2D" uid="uid://dcudk5fy5v1ub" path="res://Assets/Portraits/HaldorImpressed.png" id="4_l883w"]
+[ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="7_532wb"]
+[ext_resource type="AudioStream" uid="uid://tiydpw3xvfkl" path="res://SoundEffects/Music/Haggle V1.wav" id="11_joagt"]
+[ext_resource type="AudioStream" uid="uid://dmcqqnqtuviwy" path="res://SoundEffects/Music/Haggle V2.wav" id="12_k56ha"]
+[ext_resource type="Texture2D" uid="uid://dcw3yplmrh27t" path="res://Assets/Backgrounds/CampMenuBG.jpeg" id="19_lwgw6"]
+[ext_resource type="AudioStream" uid="uid://dbagvdbk0awcn" path="res://SoundEffects/OVER HERE.mp3" id="20_isan2"]
+[ext_resource type="Texture2D" uid="uid://d2inb6x32xhk5" path="res://Assets/Empty Frame.png" id="21_ek3s5"]
+[ext_resource type="AudioStream" uid="uid://cx2olklv14nuq" path="res://SoundEffects/SaveConfirm.wav" id="22_b26ij"]
+[ext_resource type="AudioStream" uid="uid://fv55oqk3pq2t" path="res://SoundEffects/BuySound.mp3" id="23_ad6lh"]
+[ext_resource type="AudioStream" uid="uid://chbsrwtiafyvv" path="res://SoundEffects/SellSound.mp3" id="24_1j8br"]
+[ext_resource type="Texture2D" uid="uid://rhdnh57bwvy2" path="res://Assets/Portraits/Morgra Portrait.png" id="25_1j8br"]
+[ext_resource type="AudioStream" uid="uid://tmmchi41guqr" path="res://SoundEffects/MasterworkSound.wav" id="27_4treb"]
+[ext_resource type="Texture2D" uid="uid://nhbjg87vtrab" path="res://Assets/UI/X Close Button.png" id="27_l883w"]
+[ext_resource type="Texture2D" uid="uid://q3nr8oelyopa" path="res://Assets/Portraits/Bartholomew Portrait.png" id="29_mjs62"]
+[ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="38_seei4"]
+[ext_resource type="Script" uid="uid://d167veyecw81c" path="res://Scenes/DragonRanch.gd" id="39_xkixq"]
+[ext_resource type="AudioStream" uid="uid://cfiict5n7gmt8" path="res://SoundEffects/Wrong Answer 1.mp3" id="40_mjs62"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4treb"]
+bg_color = Color(0, 0, 0, 0.92156863)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_s5ara"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l883w"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hj2c0"]
+bg_color = Color(0.033853274, 0.03385329, 0.033853233, 1)
+corner_radius_top_left = 50
+corner_radius_top_right = 50
+corner_radius_bottom_right = 50
+corner_radius_bottom_left = 50
+corner_detail = 11
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n127g"]
+bg_color = Color(0.14406255, 0.14406255, 0.14406249, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b26ij"]
+bg_color = Color(0.029506553, 0.029506562, 0.029506536, 1)
+corner_radius_top_left = 120
+corner_radius_top_right = 120
+corner_radius_bottom_right = 120
+corner_radius_bottom_left = 120
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_s5ara"]
+texture = ExtResource("27_l883w")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_s01ag"]
+texture = ExtResource("27_l883w")
+modulate_color = Color(0.48962224, 0.48962224, 0.48962218, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xpbjl"]
+texture = ExtResource("27_l883w")
+modulate_color = Color(1.380357, 1.380357, 0.745444, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_s01ag"]
+bg_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1j8br"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mjs62"]
+bg_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_31epj"]
+bg_color = Color(0, 0, 0, 1)
+
+[node name="Panel" type="Control" unique_id=475066477]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_he1cp")
+campfire_ambient = ExtResource("2_1j8br")
+haldor_normal = ExtResource("3_d80hf")
+haldor_impressed = ExtResource("4_l883w")
+minigame_music_tracks = Array[AudioStream]([ExtResource("11_joagt"), ExtResource("12_k56ha")])
+
+[node name="ColorRect" type="TextureRect" parent="." unique_id=1534745964]
+modulate = Color(1, 1, 1, 0.36862746)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("19_lwgw6")
+
+[node name="StatsLabel" type="RichTextLabel" parent="." unique_id=546903381]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 65.0
+offset_top = 488.0
+offset_right = 375.0
+offset_bottom = 549.0
+theme_override_font_sizes/normal_font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_4treb")
+bbcode_enabled = true
+
+[node name="GoldLabel" type="Label" parent="." unique_id=1742183536]
+layout_mode = 0
+offset_left = 915.0
+offset_top = 404.0
+offset_right = 1138.0
+offset_bottom = 449.0
+theme_override_colors/font_color = Color(1, 1, 0.31764707, 1)
+theme_override_font_sizes/font_size = 32
+text = "Gold Available"
+
+[node name="NextBattleButton" type="Button" parent="." unique_id=2123176916]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -248.5
+offset_top = -194.0
+offset_right = 248.5
+offset_bottom = -119.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 48
+text = "Proceed to Next Battle"
+
+[node name="CampMusic" type="AudioStreamPlayer" parent="." unique_id=1644137046]
+volume_db = -10.05
+autoplay = true
+
+[node name="SellButton" type="Button" parent="." unique_id=2071545771]
+layout_mode = 0
+offset_left = 699.0
+offset_top = 256.0
+offset_right = 833.0
+offset_bottom = 311.0
+theme_override_font_sizes/font_size = 32
+text = "Sell"
+
+[node name="EquipButton" type="Button" parent="." unique_id=2133184302]
+layout_mode = 0
+offset_left = 696.0
+offset_top = 74.0
+offset_right = 834.0
+offset_bottom = 128.0
+theme_override_font_sizes/font_size = 32
+text = "Equip"
+
+[node name="UseButton" type="Button" parent="." unique_id=323161385]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 696.0
+offset_top = 202.0
+offset_right = 834.0
+offset_bottom = 256.0
+theme_override_font_sizes/font_size = 32
+text = "USE"
+
+[node name="UnequipButton" type="Button" parent="." unique_id=1694653558]
+layout_mode = 0
+offset_left = 691.0
+offset_top = 129.0
+offset_right = 836.0
+offset_bottom = 190.0
+theme_override_font_sizes/font_size = 32
+text = "Unequip"
+
+[node name="PortraitRect" type="TextureRect" parent="." unique_id=1908978522]
+z_index = 1
+layout_mode = 0
+offset_left = 66.0
+offset_top = 576.0
+offset_right = 380.0
+offset_bottom = 885.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PortraitRect2" type="Panel" parent="." unique_id=1793981111]
+layout_mode = 0
+offset_left = 48.0
+offset_top = 552.0
+offset_right = 398.0
+offset_bottom = 902.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_s5ara")
+
+[node name="BuyButton" type="Button" parent="." unique_id=1734018837]
+top_level = true
+z_index = -1
+layout_mode = 0
+offset_left = 1239.0
+offset_top = 671.0
+offset_right = 1335.0
+offset_bottom = 724.0
+theme_override_font_sizes/font_size = 32
+text = "Buy"
+
+[node name="ShopDescriptionLabel" type="RichTextLabel" parent="." unique_id=1589357219]
+layout_mode = 0
+offset_left = 1464.0
+offset_top = 472.0
+offset_right = 1861.0
+offset_bottom = 646.0
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = true
+
+[node name="SellConfirmation" type="ConfirmationDialog" parent="." unique_id=1031922862]
+title = "Sell Item?"
+dialog_text = "Are you sure you want to sell this for [Price]G?"
+
+[node name="SortButton" type="Button" parent="." unique_id=365465664]
+layout_mode = 0
+offset_left = 946.0
+offset_top = 33.0
+offset_right = 988.0
+offset_bottom = 70.0
+text = "Sort"
+
+[node name="CategoryTabs" type="TabBar" parent="." unique_id=1304261070]
+layout_mode = 0
+offset_left = 1001.0
+offset_top = 30.0
+offset_right = 1316.0
+offset_bottom = 70.0
+current_tab = 0
+tab_count = 4
+tab_0/title = "All"
+tab_1/title = "Weapons"
+tab_2/title = "Items"
+tab_3/title = "Convoy"
+
+[node name="MerchantPortrait" type="TextureRect" parent="." unique_id=1522849732]
+z_index = 1
+layout_mode = 0
+offset_left = 1359.0001
+offset_top = 25.0
+offset_right = 1819.0001
+offset_bottom = 512.0
+pivot_offset = Vector2(113, 116)
+texture = ExtResource("29_mjs62")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MerchantDialogue" type="RichTextLabel" parent="." unique_id=730844376]
+layout_mode = 0
+offset_left = 1349.0
+offset_top = 398.0
+offset_right = 1836.0
+offset_bottom = 471.0
+theme_override_font_sizes/normal_font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_l883w")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BuyConfirmation" type="ConfirmationDialog" parent="." unique_id=941350113]
+title = "Purchase Item?"
+
+[node name="MerchantBlip" type="AudioStreamPlayer" parent="." unique_id=344130799]
+stream = ExtResource("7_532wb")
+volume_db = -11.723
+
+[node name="HaggleButton" type="Button" parent="." unique_id=1597452884]
+layout_mode = 0
+offset_left = 1446.0001
+offset_top = 73.0
+offset_right = 1559.0001
+offset_bottom = 133.0
+theme_override_font_sizes/font_size = 32
+text = "Haggle"
+
+[node name="HaggleConfirmation" type="ConfirmationDialog" parent="." unique_id=32889657]
+oversampling_override = 1.0
+title = "So you want to Haggle with me ?"
+initial_position = 1
+size = Vector2i(635, 200)
+ok_button_text = "Start"
+dialog_text = "You want a discount. My donkey wants more oats. 
+
+Keep the bar in the green zone to wear down my patience. 
+
+Succeed, and I lower the prices. Fail, and you lose reputation. Do we have a deal."
+
+[node name="MinigameMusic" type="AudioStreamPlayer" parent="." unique_id=1849096744]
+
+[node name="HagglePanel" type="Panel" parent="." unique_id=364880528]
+visible = false
+layout_mode = 0
+offset_left = 826.0
+offset_top = 132.0
+offset_right = 906.0
+offset_bottom = 932.0
+
+[node name="TargetZone" type="ColorRect" parent="HagglePanel" unique_id=821775077]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+color = Color(0, 1, 1, 1)
+
+[node name="PlayerBar" type="ColorRect" parent="HagglePanel" unique_id=2082330288]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 40.0
+color = Color(0.02745098, 1, 1, 1)
+
+[node name="HaggleProgress" type="ProgressBar" parent="HagglePanel" unique_id=220373430]
+layout_mode = 0
+offset_left = -346.0
+offset_top = 364.0
+offset_right = -20.0
+offset_bottom = 407.0
+show_percentage = false
+
+[node name="WarningDialog" type="AcceptDialog" parent="." unique_id=1121760661]
+
+[node name="RepPopupLabel" type="Label" parent="." unique_id=951898859]
+visible = false
+layout_mode = 0
+offset_left = 1016.0
+offset_top = 360.0
+offset_right = 1148.0
+offset_bottom = 482.0
+theme_override_font_sizes/font_size = 32
+
+[node name="TalkPanel" type="Panel" parent="." unique_id=436998529]
+visible = false
+layout_mode = 0
+offset_left = 296.0
+offset_top = 223.0
+offset_right = 909.0
+offset_bottom = 774.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hj2c0")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TalkPanel" unique_id=2010674052]
+layout_mode = 0
+offset_left = 192.0
+offset_top = 368.0
+offset_right = 407.0
+offset_bottom = 541.0
+
+[node name="Option1" type="Button" parent="TalkPanel/VBoxContainer" unique_id=1569743342]
+layout_mode = 2
+text = "Option1"
+
+[node name="Option2" type="Button" parent="TalkPanel/VBoxContainer" unique_id=1936107770]
+layout_mode = 2
+text = "Option2"
+
+[node name="Option3" type="Button" parent="TalkPanel/VBoxContainer" unique_id=1379426300]
+layout_mode = 2
+text = "Option3"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TalkPanel" unique_id=2061677841]
+z_index = 1
+layout_mode = 0
+offset_left = 36.0
+offset_top = 107.0
+offset_right = 579.0
+offset_bottom = 307.0
+
+[node name="TalkText" type="Label" parent="TalkPanel/HBoxContainer" unique_id=1831303191]
+custom_minimum_size = Vector2(300, 200)
+layout_mode = 2
+
+[node name="QuestItemIcon" type="TextureRect" parent="TalkPanel/HBoxContainer" unique_id=2051865078]
+custom_minimum_size = Vector2(128, 64)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TalkBackground" type="Panel" parent="TalkPanel" unique_id=1865044948]
+layout_mode = 0
+offset_left = 19.0
+offset_top = 84.0
+offset_right = 595.0
+offset_bottom = 325.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_n127g")
+
+[node name="TalkButton" type="Button" parent="." unique_id=2007255005]
+layout_mode = 0
+offset_left = 1612.0001
+offset_top = 77.0
+offset_right = 1736.0001
+offset_bottom = 130.0
+theme_override_font_sizes/font_size = 32
+text = "Talk"
+
+[node name="TalkSound" type="AudioStreamPlayer" parent="." unique_id=125957377]
+stream = ExtResource("20_isan2")
+volume_db = -17.801
+
+[node name="EmptyFrame" type="Sprite2D" parent="." unique_id=388617689]
+position = Vector2(1589, 270.5)
+scale = Vector2(0.7712417, 0.7720589)
+texture = ExtResource("21_ek3s5")
+
+[node name="Roster" type="Button" parent="." unique_id=1696091740]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 37.0
+offset_right = 222.0
+offset_bottom = 72.0
+theme_override_colors/font_color = Color(0.28235295, 0.95686275, 0.40392157, 1)
+theme_override_font_sizes/font_size = 20
+text = "Roster"
+
+[node name="Button2" type="Button" parent="." unique_id=1037714681]
+layout_mode = 0
+offset_left = 1333.0
+offset_top = 613.0
+offset_right = 1448.0
+offset_bottom = 650.0
+theme_override_colors/font_color = Color(0.36862746, 0.95686275, 0.30588236, 1)
+theme_override_font_sizes/font_size = 20
+text = "Merchant"
+
+[node name="Button" type="Button" parent="." unique_id=895127528]
+layout_mode = 0
+offset_left = 830.0
+offset_top = 34.0
+offset_right = 945.0
+offset_bottom = 71.0
+theme_override_font_sizes/font_size = 20
+text = "Inventory"
+
+[node name="OverwriteConfirmation" type="ConfirmationDialog" parent="." unique_id=1842712174]
+unique_name_in_owner = true
+
+[node name="SaveConfirmSound" type="AudioStreamPlayer" parent="." unique_id=866599338]
+unique_name_in_owner = true
+stream = ExtResource("22_b26ij")
+
+[node name="SavePopup" type="Panel" parent="." unique_id=13053082]
+unique_name_in_owner = true
+visible = false
+z_index = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -346.5
+offset_top = -230.0
+offset_right = 346.5
+offset_bottom = 230.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_b26ij")
+
+[node name="SaveSlotContainer" type="VBoxContainer" parent="SavePopup" unique_id=365305996]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -285.0
+offset_top = -174.0
+offset_right = 286.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 40
+
+[node name="CloseSaveButton" type="Button" parent="SavePopup/SaveSlotContainer" unique_id=1748811668]
+unique_name_in_owner = true
+z_index = 1000
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxTexture_s5ara")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_s01ag")
+theme_override_styles/hover = SubResource("StyleBoxTexture_xpbjl")
+
+[node name="SaveSlot1" type="Button" parent="SavePopup/SaveSlotContainer" unique_id=2053561090]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Slot 1"
+
+[node name="SaveSlot2" type="Button" parent="SavePopup/SaveSlotContainer" unique_id=1954705042]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Slot 2"
+
+[node name="SaveSlot3" type="Button" parent="SavePopup/SaveSlotContainer" unique_id=2046037267]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Slot 3"
+
+[node name="ShopBuySound" type="AudioStreamPlayer" parent="." unique_id=680532912]
+unique_name_in_owner = true
+stream = ExtResource("23_ad6lh")
+
+[node name="ShopSellSound" type="AudioStreamPlayer" parent="." unique_id=779558664]
+unique_name_in_owner = true
+stream = ExtResource("24_1j8br")
+
+[node name="ExploreCampButton" type="Button" parent="." unique_id=191139802]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 106.0
+offset_top = -126.0
+offset_right = 310.0
+offset_bottom = -49.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Explore Camp"
+
+[node name="WorldMapButton" type="Button" parent="." unique_id=191139801]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -102.0
+offset_top = -125.0
+offset_right = 102.0
+offset_bottom = -48.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "World Map"
+
+[node name="InventoryDescLabel" type="RichTextLabel" parent="." unique_id=2018723526]
+layout_mode = 0
+offset_left = 502.0
+offset_top = 252.0
+offset_right = 826.0
+offset_bottom = 490.0
+rotation = -0.0016901302
+bbcode_enabled = true
+
+[node name="InventoryScroll" type="ScrollContainer" parent="." unique_id=182528777]
+layout_mode = 0
+offset_left = 832.0
+offset_top = 64.0
+offset_right = 1292.0
+offset_bottom = 394.0
+
+[node name="InventoryVBox" type="VBoxContainer" parent="InventoryScroll" unique_id=1850858332]
+custom_minimum_size = Vector2(400, 330)
+layout_mode = 2
+
+[node name="UnitGrid" type="GridContainer" parent="InventoryScroll/InventoryVBox" unique_id=1464148662]
+layout_mode = 2
+columns = 5
+
+[node name="ConvoyHeader" type="Label" parent="InventoryScroll/InventoryVBox" unique_id=393120844]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "--- CONVOY ---"
+
+[node name="ConvoyGrid" type="GridContainer" parent="InventoryScroll/InventoryVBox" unique_id=346712578]
+layout_mode = 2
+columns = 5
+
+[node name="MasterworkSound" type="AudioStreamPlayer" parent="." unique_id=745877627]
+stream = ExtResource("27_4treb")
+volume_db = 22.089
+
+[node name="OpenBlacksmithButton" type="Button" parent="." unique_id=1169692218]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 1492.0
+offset_top = 20.0
+offset_right = 1667.0
+offset_bottom = 63.0
+text = "Open Blacksmith"
+
+[node name="OpenSaveMenuButton" type="Button" parent="." unique_id=1008426689]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 459.0
+offset_top = 929.0
+offset_right = 632.0
+offset_bottom = 1012.0
+theme_override_font_sizes/font_size = 32
+text = "Save Menu"
+
+[node name="ShopScroll" type="ScrollContainer" parent="." unique_id=380127094]
+custom_minimum_size = Vector2(400, 330)
+layout_mode = 0
+offset_left = 1344.0
+offset_top = 704.0
+offset_right = 1844.0
+offset_bottom = 1034.0
+
+[node name="ShopGrid" type="GridContainer" parent="ShopScroll" unique_id=614365975]
+layout_mode = 2
+columns = 5
+
+[node name="RosterScroll" type="ScrollContainer" parent="." unique_id=1818537501]
+custom_minimum_size = Vector2(400, 330)
+layout_mode = 0
+offset_left = 64.0
+offset_top = 64.0
+offset_right = 104.0
+offset_bottom = 104.0
+
+[node name="RosterGrid" type="GridContainer" parent="RosterScroll" unique_id=410693658]
+layout_mode = 2
+columns = 4
+
+[node name="BlacksmithPanel" type="Panel" parent="." unique_id=609173435]
+visible = false
+z_index = 1
+layout_mode = 0
+offset_left = 172.0
+offset_top = 104.0
+offset_right = 1724.0
+offset_bottom = 974.0
+rotation = -0.0012583635
+theme_override_styles/panel = SubResource("StyleBoxFlat_s01ag")
+
+[node name="MaterialScroll" type="ScrollContainer" parent="BlacksmithPanel" unique_id=101047813]
+z_index = 1
+custom_minimum_size = Vector2(50, 800)
+layout_mode = 0
+offset_right = 278.0
+offset_bottom = 865.0
+mouse_filter = 2
+
+[node name="MaterialGrid" type="GridContainer" parent="BlacksmithPanel/MaterialScroll" unique_id=359161242]
+z_index = 2
+custom_minimum_size = Vector2(400, 800)
+layout_mode = 2
+mouse_filter = 0
+columns = 4
+
+[node name="Anvil" type="HBoxContainer" parent="BlacksmithPanel" unique_id=1050343351]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 0
+offset_left = 716.0
+offset_top = 400.0
+offset_right = 1016.0
+offset_bottom = 480.0
+theme_override_constants/separation = 30
+
+[node name="Slot1" type="TextureRect" parent="BlacksmithPanel/Anvil" unique_id=731946077]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+mouse_filter = 0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ColorRect" type="ColorRect" parent="BlacksmithPanel/Anvil/Slot1" unique_id=775401000]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.5449743, 0.54497427, 0.54497427, 1)
+
+[node name="Slot2" type="TextureRect" parent="BlacksmithPanel/Anvil" unique_id=919056788]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+mouse_filter = 0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ColorRect" type="ColorRect" parent="BlacksmithPanel/Anvil/Slot2" unique_id=931810817]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.5449743, 0.54497427, 0.54497427, 1)
+
+[node name="Slot3" type="TextureRect" parent="BlacksmithPanel/Anvil" unique_id=13024327]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+mouse_filter = 0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ColorRect" type="ColorRect" parent="BlacksmithPanel/Anvil/Slot3" unique_id=749672450]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.5449743, 0.54497427, 0.54497427, 1)
+
+[node name="RecipeResultLabel" type="RichTextLabel" parent="BlacksmithPanel" unique_id=1940267766]
+layout_mode = 0
+offset_left = 1216.0
+offset_top = 509.0
+offset_right = 1485.0
+offset_bottom = 708.0
+rotation = 0.010457623
+bbcode_enabled = true
+text = "Drop materials here"
+
+[node name="ColorRect" type="ColorRect" parent="BlacksmithPanel/RecipeResultLabel" unique_id=205520253]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.14406255, 0.14406255, 0.14406255, 1)
+
+[node name="CraftButton" type="Button" parent="BlacksmithPanel" unique_id=2139879266]
+layout_mode = 0
+offset_left = 824.0
+offset_top = 318.0
+offset_right = 910.0
+offset_bottom = 356.0
+theme_override_font_sizes/font_size = 32
+text = "Craft"
+
+[node name="CloseBlacksmithButton" type="Button" parent="BlacksmithPanel" unique_id=1868772918]
+unique_name_in_owner = true
+z_index = 1
+layout_mode = 0
+offset_left = 1450.0
+offset_top = 783.0
+offset_right = 1506.0
+offset_bottom = 833.0
+text = "Close"
+
+[node name="ResultIcon" type="TextureRect" parent="BlacksmithPanel" unique_id=2086045928]
+layout_mode = 0
+offset_left = 1241.0
+offset_top = 291.0
+offset_right = 1453.0
+offset_bottom = 503.0
+rotation = 0.010457623
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ColorRect" type="ColorRect" parent="BlacksmithPanel/ResultIcon" unique_id=60463734]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.5449743, 0.54497427, 0.54497427, 1)
+
+[node name="RecipeBookButton" type="Button" parent="BlacksmithPanel" unique_id=648720368]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 433.0
+offset_top = 610.0
+offset_right = 601.0
+offset_bottom = 667.0
+theme_override_font_sizes/font_size = 32
+text = "Recipe Book"
+
+[node name="RecipeBookPanel" type="Panel" parent="BlacksmithPanel" unique_id=363581700]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 622.0
+offset_top = 536.0
+offset_right = 949.0
+offset_bottom = 752.0
+
+[node name="CloseBookButton" type="Button" parent="BlacksmithPanel/RecipeBookPanel" unique_id=1876713763]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 290.0
+offset_top = 1.0
+offset_right = 325.0
+offset_bottom = 42.0
+text = "X"
+
+[node name="RecipeListText" type="RichTextLabel" parent="BlacksmithPanel/RecipeBookPanel" unique_id=1641120264]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 283.0
+offset_bottom = 214.0
+theme_override_font_sizes/normal_font_size = 24
+bbcode_enabled = true
+
+[node name="BlacksmithPortrait" type="TextureRect" parent="BlacksmithPanel" unique_id=418042425]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 380.0
+offset_top = -25.0
+offset_right = 803.0
+offset_bottom = 275.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BlacksmithDialogue" type="Label" parent="BlacksmithPanel" unique_id=212260933]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 388.0
+offset_top = 267.0
+offset_right = 711.0
+offset_bottom = 413.0
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 2
+
+[node name="BlacksmithTalkButton" type="Button" parent="BlacksmithPanel" unique_id=588787663]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 914.0
+offset_top = 74.0
+offset_right = 1033.0
+offset_bottom = 150.0
+theme_override_font_sizes/font_size = 32
+text = "Talk"
+
+[node name="BlueprintStockPanel" type="Panel" parent="BlacksmithPanel" unique_id=302111345]
+layout_mode = 0
+offset_left = 1121.0
+offset_top = 19.0
+offset_right = 1527.0
+offset_bottom = 256.0
+
+[node name="StockLabel" type="RichTextLabel" parent="BlacksmithPanel/BlueprintStockPanel" unique_id=1527045377]
+layout_mode = 0
+offset_right = 404.0
+offset_bottom = 231.0
+bbcode_enabled = true
+
+[node name="UseItemSound" type="AudioStreamPlayer" parent="." unique_id=1990547932]
+unique_name_in_owner = true
+stream = ExtResource("38_seei4")
+
+[node name="QuantityPopup" type="Panel" parent="." unique_id=1667456372]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -100.0
+offset_right = 150.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ItemNameLabel" type="Label" parent="QuantityPopup" unique_id=513303020]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_right = 20.0
+offset_bottom = 15.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "Title"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PriceLabel" type="Label" parent="QuantityPopup" unique_id=1328288810]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_top = 35.0
+offset_right = 20.0
+offset_bottom = 50.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "price"
+
+[node name="AmountSlider" type="HSlider" parent="QuantityPopup" unique_id=1542551934]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -8.0
+offset_right = 100.0
+offset_bottom = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="AmountLabel" type="Label" parent="QuantityPopup" unique_id=1034700801]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -65.0
+offset_right = 20.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "amount"
+
+[node name="ConfirmButton" type="Button" parent="QuantityPopup" unique_id=23070305]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -70.0
+offset_top = -33.0
+offset_right = -11.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "confirm"
+
+[node name="CancelButton" type="Button" parent="QuantityPopup" unique_id=946213632]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -33.0
+offset_right = 68.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "cancel"
+
+[node name="JukeboxButton" type="Button" parent="." unique_id=1953080190]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 160.0
+offset_top = 953.0
+offset_right = 280.0
+offset_bottom = 991.0
+theme_override_font_sizes/font_size = 32
+text = "Jukebox"
+
+[node name="JukeboxPanel" type="Panel" parent="." unique_id=1545829136]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 463.0
+offset_top = 161.0
+offset_right = 1342.0
+offset_bottom = 873.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_1j8br")
+
+[node name="Label" type="Label" parent="JukeboxPanel" unique_id=1892615570]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -33.0
+offset_right = 33.0
+offset_bottom = 30.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "Title"
+
+[node name="JukeboxList" type="ItemList" parent="JukeboxPanel" unique_id=1433892751]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -290.5
+offset_top = -190.0
+offset_right = 307.5
+offset_bottom = 213.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CloseJukeboxButton" type="Button" parent="JukeboxPanel" unique_id=878374810]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -44.0
+offset_top = -38.0
+offset_right = 44.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Close"
+
+[node name="JukeboxNowPlaying" type="RichTextLabel" parent="JukeboxPanel" unique_id=403112500]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 310.0
+offset_top = 39.0
+offset_right = 571.0
+offset_bottom = 83.0
+bbcode_enabled = true
+fit_content = true
+
+[node name="JukeboxVolumeSlider" type="HSlider" parent="JukeboxPanel" unique_id=765552061]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 307.0
+offset_top = 591.0
+offset_right = 607.0
+offset_bottom = 607.0
+min_value = 0.001
+max_value = 1.0
+step = 0.01
+value = 0.501
+
+[node name="JukeboxSkipButton" type="Button" parent="JukeboxPanel" unique_id=833312690]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 346.0
+offset_top = 626.0
+offset_right = 425.0
+offset_bottom = 649.0
+text = "Skip Track"
+
+[node name="JukeboxStopButton" type="Button" parent="JukeboxPanel" unique_id=535378189]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 478.0
+offset_top = 630.0
+offset_right = 557.0
+offset_bottom = 653.0
+text = "Stop Music"
+
+[node name="OpenSkillsButton" type="Button" parent="." unique_id=636694777]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 67.0
+offset_top = 399.0
+offset_right = 217.0
+offset_bottom = 437.0
+theme_override_font_sizes/font_size = 32
+text = "Skill Tree"
+
+[node name="SkillTreePanel" type="Panel" parent="." unique_id=1010332362]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -350.0
+offset_right = 400.0
+offset_bottom = 350.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SkillTitleLabel" type="Label" parent="SkillTreePanel" unique_id=2107508942]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -73.5
+offset_right = 73.5
+offset_bottom = 15.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "Mercenary Skill Tree"
+
+[node name="SkillPointsLabel" type="Label" parent="SkillTreePanel" unique_id=134895921]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -59.0
+offset_top = 50.0
+offset_right = 59.0
+offset_bottom = 80.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "Points: 0"
+
+[node name="CloseSkillsButton" type="Button" parent="SkillTreePanel" unique_id=811101270]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -88.0
+offset_top = -38.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Close"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SkillTreePanel" unique_id=813494550]
+layout_mode = 0
+offset_left = 40.5
+offset_top = 80.5
+offset_right = 765.0
+offset_bottom = 484.5
+
+[node name="TreeCanvas" type="Control" parent="SkillTreePanel/ScrollContainer" unique_id=407200143]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(2000, 2000)
+layout_mode = 2
+
+[node name="SkillInfoPanel" type="Panel" parent="SkillTreePanel" unique_id=249947216]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 4.5
+offset_top = 541.5
+offset_right = 694.0
+offset_bottom = 678.0
+
+[node name="SkillNameLabel" type="Label" parent="SkillTreePanel/SkillInfoPanel" unique_id=1368733455]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 15.0
+
+[node name="SkillDescLabel" type="RichTextLabel" parent="SkillTreePanel/SkillInfoPanel" unique_id=1444640014]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 15.0
+offset_top = 39.0
+offset_right = 779.5
+offset_bottom = 132.0
+bbcode_enabled = true
+
+[node name="UnlockSkillButton" type="Button" parent="SkillTreePanel/SkillInfoPanel" unique_id=1652629864]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 119.75
+offset_top = -180.0
+offset_right = 223.75
+offset_bottom = -142.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "Unlock"
+
+[node name="SwapAbilityButton" type="Button" parent="." unique_id=1468178478]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 262.0
+offset_top = 400.0
+offset_right = 432.0
+offset_bottom = 438.0
+theme_override_font_sizes/font_size = 32
+text = "Swap Ability"
+
+[node name="DragonRanchPanel" type="Panel" parent="." unique_id=1716477812]
+visible = false
+z_index = 1000
+layout_mode = 0
+offset_left = 18.0
+offset_top = 13.0
+offset_right = 1908.0
+offset_bottom = 1059.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_mjs62")
+script = ExtResource("39_xkixq")
+
+[node name="HeaderLabel" type="Label" parent="DragonRanchPanel" unique_id=1591428862]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_right = 20.0
+offset_bottom = 15.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "Dragon Enclosure"
+
+[node name="CloseRanchButton" type="Button" parent="DragonRanchPanel" unique_id=1246558732]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -88.0
+offset_bottom = 38.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 32
+text = "Close"
+
+[node name="EnclosureArea" type="ColorRect" parent="DragonRanchPanel" unique_id=474859683]
+layout_mode = 0
+offset_left = 62.0
+offset_top = 48.0
+offset_right = 1333.0
+offset_bottom = 909.0
+color = Color(0.23031491, 0.23031494, 0.23031494, 1)
+
+[node name="InvalidSound" type="AudioStreamPlayer" parent="DragonRanchPanel/EnclosureArea" unique_id=111250577]
+stream = ExtResource("40_mjs62")
+
+[node name="DragonInfoCard" type="Panel" parent="DragonRanchPanel" unique_id=381749517]
+layout_mode = 0
+offset_left = 1351.0
+offset_top = 39.0
+offset_right = 1867.0
+offset_bottom = 1043.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_31epj")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DragonRanchPanel/DragonInfoCard" unique_id=572474332]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 12.0
+offset_right = 509.0
+offset_bottom = 522.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=506332765]
+layout_mode = 2
+alignment = 1
+
+[node name="NameInput" type="LineEdit" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer/HBoxContainer" unique_id=1218353639]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+alignment = 1
+max_length = 30
+
+[node name="SaveNameBtn" type="Button" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer/HBoxContainer" unique_id=211798387]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Rename"
+
+[node name="Spacer" type="Label" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=481203175]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+
+[node name="DetailsLabel" type="RichTextLabel" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=757648473]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 24
+bbcode_enabled = true
+text = "Gen 1 Fire Baby"
+fit_content = true
+
+[node name="TraitsLabel" type="RichTextLabel" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1730263796]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 24
+text = "Traits: Fierce"
+fit_content = true
+
+[node name="GrowthLabel" type="RichTextLabel" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1653027468]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 32
+text = "Growth: 0/50"
+fit_content = true
+
+[node name="StatsDragonLabel" type="RichTextLabel" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1952422906]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 32
+fit_content = true
+
+[node name="FeedButton" type="Button" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1905823982]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Feed (Costs 10 Gold)"
+
+[node name="HuntRabbitBtn" type="Button" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=909874511]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Throw Rabbit"
+
+[node name="Spacer2" type="Label" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1873860349]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+
+[node name="TrainingStatusLabel" type="RichTextLabel" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=846498603]
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 32
+bbcode_enabled = true
+
+[node name="TrainingPreviewLabel" type="RichTextLabel" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1673335317]
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 24
+bbcode_enabled = true
+
+[node name="TrainingProgramOption" type="OptionButton" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=199517940]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+
+[node name="TrainingIntensityOption" type="OptionButton" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=2109632387]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+
+[node name="TrainDragonBtn" type="Button" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=983120751]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="RestDragonBtn" type="Button" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=1806562903]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="CloseCardBtn" type="Button" parent="DragonRanchPanel/DragonInfoCard/VBoxContainer" unique_id=692854429]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Close"
+
+[node name="HatchEggButton" type="Button" parent="DragonRanchPanel" unique_id=2110164489]
+layout_mode = 0
+offset_left = 585.0
+offset_top = 942.0
+offset_right = 729.0
+offset_bottom = 980.0
+theme_override_font_sizes/font_size = 32
+text = "Hatch eGG"
+
+[node name="OpenBreedBtn" type="Button" parent="DragonRanchPanel" unique_id=1865855061]
+layout_mode = 0
+offset_left = 770.0
+offset_top = 943.0
+offset_right = 1004.0
+offset_bottom = 981.0
+theme_override_font_sizes/font_size = 32
+text = "Breeding Station"
+
+[node name="BreedPanel" type="Panel" parent="DragonRanchPanel" unique_id=1462487516]
+visible = false
+layout_mode = 0
+offset_right = 1370.0
+offset_bottom = 977.0
+
+[node name="CloseBreedBtn" type="Button" parent="DragonRanchPanel/BreedPanel" unique_id=187078234]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -49.0
+offset_bottom = 59.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 32
+text = "X"
+
+[node name="TitleLabel" type="Label" parent="DragonRanchPanel/BreedPanel" unique_id=934508773]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -56.5
+offset_right = 56.5
+offset_bottom = 15.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "BREEDING STATION"
+
+[node name="ParentABtn" type="Button" parent="DragonRanchPanel/BreedPanel" unique_id=1530749819]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 354.0
+offset_right = 549.0
+offset_bottom = 521.0
+text = "Select\\nParent A"
+
+[node name="Sprite" type="TextureRect" parent="DragonRanchPanel/BreedPanel/ParentABtn" unique_id=1206946284]
+layout_mode = 0
+offset_left = -3.0
+offset_top = -272.0
+offset_right = 424.0
+offset_bottom = -15.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ParentBBtn" type="Button" parent="DragonRanchPanel/BreedPanel" unique_id=2055239631]
+layout_mode = 0
+offset_left = 812.0
+offset_top = 359.0
+offset_right = 1244.0
+offset_bottom = 521.0
+text = "Select\\nParent B"
+
+[node name="Sprite" type="TextureRect" parent="DragonRanchPanel/BreedPanel/ParentBBtn" unique_id=1890721665]
+layout_mode = 0
+offset_left = 5.0
+offset_top = -270.0
+offset_right = 432.0
+offset_bottom = -13.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PredictionLabel" type="RichTextLabel" parent="DragonRanchPanel/BreedPanel" unique_id=677488515]
+layout_mode = 0
+offset_left = 490.0
+offset_top = 536.0
+offset_right = 870.0
+offset_bottom = 851.0
+bbcode_enabled = true
+fit_content = true
+
+[node name="ConfirmBreedBtn" type="Button" parent="DragonRanchPanel/BreedPanel" unique_id=639433873]
+layout_mode = 0
+offset_left = 468.0
+offset_top = 814.0
+offset_right = 920.0
+offset_bottom = 852.0
+theme_override_font_sizes/font_size = 32
+text = "Breed (Requires 1x Dragon Rose)"
+
+[node name="BreedSelectionPopup" type="Panel" parent="DragonRanchPanel" unique_id=2025542076]
+visible = false
+layout_mode = 0
+offset_left = 1089.0
+offset_top = 60.0
+offset_right = 1616.0
+offset_bottom = 780.0
+
+[node name="CloseSelectionBtn" type="Button" parent="DragonRanchPanel/BreedSelectionPopup" unique_id=270374015]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -56.0
+offset_bottom = 23.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 32
+text = "Cancel"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="DragonRanchPanel/BreedSelectionPopup" unique_id=1175692868]
+layout_mode = 0
+offset_right = 410.0
+offset_bottom = 707.0
+
+[node name="SelectionVBox" type="VBoxContainer" parent="DragonRanchPanel/BreedSelectionPopup/ScrollContainer" unique_id=239634928]
+layout_mode = 2
+
+[node name="HerderPortrait" type="TextureRect" parent="DragonRanchPanel" unique_id=1841537424]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 1072.0
+offset_top = 530.0
+offset_right = 1365.0
+offset_bottom = 840.0
+texture = ExtResource("25_1j8br")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HerderDialogue" type="Label" parent="DragonRanchPanel" unique_id=693657039]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 891.0
+offset_top = 838.0
+offset_right = 1336.0
+offset_bottom = 927.0
+autowrap_mode = 2
+
+[node name="HerderBlip" type="AudioStreamPlayer" parent="DragonRanchPanel" unique_id=1618884786]
+unique_name_in_owner = true
+stream = ExtResource("7_532wb")
+
+[node name="FavoriteDragonLabel" type="Label" parent="DragonRanchPanel" unique_id=736047542]
+layout_mode = 0
+offset_left = 986.0
+offset_top = 885.0
+offset_right = 1268.0
+offset_bottom = 911.0
+
+[node name="DebugMorgraPanel" type="VBoxContainer" parent="DragonRanchPanel" unique_id=604112305]
+layout_mode = 0
+offset_left = 968.0
+offset_top = 114.0
+offset_right = 1008.0
+offset_bottom = 154.0
+
+[node name="BtnAnger" type="Button" parent="DragonRanchPanel/DebugMorgraPanel" unique_id=745146793]
+layout_mode = 2
+text = "Force Anger"
+
+[node name="BtnNeutral" type="Button" parent="DragonRanchPanel/DebugMorgraPanel" unique_id=182485231]
+layout_mode = 2
+text = "Force Neutral\""
+
+[node name="BtnAdore" type="Button" parent="DragonRanchPanel/DebugMorgraPanel" unique_id=975248773]
+layout_mode = 2
+text = "Force Adoration"
+
+[node name="BtnReset" type="Button" parent="DragonRanchPanel/DebugMorgraPanel" unique_id=1138006794]
+layout_mode = 2
+text = "Reset States"
+
+[node name="OpenRanchButton" type="Button" parent="." unique_id=1668478921]
+layout_mode = 0
+offset_left = 448.0
+offset_top = 18.0
+offset_right = 692.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 32
+text = "OpenRanchButton"
+
+[node name="InspectUnitButton" type="Button" parent="." unique_id=1128961139]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 462.0
+offset_top = 884.0
+offset_right = 632.0
+offset_bottom = 922.0
+theme_override_font_sizes/font_size = 32
+text = "Inspect Unit"
+
+[node name="UnitInfoPanel" type="Panel" parent="." unique_id=1623495648]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 496.0
+offset_top = 313.0
+offset_right = 1209.0
+offset_bottom = 789.0
+
+[node name="UnitInfoPortrait" type="TextureRect" parent="UnitInfoPanel" unique_id=2110285257]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 91.0
+offset_top = 45.0
+offset_right = 265.0
+offset_bottom = 222.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UnitInfoName" type="Label" parent="UnitInfoPanel" unique_id=285641352]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 158.0
+offset_top = 5.0
+offset_right = 347.0
+offset_bottom = 39.0
+
+[node name="UnitInfoStats" type="RichTextLabel" parent="UnitInfoPanel" unique_id=1544316008]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 341.0
+offset_top = 15.0
+offset_right = 697.0
+offset_bottom = 419.0
+bbcode_enabled = true
+
+[node name="UnitInfoCloseButton" type="Button" parent="UnitInfoPanel" unique_id=554205817]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 659.0
+offset_top = 9.0
+offset_right = 705.0
+offset_bottom = 54.0
+theme_override_font_sizes/font_size = 32
+text = "X"
+
+[node name="HpGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1489421222]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 11.0
+offset_top = 337.0
+offset_right = 340.0
+offset_bottom = 356.0
+
+[node name="StrGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1918568062]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 2.0
+offset_top = 363.0
+offset_right = 343.0
+offset_bottom = 382.0
+
+[node name="MagGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=657347036]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 9.0
+offset_top = 385.0
+offset_right = 348.0
+offset_bottom = 404.0
+
+[node name="DefGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1434857582]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 8.0
+offset_top = 410.0
+offset_right = 347.0
+offset_bottom = 429.0
+
+[node name="ResGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1017219401]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 437.0
+offset_right = 353.0
+offset_bottom = 456.0
+
+[node name="SpdGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=2063666733]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 6.0
+offset_top = 462.0
+offset_right = 377.0
+offset_bottom = 481.0
+
+[node name="AgiGrowthBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=18262802]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 4.0
+offset_bottom = 19.0
+
+[node name="HpStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=499320674]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 376.0
+offset_top = 338.0
+offset_right = 576.0
+offset_bottom = 357.0
+
+[node name="StrStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=142389060]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 379.0
+offset_top = 362.0
+offset_right = 579.0
+offset_bottom = 381.0
+
+[node name="MagStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1699402139]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 378.0
+offset_top = 393.0
+offset_right = 578.0
+offset_bottom = 412.0
+
+[node name="DefStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1694359295]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 378.0
+offset_top = 426.0
+offset_right = 578.0
+offset_bottom = 445.0
+
+[node name="ResStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1469478416]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 385.0
+offset_top = 454.0
+offset_right = 585.0
+offset_bottom = 473.0
+
+[node name="SpdStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1840512000]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 578.0
+offset_top = 343.0
+offset_right = 778.0
+offset_bottom = 362.0
+
+[node name="AgiStatBar" type="ProgressBar" parent="UnitInfoPanel" unique_id=1162812799]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 581.0
+offset_top = 365.0
+offset_right = 781.0
+offset_bottom = 384.0
+
+[connection signal="pressed" from="SortButton" to="." method="_on_sort_button_pressed"]
+[connection signal="pressed" from="HaggleButton" to="." method="_on_haggle_button_pressed"]

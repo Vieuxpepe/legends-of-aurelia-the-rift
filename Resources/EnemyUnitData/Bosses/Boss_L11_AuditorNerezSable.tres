@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://ddjkudm1yv5u4"]
+
+[ext_resource type="Resource" uid="uid://bqhyltkqmqfpx" path="res://Resources/Classes/PromotedClass/BladeWeaver.tres" id="1_tvram"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_uaxvc"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_nympw"]
+[ext_resource type="Resource" uid="uid://bka5a1mua7c6a" path="res://Resources/GeneratedItems/Weapon_Sparkknife.tres" id="4_6rl01"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_8lbwp"]
+
+[resource]
+script = ExtResource("3_nympw")
+display_name = "Auditor Nerez Sable"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["So the account closes here… and still none of you understand the price of chaos."])
+character_class = ExtResource("1_tvram")
+starting_weapon = ExtResource("4_6rl01")
+ability = "collateral_clause"
+max_hp = 36
+strength = 12
+magic = 7
+defense = 6
+resistance = 9
+speed = 18
+agility = 18
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

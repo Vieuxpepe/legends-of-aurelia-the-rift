@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://c5biqfvor0soy"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_2knq7"]
+
+[resource]
+script = ExtResource("1_2knq7")
+skill_id = "merc_shove"
+skill_name = "Shove"
+description = "Unlocks Shove."
+required_skill_id = "skill_hp_1"
+grid_position = Vector2(1, 0)
+boost_amount = 0
+ability_to_unlock = "Shove"
+metadata/_custom_type_script = "uid://cf2fyl2krcj10"

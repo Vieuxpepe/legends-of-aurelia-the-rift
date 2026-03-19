@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://c3ofndf127qm0"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_d2rjp"]
+
+[resource]
+script = ExtResource("1_d2rjp")
+skill_id = "villager_def_1"
+skill_name = "Weathered Hide"
+description = "Grants +1 Defense."
+required_skill_id = "villager_str_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "def"
+boost_amount = 1

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b2n1yyh8oryok"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_km786"]
+
+[resource]
+script = ExtResource("1_km786")
+description = "A graceful performance fan that turns movement into cutting force."
+weapon_name = "Silken Fan"
+gold_cost = 520
+damage_type = 1
+weapon_type = 9
+affected_stat = "magic"
+effect_amount = 0
+might = 3
+hit_bonus = 16
+max_range = 2
+max_durability = 40
+current_durability = 40

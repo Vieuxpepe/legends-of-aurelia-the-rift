@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cesr0thpfqu0"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_jhtlm"]
+
+[resource]
+script = ExtResource("1_jhtlm")
+item_name = "Recipe: Rusty Sword"
+description = "Blueprint for forging a Rusty Sword."
+gold_cost = 70

@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://c04nchvpxyyu1"]
+
+[ext_resource type="Script" uid="uid://bc4t1ov0h4134" path="res://Scripts/Core/EnemySpawner.gd" id="1_wscvy"]
+[ext_resource type="PackedScene" uid="uid://b0e8x5ik3udyx" path="res://Resources/Unit.tscn" id="2_tvxv8"]
+[ext_resource type="Resource" uid="uid://bu07uyhbuqebs" path="res://Resources/Units/Skeleton.tres" id="3_uc8ql"]
+[ext_resource type="Texture2D" uid="uid://80ubdcvjlq4o" path="res://Assets/Sprites/TentSpawner.png" id="4_q1kdf"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tvxv8"]
+bg_color = Color(0.34509805, 1, 0.078431375, 0.7764706)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="MercenaryTent" type="Node2D" unique_id=1450992864]
+script = ExtResource("1_wscvy")
+spawner_faction = 2
+base_unit_scene = ExtResource("2_tvxv8")
+unit_data = ExtResource("3_uc8ql")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=640169180]
+modulate = Color(0.6156863, 1, 1, 1)
+position = Vector2(33, 35.5)
+scale = Vector2(0.25, 0.2610294)
+texture = ExtResource("4_q1kdf")
+
+[node name="HealthBar" type="ProgressBar" parent="." unique_id=11864795]
+z_index = 2
+offset_top = -25.0
+offset_right = 64.0
+offset_bottom = -5.0
+theme_override_styles/fill = SubResource("StyleBoxFlat_tvxv8")
+value = 100.0

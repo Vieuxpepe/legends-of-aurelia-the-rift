@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://c8j3dn2qnngxn"]
+
+[ext_resource type="Resource" uid="uid://basnwy3wbonr2" path="res://Resources/Classes/Mage.tres" id="1_t2oon"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_lbxpc"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_3uit2"]
+[ext_resource type="Texture2D" uid="uid://cl5p1i4trbqvk" path="res://Assets/Portraits/Tariq Portrait.png" id="3_4d5h4"]
+[ext_resource type="Resource" uid="uid://b6or84k5hkngk" path="res://Resources/GeneratedItems/Weapon_Arcane_Grimoire.tres" id="4_4d5h4"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_bs36w"]
+[ext_resource type="Texture2D" uid="uid://bufj7rt4bmo7d" path="res://Assets/Sprites/Tariq Battle Sprite.png" id="7_bs36w"]
+
+[resource]
+script = ExtResource("3_3uit2")
+display_name = "Tariq"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["How irritating… after all that, I turn out to be exactly as mortal as advertised.", "So that is the final correction. Fine.", "I had hoped for a more intellectually satisfying conclusion.", "Don’t become sentimental on my behalf. Become effective."])
+level_up_quotes = Array[String](["Well. Apparently I remain annoyingly effective.", "Good. Competence continues to justify my presence.", "Mm. Refinement, not luck. Much preferred."])
+support_personality = "sardonic"
+character_class = ExtResource("1_t2oon")
+starting_weapon = ExtResource("4_4d5h4")
+unit_sprite = ExtResource("7_bs36w")
+portrait = ExtResource("3_4d5h4")
+max_hp = 22
+strength = 0
+magic = 11
+defense = 3
+resistance = 8
+speed = 8
+agility = 11
+hp_growth = 50
+str_growth = 0
+mag_growth = 65
+def_growth = 15
+res_growth = 45
+spd_growth = 45
+agi_growth = 60

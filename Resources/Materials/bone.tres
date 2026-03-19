@@ -1,0 +1,9 @@
+[gd_resource type="Resource" format=3 uid="uid://c1wtvc4o2xk4x"]
+
+[ext_resource type="Texture2D" uid="uid://gpckd3xxi33s" path="res://Resources/Materials/Icons/Bone.png" id="1_8eo8o"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_p7qmw"]
+
+[resource]
+script = ExtResource("2_p7qmw")
+item_name = "Skeleton Bone"
+icon = ExtResource("1_8eo8o")

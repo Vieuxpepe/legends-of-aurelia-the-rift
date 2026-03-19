@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://djld3nk0j1ij7"]
+
+[ext_resource type="Resource" uid="uid://cex4kc5oyyjqt" path="res://Resources/Classes/Mercenary.tres" id="1_4ftrc"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_sjcje"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_qyl44"]
+[ext_resource type="Resource" uid="uid://c7tx64bqc5g86" path="res://Resources/GeneratedItems/Weapon_Oathcutter.tres" id="4_734rc"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_ggrdo"]
+
+[resource]
+script = ExtResource("3_qyl44")
+display_name = "Graveblade"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_4ftrc")
+starting_weapon = ExtResource("4_734rc")
+max_hp = 25
+strength = 9
+defense = 5
+resistance = 2
+speed = 5
+agility = 5
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 7
+max_gold_drop = 12
+drops_equipped_weapon = true
+equipped_weapon_chance = 14

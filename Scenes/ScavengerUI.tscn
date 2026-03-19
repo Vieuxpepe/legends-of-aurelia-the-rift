@@ -1,0 +1,127 @@
+[gd_scene format=3 uid="uid://bceah4ri0w8fh"]
+
+[ext_resource type="Script" uid="uid://b6cnyukkjjnnc" path="res://Scenes/ScavengerUI.gd" id="1_ti2gb"]
+
+[node name="ScavengerUI" type="Control" unique_id=1311269240]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ti2gb")
+
+[node name="Dimmer" type="ColorRect" parent="." unique_id=1892867865]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.14117648, 0.14117648, 0.14117648, 0.5921569)
+
+[node name="MainPanel" type="Panel" parent="." unique_id=1200684527]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -550.0
+offset_top = -350.0
+offset_right = 550.0
+offset_bottom = 350.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="MainPanel" unique_id=1546329654]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -170.0
+offset_right = 170.0
+offset_bottom = 30.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "The Scavenger's Network"
+
+[node name="CloseBtn" type="Button" parent="MainPanel" unique_id=398980657]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -38.0
+offset_bottom = 38.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 32
+text = "X"
+
+[node name="LayoutHBox" type="HBoxContainer" parent="MainPanel" unique_id=1914050535]
+layout_mode = 0
+offset_left = 32.0
+offset_top = 108.0
+offset_right = 1082.0
+offset_bottom = 658.0
+theme_override_constants/separation = 20
+
+[node name="ConvoySection" type="VBoxContainer" parent="MainPanel/LayoutHBox" unique_id=1494117428]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MainPanel/LayoutHBox/ConvoySection" unique_id=836884250]
+layout_mode = 2
+text = "Your Convoy (Donate)"
+
+[node name="ConvoyScroll" type="ScrollContainer" parent="MainPanel/LayoutHBox/ConvoySection" unique_id=114191129]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ConvoyGrid" type="GridContainer" parent="MainPanel/LayoutHBox/ConvoySection/ConvoyScroll" unique_id=1427986715]
+layout_mode = 2
+columns = 3
+
+[node name="DetailsSection" type="VBoxContainer" parent="MainPanel/LayoutHBox" unique_id=1210241195]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+alignment = 1
+
+[node name="PreviewIcon" type="TextureRect" parent="MainPanel/LayoutHBox/DetailsSection" unique_id=2060883248]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DonorLabel" type="Label" parent="MainPanel/LayoutHBox/DetailsSection" unique_id=1487433341]
+layout_mode = 2
+text = "Donated by: ..."
+
+[node name="ItemDesc" type="RichTextLabel" parent="MainPanel/LayoutHBox/DetailsSection" unique_id=1895227806]
+custom_minimum_size = Vector2(0, 250)
+layout_mode = 2
+bbcode_enabled = true
+
+[node name="ActionBtn" type="Button" parent="MainPanel/LayoutHBox/DetailsSection" unique_id=1571321743]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="NetworkSection" type="VBoxContainer" parent="MainPanel/LayoutHBox" unique_id=1623783113]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MainPanel/LayoutHBox/NetworkSection" unique_id=115212305]
+layout_mode = 2
+text = "Network Finds (Claim)"
+
+[node name="NetworkScroll" type="ScrollContainer" parent="MainPanel/LayoutHBox/NetworkSection" unique_id=1063489522]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="NetworkGrid" type="GridContainer" parent="MainPanel/LayoutHBox/NetworkSection/NetworkScroll" unique_id=1601553420]
+layout_mode = 2
+columns = 3
+
+[node name="RefreshBtn" type="Button" parent="MainPanel/LayoutHBox/NetworkSection" unique_id=625057894]
+layout_mode = 2
+text = "Search Ruins (Refresh)"

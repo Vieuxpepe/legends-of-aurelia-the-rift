@@ -1,0 +1,46 @@
+WEAPON SOFT CLEANUP REPORT
+==================================================
+Mode: DRY RUN
+Generated weapons scanned: 84
+Legacy weapons scanned: 11
+Planned actions: 8
+
+MOVE
+  FROM: res://Resources/Weapons/FireTome.tres
+  TO:   res://Resources/Weapons/_Deprecated/FireTome.tres
+  WHY:  Legacy duplicate of generated weapon_name: Fire Tome
+
+MOVE
+  FROM: res://Resources/Weapons/Heal Staff.tres
+  TO:   res://Resources/Weapons/_Deprecated/Heal Staff.tres
+  WHY:  Legacy duplicate of generated weapon_name: Heal Staff
+
+MOVE
+  FROM: res://Resources/Weapons/IronSword.tres
+  TO:   res://Resources/Weapons/_Deprecated/IronSword.tres
+  WHY:  Legacy duplicate of generated weapon_name: Iron Sword
+
+MOVE
+  FROM: res://Resources/Weapons/Protect Staff.tres
+  TO:   res://Resources/Weapons/_Deprecated/Protect Staff.tres
+  WHY:  Legacy duplicate of generated weapon_name: Protect Staff
+
+MOVE
+  FROM: res://Resources/Weapons/Crude Bow.tres
+  TO:   res://Resources/Weapons/_Deprecated/Crude Bow.tres
+  WHY:  Suspicious legacy file flagged by audit
+
+MOVE
+  FROM: res://Resources/Weapons/Legendary TEST Sword.tres
+  TO:   res://Resources/Weapons/_Deprecated/Legendary TEST Sword.tres
+  WHY:  Suspicious legacy file flagged by audit
+
+MOVE
+  FROM: res://Resources/Weapons/SteelAxe.tres
+  TO:   res://Resources/Weapons/_Deprecated/SteelAxe.tres
+  WHY:  Suspicious legacy file flagged by audit
+
+MOVE
+  FROM: res://Resources/Weapons/TomeOfFireBeam.tres
+  TO:   res://Resources/Weapons/_Deprecated/TomeOfFireBeam.tres
+  WHY:  Suspicious legacy file flagged by audit

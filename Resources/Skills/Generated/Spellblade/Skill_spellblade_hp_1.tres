@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://sabpsxk8i3r6"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_47uox"]
+
+[resource]
+script = ExtResource("1_47uox")
+skill_id = "spellblade_hp_1"
+description = "Grants +2 Max HP."
+required_skill_id = "spellblade_def_1"
+grid_position = Vector2(4, 1)
+boost_amount = 2

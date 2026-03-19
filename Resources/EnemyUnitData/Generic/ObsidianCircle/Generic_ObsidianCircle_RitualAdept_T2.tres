@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://5k7sior3howr"]
+
+[ext_resource type="Resource" uid="uid://dekndssahuvia" path="res://Resources/Classes/Monk.tres" id="1_8l2hk"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ti0es"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_6j8xe"]
+[ext_resource type="Resource" uid="uid://cvv7yw08137uj" path="res://Resources/GeneratedItems/Weapon_Pilgrims_Knuckles.tres" id="4_t7aor"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_hx7kl"]
+
+[resource]
+script = ExtResource("3_6j8xe")
+display_name = "Ritual Adept"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_8l2hk")
+starting_weapon = ExtResource("4_t7aor")
+max_hp = 24
+strength = 8
+magic = 2
+defense = 4
+resistance = 5
+speed = 5
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 7
+max_gold_drop = 12
+drops_equipped_weapon = true
+equipped_weapon_chance = 14

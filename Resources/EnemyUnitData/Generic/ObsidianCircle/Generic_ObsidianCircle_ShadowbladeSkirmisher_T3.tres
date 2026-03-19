@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://sckihjunvkxo"]
+
+[ext_resource type="Resource" uid="uid://krdfn8n4hwu8" path="res://Resources/Classes/PromotedClass/Assassin.tres" id="1_iab7x"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_caoj5"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_c2t57"]
+[ext_resource type="Resource" uid="uid://bka5a1mua7c6a" path="res://Resources/GeneratedItems/Weapon_Sparkknife.tres" id="4_4bto7"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_ejx3y"]
+
+[resource]
+script = ExtResource("3_c2t57")
+display_name = "Shadowblade Skirmisher"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_iab7x")
+starting_weapon = ExtResource("4_4bto7")
+max_hp = 30
+strength = 11
+defense = 4
+resistance = 4
+speed = 9
+agility = 9
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://4gcahl7fvfj6"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_b015s"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_qapi2"]
+[ext_resource type="Resource" uid="uid://b0m0i3egeoykk" path="res://Resources/Skills/Generated/Promoted/DivineSage/Skill_ds_hp_1.tres" id="3_3es8m"]
+[ext_resource type="Resource" uid="uid://br35glux7xg1n" path="res://Resources/Skills/Generated/Promoted/DivineSage/Skill_ds_mag_1.tres" id="4_8sb1f"]
+[ext_resource type="Resource" uid="uid://b74qcw07cpyio" path="res://Resources/Skills/Generated/Promoted/DivineSage/Skill_ds_mastery.tres" id="5_5xw2c"]
+[ext_resource type="Resource" uid="uid://lnx52v3qc8np" path="res://Resources/Skills/Generated/Promoted/DivineSage/Skill_ds_res_1.tres" id="6_pj0g1"]
+[ext_resource type="Resource" uid="uid://dmetu7nnxtmfp" path="res://Resources/Skills/Generated/Promoted/DivineSage/Skill_ds_spd_1.tres" id="7_50vwc"]
+
+[resource]
+script = ExtResource("1_b015s")
+skills = Array[ExtResource("2_qapi2")]([ExtResource("3_3es8m"), ExtResource("4_8sb1f"), ExtResource("5_5xw2c"), ExtResource("6_pj0g1"), ExtResource("7_50vwc")])
+metadata/_custom_type_script = "uid://cedoicamottly"

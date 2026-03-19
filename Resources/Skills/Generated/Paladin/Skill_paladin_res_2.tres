@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cfjc5tqjvqh4m"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_5f0o5"]
+
+[resource]
+script = ExtResource("1_5f0o5")
+skill_id = "paladin_res_2"
+skill_name = "Sacred Resistance II"
+description = "Increases Resistance by +1."
+required_skill_id = "paladin_res_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "res"
+boost_amount = 1

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dyihdjg7ejwc5"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_aq4jf"]
+
+[resource]
+script = ExtResource("1_aq4jf")
+rarity = "Legendary"
+description = "A monstrous endgame axe for ending arguments and walls."
+weapon_name = "Titan Breaker"
+gold_cost = 9200
+weapon_type = 2
+effect_amount = 0
+might = 15
+hit_bonus = -4
+max_durability = 18
+current_durability = 18

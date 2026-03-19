@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dl4s21ip7hen8"
+path="res://.godot/imported/The Multiverse Arena Battle.mp3-948b06c4ba9fc3e51a997ff2a082eb63.mp3str"
+
+[deps]
+
+source_file="res://SoundEffects/Music/music discs/The Multiverse Arena Battle.mp3"
+dest_files=["res://.godot/imported/The Multiverse Arena Battle.mp3-948b06c4ba9fc3e51a997ff2a082eb63.mp3str"]
+
+[params]
+
+loop=true
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,144 @@
+# Master AI Reviewer & Architecture Manifesto for the Tactical SRPG Project
+
+This document provides a top-level overview of the tactical SRPG project supplied in the zip file. It is designed to give both developers and future AI reviewers immediate context on how the game works.
+
+## 1. Global Architecture & Autoloads
+
+### Autoload/Singleton usage in Godot
+
+Godot's AutoLoad system creates a node for a script and adds it to the root of the scene tree before any scenes are loaded; this node can then be accessed from anywhere via `/root/Name` or by using its class name as a global if it is marked as `Enabled`.[^1] Autoloads are ideal for storing global state and managing cross-scene logic.[^2] In this project the following scripts serve as global singletons:
+
+| Singleton (script) | Description & state managed |
+|---|---|
+| `CampaignManager.gd` | Central persistent store for the entire campaign. It tracks player settings (audio volume, camera speeds, fog-of-war toggles, zoom limits), global variables such as gold and fame, base management, progression through the campaign (current level index, max unlocked index, whether the player is in skirmish mode), world map yield tables and progression arrays (pre-battle and post-battle transitions), and NPC relationship data. Scripts across the project read and write its state to persist things between scenes. |
+| `ItemDatabase.gd` | Runs at start-up and recursively loads every `.tres` resource in `res://Resources/` specified in `folders_to_scan`. It builds a `master_item_pool` and categorizes items by rarity. Other systems query it to generate merchant inventories and loot pools. |
+| `DialogueDatabase.gd` | Holds dictionaries of dialogue lines for camp NPCs (e.g., Blacksmith and Merchant). Separating text from UI allows expansion without editing UI scripts. |
+| `RecipeDatabase.gd` | Contains an array of dictionaries describing crafting/smelting/structure recipes. Each entry lists ingredients, the resulting item, and whether it's a structure or smelting recipe. |
+| `EncounterDatabase.gd` | Defines static world-map narrative encounters as an array of dictionaries (`id`, title, description, options with requirements and rewards). World-map scripts read from this to present events. |
+| `ScavengerManager.gd` | Manages asynchronous multiplayer item sharing. It serializes items via `CampaignManager._serialize_item`, posts them to a server (SilentWolf), and maintains a `current_scavenger_stock` list. |
+| `QTEManager.gd` | Provides helper functions to begin/end QTE mini-games. It pauses the scene tree, manages pitch resets, and cleans up the QTE layer. Although not explicitly marked as an autoload in the code, it is designed to be used globally by combat scripts. |
+| `SeraphinaDialogueManager.gd` *(optional)* | Coordinates a branching dialogue tree for the character Seraphina. Exposes signals (`dialogue_started`, `dialogue_finished`) and methods to start and advance dialogues. This manager is often used from multiple scenes, so registering it as an autoload simplifies access. |
+
+These singletons expose variables and methods that many scenes rely on. For example, combat logic reads `CampaignManager.battle_show_danger_zone_default` to decide if danger tiles should be displayed by default. Renaming or removing these autoloads will break numerous scripts, so treat them as the foundation of the project's state.
+
+## 2. The Signal Ecosystem
+
+### Core custom signals and their publishers
+
+| Signal | Emitted by | Purpose / Typical listeners |
+|---|---|---|
+| `Unit.moved(target_grid_pos: Vector2i)` | `Unit.gd` when a unit finishes moving | Notifies the battlefield and state machines that the unit has moved. Used to update path previews or mark tiles as occupied. |
+| `Unit.finished_turn(unit: Node2D)` | `Unit.gd` after the unit completes all actions in its turn | Triggers the turn manager to select the next actor. `BattleField` or `PlayerTurnState` listen for this to advance to the next unit or end the turn. |
+| `Unit.damaged(current_hp: int)` | `Unit.gd` when a unit takes damage | Allows UI elements (health bars) to animate HP changes; used by `BattleField` to show floating text. |
+| `Unit.died(unit: Node2D, killer: Node2D)` | `Unit.gd` when a unit's HP reaches zero | `BattleField` removes the unit from the scene and spawns loot; `AITurnState` and `PlayerTurnState` update lists of remaining units. |
+| `Unit.leveled_up(unit: Node2D, gains: Dictionary)` | `Unit.gd` when a unit gains enough XP | `BattleField` plays the level-up effect and displays stat increases. |
+| `AITurnState.turn_finished` | `AITurnState.gd` when the AI faction completes its actions | `BattleField` listens to switch back to the player's turn. |
+| `Destructible.died(node: Node2D, killer: Node2D)` | `Destructible.gd` when a chest, barricade, or other destructible object is destroyed | `BattleField` removes the object, spawns loot, and frees the tile. |
+| `EnemySpawner.died` / `EnemySpawner.damaged` | `EnemySpawner.gd` controlling spawned boss monsters | Updates the UI and triggers victory/defeat checks. |
+| `TreasureChest.opened(node: Node2D, opener: Node2D)` | `Resources/Chests/TreasureChest.gd` when a chest is opened | `BattleField` grants loot, plays a sound, and removes the chest from the map. |
+| `BattleField.forecast_resolved(action, use_ability)` | `BattleField.gd` after the player resolves the combat forecast | Listened to by `PlayerTurnState` to decide whether to execute combat, cancel, or initiate a talk. |
+| `BattleField.dialogue_advanced` | `BattleField.gd` when the player clicks to advance cinematic dialogue | Dialogue UI connects to this to display the next line. |
+| `BattleField.promotion_chosen(chosen_class_res: Resource)` | `BattleField.gd` when the player picks a promotion option | Character creation or arena UI listens to update the promoted class data. |
+| `SeraphinaDialogueManager.dialogue_started(node_id)` / `dialogue_finished(last_node_id)` | `SeraphinaDialogueManager.gd` | Used by scenes that need to disable controls while narrative dialogue is in progress. |
+
+### How signals flow through the project
+
+- During gameplay, `Unit` emits `moved`, `finished_turn`, `damaged`, and `died`. `BattleField` connects to these signals to update tile occupancy and UI. `AITurnState` waits for `turn_finished` to know when the AI has finished acting.
+- The combat forecast panel lives inside `BattleField`. When the player confirms or cancels a forecast, `BattleField` emits `forecast_resolved(action, use_ability)`. `PlayerTurnState` awaits this signal to decide whether to run `execute_combat`, cancel, or start a talk.
+- Dialogue managers (`SeraphinaDialogueManager` and dialogue panels inside `BattleField`) emit `dialogue_advanced` or `dialogue_started`; scenes that show story content connect these signals to disable player input until the dialogue is complete.
+
+Connecting and disconnecting signals properly is crucial. Improper signal hookups can cause multiple event firings or unresponsive UI. A good practice is to connect signals in `_ready()` and to check with `has_signal()` or `is_connected()` before connecting or disconnecting to avoid duplicates.
+
+## 3. Core Gameplay Loop (Combat Manager)
+
+### Overview
+
+The tactical combat system uses a state machine pattern with two main states: `PlayerTurnState` and `AITurnState`. Each state derives from a base `GameState` class and holds a reference to the `BattleField` (the scene managing the map, units, and UI).
+
+1. **Unit selection** - In `PlayerTurnState.handle_input`, when the player left-clicks a grid tile with a friendly unit, the script sets `active_unit` and stores the unit's original grid position. It then calls `battlefield.calculate_ranges(active_unit)` to highlight movement and attack ranges and plays a select sound.
+2. **Movement & action selection** - If the player clicks an empty tile within the move range, `PlayerTurnState` computes a path via `battlefield.get_unit_path` and calls `battlefield.move_unit_to(active_unit, path)` (inside `_move_unit_along_path()`) to animate the movement. After moving, the unit is marked as `has_moved`. If the player clicks the unit's current tile again, the script toggles Defend mode; confirming sets `active_unit.is_defending` and ends the unit's turn.
+3. **Attack or interaction** - When the player clicks on an enemy within range, `PlayerTurnState` sets `is_forecasting` and calls `battlefield.show_combat_forecast(active_unit, target_node)`. This function displays a forecast panel showing hit rates, damage, and critical chance, and returns an array `[action, use_ability]` indicating the player's choice. If the action is `"confirm"`, `PlayerTurnState` awaits `battlefield.execute_combat(active_unit, target_node, use_ability)`. This function runs `_run_strike_sequence` for the attacker and defender, handles support triggers, plays animations, and applies damage. Retaliations are handled automatically if the defender survives. If either actor dies, `Unit.died` is emitted, `BattleField` removes the unit, and spawns loot.
+4. **Turn end** - After combat or a defend action, `PlayerTurnState` calls `active_unit.finish_turn()`, emitting `finished_turn`. The state then clears `active_unit` and calls `battlefield.rebuild_grid()` and `battlefield.clear_ranges()` to reset highlights. Once all player units are exhausted, `BattleField` swaps to the `AITurnState`, which iterates through enemy units, evaluates tactical plans, and moves/attacks until no enemies remain active. When `AITurnState.turn_finished` fires, control returns to the player for the next turn.
+
+This cycle repeats until victory or defeat conditions set in `BattleField` (e.g., routing all enemies, surviving a set number of turns, or protecting a VIP) are met.
+
+## 4. Data Architecture (Resources)
+
+Godot's `Resource` system is leveraged extensively to define data for classes, units, weapons, and consumables. Because resources are serialized to `.tres` files, they can be edited in the inspector and loaded at runtime without custom parsers.
+
+### Character and unit data
+
+- `UnitData.gd` - The base resource for any combatant. It exposes properties such as `display_name`, `character_class`, `starting_weapon`, `max_hp`, `strength`, `magic`, `defense`, `resistance`, `speed`, `agility`, growth rates, an `ability` string, visual assets (sprite, portrait, and scale), and an array of supports (instances of `SupportData`). The resource also includes recruitable dialogue and loot drop definitions. Both player characters and enemies reference a `UnitData` resource.
+- `ClassData.gd` - Defines a class's movement type and range, a reference to its skill tree, promotion options, promoted visuals, and stat bonuses for both base stats and growths. Units store a `character_class` pointer so they can easily change class on promotion.
+- `SupportData.gd` - Stores support conversation data for a pair of characters: the partner's name, point thresholds for ranks C/B/A, and arrays of dialogue lines for each rank.
+
+### Weapons and consumables
+
+- `WeaponData.gd` - Contains fundamental weapon stats: `weapon_name`, `damage_type` (physical or magic), `weapon_type` (sword, lance, axe, bow, tome), rarity, `might`, `hit_bonus`, `min_range` / `max_range`, durability, cost, and optional flags `is_healing_staff`, `is_buff_staff`, or `is_debuff_staff` to indicate staves. It also stores visual effects (projectile and impact scenes) and arena shop requirements.
+- `ConsumableData.gd` - Similar to `WeaponData`, this resource defines the name, description, cost, rarity, and specific effects (e.g., HP restore amount, buff duration). Consumables also have `overworld_visual` properties for map pickups.
+- `LootDrop.gd` - A helper resource used by `UnitData` and chests to specify a loot item and drop probability. `BattleField` reads these resources to roll drops.
+
+### Item collections
+
+Rather than hard-coding items, the `ItemDatabase` scans designated folders for `.tres` files at runtime. It stores all items in `master_item_pool` and organizes them by rarity. Other systems (merchants, random chests, the scavenger market) query this database to generate item pools appropriate for the player's progression.
+
+## 5. Scene & Node Hierarchy
+
+### Battle scene
+
+The main combat scene is structured around a `BattleField` node (inherits `Node2D`). While the actual `.tscn` file is not included in the zip, on-ready variables in the script reveal the hierarchy. A simplified tree is shown below:
+
+```text
+BattleField (Node2D, script: BattleField.gd)
+├─ AllyUnits (Node2D) - container for player units
+├─ EnemyUnits (Node2D) - container for enemy units
+├─ NeutralUnits (Node2D) - container for NPCs/chests
+├─ Grid (TileMap/Custom) - holds map tiles and terrain data
+├─ UI (Control)
+│  ├─ CombatForecastPanel (Control) - displays forecast stats, talk and ability buttons
+│  ├─ TradePopup / TradeWindow - small pop-ups for item trading between allies
+│  ├─ TalkPanel - shows character portraits and dialogue
+│  ├─ ArenaVSLayer - overlays used in arena matches (portraits, rankings, sweep particles)
+│  ├─ SupportTrackerPanel - lists unlocked support pairs and points
+│  ├─ UnitInfoPanel - displays stats and equipment for the currently selected unit
+│  ├─ GameOverPanel - restart and continue buttons
+│  └─ MinimapContainer - contains the minimap and map drawer
+├─ Camera2D - follows active unit and pans/zooms based on input
+├─ FogDrawer (Node2D) - draws fog of war based on vision calculations
+├─ Audio players (e.g., DefendSound, InvalidSound)
+└─ Additional helpers (AnimationPlayer, PathLine, click catchers, etc.)
+
+The BattleField script caches many of these nodes using @onready var to avoid repeated lookups. For example, forecast_panel, talk_panel, arena_vs_layer, support_tracker_panel, trade popups, and minimap containers are all cached to control UI visibility and animations.
+
+Unit scene
+
+Each combatant is an instance of a Unit scene (root Node2D with script Unit.gd). The node tree inferred from the script is:
+
+Unit (Node2D, script: Unit.gd)
+├─ Sprite (Sprite2D) - displays the unit sprite
+├─ HealthBar (ProgressBar) - shows current HP
+├─ ExpBar (ProgressBar) - displays experience progress
+├─ TeamGlow (ColorRect) - coloured overlay to show faction and selection state
+├─ DefendIcon (Sprite) - appears when the unit is defending
+├─ DeathSound (AudioStreamPlayer) - plays when the unit dies
+└─ Additional nodes (e.g., selection tween, stagger tween, child projectiles) created in code
+
+The script adjusts the sprite's scale based on the UnitData.visual_scale and sets the texture to UnitData.unit_sprite in _ready().
+
+6. Fragile Links & Warnings
+
+The project contains several tightly coupled areas where changes can easily introduce bugs:
+
+State machine vs. Battlefield API - PlayerTurnState and AITurnState depend heavily on BattleField methods such as calculate_ranges(), show_combat_forecast(), execute_combat(), animate_shield_drop(), and rebuild_grid(). Any renaming of these functions, changes to their parameter lists, or returned values will break turn-state logic. When adding new features to BattleField, always update both state classes accordingly.
+
+Direct node paths in scripts - Many scripts use absolute node paths like $UI/TradePopup/VBoxContainer/TradeButton and $AllyUnits in BattleField.gd or $HealthBar in Unit.gd. If the scene hierarchy changes (e.g., reorganizing UI panels), these paths will become invalid. To mitigate, store references in exported variables or resolve via get_node() from a root path.
+
+Item database folder structure - ItemDatabase.gd hard-codes directories in folders_to_scan. Moving items to new folders without updating this array will prevent them from being loaded. Similarly, renaming resources may break UnitData.starting_weapon or recipe entries.
+
+CampaignManager serialization - The save/load system likely serializes CampaignManager fields. Adding or removing properties may require migration code to preserve save compatibility. Also, functions like _serialize_item() used by ScavengerManager assume specific keys exist in item resources.
+
+Signal connections - Signals are often connected anonymously using lambdas. If you refactor the signal name or the emitting node, ensure that you reconnect or update the anonymous functions. Failing to disconnect signals can result in multiple callbacks and duplicated logic.
+
+Promotion logic - The BattleField.promotion_chosen signal passes a Resource representing the chosen class. Several UI screens (arena shop, level-up menu) assume this resource has certain exported variables (like promotion_options and promoted_portrait). Altering the ClassData interface will ripple through the promotion UI.
+
+By understanding these dependencies and the overall architecture, future developers and AI agents can navigate the project confidently, extend its systems safely, and avoid the common pitfalls of tightly coupled GDScript code.

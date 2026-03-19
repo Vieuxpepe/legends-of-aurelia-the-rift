@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bkemmktbtnyrm"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_bt8xt"]
+
+[resource]
+script = ExtResource("1_bt8xt")
+rarity = "Rare"
+item_name = "Elemental Crystal"
+description = "Essential for forging elemental weapons."
+gold_cost = 450

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://b8l2u36275bqa"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_a1bdf"]
+
+[resource]
+script = ExtResource("1_a1bdf")
+skill_id = "monster_frenzy_claw"
+skill_name = "Frenzy Claw"
+description = "Slash wildly with claws multiple times causing heavy damage."
+required_skill_id = "monster_str_2"
+grid_position = Vector2(3, -1)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Frenzy Claw"

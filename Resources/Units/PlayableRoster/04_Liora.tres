@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cdygsindjvno1"]
+
+[ext_resource type="Resource" uid="uid://lifv7w6xb806" path="res://Resources/Classes/Cleric.tres" id="1_morq2"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_rhy30"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_1essp"]
+[ext_resource type="Texture2D" uid="uid://bpwyr0tkd28dj" path="res://Assets/Portraits/Liora_Portrait.png" id="3_parml"]
+[ext_resource type="Resource" uid="uid://dybujbv48f05e" path="res://Resources/GeneratedItems/Weapon_Beginners_Staff.tres" id="4_parml"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_o41wh"]
+[ext_resource type="Texture2D" uid="uid://dlfq38y84xx0x" path="res://Assets/Sprites/Liora Battle Sprite.png" id="7_o41wh"]
+
+[resource]
+script = ExtResource("3_1essp")
+display_name = "Liora"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["If mercy still means anything, let it live longer in you than it did in me.", "Do not use my death to justify cruelty.", "Faith is not fear… please remember that better than they did.", "If there is light left in this world, carry it gently."])
+level_up_quotes = Array[String](["Then let this be another gift I use in service, not pride.", "I feel steadier now. That matters.", "Good. Faith should strengthen the hand as well as the heart."])
+support_personality = "compassionate"
+character_class = ExtResource("1_morq2")
+starting_weapon = ExtResource("4_parml")
+unit_sprite = ExtResource("7_o41wh")
+portrait = ExtResource("3_parml")
+max_hp = 19
+strength = 1
+magic = 8
+resistance = 9
+speed = 5
+agility = 6
+hp_growth = 50
+str_growth = 5
+mag_growth = 60
+def_growth = 10
+res_growth = 55
+spd_growth = 35
+agi_growth = 45

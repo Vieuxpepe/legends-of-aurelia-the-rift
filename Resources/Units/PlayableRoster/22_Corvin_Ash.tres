@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cl7ofna1m7hdv"]
+
+[ext_resource type="Resource" uid="uid://basnwy3wbonr2" path="res://Resources/Classes/Mage.tres" id="1_3obc7"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_yik73"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_6cw6y"]
+[ext_resource type="Texture2D" uid="uid://f5hyi8ccpxqv" path="res://Assets/Portraits/Corvin Portrait.png" id="3_xewrl"]
+[ext_resource type="Resource" uid="uid://cc4ge88nh13qp" path="res://Resources/GeneratedItems/Weapon_Gloam_Primer.tres" id="4_xewrl"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_lj2yf"]
+[ext_resource type="Texture2D" uid="uid://dwkkgniau31wm" path="res://Assets/Sprites/Corvin Battle Sprite.png" id="7_lj2yf"]
+
+[resource]
+script = ExtResource("3_6cw6y")
+display_name = "Corvin Ash"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["So this is the final threshold… less mysterious than I’d hoped, but honest.", "Interesting. In the end, death proves disappointingly literal.", "Then let this be one truth I do not misname.", "I studied darkness long enough to know this part was always mine."])
+level_up_quotes = Array[String](["Interesting. I can feel the boundary thinning.", "Ah. Growth always feels a little like trespass.", "Good. Another refinement in the anatomy of power."])
+support_personality = "occult"
+character_class = ExtResource("1_3obc7")
+starting_weapon = ExtResource("4_xewrl")
+unit_sprite = ExtResource("7_lj2yf")
+portrait = ExtResource("3_xewrl")
+max_hp = 22
+strength = 0
+magic = 12
+resistance = 10
+speed = 8
+agility = 10
+hp_growth = 45
+str_growth = 0
+mag_growth = 70
+def_growth = 10
+res_growth = 55
+spd_growth = 40
+agi_growth = 50

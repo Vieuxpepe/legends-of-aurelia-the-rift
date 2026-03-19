@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://hr4pv1yt2ugk"]
+
+[ext_resource type="Resource" uid="uid://d08sn5e7me4qv" path="res://Resources/Classes/PromotedClass/HighPaladin.tres" id="1_ixfso"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_n0fn0"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_stnum"]
+[ext_resource type="Resource" uid="uid://dlq46nqvjwh8e" path="res://Resources/GeneratedItems/Weapon_Silver_Lance.tres" id="4_kauw6"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_ao2yq"]
+
+[resource]
+script = ExtResource("3_stnum")
+display_name = "Duke Alric Thornmere"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["If I fall, then Edranor belongs to louder men and lesser blood."])
+character_class = ExtResource("1_ixfso")
+starting_weapon = ExtResource("4_kauw6")
+ability = "banner_break"
+max_hp = 52
+strength = 19
+defense = 15
+resistance = 10
+speed = 13
+agility = 17
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

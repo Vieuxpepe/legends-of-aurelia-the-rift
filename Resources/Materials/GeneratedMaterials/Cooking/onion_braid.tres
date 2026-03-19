@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c576d3unisgt2"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_jkqim"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_alu4y"]
+
+[resource]
+script = ExtResource("2_alu4y")
+item_name = "Onion Braid"
+description = "A hanging braid of pungent onions with papery skins. Their sharp scent lingers on hands, knives, and cutting boards for hours."
+gold_cost = 7
+icon = ExtResource("1_jkqim")
+category = "Cooking"

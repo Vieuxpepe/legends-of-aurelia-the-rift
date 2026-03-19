@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://bxudjnfkenwed"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_0jflx"]
+
+[resource]
+script = ExtResource("1_0jflx")
+item_name = "Wooden Plank"
+description = "Used in the construction of basic weapons and tools."
+gold_cost = 40

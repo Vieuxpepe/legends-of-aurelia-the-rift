@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://vfw6pkq1o24i"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_bpodl"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_01ymf"]
+
+[resource]
+script = ExtResource("2_01ymf")
+item_name = "Saddle Blanket"
+description = "A folded wool blanket meant for pack animals or cold sleepers. It carries the scent of dust, sweat, and long miles."
+gold_cost = 12
+icon = ExtResource("1_bpodl")
+category = "Crafting"

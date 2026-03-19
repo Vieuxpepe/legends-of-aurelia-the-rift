@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://ooukwxsx1v0k"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_uqr7q"]
+
+[resource]
+script = ExtResource("1_uqr7q")
+skill_id = "hero_mastery"
+skill_name = "Mastery: Vanguard's Rally"
+description = "Damages the target and permanently buffs the strength and magic of all allies."
+required_skill_id = "hero_spd_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Vanguard's Rally"

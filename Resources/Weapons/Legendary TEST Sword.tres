@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://c445fnop4de3v"]
+
+[ext_resource type="Texture2D" uid="uid://drvgs3atk5a1n" path="res://Assets/IronSword.png" id="1_0mfes"]
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="2_e25mw"]
+
+[resource]
+script = ExtResource("2_e25mw")
+rarity = "Legendary"
+weapon_name = "Legendary Sword"
+weapon_type = 3
+effect_amount = 0
+max_range = 3
+icon = ExtResource("1_0mfes")
+gladiator_token_cost = 10
+metadata/_custom_type_script = "uid://b1atwvdvhdm0s"

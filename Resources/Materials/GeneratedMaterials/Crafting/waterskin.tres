@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dhal2dyvilw2h"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_exf87"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_a1ljv"]
+
+[resource]
+script = ExtResource("2_a1ljv")
+item_name = "Waterskin"
+description = "A cured leather flask with a cork stopper and a faint animal scent. Plain, durable, and precious once the road grows dry."
+gold_cost = 11
+icon = ExtResource("1_exf87")
+category = "Crafting"

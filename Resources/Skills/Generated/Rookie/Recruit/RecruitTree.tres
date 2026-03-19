@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://ccy6giku7jsq0"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_j3lgf"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_nqmey"]
+[ext_resource type="Resource" uid="uid://b635rx80nhiqi" path="res://Resources/Skills/Generated/Rookie/Recruit/Skill_recruit_hp_1.tres" id="3_op4pa"]
+[ext_resource type="Resource" uid="uid://5estkhm4ml7d" path="res://Resources/Skills/Generated/Rookie/Recruit/Skill_recruit_def_1.tres" id="4_hmb2b"]
+[ext_resource type="Resource" uid="uid://bltqcoqyworyw" path="res://Resources/Skills/Generated/Rookie/Recruit/Skill_recruit_str_1.tres" id="5_w5gky"]
+[ext_resource type="Resource" uid="uid://p627vx5shros" path="res://Resources/Skills/Generated/Rookie/Recruit/Skill_recruit_spd_1.tres" id="6_qt3ap"]
+[ext_resource type="Resource" uid="uid://dd2u8ditaehol" path="res://Resources/Skills/Generated/Rookie/Recruit/Skill_recruit_mastery.tres" id="7_p2c2x"]
+
+[resource]
+script = ExtResource("1_j3lgf")
+tree_name = "Recruit Rookie Tree"
+skills = Array[ExtResource("2_nqmey")]([ExtResource("3_op4pa"), ExtResource("4_hmb2b"), ExtResource("5_w5gky"), ExtResource("6_qt3ap"), ExtResource("7_p2c2x")])

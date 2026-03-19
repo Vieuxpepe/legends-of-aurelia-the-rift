@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c8jd6i4gpwapu"]
+
+[ext_resource type="Texture2D" uid="uid://dpk8p0lha2rix" path="res://Resources/Recipes/Dwarven Crucible.png" id="1_7hdk2"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_dhewv"]
+
+[resource]
+script = ExtResource("1_dhewv")
+rarity = "Epic"
+item_name = "Dwarven Crucible"
+description = "A legendary smelting pot capable of refining raw ores into pure ingots. Hand it to Haldor."
+icon = ExtResource("1_7hdk2")
+metadata/_custom_type_script = "uid://dxefrus755705"

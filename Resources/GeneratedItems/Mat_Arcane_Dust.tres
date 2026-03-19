@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cu22xqni0tucj"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_pwpqn"]
+
+[resource]
+script = ExtResource("1_pwpqn")
+rarity = "Uncommon"
+item_name = "Arcane Dust"
+description = "Residue used to enhance magical items."
+gold_cost = 180

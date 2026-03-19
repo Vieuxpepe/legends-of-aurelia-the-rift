@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://b7odaeatu6hd"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ieild"]
+
+[resource]
+script = ExtResource("1_ieild")
+skill_id = "bd_agi_1"
+skill_name = "Ribbon Feint"
+description = "Grants +2 Agility."
+required_skill_id = "bd_spd_1"
+grid_position = Vector2(1, 0)
+stat_to_boost = "agi"
+boost_amount = 2

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://c4qgt81gd5yj4"]
+
+[ext_resource type="Resource" uid="uid://cnbrpseqmpqqk" path="res://Resources/Skills/Generated/Ascended/RiftArchon/RiftArchonTree.tres" id="1_vopu2"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_uwy7l"]
+
+[resource]
+script = ExtResource("2_uwy7l")
+job_name = "Rift Archon"
+move_range = 6
+allowed_weapon_types = Array[int]([4, 10])
+can_use_debuff_staff = true
+class_skill_tree = ExtResource("1_vopu2")
+promo_str_bonus = 0
+promo_mag_bonus = 4
+promo_def_bonus = 0
+promo_res_bonus = 3
+promo_agi_bonus = 2
+hp_bonus = 2
+spd_bonus = 1
+agi_bonus = 2
+mag_bonus = 5
+res_bonus = 4
+spd_growth_bonus = 5
+agi_growth_bonus = 5
+mag_growth_bonus = 15
+res_growth_bonus = 10

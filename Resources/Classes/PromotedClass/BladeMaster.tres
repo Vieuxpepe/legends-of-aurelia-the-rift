@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://cb3mjav7sxdwj"]
+
+[ext_resource type="Resource" uid="uid://bvn1j1bfmee0d" path="res://Resources/Skills/Generated/Promoted/BladeMaster/BladeMasterTree.tres" id="1_2115t"]
+[ext_resource type="Texture2D" uid="uid://cty3skk4dhf6k" path="res://Assets/Sprites/Promoted Battle Sprites/Blademaster.png" id="1_txml7"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_2115t"]
+[ext_resource type="Resource" uid="uid://bxfb4nk1qwi1b" path="res://Resources/Classes/AscendedClass/DawnExalt.tres" id="3_2bnyj"]
+[ext_resource type="Resource" uid="uid://curmxwv401nal" path="res://Resources/Classes/AscendedClass/VoidStrider.tres" id="4_u6ett"]
+[ext_resource type="Resource" uid="uid://c4qgt81gd5yj4" path="res://Resources/Classes/AscendedClass/RiftArchon.tres" id="5_tme6u"]
+
+[resource]
+script = ExtResource("2_2115t")
+job_name = "Blademaster"
+allowed_weapon_types = Array[int]([0])
+class_skill_tree = ExtResource("1_2115t")
+promotion_options = Array[Resource]([ExtResource("3_2bnyj"), ExtResource("4_u6ett"), ExtResource("5_tme6u")])
+promoted_battle_sprite = ExtResource("1_txml7")
+promo_def_bonus = 2
+promo_spd_bonus = 2
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

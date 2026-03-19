@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dk5kuuqj5kf6r"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_cd5qx"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_3yte5"]
+
+[resource]
+script = ExtResource("2_3yte5")
+rarity = "Uncommon"
+item_name = "Crowbar"
+description = "A thick iron bar with one end flattened for prying. It opens crates, stubborn doors, and sometimes tombs best left shut."
+gold_cost = 24
+icon = ExtResource("1_cd5qx")
+category = "Crafting"

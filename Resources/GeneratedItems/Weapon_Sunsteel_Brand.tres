@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cl671rk7nho3p"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_ofy7s"]
+
+[resource]
+script = ExtResource("1_ofy7s")
+rarity = "Epic"
+description = "A radiant warblade forged to hold against darkness."
+weapon_name = "Sunsteel Brand"
+gold_cost = 5200
+effect_amount = 0
+might = 11
+hit_bonus = 8
+max_durability = 28
+current_durability = 28

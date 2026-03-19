@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dpg6y11cvqi0"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_u1ugg"]
+
+[resource]
+script = ExtResource("1_u1ugg")
+skill_id = "monk_spd_2"
+skill_name = "Quickness II"
+description = "Increases Speed by +2."
+required_skill_id = "monk_meditate"
+grid_position = Vector2(4, 0)
+stat_to_boost = "spd"
+boost_amount = 2

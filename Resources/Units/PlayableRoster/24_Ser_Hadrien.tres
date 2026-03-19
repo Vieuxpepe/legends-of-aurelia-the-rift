@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://baac6bqvta6wo"]
+
+[ext_resource type="Resource" uid="uid://cadv2qi1rxorv" path="res://Resources/Classes/PromotedClass/DeathKnight.tres" id="1_1cqxm"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_e18d8"]
+[ext_resource type="Texture2D" uid="uid://rj1ghdnlus6g" path="res://Assets/Portraits/Ser Hadrien Portrait.png" id="3_2s1hr"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_fpej5"]
+[ext_resource type="Resource" uid="uid://dlq46nqvjwh8e" path="res://Resources/GeneratedItems/Weapon_Silver_Lance.tres" id="4_2s1hr"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_8c0a6"]
+[ext_resource type="Texture2D" uid="uid://du66edxsnu67l" path="res://Assets/Sprites/Ser Hadrien Battle Sprite.png" id="7_8c0a6"]
+
+[resource]
+script = ExtResource("3_fpej5")
+display_name = "Ser Hadrien"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Then let this borrowed life return to memory, and let the living finish the oath.", "At last… the dead may release what the living still must carry.", "Do not make a relic of me. Make use of what I believed.", "My vigil ends. Yours must not."])
+level_up_quotes = Array[String](["So even now, the edge may yet be honed.", "Curious. This old oath still finds new strength.", "Then memory has not finished with me."])
+support_personality = "haunted"
+character_class = ExtResource("1_1cqxm")
+starting_weapon = ExtResource("4_2s1hr")
+unit_sprite = ExtResource("7_8c0a6")
+portrait = ExtResource("3_2s1hr")
+max_hp = 36
+strength = 14
+magic = 3
+defense = 11
+resistance = 9
+speed = 10
+agility = 13
+hp_growth = 45
+str_growth = 35
+mag_growth = 10
+def_growth = 35
+res_growth = 30
+agi_growth = 40

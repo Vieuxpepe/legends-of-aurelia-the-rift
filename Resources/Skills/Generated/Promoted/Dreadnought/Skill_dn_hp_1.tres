@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://v0vus1cr0tgr"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_xttr2"]
+
+[resource]
+script = ExtResource("1_xttr2")
+skill_id = "dn_hp_1"
+skill_name = "Juggernaut Hull"
+description = "Grants +8 Max HP."
+boost_amount = 8

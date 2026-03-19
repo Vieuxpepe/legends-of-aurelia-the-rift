@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b0dpbg8psctrb"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_yvk4y"]
+
+[resource]
+script = ExtResource("1_yvk4y")
+description = "A straightforward fire text with reliable destructive force."
+weapon_name = "Fire Tome"
+gold_cost = 520
+damage_type = 1
+weapon_type = 4
+affected_stat = "magic"
+effect_amount = 0
+hit_bonus = 8
+max_range = 2
+max_durability = 38
+current_durability = 38

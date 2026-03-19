@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bj1bnot1qd8cn"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_756tk"]
+
+[resource]
+script = ExtResource("1_756tk")
+skill_id = "muse_spd_1"
+skill_name = "Flowing Rhythm"
+description = "Grants +2 Speed."
+required_skill_id = "muse_res_1"
+grid_position = Vector2(2, 0)
+stat_to_boost = "spd"
+boost_amount = 2

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://btataw63xf0hn"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_unbev"]
+
+[resource]
+script = ExtResource("1_unbev")
+skill_id = "beastmaster_res_1"
+skill_name = "Wild Instinct I"
+description = "Increases Resistance by +1."
+required_skill_id = "beastmaster_def_2"
+grid_position = Vector2(4, 1)
+stat_to_boost = "res"
+boost_amount = 1

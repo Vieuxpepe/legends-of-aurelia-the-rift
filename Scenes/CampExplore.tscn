@@ -1,0 +1,277 @@
+[gd_scene format=3 uid="uid://64x6kuu3byay"]
+
+[ext_resource type="Script" uid="uid://doke0ah8kq4aa" path="res://Scripts/CampExplore.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://cbknu558fndlo" path="res://icon.svg" id="2_icon"]
+[ext_resource type="Script" uid="uid://bsf8vbjogtgwq" path="res://Scripts/CampBehaviorZone.gd" id="3_fnn20"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ambient_bubble"]
+bg_color = Color(0.1, 0.08, 0.07, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.52, 0.44, 0.3, 0.95)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.12, 0.12, 0.14, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.35, 0.25, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="CampExplore" type="Node2D" unique_id=1394152883]
+script = ExtResource("1_script")
+debug_use_test_camp_roster = true
+
+[node name="CampMusic" type="AudioStreamPlayer" parent="." unique_id=1304723000]
+volume_db = -10.05
+
+[node name="Background" type="ColorRect" parent="." unique_id=1078457718]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.18, 0.22, 0.15, 1)
+
+[node name="Player" type="Node2D" parent="." unique_id=1150302151]
+position = Vector2(400, 300)
+
+[node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=1746092765]
+scale = Vector2(0.22, 0.22)
+texture = ExtResource("2_icon")
+
+[node name="Walkers" type="Node2D" parent="." unique_id=1349453277]
+
+[node name="TimeOfDayOverlay" type="ColorRect" parent="." unique_id=1349452780]
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0)
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1208962169]
+
+[node name="BackButton" type="Button" parent="UI" unique_id=1928469198]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -180.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 60.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 24
+text = "Back"
+
+[node name="InteractPrompt" type="Label" parent="UI" unique_id=15823741]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -80.0
+offset_top = -200.0
+offset_right = 80.0
+offset_bottom = -160.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.9, 0.85, 0.6, 1)
+theme_override_font_sizes/font_size = 22
+text = "E  Talk"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RumorLabel" type="Label" parent="UI" unique_id=15823742]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -280.0
+offset_right = 280.0
+offset_bottom = -220.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.85, 0.82, 0.7, 0.95)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="AmbientSpeechBubble" type="PanelContainer" parent="UI" unique_id=15823743]
+visible = false
+z_index = 50
+offset_right = 240.0
+offset_bottom = 80.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ambient_bubble")
+
+[node name="Margin" type="MarginContainer" parent="UI/AmbientSpeechBubble" unique_id=15823744]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="UI/AmbientSpeechBubble/Margin" unique_id=15823745]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Speaker" type="Label" parent="UI/AmbientSpeechBubble/Margin/VBox" unique_id=15823746]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.84, 0.62, 0.95)
+theme_override_font_sizes/font_size = 14
+text = "Speaker"
+
+[node name="Text" type="Label" parent="UI/AmbientSpeechBubble/Margin/VBox" unique_id=15823747]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.9, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+text = "Ambient line."
+autowrap_mode = 2
+
+[node name="DialoguePanel" type="PanelContainer" parent="UI" unique_id=76254277]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 200.0
+offset_top = -320.0
+offset_right = -200.0
+offset_bottom = -60.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/DialoguePanel" unique_id=400552639]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="NameLabel" type="Label" parent="UI/DialoguePanel/VBox" unique_id=594883672]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.7, 1)
+theme_override_font_sizes/font_size = 26
+text = "Unit"
+
+[node name="HBox" type="HBoxContainer" parent="UI/DialoguePanel/VBox" unique_id=2115957139]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Portrait" type="TextureRect" parent="UI/DialoguePanel/VBox/HBox" unique_id=983453598]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextLabel" type="Label" parent="UI/DialoguePanel/VBox/HBox" unique_id=603498813]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Dialogue line."
+autowrap_mode = 3
+
+[node name="ButtonRow" type="HBoxContainer" parent="UI/DialoguePanel/VBox" unique_id=402507009]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AcceptButton" type="Button" parent="UI/DialoguePanel/VBox/ButtonRow" unique_id=1493082574]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Accept"
+
+[node name="DeclineButton" type="Button" parent="UI/DialoguePanel/VBox/ButtonRow" unique_id=1231257698]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Decline"
+
+[node name="TurnInButton" type="Button" parent="UI/DialoguePanel/VBox/ButtonRow" unique_id=536113088]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Turn in"
+
+[node name="CloseButton" type="Button" parent="UI/DialoguePanel/VBox" unique_id=1577766482]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Close"
+
+[node name="Watch Post" type="Node2D" parent="." unique_id=1168454452]
+position = Vector2(960, 400)
+script = ExtResource("3_fnn20")
+zone_type = "watch_post"
+radius = 5.0
+face_mode = "outward"
+
+[node name="InfirmaryZone" type="Node2D" parent="." unique_id=1168454453]
+position = Vector2(600, 360)
+script = ExtResource("3_fnn20")
+zone_type = "infirmary"
+
+[node name="MapTableZone" type="Node2D" parent="." unique_id=1168454454]
+position = Vector2(820, 520)
+script = ExtResource("3_fnn20")
+zone_type = "map_table"
+radius = 28.0
+
+[node name="CookAreaZone" type="Node2D" parent="." unique_id=1168454455]
+position = Vector2(500, 520)
+script = ExtResource("3_fnn20")
+zone_type = "cook_area"
+
+[node name="FireZone" type="Node2D" parent="." unique_id=1168454456]
+position = Vector2(520, 460)
+script = ExtResource("3_fnn20")
+zone_type = "fire"
+radius = 24.0
+
+[node name="ShrineZone" type="Node2D" parent="." unique_id=1168454457]
+position = Vector2(1100, 420)
+script = ExtResource("3_fnn20")
+zone_type = "shrine"
+radius = 28.0
+
+[node name="BenchZone" type="Node2D" parent="." unique_id=1168454458]
+position = Vector2(700, 440)
+script = ExtResource("3_fnn20")
+zone_type = "bench"
+radius = 24.0
+
+[node name="WallZone" type="Node2D" parent="." unique_id=1168454459]
+position = Vector2(1180, 360)
+script = ExtResource("3_fnn20")
+zone_type = "wall"
+radius = 40.0
+
+[node name="WagonZone" type="Node2D" parent="." unique_id=1168454460]
+position = Vector2(480, 380)
+script = ExtResource("3_fnn20")
+zone_type = "wagon"
+
+[node name="SupplyZone" type="Node2D" parent="." unique_id=1168454461]
+position = Vector2(560, 420)
+script = ExtResource("3_fnn20")
+zone_type = "supply"
+radius = 28.0
+
+[node name="WorkbenchZone" type="Node2D" parent="." unique_id=1168454462]
+position = Vector2(540, 560)
+script = ExtResource("3_fnn20")
+zone_type = "workbench"
+radius = 28.0
+
+[node name="TreeLineZone" type="Node2D" parent="." unique_id=1168454463]
+position = Vector2(1300, 320)
+script = ExtResource("3_fnn20")
+zone_type = "tree_line"
+radius = 40.0

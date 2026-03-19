@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://fxvmgcknu8xh"]
+
+[ext_resource type="Resource" uid="uid://00ulotqdgwqs" path="res://Resources/Skills/MonsterTree.tres" id="1_ma6n1"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_vuuna"]
+
+[resource]
+script = ExtResource("1_vuuna")
+allowed_weapon_types = Array[int]([5])
+class_skill_tree = ExtResource("1_ma6n1")
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

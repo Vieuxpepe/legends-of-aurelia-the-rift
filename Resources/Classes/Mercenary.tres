@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://cex4kc5oyyjqt"]
+
+[ext_resource type="Resource" uid="uid://bxheb7ls0hsh4" path="res://Resources/Skills/MercenaryTree.tres" id="1_acg5c"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="1_keojr"]
+[ext_resource type="Resource" uid="uid://bqdkvp4liu4s2" path="res://Resources/Classes/PromotedClass/Hero.tres" id="2_qf7yn"]
+[ext_resource type="Resource" uid="uid://cb3mjav7sxdwj" path="res://Resources/Classes/PromotedClass/BladeMaster.tres" id="3_kn8cu"]
+[ext_resource type="Resource" uid="uid://krdfn8n4hwu8" path="res://Resources/Classes/PromotedClass/Assassin.tres" id="4_cwpvu"]
+
+[resource]
+script = ExtResource("1_keojr")
+job_name = "Mercenary"
+move_range = 5
+allowed_weapon_types = Array[int]([0])
+class_skill_tree = ExtResource("1_acg5c")
+promotion_options = Array[Resource]([ExtResource("2_qf7yn"), ExtResource("3_kn8cu"), ExtResource("4_cwpvu")])
+hp_bonus = 25
+str_bonus = 8
+def_bonus = 6
+spd_bonus = 1
+agi_bonus = 1
+hp_growth_bonus = 10
+str_growth_bonus = 10
+def_growth_bonus = 10
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

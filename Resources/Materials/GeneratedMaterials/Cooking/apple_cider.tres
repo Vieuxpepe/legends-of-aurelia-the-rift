@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dgxjpw40qbp0f"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_m3st8"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_qsot0"]
+
+[resource]
+script = ExtResource("2_qsot0")
+item_name = "Apple Cider"
+description = "A corked bottle of cloudy cider with a tart orchard scent. Good for drinking, glazing, or lifting the flavor of stew."
+icon = ExtResource("1_m3st8")
+category = "Cooking"

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cdsppsppuanna"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_cd3v2"]
+
+[resource]
+script = ExtResource("1_cd3v2")
+rarity = "Legendary"
+description = "A transcendent harp whose resonance feels almost holy."
+weapon_name = "Dawn Harp"
+gold_cost = 8700
+damage_type = 1
+weapon_type = 9
+affected_stat = "magic"
+effect_amount = 0
+might = 9
+hit_bonus = 20
+max_range = 2
+max_durability = 20
+current_durability = 20

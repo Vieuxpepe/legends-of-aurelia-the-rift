@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bkl2l7pt6qt4g"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_uqo3n"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_l72v6"]
+[ext_resource type="Resource" uid="uid://bdefq037idvoc" path="res://Resources/Skills/Generated/Promoted/BladeDancer/Skill_bd_spd_1.tres" id="3_sgi5d"]
+[ext_resource type="Resource" uid="uid://b7odaeatu6hd" path="res://Resources/Skills/Generated/Promoted/BladeDancer/Skill_bd_agi_1.tres" id="4_4awu5"]
+[ext_resource type="Resource" uid="uid://cjl3m76xw86dh" path="res://Resources/Skills/Generated/Promoted/BladeDancer/Skill_bd_str_1.tres" id="5_mfs15"]
+[ext_resource type="Resource" uid="uid://dswuah1y6byu6" path="res://Resources/Skills/Generated/Promoted/BladeDancer/Skill_bd_hp_1.tres" id="6_k7li4"]
+[ext_resource type="Resource" uid="uid://bhle1soykohnk" path="res://Resources/Skills/Generated/Promoted/BladeDancer/Skill_bd_mastery.tres" id="7_c57ov"]
+
+[resource]
+script = ExtResource("1_uqo3n")
+tree_name = "BladeDancer Tree"
+skills = Array[ExtResource("2_l72v6")]([ExtResource("3_sgi5d"), ExtResource("4_4awu5"), ExtResource("5_mfs15"), ExtResource("6_k7li4"), ExtResource("7_c57ov")])

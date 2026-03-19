@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dpor55hdih51v"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_pwyse"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_n5vfj"]
+
+[resource]
+script = ExtResource("2_n5vfj")
+rarity = "Uncommon"
+item_name = "Emberwood Resin"
+description = "A glowing orange resin tapped from trees that survived the long burn of Emberwood. It smells like smoke, pine, and a campfire that never truly goes out."
+gold_cost = 39
+icon = ExtResource("1_pwyse")
+category = "Lore_And_Misc"

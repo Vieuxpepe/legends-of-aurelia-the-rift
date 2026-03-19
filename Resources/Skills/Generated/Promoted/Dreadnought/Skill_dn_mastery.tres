@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://8xf5fxx30hho"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_kvrgq"]
+
+[resource]
+script = ExtResource("1_kvrgq")
+skill_id = "dn_mastery"
+skill_name = "Mastery: Cataclysm Shell"
+description = "Detonates the battlefield with a catastrophic impact shot."
+required_skill_id = "dn_res_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Earthshatter"

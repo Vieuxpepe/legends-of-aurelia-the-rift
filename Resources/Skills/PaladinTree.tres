@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://bvnf84qfhi258"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_vjq4l"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_uhqac"]
+[ext_resource type="Resource" uid="uid://cr3nuvqk5y80c" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_def_1.tres" id="3_ycu1e"]
+[ext_resource type="Resource" uid="uid://l1c1pngxjiqx" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_def_2.tres" id="4_4dmef"]
+[ext_resource type="Resource" uid="uid://ea71hola8ou4" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_def_3.tres" id="5_40aps"]
+[ext_resource type="Resource" uid="uid://c8i7a0jibx8s1" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_holy_ward.tres" id="6_xgviv"]
+[ext_resource type="Resource" uid="uid://dqnywr0ayi16o" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_hp_1.tres" id="7_danls"]
+[ext_resource type="Resource" uid="uid://cwktrdng8ey2g" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_hp_2.tres" id="8_s2smv"]
+[ext_resource type="Resource" uid="uid://cwfycp2hr4d0p" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_res_1.tres" id="9_q7bqb"]
+[ext_resource type="Resource" uid="uid://cfjc5tqjvqh4m" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_res_2.tres" id="10_83bh4"]
+[ext_resource type="Resource" uid="uid://hxttj6qntl5s" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_res_3.tres" id="11_3xb1a"]
+[ext_resource type="Resource" uid="uid://brx3p0hf1bl4a" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_sacred_judgment.tres" id="12_3grnn"]
+[ext_resource type="Resource" uid="uid://dpbwl8eyfw6eg" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_smite.tres" id="13_n824w"]
+[ext_resource type="Resource" uid="uid://cc5002htyv7eb" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_spd_1.tres" id="14_ao7yi"]
+[ext_resource type="Resource" uid="uid://dm1sluf4mlmlm" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_str_1.tres" id="15_il11d"]
+[ext_resource type="Resource" uid="uid://cvcmgcm60jay2" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_str_2.tres" id="16_j6du5"]
+[ext_resource type="Resource" uid="uid://ceea8nlide75q" path="res://Resources/Skills/Generated/Paladin/Skill_paladin_str_3.tres" id="17_a0d36"]
+
+[resource]
+script = ExtResource("1_vjq4l")
+skills = Array[ExtResource("2_uhqac")]([ExtResource("3_ycu1e"), ExtResource("4_4dmef"), ExtResource("5_40aps"), ExtResource("6_xgviv"), ExtResource("7_danls"), ExtResource("8_s2smv"), ExtResource("9_q7bqb"), ExtResource("10_83bh4"), ExtResource("11_3xb1a"), ExtResource("12_3grnn"), ExtResource("13_n824w"), ExtResource("14_ao7yi"), ExtResource("15_il11d"), ExtResource("16_j6du5"), ExtResource("17_a0d36")])
+metadata/_custom_type_script = "uid://cedoicamottly"

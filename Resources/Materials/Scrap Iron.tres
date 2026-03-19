@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://c88l0i4cfojj"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_7bxfx"]
+[ext_resource type="Texture2D" uid="uid://rppqdqwmibp5" path="res://Resources/Materials/Icons/Scrap Iron.png" id="1_ui72u"]
+
+[resource]
+script = ExtResource("1_7bxfx")
+item_name = "Scrap Iron"
+description = "A crafting material."
+icon = ExtResource("1_ui72u")
+metadata/_custom_type_script = "uid://dxefrus755705"

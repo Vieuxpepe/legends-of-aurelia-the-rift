@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://dkwwgjyc0nfmj"]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_dcnom"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_bo01b"]
+
+[resource]
+script = ExtResource("2_bo01b")
+rarity = "Uncommon"
+item_name = "Caltrop Pouch"
+description = "A pouch of sharp little iron jacks, each designed to leave one point upward. Crude tools, but persuasive to pursuers."
+gold_cost = 22
+icon = ExtResource("1_dcnom")
+category = "Crafting"

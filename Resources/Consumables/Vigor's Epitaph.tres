@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://c4fq6nvug5i83"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_4gqn8"]
+[ext_resource type="Texture2D" uid="uid://dlu4kje4hkbbb" path="res://Resources/Consumables/image-removebg-preview (91).png" id="1_iumta"]
+
+[resource]
+script = ExtResource("1_4gqn8")
+rarity = "Epic"
+item_name = "Vigor's Epitaph"
+heal_amount = 0
+gold_cost = 1500
+icon = ExtResource("1_iumta")
+hp_boost = 7
+metadata/_custom_type_script = "uid://67xkte2k6sun"

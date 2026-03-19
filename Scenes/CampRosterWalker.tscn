@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3 uid="uid://camp_roster_walker"]
+
+[ext_resource type="Script" path="res://Scripts/CampRosterWalker.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://cbknu558fndlo" path="res://icon.svg" id="2_icon"]
+
+[node name="CampRosterWalker" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.22, 0.22)
+texture = ExtResource("2_icon")
+
+[node name="MarkerLabel" type="Label" parent="."]
+offset_left = -12.0
+offset_top = -48.0
+offset_right = 12.0
+offset_bottom = -24.0
+theme_override_colors/font_color = Color(1, 0.9, 0.2, 1)
+theme_override_font_sizes/font_size = 24
+text = "!"
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false

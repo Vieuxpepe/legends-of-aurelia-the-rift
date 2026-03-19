@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://mya48uhmfbgx"]
+
+[ext_resource type="Resource" uid="uid://dekndssahuvia" path="res://Resources/Classes/Monk.tres" id="1_boats"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ppggw"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_0s8hr"]
+[ext_resource type="Texture2D" uid="uid://cbn34j3j3t8xe" path="res://Assets/Portraits/Brother Alden Portrait.png" id="3_r843p"]
+[ext_resource type="Resource" uid="uid://cvv7yw08137uj" path="res://Resources/GeneratedItems/Weapon_Pilgrims_Knuckles.tres" id="4_r843p"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_6qhff"]
+[ext_resource type="Texture2D" uid="uid://db0uma7nqut74" path="res://Assets/Sprites/Brother Alden Battle Sprite.png" id="7_6qhff"]
+
+[resource]
+script = ExtResource("3_0s8hr")
+display_name = "Brother Alden"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["Then let my body fail if it must — only do not let your mercy fail with it.", "Stand firm. Be gentle. Those two things were never opposites.", "If pain must remain, let it at least teach compassion.", "I go in peace. See that you do not abandon yours."])
+level_up_quotes = Array[String](["Then I am better prepared for what others place in my hands.", "Good. Let this be strength with purpose.", "If I am made stronger, let it be for steadiness."])
+support_personality = "devout"
+character_class = ExtResource("1_boats")
+starting_weapon = ExtResource("4_r843p")
+unit_sprite = ExtResource("7_6qhff")
+portrait = ExtResource("3_r843p")
+max_hp = 29
+strength = 10
+magic = 4
+defense = 8
+resistance = 9
+speed = 7
+agility = 8
+hp_growth = 75
+str_growth = 50
+mag_growth = 25
+def_growth = 35
+res_growth = 45
+spd_growth = 35
+agi_growth = 40

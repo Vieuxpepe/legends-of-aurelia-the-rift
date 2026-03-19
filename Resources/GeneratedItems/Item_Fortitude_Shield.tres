@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cv04ieebycrhf"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_0ay10"]
+
+[resource]
+script = ExtResource("1_0ay10")
+rarity = "Legendary"
+description = "Permanently increases defense by 5."
+item_name = "Fortitude Shield"
+heal_amount = 0
+gold_cost = 5000
+def_boost = 5

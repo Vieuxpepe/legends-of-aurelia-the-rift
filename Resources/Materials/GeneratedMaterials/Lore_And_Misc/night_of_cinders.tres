@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://boonafg3wfsfd"]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_wqaei"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_a4inw"]
+
+[resource]
+script = ExtResource("2_a4inw")
+rarity = "Rare"
+item_name = "Night of Cinders"
+description = "A vial of black dust gathered from a breach-scored ruin and named for the old Night of Unknowing. Scholars at the College of Seekers pay richly for even a pinch, though many later regret touching it."
+gold_cost = 107
+icon = ExtResource("1_wqaei")
+category = "Lore_And_Misc"

@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://1fu8fc7eiqvx"]
+
+[ext_resource type="Resource" uid="uid://fxvmgcknu8xh" path="res://Resources/Classes/Monster.tres" id="1_b1tjf"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_cnqmn"]
+[ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_drijo"]
+[ext_resource type="Resource" uid="uid://ckitvh4grj5oh" path="res://Resources/Chests/Keys/Iron Key.tres" id="3_drijo"]
+[ext_resource type="Resource" uid="uid://c1wtvc4o2xk4x" path="res://Resources/Materials/bone.tres" id="4_bmuyh"]
+[ext_resource type="Resource" uid="uid://c88l0i4cfojj" path="res://Resources/Materials/Scrap Iron.tres" id="5_b1tjf"]
+[ext_resource type="Texture2D" uid="uid://hn5d0n20il22" path="res://Assets/Portraits/Skeleton.png" id="6_mbxl2"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="7_cfxrg"]
+[ext_resource type="Resource" uid="uid://cklgmau71r55h" path="res://Resources/Weapons/SteelAxe.tres" id="8_b1tjf"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="9_fjcm7"]
+[ext_resource type="Texture2D" uid="uid://cvdniyjvvrbrh" path="res://Assets/Sprites/Veteran Skeleton.png" id="10_cnqmn"]
+
+[sub_resource type="Resource" id="Resource_6bxmx"]
+script = ExtResource("2_cnqmn")
+item = ExtResource("3_drijo")
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_pr4d2"]
+script = ExtResource("2_cnqmn")
+item = ExtResource("4_bmuyh")
+drop_chance = 50.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_cnqmn"]
+script = ExtResource("2_cnqmn")
+item = ExtResource("5_b1tjf")
+drop_chance = 50.0
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[resource]
+script = ExtResource("7_cfxrg")
+display_name = "Skeleton Veteran"
+is_recruitable = true
+character_class = ExtResource("1_b1tjf")
+starting_weapon = ExtResource("8_b1tjf")
+death_sound = ExtResource("2_drijo")
+unit_sprite = ExtResource("10_cnqmn")
+portrait = ExtResource("6_mbxl2")
+visual_scale = 1.25
+max_hp = 30
+strength = 8
+defense = 5
+resistance = 3
+speed = 5
+agility = 4
+min_gold_drop = 2
+max_gold_drop = 10
+drops_equipped_weapon = true
+equipped_weapon_chance = 15
+extra_loot = Array[ExtResource("2_cnqmn")]([SubResource("Resource_6bxmx"), SubResource("Resource_pr4d2"), SubResource("Resource_cnqmn"), SubResource("Resource_cnqmn")])
+metadata/_custom_type_script = "uid://3jului3v2v6"

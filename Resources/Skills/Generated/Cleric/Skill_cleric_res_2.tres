@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://bsqiqg1a74kbb"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_mcjjr"]
+
+[resource]
+script = ExtResource("1_mcjjr")
+skill_id = "cleric_res_2"
+skill_name = "Ward II"
+description = "Increases Resistance by +1."
+required_skill_id = "cleric_divine_protection"
+grid_position = Vector2(4, 0)
+stat_to_boost = "res"
+boost_amount = 1

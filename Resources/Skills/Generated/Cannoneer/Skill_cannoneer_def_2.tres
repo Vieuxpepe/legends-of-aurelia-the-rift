@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://0wwo0nvce0e0"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_j17mu"]
+
+[resource]
+script = ExtResource("1_j17mu")
+skill_id = "cannoneer_def_2"
+skill_name = "Braced Stance II"
+description = "Increases Defense by +1."
+required_skill_id = "cannoneer_hp_2"
+grid_position = Vector2(3, 0)
+stat_to_boost = "def"
+boost_amount = 1

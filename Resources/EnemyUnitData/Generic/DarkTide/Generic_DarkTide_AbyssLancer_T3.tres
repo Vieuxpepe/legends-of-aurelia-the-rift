@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cyswr1t3bugkt"]
+
+[ext_resource type="Resource" uid="uid://dripsbbvug6em" path="res://Resources/Classes/Paladin.tres" id="1_mlxot"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_osvl3"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_kvtkw"]
+[ext_resource type="Resource" uid="uid://c6j4eh0y6tllv" path="res://Resources/GeneratedItems/Weapon_Thunder_Pike.tres" id="4_jlwfd"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_t2v2b"]
+
+[resource]
+script = ExtResource("3_kvtkw")
+display_name = "Abyss Lancer"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_mlxot")
+starting_weapon = ExtResource("4_jlwfd")
+max_hp = 32
+strength = 11
+magic = 2
+defense = 8
+resistance = 5
+speed = 6
+agility = 6
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 12
+max_gold_drop = 18
+drops_equipped_weapon = true
+equipped_weapon_chance = 18

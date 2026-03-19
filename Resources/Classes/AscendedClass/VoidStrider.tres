@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://curmxwv401nal"]
+
+[ext_resource type="Resource" uid="uid://v4st7g0v0h8e" path="res://Resources/Skills/Generated/Ascended/VoidStrider/VoidStriderTree.tres" id="1_16c6q"]
+[ext_resource type="Script" uid="uid://c45aax7tnes1o" path="res://Resources/Classes/ClassData.gd" id="2_mfn2k"]
+
+[resource]
+script = ExtResource("2_mfn2k")
+job_name = "Void Strider"
+move_range = 7
+allowed_weapon_types = Array[int]([6, 10])
+class_skill_tree = ExtResource("1_16c6q")
+promo_str_bonus = 2
+promo_mag_bonus = 2
+promo_def_bonus = 0
+promo_spd_bonus = 3
+promo_agi_bonus = 3
+hp_bonus = 2
+str_bonus = 2
+spd_bonus = 4
+agi_bonus = 4
+mag_bonus = 2
+res_bonus = 1
+str_growth_bonus = 5
+spd_growth_bonus = 10
+agi_growth_bonus = 10
+mag_growth_bonus = 5

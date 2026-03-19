@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://d3h3a7soxyd01"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_oa7fs"]
+
+[resource]
+script = ExtResource("1_oa7fs")
+rarity = "Uncommon"
+description = "A reliable field bow with clean handling."
+weapon_name = "Hunter's Bow"
+gold_cost = 860
+weapon_type = 3
+effect_amount = 0
+might = 6
+hit_bonus = 10
+min_range = 2
+max_range = 2
+max_durability = 36
+current_durability = 36

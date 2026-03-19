@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://buu8dcqvfyq58"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_vxh4q"]
+
+[resource]
+script = ExtResource("1_vxh4q")
+rarity = "Rare"
+item_name = "Silver Ore"
+description = "Precious ore used for rare weapons."
+gold_cost = 500

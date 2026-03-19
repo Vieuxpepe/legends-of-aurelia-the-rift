@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://doa5kpeht06xn"]
+
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="1_tv8ch"]
+
+[resource]
+script = ExtResource("1_tv8ch")
+rarity = "Legendary"
+item_name = "Recipe: Celestial Tome"
+description = "Instructions for crafting a Celestial Tome."
+gold_cost = 1500

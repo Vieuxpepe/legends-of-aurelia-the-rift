@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://cvwkk35ls6ccr"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_d2a1q"]
+
+[resource]
+script = ExtResource("1_d2a1q")
+skill_id = "knight_charge"
+skill_name = "Charge"
+description = "Rush forward to strike a distant foe, dealing heavy damage."
+required_skill_id = "knight_str_2"
+grid_position = Vector2(3, -1)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Charge"

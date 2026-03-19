@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://b2gc7nh4cg7nu"]
+
+[ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_etkkr"]
+
+[resource]
+script = ExtResource("1_etkkr")
+description = "A versatile early blade suited to long marches and uncertain roads."
+weapon_name = "Traveler's Blade"
+gold_cost = 520
+effect_amount = 0
+hit_bonus = 8
+max_durability = 40
+current_durability = 40

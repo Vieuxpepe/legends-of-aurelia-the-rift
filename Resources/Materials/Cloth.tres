@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://ddw5wqd53uetg"]
+
+[ext_resource type="Texture2D" uid="uid://dwyjek8tta7ko" path="res://Resources/Materials/Icons/Cloth.png" id="1_0lity"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_lin7h"]
+
+[resource]
+script = ExtResource("2_lin7h")
+item_name = "Cloth"
+description = "A crafting material."
+gold_cost = 5
+icon = ExtResource("1_0lity")
+metadata/_custom_type_script = "uid://dxefrus755705"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://brx3p0hf1bl4a"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_3waui"]
+
+[resource]
+script = ExtResource("1_3waui")
+skill_id = "paladin_sacred_judgment"
+skill_name = "Sacred Judgment"
+description = "Call down divine judgement, smiting multiple enemies with holy energy."
+required_skill_id = "paladin_res_3"
+grid_position = Vector2(6, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Sacred Judgment"

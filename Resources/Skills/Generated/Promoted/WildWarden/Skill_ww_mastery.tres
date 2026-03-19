@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillNode" format=3 uid="uid://dcu6tbm15upf8"]
+
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="1_ug5a7"]
+
+[resource]
+script = ExtResource("1_ug5a7")
+skill_id = "ww_mastery"
+skill_name = "Mastery: Verdant Bastion"
+description = "Calls the wilds to harden allies into an unyielding wall."
+required_skill_id = "ww_res_1"
+grid_position = Vector2(4, 0)
+effect_type = 1
+stat_to_boost = ""
+boost_amount = 0
+ability_to_unlock = "Unbreakable Bastion"

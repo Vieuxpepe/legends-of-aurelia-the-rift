@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3 uid="uid://cx6bmrmrvup2a"]
+
+[ext_resource type="Texture2D" uid="uid://b0gw0dcafya3w" path="res://Resources/Materials/GeneratedMaterials/Icons/cooking.png" id="1_4oqx0"]
+[ext_resource type="Script" uid="uid://dxefrus755705" path="res://Scripts/Core/MaterialData.gd" id="2_n3mqo"]
+
+[resource]
+script = ExtResource("2_n3mqo")
+item_name = "Smoked Herring"
+description = "A bundle of thin smoked fish with silvery skin and a strong briny smell. Salty, oily, and far better than an empty pot."
+gold_cost = 12
+icon = ExtResource("1_4oqx0")
+category = "Cooking"

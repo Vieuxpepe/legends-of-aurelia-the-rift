@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SkillTree" format=3 uid="uid://ddn4nt7wjidjj"]
+
+[ext_resource type="Script" uid="uid://cedoicamottly" path="res://Scripts/Core/SkillTree.gd" id="1_116e1"]
+[ext_resource type="Script" uid="uid://cf2fyl2krcj10" path="res://Scripts/Core/SkillNode.gd" id="2_l4kwd"]
+[ext_resource type="Resource" uid="uid://238wi5trms23" path="res://Resources/Skills/Generated/Promoted/Berserker/Skill_berserker_agi_1.tres" id="3_x74vf"]
+[ext_resource type="Resource" uid="uid://dfbnse024mcuq" path="res://Resources/Skills/Generated/Promoted/Berserker/Skill_berserker_hp_1.tres" id="4_np325"]
+[ext_resource type="Resource" uid="uid://b42c0jq7y1h8l" path="res://Resources/Skills/Generated/Promoted/Berserker/Skill_berserker_mastery.tres" id="5_b805d"]
+[ext_resource type="Resource" uid="uid://clr7r4rp12fhp" path="res://Resources/Skills/Generated/Promoted/Berserker/Skill_berserker_spd_1.tres" id="6_tne63"]
+[ext_resource type="Resource" uid="uid://bsa1k3u1sqo3k" path="res://Resources/Skills/Generated/Promoted/Berserker/Skill_berserker_str_1.tres" id="7_uwjip"]
+
+[resource]
+script = ExtResource("1_116e1")
+skills = Array[ExtResource("2_l4kwd")]([ExtResource("3_x74vf"), ExtResource("4_np325"), ExtResource("5_b805d"), ExtResource("6_tne63"), ExtResource("7_uwjip")])
+metadata/_custom_type_script = "uid://cedoicamottly"

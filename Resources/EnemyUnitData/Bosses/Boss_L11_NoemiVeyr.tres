@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://dvrktkth4woxs"]
+
+[ext_resource type="Resource" uid="uid://krdfn8n4hwu8" path="res://Resources/Classes/PromotedClass/Assassin.tres" id="1_gfikh"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_xt2th"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_tek3a"]
+[ext_resource type="Resource" uid="uid://bka5a1mua7c6a" path="res://Resources/GeneratedItems/Weapon_Sparkknife.tres" id="4_dwl1e"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_jkckp"]
+
+[resource]
+script = ExtResource("3_tek3a")
+display_name = "Noemi Veyr"
+recruit_dialogue = Array[String]([])
+death_quotes = Array[String](["So… the mask slips at last; pity the truth beneath it was sharper."])
+character_class = ExtResource("1_gfikh")
+starting_weapon = ExtResource("4_dwl1e")
+ability = "fifth_mask"
+max_hp = 34
+strength = 15
+defense = 6
+resistance = 9
+speed = 22
+agility = 20
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0

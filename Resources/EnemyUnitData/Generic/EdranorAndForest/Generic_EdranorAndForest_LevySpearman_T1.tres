@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://g5uk6xsk3cap"]
+
+[ext_resource type="Resource" uid="uid://bjqsfivdqe818" path="res://Resources/Classes/RookieClass/Recruit.tres" id="1_pbndv"]
+[ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_ge3k1"]
+[ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="3_pavtr"]
+[ext_resource type="Resource" uid="uid://bmk2plnrrxj6o" path="res://Resources/GeneratedItems/Weapon_Wooden_Pike.tres" id="4_yg7ss"]
+[ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="5_rtyu6"]
+
+[resource]
+script = ExtResource("3_pavtr")
+display_name = "Levy Spearman"
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_pbndv")
+starting_weapon = ExtResource("4_yg7ss")
+max_hp = 18
+strength = 6
+defense = 3
+resistance = 1
+speed = 4
+agility = 4
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 4
+max_gold_drop = 8
+drops_equipped_weapon = true
+equipped_weapon_chance = 10

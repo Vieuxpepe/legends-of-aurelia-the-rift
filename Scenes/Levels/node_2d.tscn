@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://ch2p1k1of3pbp"]
+
+[ext_resource type="Script" uid="uid://dafwuctxkwyqa" path="res://Scenes/Levels/EscortConvoy.gd" id="1_khms6"]
+[ext_resource type="Texture2D" uid="uid://ghwjd5typha3" path="res://Assets/Sprites/Donkey cart/unnamed__23_-removebg-preview.png" id="2_l4tgx"]
+[ext_resource type="Texture2D" uid="uid://b2jo3fu0d204t" path="res://Assets/Sprites/Donkey cart/unnamed__24_-removebg-preview.png" id="3_mwk6y"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hjnmn"]
+bg_color = Color(0.34509805, 1, 0.078431375, 0.57254905)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="DonkeyCart" type="Node2D" unique_id=867810033]
+script = ExtResource("1_khms6")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=20205367]
+position = Vector2(64, 64.5)
+scale = Vector2(0.256, 0.254)
+texture = ExtResource("2_l4tgx")
+
+[node name="Sprite2D2" type="Sprite2D" parent="." unique_id=1413632173]
+position = Vector2(64, 134)
+scale = Vector2(0.182, 0.18200001)
+texture = ExtResource("3_mwk6y")
+
+[node name="HealthBar" type="ProgressBar" parent="." unique_id=951600867]
+z_index = 10
+offset_top = -50.0
+offset_right = 85.0
+offset_bottom = -23.0
+scale = Vector2(0.75, 0.75)
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_styles/fill = SubResource("StyleBoxFlat_hjnmn")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1577332553]
+visible = false
+custom_minimum_size = Vector2(64, 64)
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ColorRect2" type="ColorRect" parent="." unique_id=1807215261]
+visible = false
+custom_minimum_size = Vector2(64, 64)
+offset_left = 64.0
+offset_right = 128.0
+offset_bottom = 64.0
+
+[node name="ColorRect3" type="ColorRect" parent="." unique_id=1576965828]
+visible = false
+custom_minimum_size = Vector2(64, 64)
+offset_top = 64.0
+offset_right = 64.0
+offset_bottom = 128.0
+
+[node name="ColorRect4" type="ColorRect" parent="." unique_id=647026658]
+visible = false
+custom_minimum_size = Vector2(64, 64)
+offset_left = 64.0
+offset_top = 64.0
+offset_right = 128.0
+offset_bottom = 128.0
