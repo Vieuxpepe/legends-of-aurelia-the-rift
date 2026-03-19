@@ -48,6 +48,7 @@ var _task_log: TaskLog = null
 @export_enum("auto", "normal", "hopeful", "tense", "somber") var debug_camp_mood_override: String = "auto"
 @export var debug_use_test_camp_roster: bool = false
 @export var debug_replace_roster_entirely: bool = true
+@export var debug_camp_pacing: bool = false
 var _debug_flags_logged_once: bool = false
 
 var _ctx: CampContext
@@ -125,6 +126,8 @@ func _ready() -> void:
 		CampaignManager.ensure_camp_memory()
 		CampaignManager.increment_camp_visit()
 	var now_time: float = Time.get_ticks_msec() / 1000.0
+	_dialogue.bind_pacing_ambient(_ambient)
+	_ambient.set_debug_pacing(debug_camp_pacing)
 	_ambient.prime_attempt_timers_after_ready(now_time)
 
 

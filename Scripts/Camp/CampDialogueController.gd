@@ -10,6 +10,7 @@ const PAIR_LISTEN_RADIUS: float = 120.0
 var _explore: Node2D
 var _ctx: CampContext
 var _requests: CampRequestController
+var _ambient_for_pacing: CampAmbientDirector = null
 
 var dialogue_panel: PanelContainer
 var dialogue_name: Label
@@ -44,6 +45,10 @@ func _init(explore: Node2D, ctx: CampContext, requests: CampRequestController) -
 	_explore = explore
 	_ctx = ctx
 	_requests = requests
+
+
+func bind_pacing_ambient(ambient: CampAmbientDirector) -> void:
+	_ambient_for_pacing = ambient
 
 
 func bind_dialogue_nodes(
@@ -163,6 +168,9 @@ func get_eligible_pair_scene() -> Dictionary:
 		var prio: float = float(s.get("priority", 0))
 		var score: float = _ctx.score_with_relationship_bias(prio, s, a_name, b_name)
 		score += _ctx.visit_theme_score_adjust(s, "pair_listen")
+		if _ambient_for_pacing != null:
+			var now_pl: float = Time.get_ticks_msec() / 1000.0
+			score += _ambient_for_pacing.adjust_pair_listen_score(s, a_name, b_name, now_pl)
 		if score > best_score:
 			best_score = score
 			best = { "scene": s, "walker_a": w_a, "walker_b": w_b }
@@ -237,6 +245,8 @@ func end_pair_scene() -> void:
 		if sid != "":
 			pair_scenes_shown_this_visit[sid] = true
 	record_pair_scene_completion(scene)
+	if _ambient_for_pacing != null:
+		_ambient_for_pacing.on_pair_listen_completed(scene)
 	pair_scene_active = false
 	dialogue_active = false
 	pair_scene_lines.clear()

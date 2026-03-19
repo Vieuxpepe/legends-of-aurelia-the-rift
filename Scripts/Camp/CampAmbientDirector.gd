@@ -50,6 +50,32 @@ const AMBIENT_TEXT_BONUS_PER_STEP: float = 0.22
 const AMBIENT_LINE_DURATION_MIN: float = 1.8
 const AMBIENT_LINE_DURATION_MAX: float = 6.2
 
+const PACING_OPENING_SEC: float = 32.0
+const PACING_MID_UNTIL_SEC: float = 145.0
+const QUIET_AFTER_MAJOR_MIN: float = 7.0
+const QUIET_AFTER_MAJOR_MAX: float = 13.0
+const PAIR_LISTEN_CHAIN_COOLDOWN_SEC: float = 16.0
+const BUDGET_MAJOR_SOFT: int = 2
+const BUDGET_MAJOR_HARD: int = 5
+const BUDGET_MINOR_SOFT: int = 7
+const INTENT_PAIR_PROMINENCE_WEIGHT: float = 1.18
+const INTENT_RECENT_MAJOR_PAIR_EXTRA: float = 1.55
+const INTENT_RECENT_MAJOR_PAIR_SLOTS: int = 2
+
+var major_social_events_this_visit: int = 0
+var minor_ambient_events_this_visit: int = 0
+var major_pair_listens_this_visit: int = 0
+var recent_active_pairs_this_visit: Array[String] = []
+var debug_pacing_enabled: bool = false
+var _visit_entered_at_sec: float = -1.0
+var _quiet_major_until_sec: float = 0.0
+var _pair_listen_chain_cooldown_until_sec: float = 0.0
+var _last_major_event_label: String = ""
+var _pair_prominence: Dictionary = {}
+var _recent_major_pair_keys: Array[String] = []
+var _last_pacing_phase_logged: String = ""
+var _pair_soft_visit_weight: Dictionary = {}
+
 var _chatter_active: bool = false
 var _chatter_lines: Array = []
 var _chatter_index: int = 0
@@ -94,6 +120,18 @@ func reset_visit_state() -> void:
 	_chatter_familiarity_awarded_this_visit.clear()
 	_spontaneous_social_shown_this_visit.clear()
 	_ambient_line_last_variant_by_event.clear()
+	_visit_entered_at_sec = -1.0
+	major_social_events_this_visit = 0
+	minor_ambient_events_this_visit = 0
+	major_pair_listens_this_visit = 0
+	recent_active_pairs_this_visit.clear()
+	_quiet_major_until_sec = 0.0
+	_pair_listen_chain_cooldown_until_sec = 0.0
+	_last_major_event_label = ""
+	_pair_prominence.clear()
+	_pair_soft_visit_weight.clear()
+	_recent_major_pair_keys.clear()
+	_last_pacing_phase_logged = ""
 	_chatter_active = false
 	_chatter_meetup_started_at = 0.0
 	_chatter_social_settle_until = 0.0
@@ -117,8 +155,217 @@ func _player_node() -> Node2D:
 
 
 func prime_attempt_timers_after_ready(now_time: float) -> void:
-	_chatter_next_attempt_time = now_time + randf_range(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX)
-	_spontaneous_social_next_attempt_time = now_time + randf_range(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX)
+	_visit_entered_at_sec = now_time
+	_chatter_next_attempt_time = now_time + _pacing_spaced_interval(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX, now_time)
+	_spontaneous_social_next_attempt_time = now_time + _pacing_spaced_interval(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX, now_time)
+
+
+func set_debug_pacing(on: bool) -> void:
+	debug_pacing_enabled = on
+
+
+func get_pacing_debug_snapshot(now_override: float = -1.0) -> Dictionary:
+	var now: float = now_override if now_override >= 0.0 else (Time.get_ticks_msec() / 1000.0)
+	var elapsed: float = -1.0
+	if _visit_entered_at_sec >= 0.0:
+		elapsed = now - _visit_entered_at_sec
+	return {
+		"visit_theme": str(_ctx.visit_theme).strip_edges(),
+		"pacing_phase": _pacing_phase_at(now),
+		"elapsed_sec": elapsed,
+		"major_social_events": major_social_events_this_visit,
+		"minor_ambient_events": minor_ambient_events_this_visit,
+		"major_pair_listens": major_pair_listens_this_visit,
+		"recent_active_pairs": recent_active_pairs_this_visit.duplicate(),
+		"quiet_major_active": now < _quiet_major_until_sec,
+		"quiet_major_until_sec": _quiet_major_until_sec,
+		"pair_listen_chain_until_sec": _pair_listen_chain_cooldown_until_sec,
+		"last_major_event": _last_major_event_label,
+		"recent_major_pair_keys": _recent_major_pair_keys.duplicate(),
+	}
+
+
+func _pacing_phase_at(now: float) -> String:
+	if _visit_entered_at_sec < 0.0:
+		return "mid"
+	var elapsed: float = now - _visit_entered_at_sec
+	if elapsed < PACING_OPENING_SEC:
+		return "opening"
+	if elapsed < PACING_MID_UNTIL_SEC:
+		return "mid"
+	return "late"
+
+
+func _log_pacing_phase_if_needed(now: float) -> void:
+	if not debug_pacing_enabled:
+		return
+	var ph: String = _pacing_phase_at(now)
+	if ph == _last_pacing_phase_logged:
+		return
+	_last_pacing_phase_logged = ph
+	var elapsed: float = (now - _visit_entered_at_sec) if _visit_entered_at_sec >= 0.0 else 0.0
+	print("[CampPacing] phase=", ph, " t=", "%.1f" % elapsed, " theme=", _ctx.visit_theme, " majorSoc=", major_social_events_this_visit, " minor=", minor_ambient_events_this_visit, " pairHi=", major_pair_listens_this_visit, " quietMajor=", now < _quiet_major_until_sec, " last=", _last_major_event_label)
+
+
+func _pacing_spaced_interval(base_min: float, base_max: float, now: float) -> float:
+	var mul: float = 1.0
+	if _pacing_phase_at(now) == "late":
+		mul = 1.32
+	return randf_range(base_min, base_max) * mul
+
+
+func _phase_score_bias(category: String, now: float) -> float:
+	var ph: String = _pacing_phase_at(now)
+	match ph:
+		"opening":
+			match category:
+				"chatter", "social_cluster", "pair_listen":
+					return -2.15
+				"social_passing":
+					return -0.55
+				"rumor", "micro":
+					return 0.42
+		"late":
+			match category:
+				"chatter", "social_cluster":
+					return -1.25
+				"pair_listen":
+					return -0.85
+				"rumor", "micro":
+					return 0.32
+				"social_passing":
+					return -0.22
+	return 0.0
+
+
+func _theme_mix_event_bias(entry: Dictionary, category: String) -> float:
+	var t: String = str(_ctx.visit_theme).strip_edges().to_lower()
+	var zt: String = str(entry.get("zone_type", "")).strip_edges().to_lower()
+	var d: float = 0.0
+	match t:
+		"recovery":
+			if category == "social_cluster":
+				d -= 1.05
+			if category in ["rumor", "micro"]:
+				d += 0.32
+		"tense":
+			if zt in ["watch_post", "wall", "workbench"] and category in ["chatter", "social_passing", "social_cluster", "rumor", "micro"]:
+				d += 0.42
+			if zt == "fire" and category in ["social_cluster", "social_passing"]:
+				d -= 0.22
+		"hopeful":
+			if zt == "fire" and category in ["chatter", "social_passing", "pair_listen"]:
+				d += 0.32
+			if category == "pair_listen":
+				d += 0.22
+		"gossip":
+			if category in ["chatter", "social_passing", "rumor", "micro"]:
+				d += 0.38
+			if category == "social_cluster":
+				d -= 0.18
+		"training":
+			if zt in ["watch_post", "wall", "workbench"] and category in ["chatter", "social_passing"]:
+				d += 0.38
+		"somber":
+			if category == "social_cluster":
+				d -= 0.95
+			if category in ["rumor", "micro"]:
+				d += 0.28
+			if category == "pair_listen":
+				d -= 0.12
+	return d
+
+
+func _budget_major_penalty() -> float:
+	return maxf(0.0, float(major_social_events_this_visit - BUDGET_MAJOR_SOFT)) * 1.05
+
+
+func _budget_minor_penalty() -> float:
+	return maxf(0.0, float(minor_ambient_events_this_visit - BUDGET_MINOR_SOFT)) * 0.38
+
+
+func _pair_prominence_penalty(pair_key: String) -> float:
+	if pair_key == "":
+		return 0.0
+	var n: int = int(_pair_prominence.get(pair_key, 0))
+	var pen: float = float(n) * INTENT_PAIR_PROMINENCE_WEIGHT
+	if _recent_major_pair_keys.has(pair_key):
+		pen += INTENT_RECENT_MAJOR_PAIR_EXTRA
+	pen += float(int(_pair_soft_visit_weight.get(pair_key, 0))) * 0.41
+	return pen
+
+
+func _note_recent_active_pair(pair_key: String) -> void:
+	if pair_key == "":
+		return
+	if recent_active_pairs_this_visit.has(pair_key):
+		recent_active_pairs_this_visit.erase(pair_key)
+	recent_active_pairs_this_visit.push_front(pair_key)
+	while recent_active_pairs_this_visit.size() > 14:
+		recent_active_pairs_this_visit.pop_back()
+
+
+func _bump_pair_soft_weight(pair_key: String) -> void:
+	if pair_key == "":
+		return
+	_pair_soft_visit_weight[pair_key] = int(_pair_soft_visit_weight.get(pair_key, 0)) + 1
+	_note_recent_active_pair(pair_key)
+
+
+func _register_pair_prominence(pair_key: String) -> void:
+	if pair_key == "":
+		return
+	_pair_prominence[pair_key] = int(_pair_prominence.get(pair_key, 0)) + 1
+	_recent_major_pair_keys.push_front(pair_key)
+	while _recent_major_pair_keys.size() > INTENT_RECENT_MAJOR_PAIR_SLOTS:
+		_recent_major_pair_keys.pop_back()
+	_note_recent_active_pair(pair_key)
+
+
+func _begin_major_quiet_window(now: float) -> void:
+	_quiet_major_until_sec = now + randf_range(QUIET_AFTER_MAJOR_MIN, QUIET_AFTER_MAJOR_MAX)
+	if debug_pacing_enabled:
+		print("[CampPacing] quiet_major until=", "%.2f" % _quiet_major_until_sec, " (+", _last_major_event_label, ")")
+
+
+func _on_major_social_event_completed(label: String, pair_key: String) -> void:
+	var now: float = Time.get_ticks_msec() / 1000.0
+	major_social_events_this_visit += 1
+	_last_major_event_label = label
+	_register_pair_prominence(pair_key)
+	_begin_major_quiet_window(now)
+
+
+func _record_minor_ambient_event(label: String) -> void:
+	minor_ambient_events_this_visit += 1
+	if debug_pacing_enabled:
+		print("[CampPacing] minor ", label, " count=", minor_ambient_events_this_visit)
+
+
+func on_pair_listen_completed(scene: Dictionary) -> void:
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var sid: String = str(scene.get("id", "")).strip_edges()
+	var a_name: String = str(scene.get("unit_a", "")).strip_edges()
+	var b_name: String = str(scene.get("unit_b", "")).strip_edges()
+	var pk: String = _ctx.make_pair_key(a_name, b_name)
+	major_pair_listens_this_visit += 1
+	_last_major_event_label = "pair_listen:%s" % sid if sid != "" else "pair_listen"
+	_register_pair_prominence(pk)
+	_pair_listen_chain_cooldown_until_sec = now + PAIR_LISTEN_CHAIN_COOLDOWN_SEC
+	_begin_major_quiet_window(now)
+
+
+func adjust_pair_listen_score(scene: Dictionary, a_name: String, b_name: String, now: float) -> float:
+	var pk: String = _ctx.make_pair_key(a_name, b_name)
+	var d: float = 0.0
+	d += _phase_score_bias("pair_listen", now)
+	d += _theme_mix_event_bias(scene, "pair_listen")
+	d -= _pair_prominence_penalty(pk)
+	d -= _budget_major_penalty() * 0.85
+	d -= maxf(0.0, float(major_pair_listens_this_visit - 1)) * 1.05
+	if now < _pair_listen_chain_cooldown_until_sec:
+		d -= 2.35
+	return d
 
 
 func update_rumor(_delta: float) -> void:
@@ -127,6 +374,8 @@ func update_rumor(_delta: float) -> void:
 		return
 	var now: float = Time.get_ticks_msec() / 1000.0
 	_update_social_hold(now)
+	_log_pacing_phase_if_needed(now)
+	var allow_major_social: bool = (now >= _quiet_major_until_sec) and (major_social_events_this_visit < BUDGET_MAJOR_HARD)
 	var pending_social_meetup: bool = false
 	if _chatter_active:
 		if now >= _chatter_current_until:
@@ -200,22 +449,22 @@ func update_rumor(_delta: float) -> void:
 		return
 	if not pending_social_meetup:
 		if now >= _chatter_next_attempt_time:
-			var candidate: Dictionary = _get_eligible_ambient_chatter()
+			var candidate: Dictionary = _get_eligible_ambient_chatter(now, allow_major_social)
 			if candidate.is_empty():
-				_chatter_next_attempt_time = now + randf_range(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX)
+				_chatter_next_attempt_time = now + _pacing_spaced_interval(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX, now)
 			else:
 				_start_ambient_chatter(candidate)
 			return
 		if now >= _spontaneous_social_next_attempt_time:
-			var spontaneous: Dictionary = _get_best_spontaneous_social_candidate()
+			var spontaneous: Dictionary = _get_best_spontaneous_social_candidate(now, allow_major_social)
 			if spontaneous.is_empty():
-				_spontaneous_social_next_attempt_time = now + randf_range(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX)
+				_spontaneous_social_next_attempt_time = now + _pacing_spaced_interval(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX, now)
 			else:
 				_start_spontaneous_social(spontaneous)
 			return
 	if now < _rumor_cooldown_until:
 		return
-	var micro_bark: Dictionary = _get_eligible_micro_bark()
+	var micro_bark: Dictionary = _get_eligible_micro_bark(now)
 	if not micro_bark.is_empty():
 		var mb_text: String = _get_entry_text_with_variants(micro_bark, "micro")
 		if mb_text == "":
@@ -227,9 +476,11 @@ func update_rumor(_delta: float) -> void:
 		var mid: String = str(micro_bark.get("id", "")).strip_edges()
 		if mid != "" and micro_bark.get("once_per_visit", false):
 			_micro_bark_shown_this_visit[mid] = true
+		_record_minor_ambient_event("micro:%s" % mid if mid != "" else "micro")
+		_bump_pair_soft_weight(_ctx.make_pair_key(mb_speaker, str(micro_bark.get("listener", "")).strip_edges()))
 		_rumor_hide_at = now + _get_dynamic_ambient_duration(mb_text, 2, RUMOR_DISPLAY_DURATION - 0.6)
 		return
-	var rumor: Dictionary = _get_eligible_rumor()
+	var rumor: Dictionary = _get_eligible_rumor(now)
 	if rumor.is_empty():
 		return
 	var r_text: String = _get_entry_text_with_variants(rumor, "rumor")
@@ -242,9 +493,13 @@ func update_rumor(_delta: float) -> void:
 	var rid: String = str(rumor.get("id", "")).strip_edges()
 	if rid != "" and rumor.get("once_per_visit", false):
 		_rumor_shown_this_visit[rid] = true
+	_record_minor_ambient_event("rumor:%s" % rid if rid != "" else "rumor")
+	var r_listen: String = str(rumor.get("listener", "")).strip_edges()
+	if r_listen != "":
+		_bump_pair_soft_weight(_ctx.make_pair_key(r_speaker, r_listen))
 	_rumor_hide_at = now + _get_dynamic_ambient_duration(r_text, 1, RUMOR_DISPLAY_DURATION)
 
-func _get_eligible_rumor() -> Dictionary:
+func _get_eligible_rumor(now: float) -> Dictionary:
 	var player: Node2D = _player_node()
 	if player == null:
 		return {}
@@ -314,6 +569,11 @@ func _get_eligible_rumor() -> Dictionary:
 		if listener != "":
 			score = _ctx.score_with_relationship_bias(score, rumor, speaker, listener)
 		score += _ctx.visit_theme_score_adjust(rumor, "rumor")
+		score += _phase_score_bias("rumor", now)
+		score += _theme_mix_event_bias(rumor, "rumor")
+		score -= _budget_minor_penalty()
+		if listener != "":
+			score -= _pair_prominence_penalty(_ctx.make_pair_key(speaker, listener))
 		score -= _get_recent_history_penalty("rumor", rumor, speaker)
 		if score > best_score:
 			best_score = score
@@ -335,7 +595,9 @@ func _record_chatter_completion(entry: Dictionary) -> void:
 		_chatter_familiarity_awarded_this_visit[key] = true
 	_ctx.set_pair_stats(a_name, b_name, stats)
 
-func _get_eligible_ambient_chatter() -> Dictionary:
+func _get_eligible_ambient_chatter(now: float, allow_major_social: bool) -> Dictionary:
+	if not allow_major_social:
+		return {}
 	var player: Node2D = _player_node()
 	if player == null:
 		return {}
@@ -388,6 +650,11 @@ func _get_eligible_ambient_chatter() -> Dictionary:
 			continue
 		var score: float = _ctx.score_with_relationship_bias(float(entry.get("priority", 0)), entry, a_name, b_name)
 		score += _ctx.visit_theme_score_adjust(entry, "chatter")
+		score += _phase_score_bias("chatter", now)
+		score += _theme_mix_event_bias(entry, "chatter")
+		score -= _budget_major_penalty()
+		var pk_c: String = _ctx.make_pair_key(a_name, b_name)
+		score -= _pair_prominence_penalty(pk_c)
 		score -= _get_recent_history_penalty("chatter", entry, a_name)
 		if score > best_score:
 			best_score = score
@@ -463,7 +730,12 @@ func _end_ambient_chatter() -> void:
 	_clear_chatter_speaking_state()
 	var hold_min: float = float(_chatter_entry.get("follow_hold_min", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MIN))
 	var hold_max: float = float(_chatter_entry.get("follow_hold_max", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MAX))
-	_record_chatter_completion(_chatter_entry)
+	var done_entry: Dictionary = _chatter_entry
+	_record_chatter_completion(done_entry)
+	var ca_done: String = str(done_entry.get("unit_a", "")).strip_edges()
+	var cb_done: String = str(done_entry.get("unit_b", "")).strip_edges()
+	var cid_done: String = str(done_entry.get("id", "")).strip_edges()
+	_on_major_social_event_completed("chatter:%s" % cid_done if cid_done != "" else "chatter", _ctx.make_pair_key(ca_done, cb_done))
 	var release_candidates: Array = []
 	if _chatter_walker_a is CampRosterWalker:
 		release_candidates.append(_chatter_walker_a)
@@ -480,7 +752,7 @@ func _end_ambient_chatter() -> void:
 	_chatter_walker_b = null
 	_bubble.hide_ambient_bubble()
 	var now: float = Time.get_ticks_msec() / 1000.0
-	_chatter_next_attempt_time = now + randf_range(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX)
+	_chatter_next_attempt_time = now + _pacing_spaced_interval(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX, now)
 
 func _clear_chatter_speaking_state() -> void:
 	if _chatter_walker_a is CampRosterWalker:
@@ -508,7 +780,7 @@ func _cancel_pending_ambient_chatter() -> void:
 	_chatter_walker_b = null
 	_bubble.hide_ambient_bubble()
 	var now: float = Time.get_ticks_msec() / 1000.0
-	_chatter_next_attempt_time = now + randf_range(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX)
+	_chatter_next_attempt_time = now + _pacing_spaced_interval(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX, now)
 
 func _update_social_hold(now: float) -> void:
 	if _social_hold_release_at <= 0.0:
@@ -580,7 +852,7 @@ func _get_chatter_line_sequence(entry: Dictionary) -> Array:
 		return (chosen as Array).duplicate(true)
 	return []
 
-func _get_best_spontaneous_social_candidate() -> Dictionary:
+func _get_best_spontaneous_social_candidate(now: float, allow_major_social: bool) -> Dictionary:
 	var context: Dictionary = _ctx.build_camp_context_dict()
 	var best: Dictionary = {}
 	var best_score: float = -99999.0
@@ -595,6 +867,8 @@ func _get_best_spontaneous_social_candidate() -> Dictionary:
 		if not CAMP_AMBIENT_SOCIAL_DB.when_matches(entry, context):
 			continue
 		var kind: String = str(entry.get("kind", "passing_remark")).strip_edges().to_lower()
+		if not allow_major_social and kind in ["small_cluster", "opportunistic_cluster"]:
+			continue
 		var candidate: Dictionary = {}
 		match kind:
 			"small_cluster", "opportunistic_cluster":
@@ -606,6 +880,22 @@ func _get_best_spontaneous_social_candidate() -> Dictionary:
 		var speaker_name: String = str(entry.get("speaker", "")).strip_edges()
 		var score: float = float(candidate.get("score", float(entry.get("priority", 0))))
 		score += _ctx.visit_theme_score_adjust(entry, "social")
+		var pace_cat: String = "social_cluster" if kind in ["small_cluster", "opportunistic_cluster"] else "social_passing"
+		score += _phase_score_bias(pace_cat, now)
+		score += _theme_mix_event_bias(entry, pace_cat)
+		if pace_cat == "social_cluster":
+			score -= _budget_major_penalty()
+		else:
+			score -= _budget_minor_penalty() * 0.28
+		var pk_s: String = ""
+		if pace_cat == "social_passing":
+			var ln: String = str(entry.get("listener", "")).strip_edges()
+			pk_s = _ctx.make_pair_key(speaker_name, ln)
+		else:
+			var ru: Array = entry.get("required_units", [])
+			if ru.size() >= 2:
+				pk_s = _ctx.make_pair_key(str(ru[0]).strip_edges(), str(ru[1]).strip_edges())
+		score -= _pair_prominence_penalty(pk_s)
 		score -= _get_recent_history_penalty("social", entry, speaker_name)
 		if score > best_score:
 			best_score = score
@@ -801,11 +1091,13 @@ func _start_spontaneous_social(data: Dictionary) -> void:
 	_apply_spontaneous_social_formation(_spontaneous_social_participants, speaker_walker)
 
 func _end_spontaneous_social() -> void:
+	var wrap_entry: Dictionary = _spontaneous_social_entry.duplicate(true)
+	var wrap_kind: String = str(wrap_entry.get("kind", "passing_remark")).strip_edges().to_lower()
 	var participants: Array = _spontaneous_social_participants.duplicate()
 	_clear_spontaneous_social_speaking_state()
-	var hold_chance: float = clampf(float(_spontaneous_social_entry.get("follow_hold_chance", 0.45)), 0.0, 1.0)
-	var hold_min: float = float(_spontaneous_social_entry.get("follow_hold_min", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MIN))
-	var hold_max: float = float(_spontaneous_social_entry.get("follow_hold_max", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MAX))
+	var hold_chance: float = clampf(float(wrap_entry.get("follow_hold_chance", 0.45)), 0.0, 1.0)
+	var hold_min: float = float(wrap_entry.get("follow_hold_min", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MIN))
+	var hold_max: float = float(wrap_entry.get("follow_hold_max", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MAX))
 	if participants.size() >= 2 and randf() < hold_chance:
 		_start_post_social_hold(participants, hold_min, hold_max)
 	else:
@@ -823,8 +1115,20 @@ func _end_spontaneous_social() -> void:
 	_spontaneous_social_settle_until = 0.0
 	_bubble.hide_ambient_bubble()
 	var now: float = Time.get_ticks_msec() / 1000.0
+	var sid_wrap: String = str(wrap_entry.get("id", "")).strip_edges()
+	if wrap_kind in ["small_cluster", "opportunistic_cluster"]:
+		var ru2: Array = wrap_entry.get("required_units", [])
+		var pk_m: String = ""
+		if ru2.size() >= 2:
+			pk_m = _ctx.make_pair_key(str(ru2[0]).strip_edges(), str(ru2[1]).strip_edges())
+		_on_major_social_event_completed("social_cluster:%s" % sid_wrap if sid_wrap != "" else "social_cluster", pk_m)
+	else:
+		_record_minor_ambient_event("social_passing:%s" % sid_wrap if sid_wrap != "" else "social_passing")
+		var pass_sp: String = str(wrap_entry.get("speaker", "")).strip_edges()
+		var pass_ln: String = str(wrap_entry.get("listener", "")).strip_edges()
+		_bump_pair_soft_weight(_ctx.make_pair_key(pass_sp, pass_ln))
 	_rumor_cooldown_until = maxf(_rumor_cooldown_until, now + SPONTANEOUS_SOCIAL_COOLDOWN)
-	_spontaneous_social_next_attempt_time = now + randf_range(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX)
+	_spontaneous_social_next_attempt_time = now + _pacing_spaced_interval(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX, now)
 
 
 func _get_dynamic_ambient_duration(text: String, participant_count: int, base_duration: float) -> float:
@@ -1080,7 +1384,7 @@ func _cancel_pending_spontaneous_social() -> void:
 	_spontaneous_social_settle_until = 0.0
 	_bubble.hide_ambient_bubble()
 	var now: float = Time.get_ticks_msec() / 1000.0
-	_spontaneous_social_next_attempt_time = now + randf_range(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX)
+	_spontaneous_social_next_attempt_time = now + _pacing_spaced_interval(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX, now)
 
 func _collect_passing_observers(entry: Dictionary, existing_participants: Array, center: Vector2) -> Array:
 	var max_observers: int = mini(clampi(int(entry.get("max_observers", 0)), 0, SPONTANEOUS_SOCIAL_MAX_OBSERVERS), SPONTANEOUS_SOCIAL_MAX_OBSERVERS)
@@ -1114,7 +1418,7 @@ func _collect_passing_observers(entry: Dictionary, existing_participants: Array,
 		out.append(candidate.get("walker"))
 	return out
 
-func _get_eligible_micro_bark() -> Dictionary:
+func _get_eligible_micro_bark(now: float) -> Dictionary:
 	var player: Node2D = _player_node()
 	if player == null:
 		return {}
@@ -1155,6 +1459,10 @@ func _get_eligible_micro_bark() -> Dictionary:
 				continue
 		var score: float = _ctx.score_with_relationship_bias(float(bark.get("priority", 0)), bark, speaker, listener)
 		score += _ctx.visit_theme_score_adjust(bark, "micro")
+		score += _phase_score_bias("micro", now)
+		score += _theme_mix_event_bias(bark, "micro")
+		score -= _budget_minor_penalty()
+		score -= _pair_prominence_penalty(_ctx.make_pair_key(speaker, listener))
 		score -= _get_recent_history_penalty("micro", bark, speaker)
 		if score > best_score:
 			best_score = score
