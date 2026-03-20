@@ -696,6 +696,10 @@ const RUMORS: Array = [
 		"speaker": "Branik",
 		"zone_type": "cook_area",
 		"text": "Kettle's already on. Worry can wait until after breakfast.",
+		"text_variants": [
+			"Water's hot. Whatever you're carrying, let it soften with the steam, not your spine.",
+			"Bread'll be ready soon. Save the heavy talk for when there's crumbs on the plate.",
+		],
 		"once_per_visit": false,
 		"radius": 140.0,
 	},

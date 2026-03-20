@@ -62,6 +62,14 @@ const INTENT_PAIR_PROMINENCE_WEIGHT: float = 1.18
 const INTENT_RECENT_MAJOR_PAIR_EXTRA: float = 1.55
 const INTENT_RECENT_MAJOR_PAIR_SLOTS: int = 2
 
+const MINOR_ENTRY_COOLDOWN_SEC: float = 40.0
+const MINOR_SPEAKER_COOLDOWN_SEC: float = 22.0
+const MINOR_ANTISPAM_RECENT_ENTRY_MAX: int = 10
+const MINOR_ANTISPAM_SAME_SPEAKER_SCORE_PENALTY: float = 11.2
+const MINOR_ANTISPAM_EXACT_ENTRY_EXTRA: float = 4.6
+const MINOR_ANTISPAM_SPEAKER_ZONE_EXTRA: float = 3.85
+const MINOR_ANTISPAM_DEBUG_LOG_INTERVAL_SEC: float = 2.8
+
 var major_social_events_this_visit: int = 0
 var minor_ambient_events_this_visit: int = 0
 var major_pair_listens_this_visit: int = 0
@@ -102,6 +110,12 @@ var _spontaneous_social_shown_this_visit: Dictionary = {}
 var _ambient_line_last_variant_by_event: Dictionary = {}
 var _ambient_recent_speakers: Array[String] = []
 var _ambient_recent_event_keys: Array[String] = []
+var _minor_entry_cooldown_until: Dictionary = {}
+var _minor_speaker_cooldown_until: Dictionary = {}
+var _ambient_recent_minor_entry_keys: Array[String] = []
+var _ambient_recent_minor_fingerprints: Array[String] = []
+var _last_minor_shown_label: String = ""
+var _minor_antispam_debug_last_log_sec: float = 0.0
 var _social_hold_walkers: Array = []
 var _social_hold_release_at: float = 0.0
 
@@ -146,6 +160,12 @@ func reset_visit_state() -> void:
 	_spontaneous_social_settle_until = 0.0
 	_ambient_recent_speakers.clear()
 	_ambient_recent_event_keys.clear()
+	_minor_entry_cooldown_until.clear()
+	_minor_speaker_cooldown_until.clear()
+	_ambient_recent_minor_entry_keys.clear()
+	_ambient_recent_minor_fingerprints.clear()
+	_last_minor_shown_label = ""
+	_minor_antispam_debug_last_log_sec = 0.0
 	_release_post_social_hold()
 	_bubble.hide_ambient_bubble()
 
@@ -182,7 +202,83 @@ func get_pacing_debug_snapshot(now_override: float = -1.0) -> Dictionary:
 		"pair_listen_chain_until_sec": _pair_listen_chain_cooldown_until_sec,
 		"last_major_event": _last_major_event_label,
 		"recent_major_pair_keys": _recent_major_pair_keys.duplicate(),
+		"last_minor_shown": _last_minor_shown_label,
 	}
+
+
+func _stable_minor_entry_cooldown_key(event_type: String, entry: Dictionary) -> String:
+	var et: String = str(event_type).strip_edges()
+	var eid: String = str(entry.get("id", "")).strip_edges()
+	if eid != "":
+		return "%s:%s" % [et, eid]
+	var fb: String = str(entry.get("speaker", "")).strip_edges()
+	if fb == "":
+		fb = str(entry.get("unit_a", "")).strip_edges()
+	if fb == "":
+		fb = "unknown"
+	return "%s:%s" % [et, fb.to_lower()]
+
+
+func _minor_zone_fingerprint(event_type: String, entry: Dictionary, speaker: String) -> String:
+	var sp: String = str(speaker).strip_edges().to_lower()
+	var zt: String = str(entry.get("zone_type", "")).strip_edges().to_lower()
+	return "%s|%s|%s" % [str(event_type).strip_edges(), sp, zt]
+
+
+func _minor_antispam_score_penalty(event_type: String, entry: Dictionary, speaker: String) -> float:
+	var pen: float = 0.0
+	var ck: String = _stable_minor_entry_cooldown_key(event_type, entry)
+	var ek_idx: int = _ambient_recent_minor_entry_keys.find(ck)
+	if ek_idx >= 0:
+		var tier: int = mini(ek_idx, 4)
+		pen += MINOR_ANTISPAM_EXACT_ENTRY_EXTRA + float(4 - tier) * 1.05
+	var fp: String = _minor_zone_fingerprint(event_type, entry, speaker)
+	var fp_idx: int = _ambient_recent_minor_fingerprints.find(fp)
+	if fp_idx >= 0:
+		var fpt: int = mini(fp_idx, 4)
+		pen += MINOR_ANTISPAM_SPEAKER_ZONE_EXTRA + float(4 - fpt) * 0.65
+	return pen
+
+
+func _register_minor_antispam_after_play(event_type: String, entry: Dictionary, speaker: String, now: float) -> void:
+	var ck: String = _stable_minor_entry_cooldown_key(event_type, entry)
+	_minor_entry_cooldown_until[ck] = now + MINOR_ENTRY_COOLDOWN_SEC
+	var sp: String = str(speaker).strip_edges()
+	if sp != "":
+		_minor_speaker_cooldown_until[sp] = now + MINOR_SPEAKER_COOLDOWN_SEC
+	_push_recent_string(_ambient_recent_minor_entry_keys, ck, MINOR_ANTISPAM_RECENT_ENTRY_MAX)
+	var fp: String = _minor_zone_fingerprint(event_type, entry, sp)
+	_push_recent_string(_ambient_recent_minor_fingerprints, fp, MINOR_ANTISPAM_RECENT_ENTRY_MAX)
+
+
+func _minor_entry_cooldown_blocks(event_type: String, entry: Dictionary, now: float) -> bool:
+	var ck: String = _stable_minor_entry_cooldown_key(event_type, entry)
+	return now < float(_minor_entry_cooldown_until.get(ck, 0.0))
+
+
+func _minor_same_speaker_score_penalty(speaker: String, now: float) -> float:
+	var sp: String = str(speaker).strip_edges()
+	if sp == "":
+		return 0.0
+	if now < float(_minor_speaker_cooldown_until.get(sp, 0.0)):
+		return MINOR_ANTISPAM_SAME_SPEAKER_SCORE_PENALTY
+	return 0.0
+
+
+func _debug_minor_antispam_log_skip(kind: String, detail: String, reason: String, now: float) -> void:
+	if not debug_pacing_enabled:
+		return
+	if now - _minor_antispam_debug_last_log_sec < MINOR_ANTISPAM_DEBUG_LOG_INTERVAL_SEC:
+		return
+	_minor_antispam_debug_last_log_sec = now
+	print("[CampMinorAntiSpam] skip ", kind, " ", detail, " (", reason, ")")
+
+
+func _debug_minor_antispam_log_chosen(kind: String, entry: Dictionary, speaker: String, total_penalty: float, now: float) -> void:
+	if not debug_pacing_enabled:
+		return
+	var eid: String = str(entry.get("id", "")).strip_edges()
+	print("[CampMinorAntiSpam] chose ", kind, " id=", eid, " speaker=", speaker, " antispam_pen=", "%.2f" % total_penalty, " t=", "%.1f" % now)
 
 
 func _pacing_phase_at(now: float) -> String:
@@ -477,6 +573,10 @@ func update_rumor(_delta: float) -> void:
 		if mid != "" and micro_bark.get("once_per_visit", false):
 			_micro_bark_shown_this_visit[mid] = true
 		_record_minor_ambient_event("micro:%s" % mid if mid != "" else "micro")
+		var pre_m_pen: float = _minor_antispam_score_penalty("micro", micro_bark, mb_speaker) + _minor_same_speaker_score_penalty(mb_speaker, now)
+		_debug_minor_antispam_log_chosen("micro", micro_bark, mb_speaker, pre_m_pen, now)
+		_register_minor_antispam_after_play("micro", micro_bark, mb_speaker, now)
+		_last_minor_shown_label = "micro:%s" % mid if mid != "" else "micro:anon"
 		_bump_pair_soft_weight(_ctx.make_pair_key(mb_speaker, str(micro_bark.get("listener", "")).strip_edges()))
 		_rumor_hide_at = now + _get_dynamic_ambient_duration(mb_text, 2, RUMOR_DISPLAY_DURATION - 0.6)
 		return
@@ -494,6 +594,10 @@ func update_rumor(_delta: float) -> void:
 	if rid != "" and rumor.get("once_per_visit", false):
 		_rumor_shown_this_visit[rid] = true
 	_record_minor_ambient_event("rumor:%s" % rid if rid != "" else "rumor")
+	var pre_r_pen: float = _minor_antispam_score_penalty("rumor", rumor, r_speaker) + _minor_same_speaker_score_penalty(r_speaker, now)
+	_debug_minor_antispam_log_chosen("rumor", rumor, r_speaker, pre_r_pen, now)
+	_register_minor_antispam_after_play("rumor", rumor, r_speaker, now)
+	_last_minor_shown_label = "rumor:%s" % rid if rid != "" else "rumor:anon"
 	var r_listen: String = str(rumor.get("listener", "")).strip_edges()
 	if r_listen != "":
 		_bump_pair_soft_weight(_ctx.make_pair_key(r_speaker, r_listen))
@@ -565,6 +669,9 @@ func _get_eligible_rumor(now: float) -> Dictionary:
 					break
 			if not all_nearby_found:
 				continue
+		if _minor_entry_cooldown_blocks("rumor", rumor, now):
+			_debug_minor_antispam_log_skip("rumor", _stable_minor_entry_cooldown_key("rumor", rumor), "entry_cooldown", now)
+			continue
 		var score: float = float(rumor.get("priority", 0))
 		if listener != "":
 			score = _ctx.score_with_relationship_bias(score, rumor, speaker, listener)
@@ -574,6 +681,8 @@ func _get_eligible_rumor(now: float) -> Dictionary:
 		score -= _budget_minor_penalty()
 		if listener != "":
 			score -= _pair_prominence_penalty(_ctx.make_pair_key(speaker, listener))
+		score -= _minor_antispam_score_penalty("rumor", rumor, speaker)
+		score -= _minor_same_speaker_score_penalty(speaker, now)
 		score -= _get_recent_history_penalty("rumor", rumor, speaker)
 		if score > best_score:
 			best_score = score
@@ -869,6 +978,10 @@ func _get_best_spontaneous_social_candidate(now: float, allow_major_social: bool
 		var kind: String = str(entry.get("kind", "passing_remark")).strip_edges().to_lower()
 		if not allow_major_social and kind in ["small_cluster", "opportunistic_cluster"]:
 			continue
+		if kind not in ["small_cluster", "opportunistic_cluster"]:
+			if _minor_entry_cooldown_blocks("social_passing", entry, now):
+				_debug_minor_antispam_log_skip("social_passing", _stable_minor_entry_cooldown_key("social_passing", entry), "entry_cooldown", now)
+				continue
 		var candidate: Dictionary = {}
 		match kind:
 			"small_cluster", "opportunistic_cluster":
@@ -896,6 +1009,9 @@ func _get_best_spontaneous_social_candidate(now: float, allow_major_social: bool
 			if ru.size() >= 2:
 				pk_s = _ctx.make_pair_key(str(ru[0]).strip_edges(), str(ru[1]).strip_edges())
 		score -= _pair_prominence_penalty(pk_s)
+		if pace_cat == "social_passing":
+			score -= _minor_antispam_score_penalty("social_passing", entry, speaker_name)
+			score -= _minor_same_speaker_score_penalty(speaker_name, now)
 		score -= _get_recent_history_penalty("social", entry, speaker_name)
 		if score > best_score:
 			best_score = score
@@ -1126,6 +1242,10 @@ func _end_spontaneous_social() -> void:
 		_record_minor_ambient_event("social_passing:%s" % sid_wrap if sid_wrap != "" else "social_passing")
 		var pass_sp: String = str(wrap_entry.get("speaker", "")).strip_edges()
 		var pass_ln: String = str(wrap_entry.get("listener", "")).strip_edges()
+		var pre_sp_pen: float = _minor_antispam_score_penalty("social_passing", wrap_entry, pass_sp) + _minor_same_speaker_score_penalty(pass_sp, now)
+		_debug_minor_antispam_log_chosen("social_passing", wrap_entry, pass_sp, pre_sp_pen, now)
+		_register_minor_antispam_after_play("social_passing", wrap_entry, pass_sp, now)
+		_last_minor_shown_label = "social_passing:%s" % sid_wrap if sid_wrap != "" else "social_passing:anon"
 		_bump_pair_soft_weight(_ctx.make_pair_key(pass_sp, pass_ln))
 	_rumor_cooldown_until = maxf(_rumor_cooldown_until, now + SPONTANEOUS_SOCIAL_COOLDOWN)
 	_spontaneous_social_next_attempt_time = now + _pacing_spaced_interval(SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MIN, SPONTANEOUS_SOCIAL_ATTEMPT_INTERVAL_MAX, now)
@@ -1167,10 +1287,17 @@ func _get_recent_history_penalty(event_type: String, entry: Dictionary, speaker_
 	if event_index >= 0:
 		penalty += maxf(0.3, AMBIENT_RECENT_EVENT_PENALTY - float(event_index) * 0.3)
 	var speaker: String = str(speaker_name).strip_edges()
+	var speaker_index: int = -1
 	if speaker != "":
-		var speaker_index: int = _ambient_recent_speakers.find(speaker)
+		speaker_index = _ambient_recent_speakers.find(speaker)
 		if speaker_index >= 0:
 			penalty += maxf(0.15, AMBIENT_RECENT_SPEAKER_PENALTY - float(speaker_index) * 0.25)
+	if event_type == "rumor" or event_type == "micro":
+		penalty *= 1.52
+		if event_index == 0:
+			penalty += 2.35
+		if speaker_index == 0:
+			penalty += 1.55
 	return penalty
 
 func _record_ambient_history(event_type: String, entry: Dictionary, speaker_name: String = "", record_event: bool = true) -> void:
@@ -1457,12 +1584,17 @@ func _get_eligible_micro_bark(now: float) -> Dictionary:
 			var zt: String = str(bark.get("zone_type", "")).strip_edges()
 			if zt != "" and not _ctx.is_walker_near_zone(speaker_walker, zt):
 				continue
+		if _minor_entry_cooldown_blocks("micro", bark, now):
+			_debug_minor_antispam_log_skip("micro", _stable_minor_entry_cooldown_key("micro", bark), "entry_cooldown", now)
+			continue
 		var score: float = _ctx.score_with_relationship_bias(float(bark.get("priority", 0)), bark, speaker, listener)
 		score += _ctx.visit_theme_score_adjust(bark, "micro")
 		score += _phase_score_bias("micro", now)
 		score += _theme_mix_event_bias(bark, "micro")
 		score -= _budget_minor_penalty()
 		score -= _pair_prominence_penalty(_ctx.make_pair_key(speaker, listener))
+		score -= _minor_antispam_score_penalty("micro", bark, speaker)
+		score -= _minor_same_speaker_score_penalty(speaker, now)
 		score -= _get_recent_history_penalty("micro", bark, speaker)
 		if score > best_score:
 			best_score = score
