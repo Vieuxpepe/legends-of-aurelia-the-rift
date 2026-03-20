@@ -975,6 +975,11 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		for k in raw_flags:
 			if str(k).strip_edges() != "" and raw_flags[k]:
 				encounter_flags[str(k).strip_edges()] = true
+	# Infer story beats for saves that cleared levels before encounter flags were written (camp conversation gating).
+	if camp_request_progress_level >= 3:
+		encounter_flags["shattered_sanctum_cleared"] = true
+	if camp_request_progress_level >= 10:
+		encounter_flags["sunlit_trial_cleared"] = true
 
 	claimed_scavenger_scores.clear()
 	var raw_claimed = save_data.get("claimed_scavenger_scores", {})
@@ -1196,6 +1201,8 @@ func _is_camp_lore_flag_satisfied(flag_name: String) -> bool:
 	if key.is_empty():
 		return true
 	match key:
+		"shattered_sanctum_cleared":
+			return bool(encounter_flags.get("shattered_sanctum_cleared", false))
 		"greyspire_hub_established":
 			return camp_request_progress_level >= 6
 		"market_of_masks_cleared":
@@ -1206,8 +1213,32 @@ func _is_camp_lore_flag_satisfied(flag_name: String) -> bool:
 			return camp_request_progress_level >= 16
 		"gathering_storms_cleared":
 			return camp_request_progress_level >= 17
+		"sunlit_trial_cleared":
+			return bool(encounter_flags.get("sunlit_trial_cleared", false))
 		_:
 			return bool(encounter_flags.get(key, false))
+
+
+## Story keys for CampConversationDB / ambient: encounter_flags plus narrative thresholds (same rules as _is_camp_lore_flag_satisfied).
+func get_camp_conversation_story_flags() -> Dictionary:
+	var out: Dictionary = {}
+	for k in encounter_flags.keys():
+		var ks: String = str(k).strip_edges()
+		if ks != "" and bool(encounter_flags[k]):
+			out[ks] = true
+	var script_keys: PackedStringArray = [
+		"shattered_sanctum_cleared",
+		"greyspire_hub_established",
+		"market_of_masks_cleared",
+		"dawnkeep_siege_cleared",
+		"echoes_of_the_order_cleared",
+		"gathering_storms_cleared",
+		"sunlit_trial_cleared",
+	]
+	for sk in script_keys:
+		if _is_camp_lore_flag_satisfied(sk):
+			out[str(sk)] = true
+	return out
 
 func get_available_camp_lore(unit_name: String) -> Dictionary:
 	var uname: String = str(unit_name).strip_edges()

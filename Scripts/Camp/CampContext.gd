@@ -36,14 +36,11 @@ func build_camp_context_dict() -> Dictionary:
 	var story_flags: Dictionary = {}
 	if CampaignManager:
 		progress_level = maxi(0, int(CampaignManager.camp_request_progress_level))
-		var flags_v: Variant = CampaignManager.encounter_flags
-		if flags_v is Dictionary:
-			for key_v in (flags_v as Dictionary).keys():
-				var k: String = str(key_v).strip_edges()
-				if k == "":
-					continue
-				if bool((flags_v as Dictionary).get(key_v, false)):
-					story_flags[k] = true
+		var merged: Dictionary = CampaignManager.get_camp_conversation_story_flags()
+		for mk in merged.keys():
+			var mks: String = str(mk).strip_edges()
+			if mks != "" and bool(merged[mk]):
+				story_flags[mks] = true
 	ctx["time_block"] = tb
 	ctx["camp_mood"] = mood
 	ctx["progress_level"] = progress_level

@@ -2,6 +2,8 @@
 # Authored multi-line direct (E) camp conversations with optional branching.
 # Memory: once_ever -> CampaignManager.mark_camp_memory_scene_seen(id)
 #         once_per_visit -> CampDialogueController visit dictionary (checked here via player_state)
+# Optional story gating: required_story_flags / forbidden_story_flags -> keys in CampContext story_flags
+# (CampaignManager.get_camp_conversation_story_flags: encounter_flags + narrative thresholds).
 
 class_name CampConversationDB
 extends RefCounted
@@ -56,6 +58,7 @@ const CONVERSATIONS: Array = [
 		"conversation_type": "support",
 		"priority": 21,
 		"req_level": 6,
+		"required_story_flags": ["greyspire_hub_established"],
 		"once_ever": true,
 		"branch_at": 5,
 		"script": [
@@ -100,6 +103,7 @@ const CONVERSATIONS: Array = [
 		"conversation_type": "support",
 		"priority": 22,
 		"req_level": 3,
+		"required_story_flags": ["shattered_sanctum_cleared"],
 		"once_ever": true,
 		"branch_at": 5,
 		"script": [
@@ -143,6 +147,7 @@ const CONVERSATIONS: Array = [
 		"conversation_type": "support",
 		"priority": 21,
 		"req_level": 10,
+		"required_story_flags": ["sunlit_trial_cleared"],
 		"once_ever": true,
 		"branch_at": 5,
 		"script": [
@@ -186,6 +191,7 @@ const CONVERSATIONS: Array = [
 		"conversation_type": "support",
 		"priority": 20,
 		"req_level": 16,
+		"required_story_flags": ["echoes_of_the_order_cleared"],
 		"once_ever": true,
 		"branch_at": 6,
 		"script": [
@@ -1970,6 +1976,20 @@ static func conversation_matches(
 	var max_lv: int = int(entry.get("max_progress_level", -1))
 	if max_lv >= 0 and prog > max_lv:
 		return false
+	var story_ctx: Variant = context.get("story_flags", {})
+	var story_flags: Dictionary = story_ctx if story_ctx is Dictionary else {}
+	var req_story_v: Variant = entry.get("required_story_flags", [])
+	if req_story_v is Array:
+		for sf in req_story_v as Array:
+			var sfn: String = _normalize_name(str(sf))
+			if sfn != "" and not bool(story_flags.get(sfn, false)):
+				return false
+	var forb_story_v: Variant = entry.get("forbidden_story_flags", [])
+	if forb_story_v is Array:
+		for sf2 in forb_story_v as Array:
+			var sfn2: String = _normalize_name(str(sf2))
+			if sfn2 != "" and bool(story_flags.get(sfn2, false)):
+				return false
 	if entry.has("moods"):
 		var moods_v: Variant = entry.get("moods", [])
 		if moods_v is Array:

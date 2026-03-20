@@ -8921,6 +8921,7 @@ func _trigger_victory() -> void:
 	# --- UNLOCK THE BLACKSMITH IF WE BEAT LEVEL 3 ---
 	if CampaignManager.current_level_index == 2: # Index 2 is Level 3!
 		CampaignManager.blacksmith_unlocked = true
+		CampaignManager.encounter_flags["shattered_sanctum_cleared"] = true
 
 	# --- Relationship Web: trust +1 only when both survived and were close (Manhattan <= VICTORY_TRUST_PROXIMITY_MANHATTAN) at victory ---
 	var survivors: Array[Node2D] = []
