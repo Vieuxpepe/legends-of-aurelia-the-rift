@@ -21,6 +21,14 @@ func get_camp_request_status() -> String:
 	return _requests.get_camp_request_status()
 
 
+func _gather_walker_names() -> Array:
+	var out: Array = []
+	for w in _ctx.walker_nodes:
+		if w is CampRosterWalker:
+			out.append((w as CampRosterWalker).unit_name)
+	return out
+
+
 ## Mirrors `open_dialogue` resolution without opening UI or mutating request state (except reads).
 func peek_walker_interaction_kind(walker_node: Node) -> String:
 	if walker_node == null or not (walker_node is CampRosterWalker):
@@ -56,6 +64,10 @@ func peek_walker_interaction_kind(walker_node: Node) -> String:
 				var tier_ok: bool = (scene_tier == "close" and tier in ["close", "bonded"]) or (scene_tier == "trusted" and tier in ["trusted", "close", "bonded"])
 				if tier_ok and not (scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier)):
 					return "special_scene"
+		var ctx_dict: Dictionary = _ctx.build_camp_context_dict()
+		var visit_snap: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
+		if CampConversationDB.has_eligible_direct_conversation(unit_name, ctx_dict, _gather_walker_names(), visit_snap):
+			return "direct_conversation"
 		if not CampaignManager.get_available_pair_scene_for_unit(unit_name).is_empty():
 			return "pair_snippet"
 		if not CampaignManager.get_available_camp_lore(unit_name).is_empty():
@@ -78,6 +90,8 @@ func get_interact_prompt_primary_line(nearest: Node, eligible_pair: Dictionary) 
 			"request_target_talk", "request_branching":
 				return "E  Quest: speak"
 			"special_scene":
+				return "E  Talk"
+			"direct_conversation":
 				return "E  Talk"
 			"pair_snippet":
 				return "E  Talk"
@@ -120,6 +134,10 @@ func would_single_walker_priority(nearest: Node) -> bool:
 				var tier_ok: bool = (scene_tier == "close" and tier in ["close", "bonded"]) or (scene_tier == "trusted" and tier in ["trusted", "close", "bonded"])
 				if tier_ok and not (scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier)):
 					return true
+		var ctx2: Dictionary = _ctx.build_camp_context_dict()
+		var snap2: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
+		if CampConversationDB.has_eligible_direct_conversation(unit_name, ctx2, _gather_walker_names(), snap2):
+			return true
 		if CampaignManager.get_available_pair_scene_for_unit(unit_name).is_empty() == false:
 			return true
 		if CampaignManager.get_available_camp_lore(unit_name).is_empty() == false:
@@ -182,6 +200,13 @@ func open_dialogue(walker_node: Node) -> void:
 			if scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier):
 				continue
 			_dialogue.show_special_camp_scene(walker_node, unit_name, unit_data, scene, scene_tier)
+			return
+	if CampaignManager:
+		var camp_ctx: Dictionary = _ctx.build_camp_context_dict()
+		var visit_snap_open: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
+		var best_conv: Dictionary = CampConversationDB.get_best_direct_conversation(unit_name, camp_ctx, _gather_walker_names(), visit_snap_open)
+		if not best_conv.is_empty():
+			_dialogue.start_direct_conversation(walker_node, best_conv)
 			return
 	if CampaignManager:
 		var pair_scene: Dictionary = CampaignManager.get_available_pair_scene_for_unit(unit_name)

@@ -119,6 +119,7 @@ func _ready() -> void:
 		dialogue_panel.visible = false
 	_dialogue.hide_request_buttons()
 	_dialogue.reset_pair_scene_visit_flags()
+	_dialogue.reset_direct_conversation_visit_flags()
 	_ambient.reset_visit_state()
 	if rumor_label:
 		rumor_label.visible = false
