@@ -640,6 +640,19 @@ func _deserialize_item(d) -> Resource:
 	return inst
 
 # --- Avatar relationship save/load (primitive-only; old saves without key = safe defaults on read) ---
+func _serialize_arc_flags(raw: Variant) -> Dictionary:
+	var out: Dictionary = {}
+	if raw is Dictionary:
+		for k in raw as Dictionary:
+			if bool((raw as Dictionary)[k]):
+				out[str(k)] = true
+	return out
+
+
+func _deserialize_arc_flags(raw: Variant) -> Dictionary:
+	return _serialize_arc_flags(raw)
+
+
 func _serialize_avatar_relationships() -> Dictionary:
 	var out: Dictionary = {}
 	for unit_name in avatar_relationship_by_unit:
@@ -653,6 +666,8 @@ func _serialize_avatar_relationships() -> Dictionary:
 				"branching_failures": int(d.get("branching_failures", 0)),
 				"last_change": int(d.get("last_change", 0)),
 				"last_reason": str(d.get("last_reason", "")),
+				"personal_arc_stage": maxi(0, int(d.get("personal_arc_stage", 0))),
+				"arc_flags": _serialize_arc_flags(d.get("arc_flags", {})),
 			}
 	return out
 
@@ -671,6 +686,8 @@ func _deserialize_avatar_relationships(raw: Variant) -> void:
 				"branching_failures": maxi(0, int(d.get("branching_failures", 0))),
 				"last_change": int(d.get("last_change", 0)),
 				"last_reason": str(d.get("last_reason", "")).strip_edges(),
+				"personal_arc_stage": maxi(0, int(d.get("personal_arc_stage", 0))),
+				"arc_flags": _deserialize_arc_flags(d.get("arc_flags", {})),
 			}
 
 func _serialize_personal_quest_states() -> Dictionary:
@@ -1829,6 +1846,8 @@ func _avatar_relationship_default_entry() -> Dictionary:
 		"branching_failures": 0,
 		"last_change": 0,
 		"last_reason": "",
+		"personal_arc_stage": 0,
+		"arc_flags": {},
 	}
 
 ## Returns full relationship entry for unit; creates with defaults if missing. Safe for missing units.
@@ -1861,6 +1880,104 @@ func get_avatar_relationship_tier(unit_name: String) -> String:
 		return "known"
 	return "stranger"
 
+func _ensure_avatar_progression_fields(entry: Dictionary) -> void:
+	if not entry.has("personal_arc_stage") or typeof(entry.get("personal_arc_stage")) != TYPE_INT:
+		entry["personal_arc_stage"] = 0
+	else:
+		entry["personal_arc_stage"] = maxi(0, int(entry.get("personal_arc_stage", 0)))
+	var af: Variant = entry.get("arc_flags", {})
+	if not (af is Dictionary):
+		entry["arc_flags"] = {}
+	else:
+		entry["arc_flags"] = af as Dictionary
+
+
+## Lightweight camp-direct arc progression (stored on avatar_relationship entry; saved with relationships).
+func get_personal_arc_stage(unit_name: String) -> int:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty():
+		return 0
+	if not avatar_relationship_by_unit.has(key):
+		return 0
+	var entry: Variant = avatar_relationship_by_unit[key]
+	if entry is Dictionary:
+		return maxi(0, int((entry as Dictionary).get("personal_arc_stage", 0)))
+	return 0
+
+
+func has_arc_flag(unit_name: String, flag: String) -> bool:
+	var f: String = str(flag).strip_edges()
+	if f.is_empty():
+		return false
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty() or not avatar_relationship_by_unit.has(key):
+		return false
+	var entry: Variant = avatar_relationship_by_unit[key]
+	if not (entry is Dictionary):
+		return false
+	var af: Variant = (entry as Dictionary).get("arc_flags", {})
+	if not (af is Dictionary):
+		return false
+	return bool((af as Dictionary).get(f, false))
+
+
+## Applies optional keys from authored direct conversation effects: set_personal_arc_stage, advance_personal_arc_stage,
+## set_arc_flag (String), clear_arc_flag (String), set_arc_flags (Dictionary). Ignores unknown keys and add_avatar_relationship.
+func apply_camp_direct_progression_effects(unit_name: String, fx: Dictionary) -> void:
+	var key: String = str(unit_name).strip_edges()
+	if key.is_empty() or fx.is_empty():
+		return
+	if not avatar_relationship_by_unit.has(key):
+		avatar_relationship_by_unit[key] = _avatar_relationship_default_entry().duplicate()
+	var entry: Dictionary = avatar_relationship_by_unit[key]
+	_ensure_avatar_progression_fields(entry)
+	if fx.has("set_personal_arc_stage"):
+		entry["personal_arc_stage"] = maxi(0, int(fx.get("set_personal_arc_stage", 0)))
+	if fx.has("advance_personal_arc_stage"):
+		entry["personal_arc_stage"] = maxi(0, int(entry.get("personal_arc_stage", 0)) + int(fx.get("advance_personal_arc_stage", 0)))
+	if fx.has("set_arc_flag"):
+		var sf: String = str(fx.get("set_arc_flag", "")).strip_edges()
+		if sf != "":
+			entry["arc_flags"][sf] = true
+	if fx.has("clear_arc_flag"):
+		var cf: String = str(fx.get("clear_arc_flag", "")).strip_edges()
+		if cf != "" and entry["arc_flags"] is Dictionary:
+			(entry["arc_flags"] as Dictionary).erase(cf)
+	var sfs: Variant = fx.get("set_arc_flags", {})
+	if sfs is Dictionary:
+		for fk in sfs as Dictionary:
+			if bool((sfs as Dictionary)[fk]):
+				entry["arc_flags"][str(fk)] = true
+
+
+## Ambient / DB hooks: speaker must meet min_personal_arc_stage and required_arc_flags; must not have forbidden_arc_flags.
+func ambient_entry_matches_speaker_progression(speaker_name: String, entry: Dictionary) -> bool:
+	if entry.is_empty():
+		return true
+	var sp: String = str(speaker_name).strip_edges()
+	if sp.is_empty():
+		return false
+	if entry.has("min_personal_arc_stage"):
+		if get_personal_arc_stage(sp) < int(entry.get("min_personal_arc_stage", 0)):
+			return false
+	if entry.has("max_personal_arc_stage"):
+		if get_personal_arc_stage(sp) > int(entry.get("max_personal_arc_stage", 999)):
+			return false
+	var req_v: Variant = entry.get("required_arc_flags", [])
+	if req_v is Array:
+		for flg in req_v as Array:
+			var fn: String = str(flg).strip_edges()
+			if fn != "" and not has_arc_flag(sp, fn):
+				return false
+	var forb_v: Variant = entry.get("forbidden_arc_flags", [])
+	if forb_v is Array:
+		for flg2 in forb_v as Array:
+			var fn2: String = str(flg2).strip_edges()
+			if fn2 != "" and has_arc_flag(sp, fn2):
+				return false
+	return true
+
+
 ## Applies score delta and updates last_change/last_reason. Clamps score to 0–100. Creates entry if missing.
 func add_avatar_relationship(unit_name: String, amount: int, reason: String = "") -> void:
 	var key: String = str(unit_name).strip_edges()
@@ -1869,6 +1986,7 @@ func add_avatar_relationship(unit_name: String, amount: int, reason: String = ""
 	if not avatar_relationship_by_unit.has(key):
 		avatar_relationship_by_unit[key] = _avatar_relationship_default_entry().duplicate()
 	var entry: Dictionary = avatar_relationship_by_unit[key]
+	_ensure_avatar_progression_fields(entry)
 	var old_score: int = int(entry.get("score", 0))
 	var new_score: int = clampi(old_score + amount, AVATAR_RELATIONSHIP_SCORE_MIN, AVATAR_RELATIONSHIP_SCORE_MAX)
 	entry["score"] = new_score

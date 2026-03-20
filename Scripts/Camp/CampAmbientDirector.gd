@@ -1856,6 +1856,8 @@ func _get_eligible_micro_bark(now: float) -> Dictionary:
 		var listener: String = str(bark.get("listener", "")).strip_edges()
 		if speaker.is_empty() or listener.is_empty():
 			continue
+		if CampaignManager and not CampaignManager.ambient_entry_matches_speaker_progression(speaker, bark):
+			continue
 		if not _ctx.content_condition_matches(bark, speaker, listener):
 			continue
 		if not _ctx.pair_memory_matches(bark, speaker, listener):

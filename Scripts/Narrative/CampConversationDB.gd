@@ -285,6 +285,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_nyx_1"},
 	},
 	{
 		"id": "dc_camp_avatar_nyx_2",
@@ -328,6 +329,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_nyx_2"},
 	},
 	{
 		"id": "dc_camp_avatar_branik_1",
@@ -371,6 +373,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_branik_1"},
 	},
 	{
 		"id": "dc_camp_avatar_branik_2",
@@ -414,6 +417,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_branik_2"},
 	},
 	{
 		"id": "dc_camp_avatar_sorrel_1",
@@ -457,6 +461,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_sorrel_1"},
 	},
 	{
 		"id": "dc_camp_avatar_sorrel_2",
@@ -500,6 +505,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_sorrel_2"},
 	},
 	{
 		"id": "dc_camp_avatar_tamsin_1",
@@ -543,6 +549,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_tamsin_1"},
 	},
 	{
 		"id": "dc_camp_avatar_tamsin_2",
@@ -586,6 +593,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_tamsin_2"},
 	},
 	{
 		"id": "dc_camp_avatar_celia_1",
@@ -629,6 +637,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_celia_1"},
 	},
 	{
 		"id": "dc_camp_avatar_celia_2",
@@ -672,6 +681,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_celia_2"},
 	},
 	{
 		"id": "dc_camp_avatar_garrick_1",
@@ -715,6 +725,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_garrick_1"},
 	},
 	{
 		"id": "dc_camp_avatar_garrick_2",
@@ -759,6 +770,7 @@ const CONVERSATIONS: Array = [
 				"effects": {"add_avatar_relationship": 1},
 			},
 		],
+		"effects_on_complete": {"advance_personal_arc_stage": 1, "set_arc_flag": "dc_camp_avatar_garrick_2"},
 	},
 	{
 		"id": "dc_camp_avatar_tariq_1",
@@ -1818,6 +1830,24 @@ static func conversation_matches(
 				break
 		if not allowed:
 			return false
+	if entry.has("min_personal_arc_stage") and CampaignManager:
+		if CampaignManager.get_personal_arc_stage(pu) < int(entry.get("min_personal_arc_stage", 0)):
+			return false
+	if entry.has("max_personal_arc_stage") and CampaignManager:
+		if CampaignManager.get_personal_arc_stage(pu) > int(entry.get("max_personal_arc_stage", 9999)):
+			return false
+	var req_flags_v: Variant = entry.get("required_arc_flags", [])
+	if req_flags_v is Array and CampaignManager:
+		for rflg in req_flags_v as Array:
+			var rf: String = _normalize_name(str(rflg))
+			if rf != "" and not CampaignManager.has_arc_flag(pu, rf):
+				return false
+	var forb_flags_v: Variant = entry.get("forbidden_arc_flags", [])
+	if forb_flags_v is Array and CampaignManager:
+		for fflg in forb_flags_v as Array:
+			var ff: String = _normalize_name(str(fflg))
+			if ff != "" and CampaignManager.has_arc_flag(pu, ff):
+				return false
 	var eid: String = _normalize_name(entry.get("id", ""))
 	if bool(entry.get("once_ever", false)) and CampaignManager and eid != "":
 		if CampaignManager.has_seen_camp_memory_scene(eid):

@@ -5,6 +5,7 @@ class_name CampDialogueController
 extends RefCounted
 
 const CAMP_PAIR_SCENE_TRIGGER_DB = preload("res://Scripts/Narrative/CampPairSceneTriggerDB.gd")
+const CAMP_DIRECT_TALK_PROGRESSION_DB = preload("res://Scripts/Narrative/CampDirectTalkProgressionDB.gd")
 const PAIR_LISTEN_RADIUS: float = 120.0
 
 var _explore: Node2D
@@ -611,6 +612,9 @@ func show_lore_snippet(walker_node: Node, unit_name: String, lore: Dictionary) -
 
 func show_idle_talk(walker_node: Node, unit_name: String, unit_data: Variant) -> void:
 	var line: String = CampExploreDialogueDB.get_line_for_unit(unit_data, unit_name)
+	var prog_follow: String = CAMP_DIRECT_TALK_PROGRESSION_DB.get_idle_followup(unit_name)
+	if prog_follow != "":
+		line += "\n\n" + prog_follow
 	if CampaignManager and unit_name != "":
 		var tier: String = CampaignManager.get_avatar_relationship_tier(unit_name)
 		if tier != "":
@@ -841,14 +845,15 @@ func end_direct_conversation(completed: bool) -> void:
 	var conv_id: String = str(conv.get("id", "")).strip_edges()
 	var primary: String = str(conv.get("primary_unit", "")).strip_edges()
 	if completed:
+		var top_fx: Dictionary = conv.get("effects_on_complete", {}) if conv.get("effects_on_complete") is Dictionary else {}
 		if not _direct_conv_selected_choice.is_empty():
 			apply_direct_conversation_effects(_direct_conv_selected_choice, primary)
-		elif _direct_conv_choices.is_empty():
-			var top_fx: Variant = conv.get("effects_on_complete", {})
-			if top_fx is Dictionary and CampaignManager and primary != "":
-				var d: int = int((top_fx as Dictionary).get("add_avatar_relationship", 0))
-				if d != 0:
-					CampaignManager.add_avatar_relationship(primary, d, "camp_direct_conversation")
+		elif _direct_conv_choices.is_empty() and CampaignManager and primary != "":
+			var d: int = int(top_fx.get("add_avatar_relationship", 0))
+			if d != 0:
+				CampaignManager.add_avatar_relationship(primary, d, "camp_direct_conversation")
+		if CampaignManager and primary != "":
+			CampaignManager.apply_camp_direct_progression_effects(primary, top_fx)
 		if bool(conv.get("once_ever", false)) and CampaignManager and conv_id != "":
 			CampaignManager.mark_camp_memory_scene_seen(conv_id)
 		if bool(conv.get("once_per_visit", false)) and conv_id != "":
