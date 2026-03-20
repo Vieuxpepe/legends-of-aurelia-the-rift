@@ -1355,7 +1355,7 @@ func _start_spontaneous_social(data: Dictionary) -> void:
 	_spontaneous_social_current_until = 0.0
 	_spontaneous_social_meetup_started_at = Time.get_ticks_msec() / 1000.0
 	_spontaneous_social_settle_until = 0.0
-	_apply_spontaneous_social_formation(_spontaneous_social_participants, speaker_walker)
+	_apply_spontaneous_social_formation(_spontaneous_social_participants, speaker_walker, entry)
 	var soc_pose: String = _pose_from_social_entry(entry)
 	if soc_pose != "":
 		_apply_ambient_pose_to_walkers(participants, soc_pose)
@@ -1565,11 +1565,25 @@ func _get_social_group_center(participants: Array) -> Vector2:
 		center += (p as CampRosterWalker).global_position
 	return center / float(valid.size())
 
-func _apply_spontaneous_social_formation(participants: Array, speaker_walker: CampRosterWalker = null) -> void:
+func _apply_spontaneous_social_formation(participants: Array, speaker_walker: CampRosterWalker = null, entry: Dictionary = {}) -> void:
 	var valid: Array = _get_valid_social_participants(participants)
 	if valid.is_empty():
 		return
 	var center: Vector2 = _get_social_group_center(valid)
+	var zone_type: String = str(entry.get("zone_type", "")).strip_edges().to_lower()
+	if zone_type == "":
+		zone_type = str(entry.get("preferred_zone", "")).strip_edges().to_lower()
+	var hints: Dictionary = _ctx.get_zone_layout_hints(zone_type)
+	var hint_center: Vector2 = center
+	if bool(hints.get("valid", false)):
+		hint_center = hints["center"] as Vector2
+	var facing_dir: Vector2 = hints.get("facing_dir", Vector2.RIGHT) as Vector2
+	if facing_dir.length() < 0.001:
+		facing_dir = Vector2.RIGHT
+	else:
+		facing_dir = facing_dir.normalized()
+	var family: String = str(entry.get("ambient_behavior_family", "")).strip_edges().to_lower()
+	var pose_guess: String = _pose_from_social_entry(entry)
 	if valid.size() == 1:
 		(valid[0] as CampRosterWalker).begin_social_move((valid[0] as CampRosterWalker).global_position)
 		return
@@ -1581,14 +1595,67 @@ func _apply_spontaneous_social_formation(participants: Array, speaker_walker: Ca
 			dir = Vector2.RIGHT
 		dir = dir.normalized()
 		var midpoint: Vector2 = (a.global_position + b.global_position) * 0.5
-		a.begin_social_move(midpoint + dir * SPONTANEOUS_SOCIAL_PAIR_OFFSET)
-		b.begin_social_move(midpoint - dir * SPONTANEOUS_SOCIAL_PAIR_OFFSET)
+		var off: float = SPONTANEOUS_SOCIAL_PAIR_OFFSET
+		if family in ["spar", "mock_duel"] or pose_guess == "spar":
+			off *= 1.35
+		elif family in ["drill", "formation"] or pose_guess == "drill":
+			off *= 0.92
+		elif family in ["morale_fire", "fireside", "rhythm", "song"] or pose_guess == "fireside":
+			off *= 0.82
+		elif family in ["work_detail", "repair"] or pose_guess == "work":
+			off *= 0.88
+		a.begin_social_move(midpoint + dir * off)
+		b.begin_social_move(midpoint - dir * off)
 		return
 	var ordered: Array = valid.duplicate()
 	if speaker_walker != null and speaker_walker in ordered:
 		ordered.erase(speaker_walker)
 		ordered.push_front(speaker_walker)
 	var count: int = ordered.size()
+	if zone_type in ["fire", "cook", "cook_area"] or family in ["morale_fire", "fireside", "rhythm", "song"] or pose_guess == "fireside":
+		var base_r: float = SPONTANEOUS_SOCIAL_FORMATION_RADIUS + float(maxi(0, count - 3)) * 3.0
+		base_r = clampf(base_r, 28.0, 52.0)
+		for i in range(count):
+			var walker_f: CampRosterWalker = ordered[i] as CampRosterWalker
+			var t: float = TAU * float(i) / float(count)
+			var ang: float = -PI * 0.5 + t * 0.92
+			walker_f.begin_social_move(hint_center + Vector2(cos(ang), sin(ang)) * base_r)
+		return
+	if zone_type in ["wall", "watch_post"]:
+		var perp: Vector2 = Vector2(-facing_dir.y, facing_dir.x)
+		var spread: float = 11.0 + float(count) * 5.5
+		var start_slot: float = -float(count - 1) * 0.5
+		for i in range(count):
+			var walker_w: CampRosterWalker = ordered[i] as CampRosterWalker
+			var slot: float = start_slot + float(i)
+			walker_w.begin_social_move(hint_center + perp * slot * spread * 0.5)
+		return
+	if zone_type in ["workbench", "supply"]:
+		var r_line: float = 22.0
+		var back: Vector2 = -facing_dir * r_line
+		for i in range(count):
+			var walker_wb: CampRosterWalker = ordered[i] as CampRosterWalker
+			var side: Vector2 = Vector2(-facing_dir.y, facing_dir.x) * (float(i) - float(count - 1) * 0.5) * 16.0
+			walker_wb.begin_social_move(hint_center + back + side)
+		return
+	if zone_type == "shrine":
+		var sr: float = SPONTANEOUS_SOCIAL_FORMATION_RADIUS + 14.0 + float(maxi(0, count - 3)) * 6.0
+		for i in range(count):
+			var walker_s: CampRosterWalker = ordered[i] as CampRosterWalker
+			var ang_s: float = -PI * 0.5 + TAU * float(i) / float(count)
+			walker_s.begin_social_move(hint_center + Vector2(cos(ang_s), sin(ang_s)) * sr)
+		return
+	if zone_type == "tree_line":
+		var base_ang: float = atan2(facing_dir.y, facing_dir.x)
+		var tr: float = 30.0 + float(count) * 4.0
+		for i in range(count):
+			var tln: float = 0.0
+			if count > 1:
+				tln = -0.4 + 0.8 * float(i) / float(count - 1)
+			var ang_t: float = base_ang + tln * PI * 0.5
+			var walker_t: CampRosterWalker = ordered[i] as CampRosterWalker
+			walker_t.begin_social_move(hint_center + Vector2(cos(ang_t), sin(ang_t)) * tr)
+		return
 	var radius: float = SPONTANEOUS_SOCIAL_FORMATION_RADIUS + float(maxi(0, count - 3)) * 4.0
 	for i in range(count):
 		var walker: CampRosterWalker = ordered[i] as CampRosterWalker

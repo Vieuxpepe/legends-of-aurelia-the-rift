@@ -90,6 +90,27 @@ var _social_state: int = SOCIAL_STATE_FREE
 ## Optional ambient choreography from CampAmbientDirector: "spar", "drill", "work", "fireside", or "".
 var _ambient_social_pose: String = ""
 
+var _camp_visit_theme: String = "normal"
+## Zone-grounded solo pose chosen when arriving at a stand location (overrides profile idle until next move).
+var _solo_visual_style: String = ""
+var _standing_zone_type: String = ""
+var _standing_zone_center: Vector2 = Vector2.ZERO
+var _standing_zone_radius: float = 0.0
+var _standing_facing_dir: Vector2 = Vector2.ZERO
+var _standing_face_mode: String = "center"
+var _standing_idle_override: String = ""
+## Lightweight idle micro-motion: "", "orbit", "patrol_ping", "shift_side", "fire_orbit", "sit_pulse", "kneel_pulse".
+var _solo_routine_kind: String = ""
+var _solo_routine_phase: float = 0.0
+var _solo_routine_vec: Vector2 = Vector2.ZERO
+var _solo_routine_orbit_r: float = 6.0
+var _solo_routine_anchor: Vector2 = Vector2.ZERO
+
+func set_camp_visit_theme(theme: String) -> void:
+	_camp_visit_theme = str(theme).strip_edges().to_lower()
+	if _camp_visit_theme == "":
+		_camp_visit_theme = "normal"
+
 func set_ambient_social_pose(pose: String) -> void:
 	_ambient_social_pose = str(pose).strip_edges().to_lower()
 
@@ -112,6 +133,8 @@ func set_wander_paused(paused: bool) -> void:
 	_wander_paused = paused
 	if paused:
 		_clear_social_animation_tweens()
+		_solo_routine_kind = ""
+		_solo_routine_phase = 0.0
 		_social_state = SOCIAL_STATE_PAUSED
 	else:
 		if _social_state == SOCIAL_STATE_PAUSED:
@@ -160,6 +183,8 @@ func _get_condition_bob_multiplier() -> float:
 
 func start_behavior() -> void:
 	_idle_timer = 0.0
+	_update_standing_zone_at_position(global_position)
+	_refresh_solo_visual_behavior()
 	_pick_next_idle()
 
 func _process(_delta: float) -> void:
@@ -203,6 +228,7 @@ func _process(_delta: float) -> void:
 		_idle_timer -= _delta
 		if not _idle_pose_applied:
 			_apply_idle_style()
+		_apply_solo_idle_frame(_delta)
 		_apply_personal_space_correction(_delta, 0.72)
 		if not _target_is_zone and not _social_move_active:
 			var to_home_idle: Vector2 = home_position - global_position
@@ -229,6 +255,8 @@ func _process(_delta: float) -> void:
 			_social_move_arrived = true
 			_social_state = SOCIAL_STATE_SETTLED
 			return
+		_update_standing_zone_at_position(global_position)
+		_refresh_solo_visual_behavior()
 		_pick_next_idle()
 		return
 	var move_dir: Vector2 = to_target.normalized()
@@ -283,36 +311,387 @@ func _pick_next_idle() -> void:
 		_current_zone_center = Vector2.ZERO
 		_current_zone_facing_dir = Vector2.ZERO
 
+
+func _add_solo_style_w(cands: Array, style: String, w: float) -> void:
+	var st: String = str(style).strip_edges().to_lower()
+	if st == "":
+		return
+	cands.append({"style": st, "weight": maxf(0.05, w)})
+
+
+func _build_solo_candidates() -> Array:
+	var c: Array = []
+	var zt: String = _standing_zone_type.strip_edges().to_lower()
+	var base_idle: String = str(_idle_style).strip_edges().to_lower()
+	if base_idle != "" and base_idle != "neutral":
+		_add_solo_style_w(c, base_idle, 0.55)
+	match zt:
+		"watch_post", "wall":
+			_add_solo_style_w(c, "patrol", 1.4)
+			_add_solo_style_w(c, "look_out", 1.45)
+			_add_solo_style_w(c, "inspect_wall", 1.1)
+			_add_solo_style_w(c, "check_gear", 0.95)
+			_add_solo_style_w(c, "stretch", 0.75)
+			_add_solo_style_w(c, "warm_hands", 0.35)
+		"fire", "cook", "cook_area":
+			_add_solo_style_w(c, "tend_fire", 1.5)
+			_add_solo_style_w(c, "warm_hands", 1.2)
+			_add_solo_style_w(c, "sit_rest", 0.85)
+			_add_solo_style_w(c, "pour_water", 0.7)
+			_add_solo_style_w(c, "read_notes", 0.45)
+		"workbench", "supply":
+			_add_solo_style_w(c, "sort_supplies", 1.35)
+			_add_solo_style_w(c, "workbench_tinker", 1.25)
+			_add_solo_style_w(c, "sharpen", 0.95)
+			_add_solo_style_w(c, "carry_bundle", 0.85)
+			_add_solo_style_w(c, "check_gear", 0.65)
+		"infirmary", "bench":
+			_add_solo_style_w(c, "sit_rest", 1.2)
+			_add_solo_style_w(c, "pour_water", 0.95)
+			_add_solo_style_w(c, "wash_hands", 0.85)
+			_add_solo_style_w(c, "check_gear", 0.65)
+			_add_solo_style_w(c, "rest_head_down", 0.55)
+		"shrine":
+			_add_solo_style_w(c, "kneel_prayer", 1.5)
+			_add_solo_style_w(c, "pray_quietly", 1.1)
+			_add_solo_style_w(c, "read_notes", 0.6)
+		"tree_line":
+			_add_solo_style_w(c, "look_out", 1.35)
+			_add_solo_style_w(c, "patrol", 1.15)
+			_add_solo_style_w(c, "inspect_wall", 0.7)
+		"map_table", "wagon":
+			_add_solo_style_w(c, "read_notes", 1.0)
+			_add_solo_style_w(c, "sort_supplies", 0.75)
+			_add_solo_style_w(c, "check_gear", 0.55)
+		_:
+			pass
+	if c.is_empty():
+		if base_idle != "":
+			_add_solo_style_w(c, base_idle, 1.0)
+		else:
+			_add_solo_style_w(c, "neutral", 1.0)
+		_add_solo_style_w(c, "check_gear", 0.35)
+		_add_solo_style_w(c, "warm_hands", 0.32)
+	var ov: String = _standing_idle_override.strip_edges().to_lower()
+	if ov != "":
+		_add_solo_style_w(c, ov, 2.4)
+	return c
+
+
+func _theme_weight_mul(style: String) -> float:
+	var s: String = str(style).strip_edges().to_lower()
+	var th: String = _camp_visit_theme
+	var m: float = 1.0
+	match th:
+		"training":
+			if s in ["patrol", "inspect_wall", "sharpen", "check_gear", "stretch", "look_out", "workbench_tinker", "sort_supplies", "carry_bundle"]:
+				m *= 1.45
+			if s in ["sit_rest", "rest_head_down", "pour_water", "read_notes"]:
+				m *= 0.72
+		"tense":
+			if s in ["look_out", "inspect_wall", "patrol", "check_gear", "sharpen"]:
+				m *= 1.5
+			if s in ["tend_fire", "warm_hands", "sit_rest"]:
+				m *= 0.78
+		"hopeful":
+			if s in ["tend_fire", "warm_hands", "sit_rest", "read_notes", "pour_water"]:
+				m *= 1.35
+			if s in ["sharpen", "inspect_wall", "patrol"]:
+				m *= 0.85
+		"recovery":
+			if s in ["sit_rest", "rest_head_down", "pour_water", "wash_hands", "kneel_prayer", "pray_quietly", "check_gear"]:
+				m *= 1.4
+			if s in ["patrol", "stretch", "sharpen", "carry_bundle"]:
+				m *= 0.75
+		"somber":
+			if s in ["kneel_prayer", "pray_quietly", "rest_head_down", "read_notes", "sit_rest"]:
+				m *= 1.42
+			if s in ["stretch", "patrol"]:
+				m *= 0.7
+		"gossip":
+			if s in ["read_notes", "sit_rest", "sort_supplies", "wash_hands", "check_gear"]:
+				m *= 1.25
+			if s in ["sharpen", "patrol", "look_out"]:
+				m *= 0.82
+		_:
+			pass
+	return m
+
+
+func _weighted_pick_solo_style(candidates: Array) -> String:
+	var acc_map: Dictionary = {}
+	for d in candidates:
+		if not d is Dictionary:
+			continue
+		var st: String = str(d.get("style", "")).strip_edges().to_lower()
+		if st == "":
+			continue
+		var w: float = float(d.get("weight", 0.1)) * _theme_weight_mul(st)
+		if w <= 0.001:
+			continue
+		acc_map[st] = float(acc_map.get(st, 0.0)) + w
+	var styles: Array = acc_map.keys()
+	if styles.is_empty():
+		return str(_idle_style).strip_edges().to_lower()
+	var total: float = 0.0
+	for st in styles:
+		total += float(acc_map[st])
+	var r: float = randf() * total
+	var acc: float = 0.0
+	for st in styles:
+		acc += float(acc_map[st])
+		if r <= acc:
+			return str(st)
+	return str(styles[styles.size() - 1])
+
+
+func _update_standing_zone_at_position(pos: Vector2) -> void:
+	_standing_zone_type = ""
+	_standing_zone_center = Vector2.ZERO
+	_standing_zone_radius = 0.0
+	_standing_facing_dir = Vector2.ZERO
+	_standing_face_mode = "center"
+	_standing_idle_override = ""
+	if _zones.is_empty():
+		return
+	var best: Node2D = null
+	var best_score: float = -1.0
+	for z in _zones:
+		if not is_instance_valid(z):
+			continue
+		if not (z is Node2D):
+			continue
+		var zn: Node2D = z as Node2D
+		var r: float = 96.0
+		if z is CampBehaviorZone:
+			r = maxf(4.0, (z as CampBehaviorZone).radius)
+		elif "radius" in z:
+			r = maxf(4.0, float(z.radius))
+		var cpos: Vector2 = zn.global_position
+		var d: float = pos.distance_to(cpos)
+		if d > r:
+			continue
+		var score: float = r - d
+		if score > best_score:
+			best_score = score
+			best = zn
+	if best == null:
+		return
+	var bz: Node = best
+	_standing_zone_center = best.global_position
+	if bz is CampBehaviorZone:
+		var cb: CampBehaviorZone = bz as CampBehaviorZone
+		_standing_zone_type = str(cb.zone_type).strip_edges()
+		_standing_zone_radius = maxf(4.0, cb.radius)
+		_standing_idle_override = str(cb.idle_style_override).strip_edges()
+		_standing_face_mode = str(cb.face_mode).strip_edges().to_lower()
+		var fd: Vector2 = cb.facing_dir
+		if fd.length() > 0.001:
+			_standing_facing_dir = fd.normalized()
+	else:
+		if "zone_type" in bz:
+			_standing_zone_type = str(bz.zone_type).strip_edges()
+		if "radius" in bz:
+			_standing_zone_radius = maxf(4.0, float(bz.radius))
+		if "idle_style_override" in bz:
+			_standing_idle_override = str(bz.idle_style_override).strip_edges()
+		if "face_mode" in bz:
+			_standing_face_mode = str(bz.face_mode).strip_edges().to_lower()
+		if "facing_dir" in bz:
+			var fd2: Variant = bz.facing_dir
+			if fd2 is Vector2 and (fd2 as Vector2).length() > 0.001:
+				_standing_facing_dir = (fd2 as Vector2).normalized()
+
+
+func _refresh_solo_visual_behavior() -> void:
+	if _wander_paused:
+		return
+	if str(_ambient_social_pose).strip_edges() != "":
+		return
+	var candidates: Array = _build_solo_candidates()
+	var picked: String = ""
+	if candidates.is_empty():
+		picked = str(_idle_style).strip_edges().to_lower()
+	else:
+		picked = _weighted_pick_solo_style(candidates)
+	if picked == "":
+		picked = "neutral"
+	_solo_visual_style = picked
+	_assign_routine_for_style(_solo_visual_style)
+	_idle_pose_applied = false
+
+
+func _effective_idle_style() -> String:
+	var s: String = str(_solo_visual_style).strip_edges().to_lower()
+	if s != "":
+		return s
+	return str(_idle_style).strip_edges().to_lower()
+
+
+func _assign_routine_for_style(style: String) -> void:
+	var s: String = str(style).strip_edges().to_lower()
+	_solo_routine_phase = randf() * TAU
+	_solo_routine_orbit_r = randf_range(4.5, 7.5)
+	_solo_routine_vec = Vector2.RIGHT.rotated(randf() * TAU)
+	var zt: String = _standing_zone_type.strip_edges().to_lower()
+	match s:
+		"patrol", "inspect_wall", "sort_supplies", "sweep_area":
+			_solo_routine_kind = "patrol_ping"
+		"tend_fire", "warm_hands":
+			if zt in ["fire", "cook", "cook_area"]:
+				_solo_routine_kind = "fire_orbit"
+			else:
+				_solo_routine_kind = "shift_side"
+		"sit_rest", "rest_head_down":
+			_solo_routine_kind = "sit_pulse"
+		"kneel_prayer", "pray_quietly":
+			_solo_routine_kind = "kneel_pulse"
+		"look_out", "check_gear", "sharpen", "carry_bundle", "pour_water", "wash_hands", "read_notes", "stretch", "workbench_tinker":
+			_solo_routine_kind = "shift_side"
+		_:
+			_solo_routine_kind = ""
+	if _solo_routine_kind != "":
+		_solo_routine_anchor = global_position
+
+
+func _clamp_pos_to_standing_and_home(p: Vector2) -> Vector2:
+	var out: Vector2 = p
+	if _standing_zone_center != Vector2.ZERO and _standing_zone_radius > 1.0:
+		var max_d: float = maxf(5.0, _standing_zone_radius * 0.62)
+		var v: Vector2 = out - _standing_zone_center
+		if v.length() > max_d and v.length() > 0.001:
+			out = _standing_zone_center + v.normalized() * max_d
+	if home_position != Vector2.ZERO:
+		var v2: Vector2 = out - home_position
+		if v2.length() > roam_radius and v2.length() > 0.001:
+			out = home_position + v2.normalized() * roam_radius
+	return out
+
+
+func _apply_solo_routine_position(_delta: float) -> void:
+	if _solo_routine_kind == "":
+		return
+	match _solo_routine_kind:
+		"patrol_ping":
+			var amp: float = 6.0
+			if _standing_zone_radius > 1.0:
+				amp = clampf(_standing_zone_radius * 0.28, 6.0, 15.0)
+			var off: Vector2 = _solo_routine_vec * sin(_solo_routine_phase * 1.12) * amp
+			global_position = _clamp_pos_to_standing_and_home(_solo_routine_anchor + off)
+		"fire_orbit":
+			if _standing_zone_center == Vector2.ZERO or _standing_zone_radius < 3.0:
+				var sh2: Vector2 = Vector2(sin(_solo_routine_phase * 1.1), 0) * 2.8
+				global_position = _clamp_pos_to_standing_and_home(_solo_routine_anchor + sh2)
+				return
+			var rr: float = clampf(_solo_routine_orbit_r, 4.0, minf(11.0, _standing_zone_radius * 0.42))
+			var orb: Vector2 = _standing_zone_center + Vector2(cos(_solo_routine_phase * 0.92), sin(_solo_routine_phase * 0.92)) * rr
+			global_position = _clamp_pos_to_standing_and_home(orb)
+		"shift_side":
+			var sh: Vector2 = Vector2(sin(_solo_routine_phase * 1.35), cos(_solo_routine_phase * 0.85) * 0.35) * 3.2
+			global_position = _clamp_pos_to_standing_and_home(_solo_routine_anchor + sh)
+		_:
+			pass
+
+
+func _style_pose_offset_rot(style: String) -> Vector3:
+	var s: String = str(style).strip_edges().to_lower()
+	match s:
+		"neutral":
+			return Vector3(0.0, 0.0, 0.0)
+		"warm_hands":
+			return Vector3(0.0, -2.0, deg_to_rad(-3.0))
+		"read_notes":
+			return Vector3(0.0, 1.0, deg_to_rad(-3.5))
+		"inspect_wall":
+			return Vector3(1.0, 0.0, deg_to_rad(3.2))
+		"pray_quietly":
+			return Vector3(0.0, 2.0, deg_to_rad(1.0))
+		"check_gear":
+			return Vector3(0.0, 1.0, deg_to_rad(2.0))
+		"tinker_small", "workbench_tinker":
+			return Vector3(0.0, 3.0, deg_to_rad(-2.2))
+		"look_out":
+			return Vector3(0.0, -1.0, deg_to_rad(1.2))
+		"patrol":
+			return Vector3(0.5, 0.0, deg_to_rad(1.8))
+		"sit_rest":
+			return Vector3(0.0, 4.0, deg_to_rad(4.0))
+		"stretch":
+			return Vector3(0.0, -3.0, deg_to_rad(-4.0))
+		"sharpen":
+			return Vector3(1.0, 2.0, deg_to_rad(3.5))
+		"sort_supplies":
+			return Vector3(0.0, 2.0, deg_to_rad(-2.0))
+		"carry_bundle", "carry_bowl":
+			return Vector3(1.0, 1.0, deg_to_rad(-5.0))
+		"kneel_prayer":
+			return Vector3(0.0, 5.0, deg_to_rad(8.0))
+		"tend_fire":
+			return Vector3(0.0, 0.0, deg_to_rad(3.0))
+		"sweep_area":
+			return Vector3(2.0, 2.0, deg_to_rad(2.5))
+		"wash_hands":
+			return Vector3(0.0, 3.0, deg_to_rad(-3.0))
+		"pour_water":
+			return Vector3(0.0, 2.0, deg_to_rad(2.2))
+		"rest_head_down":
+			return Vector3(0.0, 5.0, deg_to_rad(6.0))
+		_:
+			return Vector3(0.0, 0.0, 0.0)
+
+
+func _apply_pose_facing_for_standing(_unused_style: String) -> void:
+	if sprite == null:
+		return
+	if _standing_zone_center != Vector2.ZERO:
+		var dir: Vector2 = Vector2.ZERO
+		if _standing_face_mode == "outward" and _standing_facing_dir.length() > 0.001:
+			dir = _standing_facing_dir
+		else:
+			dir = _standing_zone_center - global_position
+		if dir.length() > 0.001:
+			sprite.flip_h = dir.x < 0.0
+	elif _current_zone_center != Vector2.ZERO:
+		var dir2: Vector2 = _current_zone_facing_dir
+		if dir2 == Vector2.ZERO:
+			dir2 = _current_zone_center - global_position
+		if dir2.length() > 0.001:
+			sprite.flip_h = dir2.x < 0.0
+
+
 func _apply_idle_style() -> void:
 	if sprite == null:
 		return
-	_reset_idle_pose()
-	if _current_zone_center != Vector2.ZERO:
-		var dir: Vector2 = _current_zone_facing_dir
-		if dir == Vector2.ZERO:
-			dir = (_current_zone_center - global_position)
-		if dir.length() > 0.001:
-			sprite.flip_h = dir.x < 0.0
-	match _idle_style:
-		"warm_hands":
-			sprite.position = _base_sprite_offset + Vector2(0, -2)
-		"read_notes":
-			sprite.position = _base_sprite_offset + Vector2(0, 1)
-			sprite.rotation = deg_to_rad(-3.0)
-		"inspect_wall":
-			sprite.position = _base_sprite_offset + Vector2(1, 0)
-			sprite.rotation = deg_to_rad(3.0)
-		"pray_quietly":
-			sprite.position = _base_sprite_offset + Vector2(0, 2)
-		"check_gear":
-			sprite.position = _base_sprite_offset + Vector2(0, 1)
-		"tinker_small":
-			sprite.position = _base_sprite_offset + Vector2(0, 3)
-		"look_out":
-			sprite.position = _base_sprite_offset + Vector2(0, -1)
+	_solo_routine_anchor = global_position
+	_idle_pose_applied = true
+
+
+func _apply_solo_idle_frame(delta: float) -> void:
+	if str(_ambient_social_pose).strip_edges() != "":
+		return
+	if not _idle_pose_applied:
+		return
+	if sprite == null:
+		return
+	_solo_routine_phase += delta * 1.05
+	_apply_solo_routine_position(delta)
+	var style: String = _effective_idle_style()
+	var spr: Vector3 = _style_pose_offset_rot(style)
+	var pulse_y: float = 0.0
+	var pulse_rot: float = 0.0
+	match _solo_routine_kind:
+		"sit_pulse":
+			pulse_y = sin(_solo_routine_phase * 2.2) * 0.85
+		"kneel_pulse":
+			var ph: float = _solo_routine_phase * 1.55
+			pulse_y = sin(ph) * 0.55
+			pulse_rot = sin(ph) * deg_to_rad(1.1)
 		_:
 			pass
-	_idle_pose_applied = true
+	_apply_pose_facing_for_standing(style)
+	sprite.position = _base_sprite_offset + Vector2(spr.x, spr.y + pulse_y)
+	sprite.rotation = spr.z + pulse_rot
+
 
 func _reset_idle_pose() -> void:
 	if sprite == null:
@@ -386,6 +765,8 @@ func end_social_move() -> void:
 		_social_state = SOCIAL_STATE_FREE
 	clear_ambient_social_pose()
 	_clear_social_animation_tweens()
+	_update_standing_zone_at_position(global_position)
+	_refresh_solo_visual_behavior()
 
 func play_social_settle_beat() -> void:
 	_play_arrival_settle()
@@ -590,30 +971,46 @@ func _play_social_idle_motion(delta: float) -> void:
 	var pace: float = SOCIAL_IDLE_BOB_SPEED
 	var amp: float = SOCIAL_IDLE_BOB_HEIGHT
 	var rot_amp: float = 0.0
+	var x_shift_scale: float = 0.0
+	var x_mirror: float = 1.0 if (get_instance_id() & 1) != 0 else -1.0
 	match _ambient_social_pose:
 		"spar", "mock_duel":
 			pace *= 1.38
 			amp *= 1.22
 			rot_amp = deg_to_rad(1.15)
+			x_shift_scale = 1.8
 		"drill", "formation":
 			pace *= 0.82
 			amp *= 0.72
 			rot_amp = deg_to_rad(0.55)
+			x_shift_scale = 0.55
+			x_mirror = 1.0
 		"work", "work_detail", "repair":
 			pace *= 0.68
 			amp *= 0.58
 			rot_amp = deg_to_rad(0.35)
+			x_shift_scale = 0.35
+			x_mirror = 1.0
 		"fireside", "morale", "rhythm":
 			pace *= 0.92
 			amp *= 0.88
 			rot_amp = deg_to_rad(0.45)
+			x_shift_scale = 0.28
+			x_mirror = 1.0
 		_:
 			pass
 	_social_idle_phase += pace * delta
 	var c_mult: float = _get_condition_bob_multiplier()
-	var bob: float = sin(_social_idle_phase) * amp * c_mult
-	sprite.position = _base_sprite_offset + Vector2(0, bob)
+	var phase_off: float = float(get_instance_id() & 255) * 0.01
+	var bob: float = sin(_social_idle_phase + phase_off) * amp * c_mult
+	var x_shift: float = 0.0
+	if x_shift_scale > 0.001:
+		x_shift = sin(_social_idle_phase * 0.5 + phase_off) * x_shift_scale * x_mirror * c_mult
+	sprite.position = _base_sprite_offset + Vector2(x_shift, bob)
 	if rot_amp != 0.0:
-		sprite.rotation = sin(_social_idle_phase * 0.5) * rot_amp * c_mult
+		var rph: float = _social_idle_phase * 0.5
+		if _ambient_social_pose in ["drill", "formation"]:
+			rph = _social_idle_phase * 0.42
+		sprite.rotation = sin(rph + phase_off * 0.5) * rot_amp * c_mult
 	else:
 		sprite.rotation = 0.0

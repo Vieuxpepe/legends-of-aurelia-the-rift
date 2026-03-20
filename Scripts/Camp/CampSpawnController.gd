@@ -547,6 +547,7 @@ func spawn_walkers(walkers_container: Node2D, debug_use_test_camp_roster: bool, 
 					CampaignManager.is_unit_fatigued(walker.unit_name)
 				)
 			walker.set_behavior_zones(_ctx.camp_zones)
+			walker.set_camp_visit_theme(_ctx.visit_theme)
 			walker.start_behavior()
 		else:
 			inst.global_position = anchor_g

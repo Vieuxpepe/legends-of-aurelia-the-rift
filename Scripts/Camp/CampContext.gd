@@ -191,6 +191,36 @@ func are_walkers_near_each_other(w1: Node, w2: Node, pair_radius: float) -> bool
 	return w1.global_position.distance_squared_to(w2.global_position) <= pair_radius * pair_radius
 
 
+## First matching camp behavior zone of this type (for staging / facing hints).
+func get_zone_layout_hints(zone_type: String) -> Dictionary:
+	var zt: String = str(zone_type).strip_edges()
+	var out: Dictionary = {
+		"valid": false,
+		"center": Vector2.ZERO,
+		"radius": 32.0,
+		"facing_dir": Vector2.RIGHT,
+		"face_mode": "center",
+	}
+	if zt == "":
+		return out
+	for z in camp_zones:
+		if not is_instance_valid(z) or not ("zone_type" in z):
+			continue
+		if str(z.zone_type).strip_edges() != zt:
+			continue
+		out["valid"] = true
+		out["center"] = (z as Node2D).global_position
+		out["radius"] = float(z.radius) if "radius" in z else 32.0
+		if "facing_dir" in z:
+			var fd: Variant = z.facing_dir
+			if fd is Vector2 and (fd as Vector2).length() > 0.001:
+				out["facing_dir"] = (fd as Vector2).normalized()
+		if "face_mode" in z:
+			out["face_mode"] = str(z.face_mode).strip_edges().to_lower()
+		return out
+	return out
+
+
 func make_pair_key(name_a: String, name_b: String) -> String:
 	if CampaignManager:
 		return CampaignManager.make_pair_key(name_a, name_b)
