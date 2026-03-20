@@ -66,6 +66,14 @@ const INJURED_MOVE_MULT: float = 0.78
 const FATIGUED_MOVE_MULT: float = 0.88
 const INJURED_BOB_MULT: float = 0.75
 const FATIGUED_BOB_MULT: float = 0.85
+## Solo: only bind a CampActivityAnchor for position/clamp when this close (avoids teleport-to-marker).
+const STANDING_ANCHOR_PHYSICS_MAX_DIST: float = 20.0
+## Beyond physics max, still allow anchor to drive facing until this distance.
+const STANDING_ANCHOR_FACING_ONLY_MAX_DIST: float = 68.0
+const SOLO_ROUTINE_POSITION_SPEED: float = 28.0
+const FIRE_ORBIT_LOCAL_R_MULT: float = 0.5
+const FIRE_ORBIT_LOCAL_R_MIN: float = 2.2
+const FIRE_ORBIT_LOCAL_R_MAX: float = 6.2
 
 var _move_velocity: Vector2 = Vector2.ZERO
 var _walk_cycle: float = 0.0
@@ -531,18 +539,27 @@ func _refresh_solo_visual_behavior() -> void:
 	_idle_pose_applied = false
 
 
+func _apply_standing_facing_from_anchor(cand: CampActivityAnchor) -> void:
+	if cand.facing_dir.length() > 0.001:
+		_standing_facing_dir = cand.facing_dir.normalized()
+	var fm: String = str(cand.face_mode).strip_edges().to_lower()
+	if fm != "":
+		_standing_face_mode = fm
+
+
 func _resolve_activity_anchor_for_standing(near_pos: Vector2) -> void:
 	_standing_activity_anchor = null
 	if _camp_ctx == null or _standing_zone_node == null or not is_instance_valid(_standing_zone_node):
 		return
 	var cand: CampActivityAnchor = _camp_ctx.pick_best_standing_activity_anchor(_standing_zone_node, near_pos, _effective_idle_style())
-	if cand != null and is_instance_valid(cand):
+	if cand == null or not is_instance_valid(cand):
+		return
+	var dist: float = near_pos.distance_to(cand.global_position)
+	if dist <= STANDING_ANCHOR_PHYSICS_MAX_DIST:
 		_standing_activity_anchor = cand
-		if cand.facing_dir.length() > 0.001:
-			_standing_facing_dir = cand.facing_dir.normalized()
-		var fm: String = str(cand.face_mode).strip_edges().to_lower()
-		if fm != "":
-			_standing_face_mode = fm
+		_apply_standing_facing_from_anchor(cand)
+	elif dist <= STANDING_ANCHOR_FACING_ONLY_MAX_DIST:
+		_apply_standing_facing_from_anchor(cand)
 
 
 func _effective_idle_style() -> String:
@@ -575,10 +592,7 @@ func _assign_routine_for_style(style: String) -> void:
 		_:
 			_solo_routine_kind = ""
 	if _solo_routine_kind != "":
-		if _standing_activity_anchor != null and is_instance_valid(_standing_activity_anchor):
-			_solo_routine_anchor = (_standing_activity_anchor as Node2D).global_position
-		else:
-			_solo_routine_anchor = global_position
+		_solo_routine_anchor = global_position
 
 
 func _clamp_pos_to_standing_and_home(p: Vector2) -> Vector2:
@@ -602,32 +616,28 @@ func _clamp_pos_to_standing_and_home(p: Vector2) -> Vector2:
 	return out
 
 
-func _apply_solo_routine_position(_delta: float) -> void:
+func _solo_routine_slide_toward(target: Vector2, delta: float) -> void:
+	var step: float = maxf(SOLO_ROUTINE_POSITION_SPEED * delta, 0.001)
+	global_position = global_position.move_toward(_clamp_pos_to_standing_and_home(target), step)
+
+
+func _apply_solo_routine_position(delta: float) -> void:
 	if _solo_routine_kind == "":
 		return
 	match _solo_routine_kind:
 		"patrol_ping":
-			var amp: float = 6.0
+			var amp: float = 5.0
 			if _standing_zone_radius > 1.0:
-				amp = clampf(_standing_zone_radius * 0.28, 6.0, 15.0)
+				amp = clampf(_standing_zone_radius * 0.22, 4.0, 11.0)
 			var off: Vector2 = _solo_routine_vec * sin(_solo_routine_phase * 1.12) * amp
-			global_position = _clamp_pos_to_standing_and_home(_solo_routine_anchor + off)
+			_solo_routine_slide_toward(_solo_routine_anchor + off, delta)
 		"fire_orbit":
-			var oc: Vector2 = _standing_zone_center
-			if _standing_activity_anchor is CampActivityAnchor:
-				var fa: CampActivityAnchor = _standing_activity_anchor as CampActivityAnchor
-				if fa.fire_like or _standing_zone_type.strip_edges().to_lower() in ["fire", "cook", "cook_area"]:
-					oc = fa.global_position
-			if oc == Vector2.ZERO or _standing_zone_radius < 3.0:
-				var sh2: Vector2 = Vector2(sin(_solo_routine_phase * 1.1), 0) * 2.8
-				global_position = _clamp_pos_to_standing_and_home(_solo_routine_anchor + sh2)
-				return
-			var rr: float = clampf(_solo_routine_orbit_r, 4.0, minf(11.0, _standing_zone_radius * 0.42))
-			var orb: Vector2 = oc + Vector2(cos(_solo_routine_phase * 0.92), sin(_solo_routine_phase * 0.92)) * rr
-			global_position = _clamp_pos_to_standing_and_home(orb)
+			var rr_loc: float = clampf(_solo_routine_orbit_r * FIRE_ORBIT_LOCAL_R_MULT, FIRE_ORBIT_LOCAL_R_MIN, FIRE_ORBIT_LOCAL_R_MAX)
+			var orb_local: Vector2 = _solo_routine_anchor + Vector2(cos(_solo_routine_phase * 0.92), sin(_solo_routine_phase * 0.92)) * rr_loc
+			_solo_routine_slide_toward(orb_local, delta)
 		"shift_side":
-			var sh: Vector2 = Vector2(sin(_solo_routine_phase * 1.35), cos(_solo_routine_phase * 0.85) * 0.35) * 3.2
-			global_position = _clamp_pos_to_standing_and_home(_solo_routine_anchor + sh)
+			var sh: Vector2 = Vector2(sin(_solo_routine_phase * 1.35), cos(_solo_routine_phase * 0.85) * 0.35) * 3.0
+			_solo_routine_slide_toward(_solo_routine_anchor + sh, delta)
 		_:
 			pass
 
@@ -701,10 +711,7 @@ func _apply_pose_facing_for_standing(_unused_style: String) -> void:
 func _apply_idle_style() -> void:
 	if sprite == null:
 		return
-	if _standing_activity_anchor != null and is_instance_valid(_standing_activity_anchor):
-		_solo_routine_anchor = (_standing_activity_anchor as Node2D).global_position
-	else:
-		_solo_routine_anchor = global_position
+	_solo_routine_anchor = global_position
 	_idle_pose_applied = true
 
 
