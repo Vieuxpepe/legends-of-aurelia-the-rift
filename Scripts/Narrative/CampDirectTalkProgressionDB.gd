@@ -76,20 +76,39 @@ const IDLE_FOLLOWUP_BY_UNIT: Dictionary = {
 		1: "Shorter steps on gravel—still practice, not performance. The trees heard you first; I'm just catching up.",
 		2: "Trust was letting you move my shape without taking my name—I'm holding to that when the soil gets opinionated.",
 	},
+	"Kaelen": {
+		1: "Grief waits its turn—breathing first. I'm still not soft about it; I'm just done pretending hardness is the same as useful.",
+		2: "Greyspire's weight hasn't lifted—I'm watching you carry it without turning into the kind of officer who needs a corpse to feel righteous.",
+		3: "You kept moving when Emberwood wanted you to kneel in ash—that's the line I invest in now, not speeches about sacrifice.",
+	},
+	"Liora": {
+		1: "Sanctum ink still stains my sleeves—I'm practicing seeing you before the Mark when the camp forgets how.",
+		2: "Sunlit Trial taught me fear isn't cleaner in priestess Latin—I'm scared for you, plainly, and I'm staying anyway.",
+		3: "Chosen steadiness, not spectacle—if I reach for your hand in the quiet, it's because I mean it, not because the hymn told me to.",
+	},
+	"Ser Hadrien": {
+		1: "Burden still fits the Veilbreaker better than destiny—I'm done polishing the Order's old excuses into poetry.",
+		2: "I listen for the human beneath the rule now—your calls under fire earned that, even when doctrine would've called them wrong.",
+	},
 	"Darian": {
 		1: "I still arrange the room—now I leave one corner crooked so nobody mistakes polish for full bellies.",
+		2: "The mask still fits in public—privately I'm holding to the two knocks: anger on a leash, tenderness when nobody's buying tickets.",
 	},
 	"Veska Moor": {
 		1: "Breath-length why, still—banners can hang quiet while feet learn where weight actually lives.",
+		2: "Bruises don't lecture—if I'm cleaning blood off a shield again, it's because speeches lied and bodies paid; I'll say that plain before the next rally.",
 	},
 	"Corvin Ash": {
 		1: "Warm copy's shorter; cold record stays long—visibility was the bargain, not comfort.",
+		2: "Truth spreads like damp in a ledger—keep the cold copy honest and everyone who touches it pays a little; I'd rather that cost than a pretty lie that rots quiet.",
 	},
 	"Sister Meris": {
 		1: "Files stay open longer—bread before verdict still feels like disobedience, which means it's probably mercy.",
+		2: "I caught myself handing water before judgment yesterday—small, ugly mercy Alden didn't have to prompt; that's the practice I'm trying to live, not debate.",
 	},
 	"Hest \"Sparks\"": {
 		1: "Dull build, intact fingers—if I joke mid-rig, check the clamps before the punchline; humor's just nervous insulation.",
+		2: "Slow work stopped tasting like an exit clause—if you meant the bread-and-clamps promise, I'm building like I'm still here next week, not like I'm auditioning to be forgotten.",
 	},
 }
 
