@@ -103,6 +103,7 @@ func _ready() -> void:
 		CampaignManager.advance_camp_condition_recovery_on_visit()
 		CampaignManager.apply_post_battle_camp_condition()
 	_ctx.resolve_visit_theme()
+	_ctx.reset_activity_anchor_claims_for_visit()
 	walkers_container = _spawn.spawn_walkers(walkers_container, debug_use_test_camp_roster, debug_replace_roster_entirely)
 	_connect_ui()
 	_camp_music_tracks = DefaultCampMusic.get_default_camp_music_tracks()

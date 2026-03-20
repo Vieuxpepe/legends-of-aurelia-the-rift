@@ -1,5 +1,6 @@
 class_name CampBehaviorZone
 extends Node2D
+## Optional children: CampActivityAnchor nodes for spawn, solo, and social staging.
 
 @export var zone_type: String = ""
 @export var capacity: int = 2

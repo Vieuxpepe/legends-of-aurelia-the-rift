@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://doke0ah8kq4aa" path="res://Scripts/CampExplore.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cbknu558fndlo" path="res://icon.svg" id="2_icon"]
 [ext_resource type="Script" uid="uid://bsf8vbjogtgwq" path="res://Scripts/CampBehaviorZone.gd" id="3_fnn20"]
+[ext_resource type="Script" path="res://Scripts/CampActivityAnchor.gd" id="4_anch"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ambient_bubble"]
 bg_color = Color(0.1, 0.08, 0.07, 0.92)
@@ -210,13 +211,49 @@ text = "Close"
 position = Vector2(960, 400)
 script = ExtResource("3_fnn20")
 zone_type = "watch_post"
-radius = 5.0
+radius = 22.0
 face_mode = "outward"
+
+[node name="watch_outward_1" type="Node2D" parent="Watch Post"]
+position = Vector2(-4, 2)
+script = ExtResource("4_anch")
+anchor_role = "watch_outward"
+lookout_like = true
+facing_dir = Vector2(1, 0)
+face_mode = "outward"
+occupancy_radius = 12.0
+weight = 1.1
+
+[node name="watch_outward_2" type="Node2D" parent="Watch Post"]
+position = Vector2(4, -2)
+script = ExtResource("4_anch")
+anchor_role = "watch_outward"
+lookout_like = true
+facing_dir = Vector2(1, 0)
+face_mode = "outward"
+occupancy_radius = 12.0
 
 [node name="InfirmaryZone" type="Node2D" parent="." unique_id=1168454453]
 position = Vector2(600, 360)
 script = ExtResource("3_fnn20")
 zone_type = "infirmary"
+
+[node name="infirmary_care" type="Node2D" parent="InfirmaryZone"]
+position = Vector2(-14, 4)
+script = ExtResource("4_anch")
+anchor_role = "infirmary_care"
+work_like = true
+activity_tags = "pour,wash,care"
+occupancy_radius = 16.0
+weight = 1.05
+
+[node name="infirmary_rest" type="Node2D" parent="InfirmaryZone"]
+position = Vector2(16, 2)
+script = ExtResource("4_anch")
+anchor_role = "infirmary_rest"
+sit_like = true
+preferred_idle_styles = Array[String](["sit_rest", "rest_head_down"])
+occupancy_radius = 16.0
 
 [node name="MapTableZone" type="Node2D" parent="." unique_id=1168454454]
 position = Vector2(820, 520)
@@ -229,11 +266,43 @@ position = Vector2(500, 520)
 script = ExtResource("3_fnn20")
 zone_type = "cook_area"
 
+[node name="cook_prep" type="Node2D" parent="CookAreaZone"]
+position = Vector2(0, -12)
+script = ExtResource("4_anch")
+anchor_role = "cook_prep"
+fire_like = true
+activity_tags = "pour,tend,warm"
+occupancy_radius = 14.0
+
 [node name="FireZone" type="Node2D" parent="." unique_id=1168454456]
 position = Vector2(520, 460)
 script = ExtResource("3_fnn20")
 zone_type = "fire"
 radius = 24.0
+
+[node name="fire_warm_1" type="Node2D" parent="FireZone"]
+position = Vector2(-14, 8)
+script = ExtResource("4_anch")
+anchor_role = "fire_warm"
+fire_like = true
+preferred_idle_styles = Array[String](["tend_fire", "warm_hands"])
+occupancy_radius = 15.0
+weight = 1.12
+
+[node name="fire_warm_2" type="Node2D" parent="FireZone"]
+position = Vector2(12, 6)
+script = ExtResource("4_anch")
+anchor_role = "fire_warm"
+fire_like = true
+occupancy_radius = 15.0
+
+[node name="fire_prep" type="Node2D" parent="FireZone"]
+position = Vector2(0, -14)
+script = ExtResource("4_anch")
+anchor_role = "fire_prep"
+fire_like = true
+activity_tags = "pour"
+occupancy_radius = 14.0
 
 [node name="ShrineZone" type="Node2D" parent="." unique_id=1168454457]
 position = Vector2(1100, 420)
@@ -241,17 +310,57 @@ script = ExtResource("3_fnn20")
 zone_type = "shrine"
 radius = 28.0
 
+[node name="shrine_kneel_front" type="Node2D" parent="ShrineZone"]
+position = Vector2(0, 18)
+script = ExtResource("4_anch")
+anchor_role = "shrine_kneel"
+kneel_like = true
+preferred_idle_styles = Array[String](["kneel_prayer", "pray_quietly", "read_notes"])
+occupancy_radius = 18.0
+facing_dir = Vector2(0, -1)
+weight = 1.15
+
 [node name="BenchZone" type="Node2D" parent="." unique_id=1168454458]
 position = Vector2(700, 440)
 script = ExtResource("3_fnn20")
 zone_type = "bench"
 radius = 24.0
 
+[node name="bench_seat_left" type="Node2D" parent="BenchZone"]
+position = Vector2(-18, 2)
+script = ExtResource("4_anch")
+anchor_role = "bench_seat"
+sit_like = true
+preferred_idle_styles = Array[String](["sit_rest", "read_notes"])
+occupancy_radius = 16.0
+
+[node name="bench_seat_right" type="Node2D" parent="BenchZone"]
+position = Vector2(18, 2)
+script = ExtResource("4_anch")
+anchor_role = "bench_seat"
+sit_like = true
+occupancy_radius = 16.0
+
 [node name="WallZone" type="Node2D" parent="." unique_id=1168454459]
 position = Vector2(1180, 360)
 script = ExtResource("3_fnn20")
 zone_type = "wall"
 radius = 40.0
+
+[node name="wall_check_1" type="Node2D" parent="WallZone"]
+position = Vector2(-22, -4)
+script = ExtResource("4_anch")
+anchor_role = "wall_check"
+lookout_like = true
+preferred_idle_styles = Array[String](["inspect_wall", "look_out", "patrol"])
+occupancy_radius = 14.0
+
+[node name="wall_check_2" type="Node2D" parent="WallZone"]
+position = Vector2(24, 4)
+script = ExtResource("4_anch")
+anchor_role = "wall_check"
+lookout_like = true
+occupancy_radius = 14.0
 
 [node name="WagonZone" type="Node2D" parent="." unique_id=1168454460]
 position = Vector2(480, 380)
@@ -264,14 +373,62 @@ script = ExtResource("3_fnn20")
 zone_type = "supply"
 radius = 28.0
 
+[node name="supply_sort_left" type="Node2D" parent="SupplyZone"]
+position = Vector2(-16, 6)
+script = ExtResource("4_anch")
+anchor_role = "supply_sort"
+work_like = true
+preferred_idle_styles = Array[String](["sort_supplies", "carry_bundle"])
+occupancy_radius = 15.0
+
+[node name="supply_sort_right" type="Node2D" parent="SupplyZone"]
+position = Vector2(14, -4)
+script = ExtResource("4_anch")
+anchor_role = "supply_sort"
+work_like = true
+occupancy_radius = 15.0
+
 [node name="WorkbenchZone" type="Node2D" parent="." unique_id=1168454462]
 position = Vector2(540, 560)
 script = ExtResource("3_fnn20")
 zone_type = "workbench"
 radius = 28.0
 
+[node name="workbench_left" type="Node2D" parent="WorkbenchZone"]
+position = Vector2(-18, 0)
+script = ExtResource("4_anch")
+anchor_role = "workbench_side"
+work_like = true
+preferred_idle_styles = Array[String](["workbench_tinker", "sharpen", "check_gear"])
+occupancy_radius = 15.0
+
+[node name="workbench_right" type="Node2D" parent="WorkbenchZone"]
+position = Vector2(18, 0)
+script = ExtResource("4_anch")
+anchor_role = "workbench_side"
+work_like = true
+occupancy_radius = 15.0
+
 [node name="TreeLineZone" type="Node2D" parent="." unique_id=1168454463]
 position = Vector2(1300, 320)
 script = ExtResource("3_fnn20")
 zone_type = "tree_line"
 radius = 40.0
+
+[node name="tree_line_scout_1" type="Node2D" parent="TreeLineZone"]
+position = Vector2(-20, 8)
+script = ExtResource("4_anch")
+anchor_role = "tree_scout"
+lookout_like = true
+facing_dir = Vector2(1, 0)
+face_mode = "outward"
+occupancy_radius = 14.0
+
+[node name="tree_line_scout_2" type="Node2D" parent="TreeLineZone"]
+position = Vector2(22, -6)
+script = ExtResource("4_anch")
+anchor_role = "tree_scout"
+lookout_like = true
+facing_dir = Vector2(1, 0)
+face_mode = "outward"
+occupancy_radius = 14.0

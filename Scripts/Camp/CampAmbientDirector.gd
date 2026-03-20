@@ -126,6 +126,8 @@ var _last_minor_shown_label: String = ""
 var _minor_antispam_debug_last_log_sec: float = 0.0
 var _social_hold_walkers: Array = []
 var _social_hold_release_at: float = 0.0
+var _spontaneous_social_claimed_anchors: Array = []
+var _chatter_claimed_anchors: Array = []
 
 
 func _init(explore: Node2D, ctx: CampContext, bubble: CampBubbleController, dialogue: CampDialogueController) -> void:
@@ -176,8 +178,24 @@ func reset_visit_state() -> void:
 	_ambient_recent_minor_fingerprints.clear()
 	_last_minor_shown_label = ""
 	_minor_antispam_debug_last_log_sec = 0.0
+	_release_spontaneous_social_anchor_claims()
+	_release_chatter_anchor_claims()
 	_release_post_social_hold()
 	_bubble.hide_ambient_bubble()
+
+
+func _release_spontaneous_social_anchor_claims() -> void:
+	for an in _spontaneous_social_claimed_anchors:
+		if an != null and is_instance_valid(an):
+			_ctx.release_anchor_social(an)
+	_spontaneous_social_claimed_anchors.clear()
+
+
+func _release_chatter_anchor_claims() -> void:
+	for an in _chatter_claimed_anchors:
+		if an != null and is_instance_valid(an):
+			_ctx.release_anchor_social(an)
+	_chatter_claimed_anchors.clear()
 
 
 func _player_node() -> Node2D:
@@ -922,15 +940,40 @@ func _start_ambient_chatter(data: Dictionary) -> void:
 	if _chatter_walker_a is CampRosterWalker and _chatter_walker_b is CampRosterWalker:
 		var wa: CampRosterWalker = _chatter_walker_a as CampRosterWalker
 		var wb: CampRosterWalker = _chatter_walker_b as CampRosterWalker
-		var mid: Vector2 = (wa.global_position + wb.global_position) * 0.5
-		var offset: Vector2 = (wa.global_position - wb.global_position)
-		if offset.length() < 0.01:
-			offset = Vector2(1, 0)
-		offset = offset.normalized()
-		var meet_a: Vector2 = mid + offset * CHATTER_SOCIAL_PAIR_OFFSET
-		var meet_b: Vector2 = mid - offset * CHATTER_SOCIAL_PAIR_OFFSET
-		wa.begin_social_move(meet_a)
-		wb.begin_social_move(meet_b)
+		var zt_ch: String = str(entry.get("zone_type", "")).strip_edges().to_lower()
+		if zt_ch == "":
+			zt_ch = str(entry.get("preferred_zone", "")).strip_edges().to_lower()
+		var fam_ch: String = str(entry.get("ambient_behavior_family", "")).strip_edges().to_lower()
+		var pose_ch: String = _pose_from_social_entry(entry)
+		var used_ch_anch: bool = false
+		var zn_ch: Node = _ctx.find_first_zone_of_type(zt_ch)
+		if is_instance_valid(zn_ch):
+			var ch_slots: Array = _ctx.pick_distinct_social_anchors(zn_ch, 2, fam_ch, pose_ch)
+			if ch_slots.size() >= 2:
+				_release_chatter_anchor_claims()
+				var p0: Vector2 = ch_slots[0]["position"] as Vector2
+				var p1: Vector2 = ch_slots[1]["position"] as Vector2
+				var a0: Node = ch_slots[0].get("anchor", null)
+				var a1: Node = ch_slots[1].get("anchor", null)
+				wa.begin_social_move(p0)
+				wb.begin_social_move(p1)
+				if a0 != null:
+					_chatter_claimed_anchors.append(a0)
+					_ctx.claim_anchor_social(a0)
+				if a1 != null:
+					_chatter_claimed_anchors.append(a1)
+					_ctx.claim_anchor_social(a1)
+				used_ch_anch = true
+		if not used_ch_anch:
+			var mid: Vector2 = (wa.global_position + wb.global_position) * 0.5
+			var offset: Vector2 = (wa.global_position - wb.global_position)
+			if offset.length() < 0.01:
+				offset = Vector2(1, 0)
+			offset = offset.normalized()
+			var meet_a: Vector2 = mid + offset * CHATTER_SOCIAL_PAIR_OFFSET
+			var meet_b: Vector2 = mid - offset * CHATTER_SOCIAL_PAIR_OFFSET
+			wa.begin_social_move(meet_a)
+			wb.begin_social_move(meet_b)
 		_chatter_meetup_started_at = Time.get_ticks_msec() / 1000.0
 	else:
 		_chatter_meetup_started_at = 0.0
@@ -982,6 +1025,7 @@ func _advance_ambient_chatter() -> void:
 	_show_ambient_chatter_line()
 
 func _end_ambient_chatter() -> void:
+	_release_chatter_anchor_claims()
 	_clear_chatter_speaking_state()
 	var hold_min: float = float(_chatter_entry.get("follow_hold_min", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MIN))
 	var hold_max: float = float(_chatter_entry.get("follow_hold_max", SPONTANEOUS_SOCIAL_FOLLOW_HOLD_MAX))
@@ -1020,6 +1064,7 @@ func _clear_chatter_speaking_state() -> void:
 		wb.end_listening()
 
 func _cancel_pending_ambient_chatter() -> void:
+	_release_chatter_anchor_claims()
 	_clear_chatter_speaking_state()
 	_chatter_active = false
 	_chatter_lines.clear()
@@ -1361,6 +1406,7 @@ func _start_spontaneous_social(data: Dictionary) -> void:
 		_apply_ambient_pose_to_walkers(participants, soc_pose)
 
 func _end_spontaneous_social() -> void:
+	_release_spontaneous_social_anchor_claims()
 	var wrap_entry: Dictionary = _spontaneous_social_entry.duplicate(true)
 	var wrap_kind: String = str(wrap_entry.get("kind", "passing_remark")).strip_edges().to_lower()
 	var participants: Array = _spontaneous_social_participants.duplicate()
@@ -1584,6 +1630,24 @@ func _apply_spontaneous_social_formation(participants: Array, speaker_walker: Ca
 		facing_dir = facing_dir.normalized()
 	var family: String = str(entry.get("ambient_behavior_family", "")).strip_edges().to_lower()
 	var pose_guess: String = _pose_from_social_entry(entry)
+	var znode_form: Node = _ctx.find_first_zone_of_type(zone_type)
+	if is_instance_valid(znode_form):
+		var anchor_slots: Array = _ctx.pick_distinct_social_anchors(znode_form, valid.size(), family, pose_guess)
+		if anchor_slots.size() >= valid.size():
+			var ordered_anch: Array = valid.duplicate()
+			if speaker_walker != null and speaker_walker in ordered_anch and valid.size() > 1:
+				ordered_anch.erase(speaker_walker)
+				ordered_anch.push_front(speaker_walker)
+			for idx in range(ordered_anch.size()):
+				var ww: CampRosterWalker = ordered_anch[idx] as CampRosterWalker
+				var sd: Dictionary = anchor_slots[idx]
+				var tgt_ah: Vector2 = sd["position"] as Vector2
+				var an_sl: Node = sd.get("anchor", null)
+				ww.begin_social_move(tgt_ah)
+				if an_sl != null:
+					_spontaneous_social_claimed_anchors.append(an_sl)
+					_ctx.claim_anchor_social(an_sl)
+			return
 	if valid.size() == 1:
 		(valid[0] as CampRosterWalker).begin_social_move((valid[0] as CampRosterWalker).global_position)
 		return
@@ -1721,6 +1785,7 @@ func _advance_spontaneous_social() -> void:
 	_show_spontaneous_social_line()
 
 func _cancel_pending_spontaneous_social() -> void:
+	_release_spontaneous_social_anchor_claims()
 	_clear_spontaneous_social_speaking_state()
 	for p in _spontaneous_social_participants:
 		if p is CampRosterWalker and is_instance_valid(p):

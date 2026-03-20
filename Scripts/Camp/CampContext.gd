@@ -14,6 +14,9 @@ var active_time_block: String = "day"
 var active_camp_mood: String = "normal"
 var visit_theme: String = "normal"
 
+var _anchor_home_claims: Dictionary = {}
+var _anchor_social_claims: Dictionary = {}
+
 
 func normalize_unit_name_for_matching(raw_name: String) -> String:
 	var out: String = str(raw_name).strip_edges()
@@ -219,6 +222,254 @@ func get_zone_layout_hints(zone_type: String) -> Dictionary:
 			out["face_mode"] = str(z.face_mode).strip_edges().to_lower()
 		return out
 	return out
+
+
+func reset_activity_anchor_claims_for_visit() -> void:
+	_anchor_home_claims.clear()
+	_anchor_social_claims.clear()
+
+
+func gather_activity_anchors_in_zone(zone: Node) -> Array:
+	var out: Array = []
+	if not is_instance_valid(zone):
+		return out
+	for ch in zone.get_children():
+		if ch is CampActivityAnchor:
+			out.append(ch)
+	return out
+
+
+func find_first_zone_of_type(zone_type: String) -> Node:
+	var zt: String = str(zone_type).strip_edges()
+	if zt == "":
+		return null
+	for z in camp_zones:
+		if not is_instance_valid(z) or not ("zone_type" in z):
+			continue
+		if str(z.zone_type).strip_edges() == zt:
+			return z
+	return null
+
+
+func get_all_activity_anchors_for_zone_type(zone_type: String) -> Array:
+	var z: Node = find_first_zone_of_type(zone_type)
+	if z == null:
+		return []
+	return gather_activity_anchors_in_zone(z)
+
+
+func anchor_total_use_penalty(anchor: Node) -> float:
+	if anchor == null or not is_instance_valid(anchor):
+		return 0.0
+	var id: int = anchor.get_instance_id()
+	return float(_anchor_home_claims.get(id, 0)) * 12.0 + float(_anchor_social_claims.get(id, 0)) * 16.0
+
+
+func claim_anchor_home(anchor: Node) -> void:
+	if anchor == null or not is_instance_valid(anchor):
+		return
+	var id: int = anchor.get_instance_id()
+	_anchor_home_claims[id] = int(_anchor_home_claims.get(id, 0)) + 1
+
+
+func claim_anchor_social(anchor: Node) -> void:
+	if anchor == null or not is_instance_valid(anchor):
+		return
+	var id: int = anchor.get_instance_id()
+	_anchor_social_claims[id] = int(_anchor_social_claims.get(id, 0)) + 1
+
+
+func release_anchor_social(anchor: Node) -> void:
+	if anchor == null or not is_instance_valid(anchor):
+		return
+	var id: int = anchor.get_instance_id()
+	var c: int = int(_anchor_social_claims.get(id, 0))
+	c = maxi(0, c - 1)
+	if c <= 0:
+		_anchor_social_claims.erase(id)
+	else:
+		_anchor_social_claims[id] = c
+
+
+func score_anchor_for_idle_style(anchor: CampActivityAnchor, idle_style: String, injured: bool, fatigued: bool) -> float:
+	var sc: float = maxf(0.05, anchor.weight)
+	var st: String = str(idle_style).strip_edges().to_lower()
+	for ps in anchor.preferred_idle_styles:
+		if str(ps).strip_edges().to_lower() == st:
+			sc += 22.0
+			break
+	var role_l: String = str(anchor.anchor_role).strip_edges().to_lower()
+	if role_l.length() > 1 and (role_l in st or st in role_l):
+		sc += 6.0
+	var tags: String = str(anchor.activity_tags).strip_edges().to_lower()
+	if tags != "" and st in tags:
+		sc += 10.0
+	match st:
+		"sit_rest", "rest_head_down":
+			if anchor.sit_like:
+				sc += 18.0
+		"kneel_prayer", "pray_quietly":
+			if anchor.kneel_like:
+				sc += 20.0
+		"tend_fire", "warm_hands", "pour_water":
+			if anchor.fire_like:
+				sc += 16.0
+		"look_out", "patrol", "inspect_wall":
+			if anchor.lookout_like:
+				sc += 16.0
+		"workbench_tinker", "sort_supplies", "sharpen", "carry_bundle", "sweep_area":
+			if anchor.work_like:
+				sc += 15.0
+		_:
+			pass
+	if injured or fatigued:
+		if anchor.sit_like or anchor.fire_like:
+			sc += 5.0
+	return sc
+
+
+func score_anchor_for_social_family(anchor: CampActivityAnchor, behavior_family: String, pose_guess: String) -> float:
+	var sc: float = maxf(0.05, anchor.weight)
+	var fam: String = str(behavior_family).strip_edges().to_lower()
+	var pose: String = str(pose_guess).strip_edges().to_lower()
+	for pf in anchor.preferred_behavior_families:
+		if str(pf).strip_edges().to_lower() == fam:
+			sc += 20.0
+	var tags: String = str(anchor.activity_tags).strip_edges().to_lower()
+	if tags != "" and fam != "" and fam in tags:
+		sc += 8.0
+	match fam:
+		"spar", "mock_duel":
+			if anchor.work_like or anchor.lookout_like:
+				sc += 6.0
+		"drill", "formation":
+			if anchor.lookout_like or anchor.work_like:
+				sc += 10.0
+		"work_detail", "repair":
+			if anchor.work_like:
+				sc += 18.0
+		"morale_fire", "fireside", "rhythm", "song":
+			if anchor.fire_like or anchor.sit_like:
+				sc += 16.0
+		_:
+			pass
+	match pose:
+		"spar":
+			if anchor.lookout_like:
+				sc += 4.0
+		"drill":
+			if anchor.lookout_like:
+				sc += 8.0
+		"work":
+			if anchor.work_like:
+				sc += 12.0
+		"fireside":
+			if anchor.fire_like or anchor.sit_like:
+				sc += 12.0
+		_:
+			pass
+	return sc
+
+
+func pick_best_spawn_anchor_for_zone(zone: Node, idle_style: String, injured: bool, fatigued: bool) -> CampActivityAnchor:
+	var anchors: Array = gather_activity_anchors_in_zone(zone)
+	if anchors.is_empty():
+		return null
+	var best: CampActivityAnchor = null
+	var best_sc: float = -1e9
+	for a in anchors:
+		if not (a is CampActivityAnchor):
+			continue
+		var ca: CampActivityAnchor = a as CampActivityAnchor
+		var sc: float = score_anchor_for_idle_style(ca, idle_style, injured, fatigued)
+		sc -= anchor_total_use_penalty(ca)
+		if sc > best_sc:
+			best_sc = sc
+			best = ca
+	return best
+
+
+func pick_best_standing_activity_anchor(zone: Node, near_pos: Vector2, solo_style: String) -> CampActivityAnchor:
+	if zone == null or not is_instance_valid(zone):
+		return null
+	var anchors: Array = gather_activity_anchors_in_zone(zone)
+	if anchors.is_empty():
+		return null
+	var best: CampActivityAnchor = null
+	var best_sc: float = -1e9
+	var st: String = str(solo_style).strip_edges().to_lower()
+	for a in anchors:
+		if not (a is CampActivityAnchor):
+			continue
+		var ca: CampActivityAnchor = a as CampActivityAnchor
+		var sc: float = score_anchor_for_idle_style(ca, st, false, false)
+		var d: float = near_pos.distance_to(ca.global_position)
+		sc -= d * 0.12
+		sc -= anchor_total_use_penalty(ca) * 0.38
+		if sc > best_sc:
+			best_sc = sc
+			best = ca
+	return best
+
+
+func pick_distinct_social_anchors(zone: Node, count: int, behavior_family: String, pose_guess: String) -> Array:
+	if zone == null or not is_instance_valid(zone) or count <= 0:
+		return []
+	var anchors: Array = gather_activity_anchors_in_zone(zone)
+	if anchors.is_empty():
+		return []
+	var fam: String = str(behavior_family).strip_edges().to_lower()
+	var pose: String = str(pose_guess).strip_edges().to_lower()
+	var scored: Array = []
+	for a in anchors:
+		if not (a is CampActivityAnchor):
+			continue
+		var ca: CampActivityAnchor = a as CampActivityAnchor
+		var sc: float = score_anchor_for_social_family(ca, fam, pose)
+		sc -= anchor_total_use_penalty(ca) * 0.65
+		scored.append({"anchor": ca, "score": sc})
+	if scored.is_empty():
+		return []
+	scored.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		return float(x.get("score", 0.0)) > float(y.get("score", 0.0)))
+	var picked: Array = []
+	var min_sep: float = 12.0
+	for _iter in range(count):
+		var best_adj: float = -1e10
+		var best_entry: Dictionary = {}
+		var found: bool = false
+		for entry in scored:
+			var cand: CampActivityAnchor = entry.get("anchor", null) as CampActivityAnchor
+			if cand == null:
+				continue
+			var cid: int = cand.get_instance_id()
+			var taken: bool = false
+			for p in picked:
+				var pn: CampActivityAnchor = p.get("anchor", null) as CampActivityAnchor
+				if pn != null and pn.get_instance_id() == cid:
+					taken = true
+					break
+			if taken:
+				continue
+			var sep_pen: float = 0.0
+			var cpos: Vector2 = cand.global_position
+			for p2 in picked:
+				var ppos: Vector2 = p2["position"] as Vector2
+				var dd: float = cpos.distance_to(ppos)
+				if dd < min_sep:
+					sep_pen -= (min_sep - dd) * 2.4
+			var adj: float = float(entry.get("score", 0.0)) + sep_pen
+			if adj > best_adj:
+				best_adj = adj
+				best_entry = entry
+				found = true
+		if not found:
+			return []
+		var chosen: CampActivityAnchor = best_entry["anchor"] as CampActivityAnchor
+		picked.append({"anchor": chosen, "position": chosen.global_position})
+	if picked.size() < count:
+		return []
+	return picked
 
 
 func make_pair_key(name_a: String, name_b: String) -> String:

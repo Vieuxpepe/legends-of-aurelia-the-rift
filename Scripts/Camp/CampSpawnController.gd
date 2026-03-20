@@ -184,9 +184,9 @@ func _random_point_in_zone(z: Node, fallback: Vector2) -> Vector2:
 	return p
 
 
-func _pick_zone_home_for_walker(merged: Dictionary, _unit_name: String, anchor_global: Vector2, occ: Dictionary) -> Dictionary:
+func _pick_zone_home_for_walker(merged: Dictionary, unit_name: String, anchor_global: Vector2, occ: Dictionary) -> Dictionary:
 	if _ctx.camp_zones.is_empty():
-		return {"pos": anchor_global, "zone": null}
+		return {"pos": anchor_global, "zone": null, "anchor": null}
 	var idle_style: String = str(merged.get("idle_style", "neutral")).strip_edges().to_lower()
 	var types: Array[String] = _zone_types_priority_for_profile(merged, idle_style)
 	var best_score: float = -1e10
@@ -200,8 +200,17 @@ func _pick_zone_home_for_walker(merged: Dictionary, _unit_name: String, anchor_g
 				best_score = raw
 				best_zone = zn
 	if best_zone == null or best_score < -7e5:
-		return {"pos": anchor_global, "zone": null}
-	return {"pos": _random_point_in_zone(best_zone, anchor_global), "zone": best_zone}
+		return {"pos": anchor_global, "zone": null, "anchor": null}
+	var injured_s: bool = CampaignManager.is_unit_injured(unit_name) if CampaignManager else false
+	var fatigued_s: bool = CampaignManager.is_unit_fatigued(unit_name) if CampaignManager else false
+	var spawn_anch: CampActivityAnchor = _ctx.pick_best_spawn_anchor_for_zone(best_zone, idle_style, injured_s, fatigued_s)
+	if spawn_anch != null and is_instance_valid(spawn_anch):
+		var pg: Vector2 = spawn_anch.global_position
+		pg.x = clampf(pg.x, _ctx.walk_min.x, _ctx.walk_max.x)
+		pg.y = clampf(pg.y, _ctx.walk_min.y, _ctx.walk_max.y)
+		_ctx.claim_anchor_home(spawn_anch)
+		return {"pos": pg, "zone": best_zone, "anchor": spawn_anch}
+	return {"pos": _random_point_in_zone(best_zone, anchor_global), "zone": best_zone, "anchor": null}
 
 
 func prepend_unique_zones(existing: Variant, preferred_first: Array[String]) -> Array:
@@ -547,6 +556,7 @@ func spawn_walkers(walkers_container: Node2D, debug_use_test_camp_roster: bool, 
 					CampaignManager.is_unit_fatigued(walker.unit_name)
 				)
 			walker.set_behavior_zones(_ctx.camp_zones)
+			walker.set_camp_context(_ctx)
 			walker.set_camp_visit_theme(_ctx.visit_theme)
 			walker.start_behavior()
 		else:
