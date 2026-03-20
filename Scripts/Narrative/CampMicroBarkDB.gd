@@ -1797,6 +1797,32 @@ const MICRO_BARKS: Array = [
 		"radius": 140.0,
 		"pair_radius": 88.0,
 	},
+	{
+		"id": "prog_micro_resonance_mercy_liora_tamsin_infirmary_day",
+		"priority": 19,
+		"when": { "time_block": "day" },
+		"required_story_flags": ["showed_mercy_under_pressure"],
+		"speaker": "Liora",
+		"listener": "Tamsin Reed",
+		"zone_type": "infirmary",
+		"text": "\"You talked someone off the blade once—don't pretend that didn't cost you sleep.\" — \"Sleep's a luxury. The head-count isn't.\"",
+		"once_per_visit": true,
+		"radius": 140.0,
+		"pair_radius": 88.0,
+	},
+	{
+		"id": "prog_micro_resonance_delegate_garrick_celia_wall_day",
+		"priority": 19,
+		"when": { "time_block": "day" },
+		"required_story_flags": ["delegated_under_pressure"],
+		"speaker": "Garrick Vale",
+		"listener": "Celia",
+		"zone_type": "wall",
+		"text": "\"You spent breath on the line mid-fight—not theater, coordination.\" — \"Then don't make me perform gratitude. I'll just hold the habit.\"",
+		"once_per_visit": true,
+		"radius": 140.0,
+		"pair_radius": 80.0,
+	},
 ]
 
 static func get_all_micro_barks() -> Array:

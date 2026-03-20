@@ -379,6 +379,9 @@ var current_turn: int = 1
 var camera_follows_enemies: bool = true
 var is_arena_match: bool = false
 
+func _battle_resonance_allowed() -> bool:
+	return CampaignManager != null and not is_arena_match and not CampaignManager.is_skirmish_mode
+
 var _camera_zoom_target: float = 1.0
 var _camera_zoom_tween: Tween
 
@@ -622,6 +625,8 @@ func _ready() -> void:
 			vip_target.reached_destination.connect(func(): 
 				if has_method("add_combat_log"):
 					add_combat_log("MISSION ACCOMPLISHED: The convoy escaped!", "lime")
+				if _battle_resonance_allowed():
+					CampaignManager.mark_battle_resonance("protected_civilians_first")
 				_trigger_victory() # <--- CHANGED!
 			)
 			
@@ -1045,6 +1050,13 @@ func _on_unit_died(unit: Node2D, killer: Node2D):
 	elif unit.get_parent() == ally_container:
 		ally_deaths_count += 1
 		add_combat_log(unit.unit_name + " has fallen in battle!", "orange")
+
+	if _battle_resonance_allowed() and unit.get_parent() == enemy_container:
+		if killer != null and is_instance_valid(killer):
+			var kp: Node = killer.get_parent()
+			if kp != null and (kp == player_container or (ally_container != null and kp == ally_container)):
+				if unit.get("data") != null and unit.data.get("is_recruitable") == true:
+					CampaignManager.mark_battle_resonance("chose_harsh_efficiency")
 
 	# --- Relationship Web: grief when allied unit dies and nearby allies had trust with them (battle-local only) ---
 	if unit.get_parent() == player_container or unit.get_parent() == ally_container:
@@ -7264,7 +7276,8 @@ func execute_talk(initiator: Node2D, target: Node2D) -> void:
 	screen_shake(8.0, 0.3)
 	add_combat_log(initiator.unit_name + " convinced " + target.unit_name + " to join.", "cyan")
 	spawn_loot_text("RECRUITED!", Color.LIME, target.global_position + Vector2(32, -32))
-	
+	if _battle_resonance_allowed():
+		CampaignManager.mark_battle_resonance("showed_mercy_under_pressure")
 	rebuild_grid()
 
 func play_recruit_dialogue(initiator: Node2D, target: Node2D) -> void:
@@ -7342,7 +7355,8 @@ func _on_support_talk_pressed() -> void:
 	
 	if initiator != null and ally != null:
 		await play_support_dialogue(initiator, ally)
-		
+		if _battle_resonance_allowed():
+			CampaignManager.mark_battle_resonance("delegated_under_pressure")
 		# End the initiator's turn after talking
 		initiator.finish_turn()
 		player_state.clear_active_unit()

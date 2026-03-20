@@ -160,6 +160,9 @@ var is_skirmish_mode: bool = false
 # Persistent flags set/cleared by world-map encounters; used for selection and option/result variants.
 var encounter_flags: Dictionary = {}
 
+# Cumulative story-battle resonance (not arena/skirmish). Keys are a fixed small set; merged into camp story_flags.
+var battle_resonance_flags: Dictionary = {}
+
 # --- SCAVENGER CLAIM HISTORY (correctness: prevent re-claim after refresh/reload) ---
 # score_id -> total quantity already claimed by this player for that score. Persisted in save.
 var claimed_scavenger_scores: Dictionary = {}
@@ -443,6 +446,7 @@ func reset_campaign_data() -> void:
 	max_unlocked_index = 0
 	is_skirmish_mode = false
 	encounter_flags.clear()
+	battle_resonance_flags.clear()
 	claimed_scavenger_scores.clear()
 	seen_camp_lore.clear()
 	seen_camp_pair_scenes.clear()
@@ -883,6 +887,7 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"morgra_favorite_survived_battles": morgra_favorite_survived_battles,
 
 		"encounter_flags": encounter_flags.duplicate(),
+		"battle_resonance_flags": battle_resonance_flags.duplicate(),
 		"claimed_scavenger_scores": claimed_scavenger_scores.duplicate(),
 		"seen_camp_lore": seen_camp_lore.duplicate(),
 		"seen_camp_pair_scenes": seen_camp_pair_scenes.duplicate(),
@@ -980,6 +985,13 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		encounter_flags["shattered_sanctum_cleared"] = true
 	if camp_request_progress_level >= 10:
 		encounter_flags["sunlit_trial_cleared"] = true
+
+	battle_resonance_flags.clear()
+	var raw_resonance = save_data.get("battle_resonance_flags", {})
+	if raw_resonance is Dictionary:
+		for rk in raw_resonance:
+			if str(rk).strip_edges() != "" and raw_resonance[rk]:
+				battle_resonance_flags[str(rk).strip_edges()] = true
 
 	claimed_scavenger_scores.clear()
 	var raw_claimed = save_data.get("claimed_scavenger_scores", {})
@@ -1226,6 +1238,10 @@ func get_camp_conversation_story_flags() -> Dictionary:
 		var ks: String = str(k).strip_edges()
 		if ks != "" and bool(encounter_flags[k]):
 			out[ks] = true
+	for rk in battle_resonance_flags.keys():
+		var rks: String = str(rk).strip_edges()
+		if rks != "" and bool(battle_resonance_flags[rk]):
+			out[rks] = true
 	var script_keys: PackedStringArray = [
 		"shattered_sanctum_cleared",
 		"greyspire_hub_established",
@@ -1979,6 +1995,25 @@ func apply_camp_direct_progression_effects(unit_name: String, fx: Dictionary) ->
 		for fk in sfs as Dictionary:
 			if bool((sfs as Dictionary)[fk]):
 				entry["arc_flags"][str(fk)] = true
+
+
+const BATTLE_RESONANCE_FLAG_KEYS: PackedStringArray = PackedStringArray([
+	"showed_mercy_under_pressure",
+	"protected_civilians_first",
+	"delegated_under_pressure",
+	"chose_harsh_efficiency",
+])
+
+
+## Story battles only: set a cumulative resonance flag (idempotent). Ignored if key is not in BATTLE_RESONANCE_FLAG_KEYS.
+func mark_battle_resonance(flag: String) -> void:
+	var f: String = str(flag).strip_edges()
+	if f.is_empty():
+		return
+	for allowed in BATTLE_RESONANCE_FLAG_KEYS:
+		if str(allowed) == f:
+			battle_resonance_flags[f] = true
+			return
 
 
 ## Story battles only (BattleField skips arena + skirmish). Updates encounter_flags for camp story gating
