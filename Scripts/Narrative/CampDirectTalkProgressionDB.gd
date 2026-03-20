@@ -39,42 +39,52 @@ const IDLE_FOLLOWUP_BY_UNIT: Dictionary = {
 	"Brother Alden": {
 		1: "I saw you drink water without performing martyrdom. Keep that; fevers love a commander who forgets the basics.",
 		2: "Pulse before pageant, still—if you parade a patient for morale, I'll look bored on purpose again.",
+		3: "Mercy moved into my hands before my mouth remembered how to argue—water, shade, quiet cots; the tent learns habit faster than lecture now.",
 	},
 	"Yselle Maris": {
 		1: "I'm practicing calm as labor, not as costume—if the line borrows my face, it's because panic spreads faster than hunger.",
 		2: "Armor still goes on before dawn—I'm just not pretending the weight is nothing when we're alone with the cups.",
+		3: "I still set the board for the line—when it's your cups alone, I'll let the tired show without polishing the tremor away.",
 	},
 	"Maela Thorn": {
 		1: "I'm shortening the angry stride before it turns into a speech—air is for orders, not for old voices.",
 		2: "If I run ugly drills in the mud, it's because applause lied about safety once too often.",
+		3: "I own the ring's answer now—not as proof against old insults, as duty: steadier hips, fewer performances, same standard for everyone including me.",
 	},
 	"Rufus": {
 		1: "Still picking up work hot when I say dusk—heat doesn't lie, and neither should the ask.",
 		2: "Quench tank still isn't holy water; I'm just glad you backed metal loud enough nobody needs my mouth to bless steel.",
+		3: "Near my fire you're under my bluntness—I'd rather bruise an ego early than watch a soft lie cost someone their fingers.",
 	},
 	"Mira Ashdown": {
 		1: "Slow on the line stays slow on purpose—mock patience and you train shame, not strings.",
 		2: "Wind days still bite—I'm choosing ugly truth over fast lies, even when the camp wants a show.",
+		3: "Slow work earned a seat at my ear—I'll back shared boring competence before I trust a clean score that hid the hurry.",
 	},
 	"Pell Rowan": {
 		1: "One breath, one call—still ugly, still true. That's the only brave that holds.",
 		2: "Relay tomorrow scares me less when I remember dry runs beat hero-voice—I'd rather be boring-right than shining-wrong.",
+		3: "The call still rattles—difference is I expect true before pretty now; that's steadiness I can carry when the wall goes loud.",
 	},
 	"Oren Pike": {
 		1: "I'm still padding your maps with hours they don't print—ask before you trust clean ink.",
 		2: "Guy lines stayed ugly after that march; I'd rather own boring delay than a tidy story and a twisted ankle.",
+		3: "You asked for ink plus judgment—I stake lines you can sleep behind, not timelines that look brave on parchment alone.",
 	},
 	"Tariq": {
 		1: "I'm trimming rumor before it drafts your orders for you—dialect isn't the same as intelligence.",
 		2: "Miser-words after the market lesson: earned syllables only. If they call it cold, good—warmth wraps rot.",
+		3: "I still trim—but I leave enough thread that you're holding the translation beside me, not renting my mouth when the story sours.",
 	},
 	"Sabine Varr": {
 		1: "Boredom's off the guest list on my section—rotate the pattern so the wall stops telling time to scouts.",
 		2: "Ledger's bent where reality asked—small fractures, same spine; grief can wait behind procedure.",
+		3: "My section bends and keeps spine—sergeants own small breaks while I stay with the grief in the room instead of burying it under the roster.",
 	},
 	"Inez": {
 		1: "Shorter steps on gravel—still practice, not performance. The trees heard you first; I'm just catching up.",
 		2: "Trust was letting you move my shape without taking my name—I'm holding to that when the soil gets opinionated.",
+		3: "Soil still gets the first word—only now I leave the flap open after, in case you meant to stay past the lesson.",
 	},
 	"Kaelen": {
 		1: "Grief waits its turn—breathing first. I'm still not soft about it; I'm just done pretending hardness is the same as useful.",
