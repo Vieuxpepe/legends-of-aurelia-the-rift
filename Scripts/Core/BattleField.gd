@@ -7355,8 +7355,6 @@ func _on_support_talk_pressed() -> void:
 	
 	if initiator != null and ally != null:
 		await play_support_dialogue(initiator, ally)
-		if _battle_resonance_allowed():
-			CampaignManager.mark_battle_resonance("delegated_under_pressure")
 		# End the initiator's turn after talking
 		initiator.finish_turn()
 		player_state.clear_active_unit()
