@@ -1981,6 +1981,34 @@ func apply_camp_direct_progression_effects(unit_name: String, fx: Dictionary) ->
 				entry["arc_flags"][str(fk)] = true
 
 
+## Story battles only (BattleField skips arena + skirmish). Updates encounter_flags for camp story gating
+## (get_camp_conversation_story_flags) and mirrors the same keys on the commander avatar entry via
+## apply_camp_direct_progression_effects so arc_flag-based hooks can target the custom unit name if desired.
+## Keys are mutually exclusive per outcome; "costly" is only set on VICTORY with player or ally losses.
+func record_story_battle_outcome_for_camp(result: String, player_deaths: int, ally_deaths: int) -> void:
+	encounter_flags.erase("battle_last_engagement_victory")
+	encounter_flags.erase("battle_last_engagement_defeat")
+	encounter_flags.erase("battle_last_engagement_costly")
+	var cmd: String = str(custom_avatar.get("unit_name", "Commander")).strip_edges()
+	if cmd.is_empty():
+		cmd = "Commander"
+	apply_camp_direct_progression_effects(cmd, {"clear_arc_flag": "battle_last_engagement_victory"})
+	apply_camp_direct_progression_effects(cmd, {"clear_arc_flag": "battle_last_engagement_defeat"})
+	apply_camp_direct_progression_effects(cmd, {"clear_arc_flag": "battle_last_engagement_costly"})
+	if str(result).strip_edges().to_upper() == "VICTORY":
+		encounter_flags["battle_last_engagement_victory"] = true
+		var costly: bool = player_deaths > 0 or ally_deaths > 0
+		if costly:
+			encounter_flags["battle_last_engagement_costly"] = true
+		var af: Dictionary = {"battle_last_engagement_victory": true}
+		if costly:
+			af["battle_last_engagement_costly"] = true
+		apply_camp_direct_progression_effects(cmd, {"set_arc_flags": af})
+	else:
+		encounter_flags["battle_last_engagement_defeat"] = true
+		apply_camp_direct_progression_effects(cmd, {"set_arc_flags": {"battle_last_engagement_defeat": true}})
+
+
 ## Ambient / DB hooks: speaker must meet min_personal_arc_stage and required_arc_flags; must not have forbidden_arc_flags.
 func ambient_entry_matches_speaker_progression(speaker_name: String, entry: Dictionary) -> bool:
 	if entry.is_empty():

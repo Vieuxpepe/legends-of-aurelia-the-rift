@@ -1188,8 +1188,10 @@ func _on_unit_died(unit: Node2D, killer: Node2D):
 	update_objective_ui()
 		
 func trigger_game_over(result: String) -> void:
-	change_state(null) 
-	
+	change_state(null)
+	if CampaignManager and not is_arena_match and not CampaignManager.is_skirmish_mode:
+		CampaignManager.record_story_battle_outcome_for_camp(result, player_deaths_count, ally_deaths_count)
+
 	# 1. THE PAUSE FIX: Force the game to freeze, but keep the UI panel awake
 	get_tree().paused = true
 	game_over_panel.process_mode = Node.PROCESS_MODE_ALWAYS
