@@ -87,6 +87,17 @@ const SOCIAL_STATE_SPEAKING := 3
 const SOCIAL_STATE_PAUSED := 4
 
 var _social_state: int = SOCIAL_STATE_FREE
+## Optional ambient choreography from CampAmbientDirector: "spar", "drill", "work", "fireside", or "".
+var _ambient_social_pose: String = ""
+
+func set_ambient_social_pose(pose: String) -> void:
+	_ambient_social_pose = str(pose).strip_edges().to_lower()
+
+func clear_ambient_social_pose() -> void:
+	_ambient_social_pose = ""
+
+func get_ambient_social_pose() -> String:
+	return _ambient_social_pose
 
 func _ready() -> void:
 	home_position = global_position
@@ -373,6 +384,7 @@ func end_social_move() -> void:
 	_social_move_arrived = false
 	if _social_state == SOCIAL_STATE_APPROACH or _social_state == SOCIAL_STATE_SETTLED or _social_state == SOCIAL_STATE_SPEAKING:
 		_social_state = SOCIAL_STATE_FREE
+	clear_ambient_social_pose()
 	_clear_social_animation_tweens()
 
 func play_social_settle_beat() -> void:
@@ -575,7 +587,33 @@ func _play_social_idle_motion(delta: float) -> void:
 		return
 	if (_arrive_tween != null and is_instance_valid(_arrive_tween)) or (_reaction_tween != null and is_instance_valid(_reaction_tween)):
 		return
-	_social_idle_phase += SOCIAL_IDLE_BOB_SPEED * delta
+	var pace: float = SOCIAL_IDLE_BOB_SPEED
+	var amp: float = SOCIAL_IDLE_BOB_HEIGHT
+	var rot_amp: float = 0.0
+	match _ambient_social_pose:
+		"spar", "mock_duel":
+			pace *= 1.38
+			amp *= 1.22
+			rot_amp = deg_to_rad(1.15)
+		"drill", "formation":
+			pace *= 0.82
+			amp *= 0.72
+			rot_amp = deg_to_rad(0.55)
+		"work", "work_detail", "repair":
+			pace *= 0.68
+			amp *= 0.58
+			rot_amp = deg_to_rad(0.35)
+		"fireside", "morale", "rhythm":
+			pace *= 0.92
+			amp *= 0.88
+			rot_amp = deg_to_rad(0.45)
+		_:
+			pass
+	_social_idle_phase += pace * delta
 	var c_mult: float = _get_condition_bob_multiplier()
-	var bob: float = sin(_social_idle_phase) * SOCIAL_IDLE_BOB_HEIGHT * c_mult
+	var bob: float = sin(_social_idle_phase) * amp * c_mult
 	sprite.position = _base_sprite_offset + Vector2(0, bob)
+	if rot_amp != 0.0:
+		sprite.rotation = sin(_social_idle_phase * 0.5) * rot_amp * c_mult
+	else:
+		sprite.rotation = 0.0

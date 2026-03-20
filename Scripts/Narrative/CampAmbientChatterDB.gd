@@ -6,14 +6,14 @@ const CHATTERS: Array = [
 	{
 		"id": "chatter_branik_tamsin_fire",
 		"preferred_visit_themes": ["recovery", "normal"],
-		"priority": 10,
+		"priority": 7,
 		"when": { "time_block": "night" },
-		"unit_a": "Branik",
-		"unit_b": "Tamsin Reed",
+		"unit_a": "Tamsin Reed",
+		"unit_b": "Branik",
 		"zone_type": "fire",
 		"lines": [
-			{ "speaker": "Branik", "text": "Stew's thin tonight." },
-			{ "speaker": "Tamsin Reed", "text": "So are half our patients. They'll still taste it." },
+			{ "speaker": "Tamsin Reed", "text": "Stew's thin tonight." },
+			{ "speaker": "Branik", "text": "So are half our patients. They'll still taste it." },
 		],
 		"once_per_visit": false,
 		"pair_radius": 80.0,
@@ -102,11 +102,11 @@ const CHATTERS: Array = [
 	{
 		"id": "chatter_tamsin_branik_hopeful_fire",
 		"preferred_visit_themes": ["hopeful", "recovery"],
-		"priority": 10,
+		"priority": 8,
 		"when": { "time_block": "night" },
 		"moods": ["hopeful"],
-		"unit_a": "Branik",
-		"unit_b": "Tamsin Reed",
+		"unit_a": "Tamsin Reed",
+		"unit_b": "Branik",
 		"zone_type": "fire",
 		"lines": [
 			{ "speaker": "Tamsin Reed", "text": "They asked for seconds tonight." },
@@ -232,14 +232,14 @@ const CHATTERS: Array = [
 	},
 	{
 		"id": "chatter_branik_tamsin_infirmary_day",
-		"priority": 10,
+		"priority": 8,
 		"when": { "time_block": "day" },
-		"unit_a": "Branik",
-		"unit_b": "Tamsin Reed",
+		"unit_a": "Tamsin Reed",
+		"unit_b": "Branik",
 		"zone_type": "infirmary",
 		"lines": [
-			{ "speaker": "Branik", "text": "I left broth by the cot. Don't argue with soup." },
-			{ "speaker": "Tamsin Reed", "text": "I only argue with people. Soup usually wins." },
+			{ "speaker": "Tamsin Reed", "text": "Broth by the cot again—protocol says thank you." },
+			{ "speaker": "Branik", "text": "Protocol can eat after the healers do. Don't argue with soup." },
 		],
 		"line_variants": [
 			[
@@ -480,7 +480,7 @@ const CHATTERS: Array = [
 	},
 	{
 		"id": "chatter_branik_rufus_fire_shift",
-		"priority": 9,
+		"priority": 7,
 		"when": { "time_block": "night" },
 		"unit_a": "Branik",
 		"unit_b": "Rufus",
@@ -801,7 +801,7 @@ const CHATTERS: Array = [
 	},
 	{
 		"id": "chatter_theme_hopeful_branik_rufus_cook",
-		"priority": 8,
+		"priority": 6,
 		"when": { "time_block": "day" },
 		"unit_a": "Branik",
 		"unit_b": "Rufus",
@@ -894,6 +894,23 @@ const CHATTERS: Array = [
 		"once_per_visit": true,
 		"pair_radius": 90.0,
 		"approach_radius": 146.0,
+	},
+	{
+		"id": "chatter_work_oren_rufus_workbench",
+		"preferred_visit_themes": ["normal", "tense", "training"],
+		"priority": 7,
+		"when": { "time_block": "day" },
+		"unit_a": "Oren Pike",
+		"unit_b": "Rufus",
+		"zone_type": "workbench",
+		"ambient_behavior_family": "work_detail",
+		"lines": [
+			{ "speaker": "Oren Pike", "text": "Mock repair pass first—no live pins. If this bracket fails, it insults only our pride." },
+			{ "speaker": "Rufus", "text": "Pride and thumbs stay attached. I can live with that doctrine." },
+		],
+		"once_per_visit": false,
+		"pair_radius": 88.0,
+		"approach_radius": 132.0,
 	},
 ]
 

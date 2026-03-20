@@ -691,7 +691,7 @@ const RUMORS: Array = [
 	{
 		"id": "branik_cook_dawn_kettle",
 		"preferred_visit_themes": ["normal", "recovery"],
-		"priority": 8,
+		"priority": 6,
 		"when": { "time_block": "dawn" },
 		"speaker": "Branik",
 		"zone_type": "cook_area",
@@ -705,7 +705,7 @@ const RUMORS: Array = [
 	},
 	{
 		"id": "branik_supply_day_portions",
-		"priority": 7,
+		"priority": 5,
 		"when": { "time_block": "day" },
 		"speaker": "Branik",
 		"zone_type": "supply",
@@ -1154,13 +1154,13 @@ const RUMORS: Array = [
 	},
 	{
 		"id": "rumor_theme_recovery_branik_fire_night",
-		"priority": 8,
+		"priority": 6,
 		"when": { "time_block": "night" },
 		"speaker": "Branik",
 		"zone_type": "fire",
 		"preferred_visit_themes": ["recovery"],
 		"text": "Second helpings for anyone still shaking. Hunger lies louder than courage after a long march.",
-		"once_per_visit": false,
+		"once_per_visit": true,
 		"radius": 140.0,
 	},
 	{
