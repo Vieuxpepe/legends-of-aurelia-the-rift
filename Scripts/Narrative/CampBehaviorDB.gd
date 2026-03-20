@@ -15,9 +15,9 @@ const PROFILES: Dictionary = {
 		"idle_style": "look_out",
 	},
 	"Nyx": {
-		"preferred_zones": ["tree_line", "wagon", "supply"],
-		"secondary_zones": ["fire", "bench"],
-		"movement_frequency": 0.6,
+		"preferred_zones": ["tree_line", "wagon", "workbench", "supply"],
+		"secondary_zones": ["map_table", "fire", "bench"],
+		"movement_frequency": 0.72,
 		"idle_style": "look_out",
 	},
 	"Liora": {
@@ -57,9 +57,9 @@ const PROFILES: Dictionary = {
 		"idle_style": "inspect_wall",
 	},
 	"Mira Ashdown": {
-		"preferred_zones": ["tree_line"],
-		"secondary_zones": ["fire"],
-		"movement_frequency": 0.5,
+		"preferred_zones": ["watch_post", "tree_line"],
+		"secondary_zones": ["bench", "fire"],
+		"movement_frequency": 0.48,
 		"idle_style": "look_out",
 	},
 	"Sister Meris": {
@@ -82,8 +82,8 @@ const PROFILES: Dictionary = {
 	},
 	"Rufus": {
 		"preferred_zones": ["workbench", "supply", "fire"],
-		"secondary_zones": ["bench", "wagon"],
-		"movement_frequency": 0.5,
+		"secondary_zones": ["wall", "bench", "wagon"],
+		"movement_frequency": 0.46,
 		"idle_style": "tinker_small",
 	},
 	"Inez": {
@@ -99,9 +99,9 @@ const PROFILES: Dictionary = {
 		"idle_style": "read_notes",
 	},
 	"Pell Rowan": {
-		"preferred_zones": ["watch_post", "workbench", "supply"],
-		"secondary_zones": ["wall", "bench"],
-		"movement_frequency": 0.8,
+		"preferred_zones": ["watch_post", "workbench", "wall"],
+		"secondary_zones": ["supply", "bench"],
+		"movement_frequency": 0.86,
 		"idle_style": "check_gear",
 	},
 	"Brother Alden": {
@@ -129,9 +129,9 @@ const PROFILES: Dictionary = {
 		"idle_style": "neutral",
 	},
 	"Corvin Ash": {
-		"preferred_zones": ["wagon", "shrine", "bench"],
+		"preferred_zones": ["shrine", "wagon", "bench"],
 		"secondary_zones": ["map_table", "tree_line"],
-		"movement_frequency": 0.45,
+		"movement_frequency": 0.36,
 		"idle_style": "read_notes",
 	},
 	"Veska Moor": {
@@ -147,9 +147,9 @@ const PROFILES: Dictionary = {
 		"idle_style": "pray_quietly",
 	},
 	"Maela Thorn": {
-		"preferred_zones": ["watch_post", "tree_line", "wagon"],
-		"secondary_zones": ["wall", "bench"],
-		"movement_frequency": 0.9,
+		"preferred_zones": ["watch_post", "tree_line", "wall"],
+		"secondary_zones": ["wagon", "bench"],
+		"movement_frequency": 0.98,
 		"idle_style": "look_out",
 	},
 }

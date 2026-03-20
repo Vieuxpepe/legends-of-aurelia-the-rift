@@ -1,6 +1,6 @@
 # CampExploreDialogueDB.gd
-# Data-only camp exploration dialogue: personality-keyed short lines for roster members.
-# CampExplore.gd uses this for talk interactions. Use get_line(personality) or get_line_for_unit(unit_data, unit_name).
+# Data-only camp exploration dialogue for roster members.
+# Prefers unit-specific lines first, then falls back to personality-keyed lines.
 #
 # Personality priority: UnitData.support_personality -> NAME_TO_PERSONALITY[unit_name] -> "neutral".
 
@@ -8,7 +8,6 @@ class_name CampExploreDialogueDB
 
 const DEFAULT_LINE: String = "Good to see you."
 
-## Fallback: unit display name -> personality key when UnitData has no support_personality.
 const NAME_TO_PERSONALITY: Dictionary = {
 	"Commander": "heroic",
 	"Kaelen": "stoic",
@@ -37,106 +36,324 @@ const NAME_TO_PERSONALITY: Dictionary = {
 	"Maela Thorn": "spirited",
 }
 
-## Camp lines by personality key. One short line per interaction; pick randomly.
+const CHARACTER_LINES: Dictionary = {
+	"Commander": [
+		"Still checking on everyone? Good. They notice more than they say.",
+		"You carry half this camp in your shoulders. Sit before it becomes all of it.",
+		"The camp holds together because someone keeps looking twice. That matters.",
+		"A quiet camp is never simple. But it is still worth protecting.",
+	],
+	"Kaelen": [
+		"If you're here to rest, do it properly. Brooding is not recovery.",
+		"Rations are accounted for. Guards too. Try not to give me new problems before dawn.",
+		"You look tired. That means either you're thinking too much or not enough.",
+		"Armor's holding. Camp's holding. We'll call that a decent evening.",
+		"I've seen worse camps and better liars. This one might survive.",
+		"If someone gives you heroic nonsense, send them to me. I'll cure it.",
+	],
+	"Branik": [
+		"You eaten yet? Start there. Most problems get smaller after that.",
+		"Sit a minute. The fire's doing honest work tonight.",
+		"Camp feels steadier when folks remember to breathe and chew.",
+		"If something's wrong, you don't need fancy words. Just tell me where to stand.",
+		"I put extra on the pot. Someone always needs it more than they admit.",
+		"You look like you could use quiet more than advice.",
+	],
+	"Liora": [
+		"You do not need permission to rest.",
+		"I've been making tea. One cup solves less than prayer, but faster.",
+		"Mercy begins small more often than people like to admit.",
+		"The camp is calmer tonight. I am trying to be grateful before I become suspicious.",
+		"If you are carrying grief, at least let someone help you carry water.",
+		"Faith is easier to keep when people are kind in ordinary ways.",
+	],
+	"Nyx": [
+		"Relax. If I wanted something, you'd notice one pocket later.",
+		"Camp gossip is thin tonight. Either that's good news or everyone's getting smarter.",
+		"I've been keeping an eye on the edges. They keep being edgy. Very rude of them.",
+		"You can trust me exactly as far as necessity demands. Lucky for you, that's been fairly far.",
+		"If anyone says this camp feels safe, they're either lying or asleep.",
+		"Don't look so surprised. I do know how to stay where I belong. Briefly.",
+	],
+	"Sorrel": [
+		"I've learned three useful things today and one alarming one.",
+		"This camp is full of fascinating habits. Some of them may even be practical.",
+		"I was comparing notes with the maps, but the maps remain emotionally immature.",
+		"Rest has been recommended to me by multiple parties. I continue to resent their accuracy.",
+		"I keep trying to have a quiet evening and then history interferes.",
+		"If I look distracted, it's because I am. Fortunately, productively.",
+	],
+	"Darian": [
+		"I refuse to let war make the camp aesthetically hopeless.",
+		"Morale, posture, and timing — all tragically neglected arts.",
+		"For a ruined little camp, we do produce some excellent silhouettes by firelight.",
+		"Try smiling. If it feels unnatural, that only proves you need practice.",
+		"I have been behaving with restraint all evening. Please appreciate the effort.",
+		"If the night remains quiet, I may even call it elegant.",
+	],
+	"Celia": [
+		"Watch rotations are settled. At least one thing is.",
+		"I prefer camps that stay orderly enough to defend themselves.",
+		"There is comfort in routine when routine still serves a purpose.",
+		"I've checked the perimeter twice. I may allow myself a third pass for peace of mind.",
+		"Readiness is kinder than panic.",
+		"You need not stand so rigidly around me. I'm off duty for the next few minutes.",
+	],
+	"Rufus": [
+		"I've seen worse camp setups. Usually built by men with better titles and worse hands.",
+		"If nobody loses a crate tonight, I'll call it a miracle and sleep on it.",
+		"The wall brace holds. The cookfire holds. That's a respectable amount of civilization.",
+		"Most disasters start with someone saying, 'It'll probably be fine.'",
+		"I've been fixing things all day. Don't worry, I'll still complain about it.",
+		"A steady camp beats a glorious one. Glorious camps usually catch fire.",
+	],
+	"Inez": [
+		"The tree line is quieter now. That doesn't mean friendly.",
+		"People walk differently after sunset. The ground notices.",
+		"Camp smells calmer tonight. Less fear, more smoke.",
+		"Stay off the roots on the east side. They sink under careless heels.",
+		"I trust silence more than speeches.",
+		"The edges of camp tell the truth faster than the center does.",
+	],
+	"Tariq": [
+		"I had hoped for one evening without bad information. A childish hope, in retrospect.",
+		"The maps improved. The politics did not.",
+		"I've reached the stage of fatigue where everyone becomes briefly honest to listen to.",
+		"This army continues to function through a deeply unscientific amount of stubbornness.",
+		"If someone tells you certainty is a virtue, check what they're selling.",
+		"I was enjoying the silence until it became suspiciously meaningful.",
+	],
+	"Mira Ashdown": [
+		"The western sightline is cleaner now.",
+		"It's quieter when people stop trying to sound brave.",
+		"I don't mind camp at night. Everyone finally stops performing.",
+		"If something changes out there, I'll hear it.",
+		"I prefer useful quiet to comforting noise.",
+		"The fire's less harsh when you don't stare straight into it.",
+	],
+	"Pell Rowan": [
+		"I was just finishing drills. Not because anyone told me to. Well. Mostly not.",
+		"I'm getting better. I think people can actually tell now.",
+		"One day I'll look calm on watch before I actually feel calm on watch.",
+		"I volunteered for three things today. That may have been four too many.",
+		"I'm trying to be useful without being dramatically foolish about it.",
+		"Please tell me if I look more disciplined than terrified. I'm aiming for both.",
+	],
+	"Tamsin Reed": [
+		"I finally organized the remedies. Which means someone will immediately ruin the system.",
+		"I'm resting. Briefly. This counts as resting.",
+		"You'd be amazed how many crises can be softened by boiled water and decent notes.",
+		"I keep meaning not to worry about everyone. It goes terribly every time.",
+		"The camp feels better when people remember they're allowed to sit down.",
+		"Sorry — no, not sorry. I'm trying to stop starting every sentence that way.",
+	],
+	"Hest \"Sparks\"": [
+		"Great news: nothing has exploded for several minutes.",
+		"If anyone asks, I was never near the supply pile. Emotionally or legally.",
+		"This camp would be unbearably sensible without me.",
+		"I know where everything is. That is not the same thing as admitting I moved it.",
+		"Relax. The weird smell is probably progress.",
+		"People keep calling me chaos like it's a criticism and not free morale.",
+	],
+	"Brother Alden": [
+		"Quiet is easier to hear when no one is forcing it.",
+		"You may sit. The world will remain complicated without your immediate supervision.",
+		"A steady fire and a slower breath solve more than pride admits.",
+		"I've found that camps endure best when people stop pretending they are made of iron.",
+		"There is dignity in recovering before you are forced to.",
+		"You look worn. That is not a failing. It is information.",
+	],
+	"Oren Pike": [
+		"I fixed two things and discovered five others pretending not to be broken.",
+		"The camp would run better if people put tools back where tools belong.",
+		"I don't mind helping. I mind helping the same mistake twice.",
+		"That brace holds now. Which is more than I can say for half our planning meetings.",
+		"Someone borrowed my awl. Again. I am taking this personally.",
+		"Functional is beautiful enough for me.",
+	],
+	"Garrick Vale": [
+		"Order is easier to maintain when people stop mistaking it for vanity.",
+		"The camp is holding its shape. That matters more than it sounds.",
+		"Routine gives fear fewer places to hide.",
+		"I've had enough of institutions that ask for loyalty without deserving it.",
+		"A decent watch line can feel almost like trust.",
+		"Some evenings I remember why discipline was meant to protect people.",
+	],
+	"Sabine Varr": [
+		"No immediate vulnerabilities worth shouting about. A promising sign.",
+		"I prefer calm camps. They waste less of my time.",
+		"People mistake composure for comfort. It isn't.",
+		"The defenses are acceptable. Barely. Which counts as praise.",
+		"If someone tells you the perimeter is fine, ask them how they checked.",
+		"I'm off watch, not inattentive.",
+	],
+	"Yselle Maris": [
+		"A camp does not stay human by accident.",
+		"Morale is maintenance, darling. No less than steel or soup.",
+		"I've been improving the atmosphere. Some people insist on calling it gossip.",
+		"Beauty still matters. Especially when the world behaves as though it shouldn't.",
+		"You can tell a great deal about a camp by how it carries its silence.",
+		"Even soldiers breathe easier when someone remembers grace exists.",
+	],
+	"Sister Meris": [
+		"I am still learning that quiet need not mean judgment.",
+		"Routine is useful. It leaves less room for worse instincts.",
+		"Some habits are harder to put down than a weapon.",
+		"The shrine is calmer tonight. I do not trust calm easily.",
+		"Regret is not the same thing as penance, though people confuse them often.",
+		"I have no wish to be feared here. I am adjusting to what that requires.",
+	],
+	"Corvin Ash": [
+		"The camp is full of interesting fears. Most of them sensible.",
+		"Night makes honest shapes of things that daylight flatters.",
+		"I have been reading. No, that is not the alarming part.",
+		"People always assume the dark is hiding something from them. Often it is only removing distractions.",
+		"I find camps most revealing when everyone thinks the day is over.",
+		"You may relax. I am in a reflective mood rather than an instructive one.",
+	],
+	"Veska Moor": [
+		"Wall holds. Fire holds. Enough said.",
+		"I like camps that make sense under pressure.",
+		"If something breaks tonight, wake me before it becomes symbolic.",
+		"There is comfort in work done solidly.",
+		"People talk too much when a post just needs holding.",
+		"I'm resting. That doesn't mean I stopped noticing things.",
+	],
+	"Ser Hadrien": [
+		"The living make more of quiet than the dead ever did.",
+		"A camp at night resembles a chapel if the fire is kind enough.",
+		"I have stood longer vigils in colder places. This one is gentler company.",
+		"Memory presses less harshly when people keep watch beside one another.",
+		"Do not mistake solemnity for distance. I remain here by choice.",
+		"There is comfort in hearing ordinary life persist after ruin.",
+	],
+	"Maela Thorn": [
+		"I was trying to stand still. Apparently I'm bad at luxury.",
+		"If the perimeter stays this boring, I might have to create my own sport.",
+		"I like dawn best. Everything feels one breath away from motion.",
+		"Someone told me to slow down. I laughed for a very reasonable amount of time.",
+		"The camp's alive tonight. I prefer it that way.",
+		"You ever get the feeling the sky is judging your footwork? Just me?",
+	],
+}
+
 const CAMP_LINES: Dictionary = {
 	"heroic": [
 		"Ready when you are, Commander.",
 		"Rest now. We fight again soon.",
 		"The camp's in good hands.",
+		"We'll hold together. We always do somehow.",
 	],
 	"stoic": [
-		"…",
 		"Need something?",
 		"All quiet.",
+		"I'm here.",
+		"Nothing urgent. That's worth something.",
 	],
 	"warm": [
 		"Good to see you.",
 		"Come by anytime.",
 		"Stay safe out there.",
+		"Sit a while if you need to.",
 	],
 	"compassionate": [
 		"Take care of yourself.",
 		"If you need to talk, I'm here.",
 		"Rest well.",
+		"You've been carrying enough for one day.",
 	],
 	"sly": [
 		"Keeping an eye on things.",
 		"Don't mind me.",
 		"Interesting company we keep.",
+		"Camp tells on people if you listen long enough.",
 	],
 	"scholarly": [
 		"Fascinating place, this camp.",
 		"Observations ongoing.",
 		"Perhaps we can compare notes later.",
+		"I keep learning more than I intended to.",
 	],
 	"flamboyant": [
 		"The camp wouldn't be the same without me.",
 		"Enjoying the atmosphere.",
 		"Always a pleasure.",
+		"Someone has to keep the place from becoming visually tragic.",
 	],
 	"disciplined": [
 		"Standing ready.",
 		"Discipline holds.",
 		"At ease.",
+		"Order first. Comfort after.",
 	],
 	"pragmatic": [
 		"Efficient use of downtime.",
 		"Rest. We'll need it.",
 		"Nothing to report.",
+		"If it's quiet, keep it that way.",
 	],
 	"wild": [
 		"Can't sit still for long.",
 		"Ready to move when you are.",
 		"Camp's too quiet.",
+		"The edges are where the truth usually starts.",
 	],
 	"sardonic": [
 		"Charming as ever.",
 		"Don't let me keep you.",
 		"Surviving. You?",
+		"I'd call this peaceful, but the word might take offense.",
 	],
 	"earnest": [
 		"Glad you're here.",
 		"We'll get through this.",
 		"Thanks for checking in.",
+		"I'm trying to do this right.",
 	],
 	"chaotic": [
 		"Who knows what's next?",
 		"Fun times.",
 		"Something's always happening.",
+		"If nothing is on fire, we call that success.",
 	],
 	"devout": [
 		"Peace be with you.",
 		"The path continues.",
 		"Blessings on the road ahead.",
+		"Quiet can be a kindness.",
 	],
 	"severe": [
 		"State your business.",
 		"Be brief.",
-		"… Yes?",
+		"Yes?",
+		"I am listening.",
 	],
 	"occult": [
 		"The veil is thin here.",
-		"… You feel it too.",
+		"You feel it too.",
 		"Rest. The unknown waits.",
+		"Night has a way of correcting the day's lies.",
 	],
 	"haunted": [
-		"… Sorry. Lost in thought.",
+		"Lost in thought.",
 		"Some days are harder.",
 		"I'm here.",
+		"Memory keeps longer watch than sleep.",
 	],
 	"spirited": [
-		"Hey! Good to see you.",
+		"Hey. Good to see you.",
 		"Don't work too hard.",
 		"Camp's looking good.",
+		"Feels like the air wants something to happen.",
 	],
 	"neutral": [
 		"Good to see you.",
 		"Need something?",
 		"Take care.",
+		"Quiet moment, isn't it?",
 	],
 }
 
-## Returns one short camp line for the given personality key. Falls back to DEFAULT_LINE if missing.
 static func get_line(personality: String) -> String:
 	var key: String = str(personality).strip_edges().to_lower()
 	if key.is_empty():
@@ -149,9 +366,7 @@ static func get_line(personality: String) -> String:
 	var chosen: String = str((lines as Array).pick_random()).strip_edges()
 	return chosen if not chosen.is_empty() else DEFAULT_LINE
 
-## Resolves personality from unit: support_personality on data, else NAME_TO_PERSONALITY[name], else "neutral".
 static func get_personality_for_unit(unit_data: Variant, unit_name: String) -> String:
-	# Only Resource and Dictionary have get(); unit_data can be String after save/load (e.g. path).
 	if unit_data != null and not (unit_data is String):
 		var p: Variant = unit_data.get("support_personality")
 		if p != null:
@@ -166,7 +381,19 @@ static func get_personality_for_unit(unit_data: Variant, unit_name: String) -> S
 		return str(fallback).strip_edges().to_lower()
 	return "neutral"
 
-## Returns one short camp line for the unit (uses personality lookup). Safe if unit_data is null.
+static func get_character_line(unit_name: String) -> String:
+	var name_key: String = str(unit_name).strip_edges()
+	if name_key.is_empty():
+		return ""
+	var lines_v: Variant = CHARACTER_LINES.get(name_key, null)
+	if lines_v == null or not (lines_v is Array) or lines_v.is_empty():
+		return ""
+	var chosen: String = str((lines_v as Array).pick_random()).strip_edges()
+	return chosen
+
 static func get_line_for_unit(unit_data: Variant, unit_name: String) -> String:
+	var character_line: String = get_character_line(unit_name)
+	if character_line != "":
+		return character_line
 	var personality: String = get_personality_for_unit(unit_data, unit_name)
 	return get_line(personality)
