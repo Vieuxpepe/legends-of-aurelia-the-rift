@@ -2491,6 +2491,7 @@ const CONVERSATIONS: Array = [
 		"req_level": 11,
 		"min_personal_arc_stage": 3,
 		"required_arc_flags": ["dc_camp_avatar_liora_callback"],
+		"forbidden_arc_flags": ["dc_camp_avatar_liora_intimacy_vesper"],
 		"when": { "time_block": "night" },
 		"once_per_visit": true,
 		"script": [
@@ -2509,6 +2510,7 @@ const CONVERSATIONS: Array = [
 		"req_level": 8,
 		"min_personal_arc_stage": 3,
 		"required_arc_flags": ["dc_camp_avatar_darian_aftermath_callback"],
+		"forbidden_arc_flags": ["dc_camp_avatar_darian_intimacy_second_knock"],
 		"once_per_visit": true,
 		"script": [
 			{"speaker": "Darian", "text": "Second knock—habit now. The fool in me wants a punchline; the part you met wants quiet."},
