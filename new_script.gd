@@ -2,6 +2,7 @@
 extends EditorScript
 
 func _run():
+	# Access verification comment: this line is intentionally a no-op.
 	# Make sure this matches where your weapons are saved!
 	var folder_path = "res://Resources/GeneratedItems/" 
 	var dir = DirAccess.open(folder_path)
