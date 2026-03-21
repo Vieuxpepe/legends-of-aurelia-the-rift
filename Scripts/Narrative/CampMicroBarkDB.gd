@@ -1810,6 +1810,32 @@ const MICRO_BARKS: Array = [
 		"radius": 140.0,
 		"pair_radius": 88.0,
 	},
+	{
+		"id": "prog_micro_liora_celia_shrine_night_intimacy_habit",
+		"priority": 14,
+		"when": { "time_block": "night" },
+		"required_arc_flags": ["dc_camp_avatar_liora_intimacy_habit_milestone"],
+		"speaker": "Liora",
+		"listener": "Celia",
+		"zone_type": "shrine",
+		"text": "\"I left the second wick untrimmed—longer burn, softer light.\" — \"That's not doctrine.\" — \"No. It's ours. Sit before the camp names it.\"",
+		"once_per_visit": true,
+		"radius": 140.0,
+		"pair_radius": 80.0,
+	},
+	{
+		"id": "prog_micro_darian_branik_fire_night_intimacy_habit",
+		"priority": 14,
+		"when": { "time_block": "night" },
+		"required_arc_flags": ["dc_camp_avatar_darian_intimacy_habit_milestone"],
+		"speaker": "Darian",
+		"listener": "Branik",
+		"zone_type": "fire",
+		"text": "\"Third refill—still no speech.\" — \"Best advertisement you never bought.\" — \"Mask's on the peg; the ladle doesn't need an audience.\"",
+		"once_per_visit": true,
+		"radius": 150.0,
+		"pair_radius": 88.0,
+	},
 ]
 
 static func get_all_micro_barks() -> Array:
