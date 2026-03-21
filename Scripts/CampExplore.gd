@@ -14,6 +14,8 @@ const PLAYER_STEP_BOB_HEIGHT: float = 2.0
 const PLAYER_STEP_BOB_SPEED: float = 9.0
 const PLAYER_MIN_MOVE_SPEED_FOR_BOB: float = 20.0
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
+## Dev-only: when true, F9 dumps direct-conversation + micro-bark diagnostics for the nearest walker (see debug_dump_camp_selection).
+const DEBUG_CAMP_SELECTION_DUMP: bool = true
 
 var _camp_music_tracks: Array[AudioStream] = []
 
@@ -242,6 +244,10 @@ func _input(event: InputEvent) -> void:
 			print("TASKLOG_OPEN_BRANCH_REACHED")
 			print("TASKLOG_OPEN_FUNCTION_CALL =", "_toggle_task_log")
 			_toggle_task_log()
+	if DEBUG_CAMP_SELECTION_DUMP and event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F9 or event.physical_keycode == KEY_F9:
+			debug_dump_camp_selection_for_nearest()
+			get_viewport().set_input_as_handled()
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_try_click_interact(event.position)
 
@@ -301,6 +307,83 @@ func _get_nearest_walker_in_range() -> Node:
 			best_d = d_sq
 			best = w
 	return best
+
+
+func _gather_walker_names_for_debug() -> Array:
+	var out: Array = []
+	for w in _ctx.walker_nodes:
+		if w is CampRosterWalker:
+			out.append((w as CampRosterWalker).unit_name)
+	return out
+
+
+## Dev-only: print why CampConversationDB / micro-barks resolve as they do for this unit. Requires DEBUG_CAMP_SELECTION_DUMP := true, or warns once.
+func debug_dump_camp_selection(unit_name: String) -> void:
+	if not DEBUG_CAMP_SELECTION_DUMP:
+		push_warning("CampExplore: set DEBUG_CAMP_SELECTION_DUMP := true to enable camp selection dumps.")
+		return
+	var un: String = str(unit_name).strip_edges()
+	if un.is_empty():
+		print("[CampSelectionDebug] empty unit_name")
+		return
+	var ctx: Dictionary = _ctx.build_camp_context_dict()
+	var walkers: Array = _gather_walker_names_for_debug()
+	var snap: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
+	var drep: Dictionary = CampConversationDB.build_direct_conversation_debug_report(un, ctx, walkers, snap)
+	print("========== CampSelectionDebug direct conversation: ", un, " ==========")
+	print("  context: time_block=", drep.get("context_time_block"), " visit_theme=", drep.get("context_visit_theme"), " progress_level=", drep.get("context_progress_level"))
+	print("  eligible_count=", drep.get("eligible_count"))
+	var win: Dictionary = drep.get("winner", {}) as Dictionary
+	if not win.is_empty():
+		print("  WINNER id=", win.get("id"), " score=", drep.get("winner_score"), " (tie-break: higher score, then lexicographically smaller id if within 0.001)")
+	else:
+		print("  WINNER: <none>")
+	var ru: Variant = drep.get("runners_up", [])
+	if ru is Array:
+		for item in ru as Array:
+			if item is Dictionary:
+				var it: Dictionary = item
+				print("  runner_up id=", it.get("id"), " score=", it.get("score"))
+	var bl: Variant = drep.get("blocked_high_priority", [])
+	if bl is Array:
+		print("  blocked (this unit, by priority):")
+		for b in bl as Array:
+			if b is Dictionary:
+				print("    - id=", (b as Dictionary).get("id"), " prio=", (b as Dictionary).get("priority"), " :: ", (b as Dictionary).get("reason"))
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var mrep: Dictionary = _ambient.debug_build_micro_bark_report(now, un)
+	print("========== CampSelectionDebug micro-bark (global pool; blocked filtered to unit) ==========")
+	print("  context: time_block=", mrep.get("context_time_block"), " visit_theme=", mrep.get("context_visit_theme"), " progress_level=", mrep.get("context_progress_level"))
+	print("  eligible_count=", mrep.get("eligible_count"))
+	var mw: Dictionary = mrep.get("winner", {}) as Dictionary
+	if not mw.is_empty():
+		print("  WINNER id=", mw.get("id"), " score=", mw.get("score"), " pair=", mw.get("speaker"), " -> ", mw.get("listener"))
+	else:
+		print("  WINNER: <none>")
+	var mru: Variant = mrep.get("runners_up", [])
+	if mru is Array:
+		for item2 in mru as Array:
+			if item2 is Dictionary:
+				var it2: Dictionary = item2
+				print("  runner_up id=", it2.get("id"), " score=", it2.get("score"))
+	var mb: Variant = mrep.get("blocked_involving_unit", [])
+	if mb is Array and (mb as Array).size() > 0:
+		print("  blocked (entries involving ", un, ", by priority):")
+		for b2 in mb as Array:
+			if b2 is Dictionary:
+				print("    - id=", (b2 as Dictionary).get("id"), " prio=", (b2 as Dictionary).get("priority"), " :: ", (b2 as Dictionary).get("reason"))
+	print("========== CampSelectionDebug end ==========")
+
+
+func debug_dump_camp_selection_for_nearest() -> void:
+	if not DEBUG_CAMP_SELECTION_DUMP:
+		push_warning("CampExplore: set DEBUG_CAMP_SELECTION_DUMP := true to enable camp selection dumps.")
+		return
+	var n: Node = _get_nearest_walker_in_range()
+	if n == null or not (n is CampRosterWalker):
+		print("[CampSelectionDebug] no CampRosterWalker within interact range")
+		return
+	debug_dump_camp_selection((n as CampRosterWalker).unit_name)
 
 
 func _update_interact_prompt() -> void:

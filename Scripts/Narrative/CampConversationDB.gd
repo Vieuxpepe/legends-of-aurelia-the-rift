@@ -2875,28 +2875,36 @@ static func when_matches(entry: Dictionary, context: Dictionary) -> bool:
 	return true
 
 
-static func conversation_matches(
+## Empty string means the entry matches; otherwise first failed gate (dev diagnostics only).
+static func conversation_match_failure_reason(
 	entry: Dictionary,
 	primary_unit: String,
 	context: Dictionary,
 	walker_names: Array,
 	player_state: Dictionary
-) -> bool:
+) -> String:
 	var pu: String = _normalize_name(entry.get("primary_unit", ""))
 	if pu == "" or _normalize_name(primary_unit) != pu:
-		return false
+		return "wrong primary_unit"
 	var script_v: Variant = entry.get("script", [])
 	if not (script_v is Array) or (script_v as Array).is_empty():
-		return false
+		return "empty script"
 	if not when_matches(entry, context):
-		return false
+		var when_d: Variant = entry.get("when", {})
+		var want_tb: String = ""
+		if when_d is Dictionary:
+			want_tb = str((when_d as Dictionary).get("time_block", "")).strip_edges().to_lower()
+		var got_tb: String = str(context.get("time_block", "")).strip_edges().to_lower()
+		if want_tb != "":
+			return "time_block needs '%s' (context has '%s')" % [want_tb, got_tb]
+		return "when clause / time_block mismatch"
 	var prog: int = maxi(0, int(context.get("progress_level", 0)))
 	var req_lv: int = int(entry.get("req_level", 0))
 	if prog < req_lv:
-		return false
+		return "req_level needs %d (progress_level %d)" % [req_lv, prog]
 	var max_lv: int = int(entry.get("max_progress_level", -1))
 	if max_lv >= 0 and prog > max_lv:
-		return false
+		return "max_progress_level exceeded (max %d, progress %d)" % [max_lv, prog]
 	var story_ctx: Variant = context.get("story_flags", {})
 	var story_flags: Dictionary = story_ctx if story_ctx is Dictionary else {}
 	var req_story_v: Variant = entry.get("required_story_flags", [])
@@ -2904,13 +2912,13 @@ static func conversation_matches(
 		for sf in req_story_v as Array:
 			var sfn: String = _normalize_name(str(sf))
 			if sfn != "" and not bool(story_flags.get(sfn, false)):
-				return false
+				return "missing required_story_flag: %s" % sfn
 	var forb_story_v: Variant = entry.get("forbidden_story_flags", [])
 	if forb_story_v is Array:
 		for sf2 in forb_story_v as Array:
 			var sfn2: String = _normalize_name(str(sf2))
 			if sfn2 != "" and bool(story_flags.get(sfn2, false)):
-				return false
+				return "blocked by forbidden_story_flag: %s" % sfn2
 	if entry.has("moods"):
 		var moods_v: Variant = entry.get("moods", [])
 		if moods_v is Array:
@@ -2921,7 +2929,7 @@ static func conversation_matches(
 					ok_m = true
 					break
 			if not ok_m:
-				return false
+				return "moods mismatch (camp_mood '%s' not in entry moods)" % cm
 	var vt: String = str(context.get("visit_theme", "normal")).strip_edges().to_lower()
 	if entry.has("preferred_visit_themes"):
 		var pv: Variant = entry.get("preferred_visit_themes", [])
@@ -2932,13 +2940,13 @@ static func conversation_matches(
 					hit = true
 					break
 			if not hit:
-				return false
+				return "preferred_visit_themes: no match (visit_theme '%s')" % vt
 	if entry.has("avoided_visit_themes"):
 		var av: Variant = entry.get("avoided_visit_themes", [])
 		if av is Array:
 			for item2 in av as Array:
 				if str(item2).strip_edges().to_lower() == vt:
-					return false
+					return "avoided_visit_theme: '%s'" % vt
 	var req_names: Variant = entry.get("requires_units_present", [])
 	if req_names is Array:
 		var lowered: Dictionary = {}
@@ -2951,12 +2959,12 @@ static func conversation_matches(
 			if rn == "commander":
 				continue
 			if not lowered.has(rn):
-				return false
+				return "requires_units_present missing walker: %s" % str(req).strip_edges()
 	var min_tier: String = str(entry.get("req_min_relationship_tier", "")).strip_edges()
 	if min_tier != "" and CampaignManager:
 		var cur: String = CampaignManager.get_avatar_relationship_tier(pu)
 		if not tier_at_least(cur, min_tier):
-			return false
+			return "req_min_relationship_tier needs '%s' (current '%s')" % [min_tier, cur]
 	var req_tiers_v: Variant = entry.get("req_relationship_tiers", [])
 	if req_tiers_v is Array and (req_tiers_v as Array).size() > 0 and CampaignManager:
 		var cur2: String = CampaignManager.get_avatar_relationship_tier(pu)
@@ -2966,35 +2974,117 @@ static func conversation_matches(
 				allowed = true
 				break
 		if not allowed:
-			return false
+			return "req_relationship_tiers: tier '%s' not allowed" % cur2
 	if entry.has("min_personal_arc_stage") and CampaignManager:
-		if CampaignManager.get_personal_arc_stage(pu) < int(entry.get("min_personal_arc_stage", 0)):
-			return false
+		var st: int = CampaignManager.get_personal_arc_stage(pu)
+		var need_st: int = int(entry.get("min_personal_arc_stage", 0))
+		if st < need_st:
+			return "min_personal_arc_stage needs %d (stage %d on %s)" % [need_st, st, pu]
 	if entry.has("max_personal_arc_stage") and CampaignManager:
-		if CampaignManager.get_personal_arc_stage(pu) > int(entry.get("max_personal_arc_stage", 9999)):
-			return false
+		var st2: int = CampaignManager.get_personal_arc_stage(pu)
+		var cap_st: int = int(entry.get("max_personal_arc_stage", 9999))
+		if st2 > cap_st:
+			return "max_personal_arc_stage exceeded (max %d, stage %d)" % [cap_st, st2]
 	var req_flags_v: Variant = entry.get("required_arc_flags", [])
 	if req_flags_v is Array and CampaignManager:
 		for rflg in req_flags_v as Array:
 			var rf: String = _normalize_name(str(rflg))
 			if rf != "" and not CampaignManager.has_arc_flag(pu, rf):
-				return false
+				return "missing required_arc_flag on %s: %s" % [pu, rf]
 	var forb_flags_v: Variant = entry.get("forbidden_arc_flags", [])
 	if forb_flags_v is Array and CampaignManager:
 		for fflg in forb_flags_v as Array:
 			var ff: String = _normalize_name(str(fflg))
 			if ff != "" and CampaignManager.has_arc_flag(pu, ff):
-				return false
+				return "blocked by forbidden_arc_flag on %s: %s" % [pu, ff]
 	var eid: String = _normalize_name(entry.get("id", ""))
 	if bool(entry.get("once_ever", false)) and CampaignManager and eid != "":
 		if CampaignManager.has_seen_camp_memory_scene(eid):
-			return false
+			return "once_ever already seen (camp memory)"
 	if bool(entry.get("once_per_visit", false)):
 		var vc_raw: Variant = player_state.get("visit_consumed", {})
 		var consumed: Dictionary = vc_raw if vc_raw is Dictionary else {}
 		if bool(consumed.get(eid, false)):
-			return false
-	return true
+			return "once_per_visit already consumed this visit"
+	return ""
+
+
+static func conversation_matches(
+	entry: Dictionary,
+	primary_unit: String,
+	context: Dictionary,
+	walker_names: Array,
+	player_state: Dictionary
+) -> bool:
+	return conversation_match_failure_reason(entry, primary_unit, context, walker_names, player_state) == ""
+
+
+static func build_direct_conversation_debug_report(
+	unit_name: String,
+	context: Dictionary,
+	walker_names: Array,
+	player_state: Dictionary,
+	max_blocked: int = 8,
+	max_runners_up: int = 5
+) -> Dictionary:
+	var unn: String = _normalize_name(unit_name)
+	var eligible: Array = []
+	for raw in CONVERSATIONS:
+		if not (raw is Dictionary):
+			continue
+		var e: Dictionary = raw
+		if conversation_match_failure_reason(e, unit_name, context, walker_names, player_state) != "":
+			continue
+		var eid: String = _normalize_name(e.get("id", ""))
+		var sc: float = score_conversation(e, context)
+		eligible.append({"id": eid, "score": sc, "priority": float(e.get("priority", 0))})
+	eligible.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var sa: float = float(a.get("score", 0.0))
+		var sb: float = float(b.get("score", 0.0))
+		if absf(sa - sb) >= 0.001:
+			return sa > sb
+		return str(a.get("id", "")) < str(b.get("id", ""))
+	)
+	var winner: Dictionary = {}
+	var win_score: float = -1e12
+	if eligible.size() > 0:
+		winner = eligible[0]
+		win_score = float(winner.get("score", 0.0))
+	var runners: Array = []
+	var lim: int = mini(max_runners_up + 1, eligible.size())
+	for i in range(1, lim):
+		runners.append(eligible[i])
+	var blocked: Array = []
+	for raw2 in CONVERSATIONS:
+		if not (raw2 is Dictionary):
+			continue
+		var e2: Dictionary = raw2
+		if _normalize_name(e2.get("primary_unit", "")) != unn:
+			continue
+		var why: String = conversation_match_failure_reason(e2, unit_name, context, walker_names, player_state)
+		if why == "":
+			continue
+		blocked.append({
+			"id": _normalize_name(e2.get("id", "")),
+			"reason": why,
+			"priority": float(e2.get("priority", 0.0)),
+		})
+	blocked.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a.get("priority", 0.0)) > float(b.get("priority", 0.0))
+	)
+	if blocked.size() > max_blocked:
+		blocked = blocked.slice(0, max_blocked)
+	return {
+		"unit": unn,
+		"context_time_block": str(context.get("time_block", "")),
+		"context_visit_theme": str(context.get("visit_theme", "")),
+		"context_progress_level": int(context.get("progress_level", 0)),
+		"winner": winner,
+		"winner_score": win_score,
+		"runners_up": runners,
+		"blocked_high_priority": blocked,
+		"eligible_count": eligible.size(),
+	}
 
 
 static func score_conversation(entry: Dictionary, context: Dictionary) -> float:

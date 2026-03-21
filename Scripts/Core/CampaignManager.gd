@@ -1997,12 +1997,12 @@ func apply_camp_direct_progression_effects(unit_name: String, fx: Dictionary) ->
 				entry["arc_flags"][str(fk)] = true
 
 
-const BATTLE_RESONANCE_FLAG_KEYS: PackedStringArray = PackedStringArray([
+const BATTLE_RESONANCE_FLAG_KEYS: Array[String] = [
 	"showed_mercy_under_pressure",
 	"protected_civilians_first",
 	"delegated_under_pressure",
 	"chose_harsh_efficiency",
-])
+]
 
 
 ## Story battles only: set a cumulative resonance flag (idempotent). Ignored if key is not in BATTLE_RESONANCE_FLAG_KEYS.

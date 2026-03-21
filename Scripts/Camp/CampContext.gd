@@ -553,45 +553,57 @@ func was_pair_recently_active(name_a: String, name_b: String, within_visits: int
 	return delta_visits >= 0 and delta_visits <= within_visits
 
 
+func content_condition_matches(entry: Dictionary, speaker_name: String, listener_name: String = "") -> bool:
+	return content_condition_mismatch_reason(entry, speaker_name, listener_name) == ""
+
+
+## Dev-only: why content_condition_matches failed, or "" if pass.
+func content_condition_mismatch_reason(entry: Dictionary, speaker_name: String, listener_name: String = "") -> String:
+	if not CampaignManager:
+		if bool(entry.get("requires_injured_speaker", false)) or bool(entry.get("requires_fatigued_speaker", false)) or bool(entry.get("requires_injured_listener", false)) or bool(entry.get("requires_fatigued_listener", false)):
+			return "content_condition: requires injury/fatigue but no CampaignManager"
+		return ""
+	var speaker: String = str(speaker_name).strip_edges()
+	var listener: String = str(listener_name).strip_edges()
+	if bool(entry.get("requires_injured_speaker", false)) and not CampaignManager.is_unit_injured(speaker):
+		return "requires_injured_speaker not met (%s)" % speaker
+	if bool(entry.get("requires_fatigued_speaker", false)) and not CampaignManager.is_unit_fatigued(speaker):
+		return "requires_fatigued_speaker not met (%s)" % speaker
+	if bool(entry.get("requires_injured_listener", false)):
+		if listener == "" or not CampaignManager.is_unit_injured(listener):
+			return "requires_injured_listener not met (%s)" % listener
+	if bool(entry.get("requires_fatigued_listener", false)):
+		if listener == "" or not CampaignManager.is_unit_fatigued(listener):
+			return "requires_fatigued_listener not met (%s)" % listener
+	return ""
+
+
 func pair_memory_matches(entry: Dictionary, name_a: String, name_b: String) -> bool:
+	return pair_memory_mismatch_reason(entry, name_a, name_b) == ""
+
+
+## Dev-only: why pair_memory_matches failed, or "" if pass.
+func pair_memory_mismatch_reason(entry: Dictionary, name_a: String, name_b: String) -> String:
 	var has_memory_gate: bool = entry.has("min_familiarity") or entry.has("max_familiarity") or entry.has("min_tension") or entry.has("max_tension") or entry.has("recent_within_visits")
 	if not has_memory_gate:
-		return true
+		return ""
 	var a_name: String = str(name_a).strip_edges()
 	var b_name: String = str(name_b).strip_edges()
 	if a_name.is_empty() or b_name.is_empty():
-		return true
+		return ""
 	var stats: Dictionary = get_pair_stats(a_name, b_name)
 	var familiarity: int = int(stats.get("familiarity", 0))
 	var tension: int = int(stats.get("tension", 0))
 	if entry.has("min_familiarity") and familiarity < int(entry.get("min_familiarity", 0)):
-		return false
+		return "min_familiarity needs %d (pair has %d)" % [int(entry.get("min_familiarity", 0)), familiarity]
 	if entry.has("max_familiarity") and familiarity > int(entry.get("max_familiarity", 999999)):
-		return false
+		return "max_familiarity exceeded (max %d, pair has %d)" % [int(entry.get("max_familiarity", 999999)), familiarity]
 	if entry.has("min_tension") and tension < int(entry.get("min_tension", 0)):
-		return false
+		return "min_tension needs %d (pair has %d)" % [int(entry.get("min_tension", 0)), tension]
 	if entry.has("max_tension") and tension > int(entry.get("max_tension", 999999)):
-		return false
+		return "max_tension exceeded (max %d, pair has %d)" % [int(entry.get("max_tension", 999999)), tension]
 	if entry.has("recent_within_visits"):
 		var within_visits: int = int(entry.get("recent_within_visits", 0))
 		if not was_pair_recently_active(a_name, b_name, within_visits):
-			return false
-	return true
-
-
-func content_condition_matches(entry: Dictionary, speaker_name: String, listener_name: String = "") -> bool:
-	if not CampaignManager:
-		return not bool(entry.get("requires_injured_speaker", false)) and not bool(entry.get("requires_fatigued_speaker", false)) and not bool(entry.get("requires_injured_listener", false)) and not bool(entry.get("requires_fatigued_listener", false))
-	var speaker: String = str(speaker_name).strip_edges()
-	var listener: String = str(listener_name).strip_edges()
-	if bool(entry.get("requires_injured_speaker", false)) and not CampaignManager.is_unit_injured(speaker):
-		return false
-	if bool(entry.get("requires_fatigued_speaker", false)) and not CampaignManager.is_unit_fatigued(speaker):
-		return false
-	if bool(entry.get("requires_injured_listener", false)):
-		if listener == "" or not CampaignManager.is_unit_injured(listener):
-			return false
-	if bool(entry.get("requires_fatigued_listener", false)):
-		if listener == "" or not CampaignManager.is_unit_fatigued(listener):
-			return false
-	return true
+			return "recent_within_visits gate not met (within_visits=%d)" % within_visits
+	return ""

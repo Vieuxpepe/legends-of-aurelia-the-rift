@@ -1835,6 +1835,148 @@ func _collect_passing_observers(entry: Dictionary, existing_participants: Array,
 		out.append(candidate.get("walker"))
 	return out
 
+
+func _debug_ambient_speaker_progression_reason(speaker_name: String, entry: Dictionary) -> String:
+	if entry.is_empty():
+		return ""
+	var sp: String = str(speaker_name).strip_edges()
+	if sp.is_empty():
+		return "empty micro-bark speaker"
+	if not CampaignManager:
+		return "no CampaignManager (cannot check arc / personal stage)"
+	if entry.has("min_personal_arc_stage"):
+		if CampaignManager.get_personal_arc_stage(sp) < int(entry.get("min_personal_arc_stage", 0)):
+			return "min_personal_arc_stage not met on %s" % sp
+	if entry.has("max_personal_arc_stage"):
+		if CampaignManager.get_personal_arc_stage(sp) > int(entry.get("max_personal_arc_stage", 999)):
+			return "max_personal_arc_stage exceeded on %s" % sp
+	var req_v: Variant = entry.get("required_arc_flags", [])
+	if req_v is Array:
+		for flg in req_v as Array:
+			var fn: String = str(flg).strip_edges()
+			if fn != "" and not CampaignManager.has_arc_flag(sp, fn):
+				return "missing required_arc_flag on %s: %s" % [sp, fn]
+	var forb_v: Variant = entry.get("forbidden_arc_flags", [])
+	if forb_v is Array:
+		for flg2 in forb_v as Array:
+			var fn2: String = str(flg2).strip_edges()
+			if fn2 != "" and CampaignManager.has_arc_flag(sp, fn2):
+				return "blocked by forbidden_arc_flag on %s: %s" % [sp, fn2]
+	return ""
+
+
+func _debug_micro_bark_hard_gate_reason(bark: Dictionary, context: Dictionary, now: float, player: Node2D) -> String:
+	if bark.get("once_per_visit", false):
+		var mid: String = str(bark.get("id", "")).strip_edges()
+		if mid != "" and _micro_bark_shown_this_visit.get(mid, false):
+			return "once_per_visit already shown this visit"
+	var ws: String = CAMP_MICRO_BARK_DB.when_or_story_mismatch_reason(bark, context)
+	if ws != "":
+		return ws
+	var speaker: String = str(bark.get("speaker", "")).strip_edges()
+	var listener: String = str(bark.get("listener", "")).strip_edges()
+	if speaker.is_empty() or listener.is_empty():
+		return "missing speaker or listener"
+	var prog_r: String = _debug_ambient_speaker_progression_reason(speaker, bark)
+	if prog_r != "":
+		return prog_r
+	var cc: String = _ctx.content_condition_mismatch_reason(bark, speaker, listener)
+	if cc != "":
+		return cc
+	var pm: String = _ctx.pair_memory_mismatch_reason(bark, speaker, listener)
+	if pm != "":
+		return pm
+	var speaker_walker: Node = _ctx.find_walker_by_name(speaker)
+	var listener_walker: Node = _ctx.find_walker_by_name(listener)
+	if speaker_walker == null:
+		return "speaker walker not in camp: %s" % speaker
+	if listener_walker == null:
+		return "listener walker not in camp: %s" % listener
+	var pair_radius: float = float(bark.get("pair_radius", CAMP_MICRO_BARK_DB.MICRO_BARK_DEFAULT_PAIR_RADIUS)) * 1.1
+	if not _ctx.are_walkers_near_each_other(speaker_walker, listener_walker, pair_radius):
+		return "pair not within pair_radius (speakers too far apart)"
+	var radius: float = float(bark.get("radius", CAMP_MICRO_BARK_DB.MICRO_BARK_DEFAULT_RADIUS)) * 1.1
+	if player == null:
+		return "no player node"
+	if player.global_position.distance_squared_to(speaker_walker.global_position) > radius * radius:
+		return "player not within radius of speaker"
+	if bark.has("zone_type"):
+		var zt: String = str(bark.get("zone_type", "")).strip_edges()
+		if zt != "" and not _ctx.is_walker_near_zone(speaker_walker, zt):
+			return "speaker not near zone_type: %s" % zt
+	if _minor_entry_cooldown_blocks("micro", bark, now):
+		return "micro entry cooldown active"
+	return ""
+
+
+func _debug_micro_bark_final_score(bark: Dictionary, speaker: String, listener: String, now: float) -> float:
+	var score: float = _ctx.score_with_relationship_bias(float(bark.get("priority", 0)), bark, speaker, listener)
+	score += _ctx.visit_theme_score_adjust(bark, "micro")
+	score += _phase_score_bias("micro", now)
+	score += _theme_mix_event_bias(bark, "micro")
+	score -= _budget_minor_penalty()
+	score -= _pair_prominence_penalty(_ctx.make_pair_key(speaker, listener))
+	score -= _minor_antispam_score_penalty("micro", bark, speaker)
+	score -= _minor_same_speaker_score_penalty(speaker, now)
+	score -= _speaker_balance_penalty_avg_two(speaker, listener)
+	score -= _get_recent_history_penalty("micro", bark, speaker)
+	return score
+
+
+## Dev-only: snapshot of micro-bark scoring vs live _get_eligible_micro_bark (same gates and score).
+func debug_build_micro_bark_report(now: float, unit_filter: String = "", max_blocked_for_unit: int = 10) -> Dictionary:
+	var player: Node2D = _player_node()
+	var context: Dictionary = _ctx.build_camp_context_dict()
+	var uf: String = str(unit_filter).strip_edges()
+	var eligible: Array = []
+	var blocked_for_unit: Array = []
+	for entry in CAMP_MICRO_BARK_DB.get_all_micro_barks():
+		if not (entry is Dictionary):
+			continue
+		var bark: Dictionary = entry
+		var bid: String = str(bark.get("id", "")).strip_edges()
+		var spk: String = str(bark.get("speaker", "")).strip_edges()
+		var lst: String = str(bark.get("listener", "")).strip_edges()
+		var involves: bool = uf.is_empty() or spk == uf or lst == uf
+		var hard: String = _debug_micro_bark_hard_gate_reason(bark, context, now, player)
+		if hard != "":
+			if involves and not uf.is_empty():
+				blocked_for_unit.append({
+					"id": bid,
+					"reason": hard,
+					"priority": float(bark.get("priority", 0.0)),
+				})
+			continue
+		var fs: float = _debug_micro_bark_final_score(bark, spk, lst, now)
+		eligible.append({"id": bid, "score": fs, "speaker": spk, "listener": lst, "priority": float(bark.get("priority", 0.0))})
+	eligible.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var sa: float = float(a.get("score", 0.0))
+		var sb: float = float(b.get("score", 0.0))
+		return sa > sb
+	)
+	blocked_for_unit.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a.get("priority", 0.0)) > float(b.get("priority", 0.0))
+	)
+	if blocked_for_unit.size() > max_blocked_for_unit:
+		blocked_for_unit = blocked_for_unit.slice(0, max_blocked_for_unit)
+	var winner: Dictionary = {}
+	if eligible.size() > 0:
+		winner = eligible[0]
+	var runners: Array = []
+	for i in range(1, mini(6, eligible.size())):
+		runners.append(eligible[i])
+	return {
+		"unit_filter": uf,
+		"context_time_block": str(context.get("time_block", "")),
+		"context_visit_theme": str(context.get("visit_theme", "")),
+		"context_progress_level": int(context.get("progress_level", 0)),
+		"winner": winner,
+		"runners_up": runners,
+		"eligible_count": eligible.size(),
+		"blocked_involving_unit": blocked_for_unit,
+	}
+
+
 func _get_eligible_micro_bark(now: float) -> Dictionary:
 	var player: Node2D = _player_node()
 	if player == null:

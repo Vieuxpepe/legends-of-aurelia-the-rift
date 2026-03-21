@@ -1895,17 +1895,17 @@ const MICRO_BARKS: Array = [
 static func get_all_micro_barks() -> Array:
 	return MICRO_BARKS.duplicate()
 
-static func when_matches(entry: Dictionary, context: Dictionary) -> bool:
+## Dev-only: first mismatch reason, or "" if when_matches would pass.
+static func when_or_story_mismatch_reason(entry: Dictionary, context: Dictionary) -> String:
 	var when_dict: Variant = entry.get("when", {})
-	if not (when_dict is Dictionary):
-		pass
-	else:
+	if when_dict is Dictionary:
 		for k in (when_dict as Dictionary).keys():
+			var ks: String = str(k)
 			var expected = (when_dict as Dictionary).get(k)
-			if not context.has(k):
-				return false
-			if str(context.get(k)) != str(expected):
-				return false
+			if not context.has(ks):
+				return "when: context missing key '%s'" % ks
+			if str(context.get(ks)) != str(expected):
+				return "when: key '%s' needs '%s' (context has '%s')" % [ks, str(expected), str(context.get(ks))]
 	if entry.has("moods"):
 		var moods_v: Variant = entry.get("moods", [])
 		if moods_v is Array:
@@ -1917,19 +1917,22 @@ static func when_matches(entry: Dictionary, context: Dictionary) -> bool:
 					matched = true
 					break
 			if not matched:
-				return false
-	if not _story_progress_matches(entry, context):
-		return false
-	return true
+				return "moods mismatch (camp_mood '%s' not in entry moods)" % want_mood
+	return _story_progress_mismatch_reason(entry, context)
 
-static func _story_progress_matches(entry: Dictionary, context: Dictionary) -> bool:
+
+static func when_matches(entry: Dictionary, context: Dictionary) -> bool:
+	return when_or_story_mismatch_reason(entry, context) == ""
+
+
+static func _story_progress_mismatch_reason(entry: Dictionary, context: Dictionary) -> String:
 	var progress_level: int = int(context.get("progress_level", 0))
 	var min_level: int = int(entry.get("min_progress_level", -1))
 	if min_level >= 0 and progress_level < min_level:
-		return false
+		return "min_progress_level needs %d (progress_level %d)" % [min_level, progress_level]
 	var max_level: int = int(entry.get("max_progress_level", -1))
 	if max_level >= 0 and progress_level > max_level:
-		return false
+		return "max_progress_level exceeded (max %d, progress %d)" % [max_level, progress_level]
 	var flags_v: Variant = context.get("story_flags", {})
 	var story_flags: Dictionary = flags_v if flags_v is Dictionary else {}
 	var req_v: Variant = entry.get("required_story_flags", [])
@@ -1939,7 +1942,7 @@ static func _story_progress_matches(entry: Dictionary, context: Dictionary) -> b
 			if token == "":
 				continue
 			if not bool(story_flags.get(token, false)):
-				return false
+				return "missing required_story_flag: %s" % token
 	var block_v: Variant = entry.get("blocked_story_flags", [])
 	if block_v is Array:
 		for token_v2 in (block_v as Array):
@@ -1947,5 +1950,8 @@ static func _story_progress_matches(entry: Dictionary, context: Dictionary) -> b
 			if token2 == "":
 				continue
 			if bool(story_flags.get(token2, false)):
-				return false
-	return true
+				return "blocked by blocked_story_flag: %s" % token2
+	return ""
+
+static func _story_progress_matches(entry: Dictionary, context: Dictionary) -> bool:
+	return _story_progress_mismatch_reason(entry, context) == ""
