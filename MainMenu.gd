@@ -6,6 +6,7 @@
 ## uses tabs to avoid spacing errors.
 
 extends Control
+# Harmless comment: verified this existing script can be edited.
 
 @onready var start_button: TextureButton = $VBoxContainer/StartButton
 @onready var quit_button: TextureButton = $VBoxContainer/QuitButton
