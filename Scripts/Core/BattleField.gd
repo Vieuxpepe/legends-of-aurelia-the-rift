@@ -258,6 +258,7 @@ var detailed_unit_info_close_btn: Button
 var forecast_atk_support_label: Label
 var forecast_def_support_label: Label
 var forecast_instruction_label: Label
+var forecast_reaction_label: Label
 
 
 # =============================================================================
@@ -2168,9 +2169,19 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 				ins += " Talk = recruit (ends turn)."
 			forecast_instruction_label.text = ins
 	
+	if forecast_reaction_label:
+		var rsum: String = _build_forecast_reaction_summary(attacker, defender, atk_wpn)
+		if rsum.is_empty():
+			forecast_reaction_label.visible = false
+			forecast_reaction_label.text = ""
+		else:
+			forecast_reaction_label.text = rsum
+			forecast_reaction_label.visible = true
+	
 	if is_instance_valid(target_cursor):
 		target_cursor.z_index = 80
-		target_cursor.global_position = defender.global_position + Vector2(float(CELL_SIZE.x) * 0.5, float(CELL_SIZE.y) * 0.5)
+		# Match main Cursor: parent sits on tile top-left; child Sprite2D (~half cell + texture offset) centers the art.
+		target_cursor.global_position = defender.global_position
 		target_cursor.visible = true
 	
 	forecast_panel.visible = true
@@ -2195,6 +2206,9 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 		forecast_atk_support_label.visible = false
 	if forecast_def_support_label:
 		forecast_def_support_label.visible = false
+	if forecast_reaction_label:
+		forecast_reaction_label.visible = false
+		forecast_reaction_label.text = ""
 	
 	forecast_panel.visible = false
 	if is_instance_valid(target_cursor):
@@ -10780,6 +10794,64 @@ func _get_forecast_support_text(unit: Node2D) -> String:
 	return "SUPPORT: " + "  |  ".join(parts)
 
 
+func _is_forecast_allied_unit(unit: Node2D) -> bool:
+	if unit == null:
+		return false
+	return unit.get_parent() == player_container or (ally_container != null and unit.get_parent() == ally_container)
+
+
+## Lines for support reactions + burn hints; mirrors execute_combat / _apply_hit_with_support_reactions / Dual Strike gates (no balance changes).
+func _build_forecast_reaction_summary(attacker: Node2D, defender: Node2D, atk_wpn: Resource) -> String:
+	var lines: Array[String] = []
+	if attacker == null or defender == null:
+		return ""
+
+	var staff: bool = atk_wpn != null and (
+		atk_wpn.get("is_healing_staff") == true
+		or atk_wpn.get("is_buff_staff") == true
+		or atk_wpn.get("is_debuff_staff") == true
+	)
+	if staff:
+		lines.append("Staff: Guard / Dual Strike / Defy Death do not apply to this exchange.")
+		return "\n".join(lines)
+
+	# Dual Strike: allied attacker only; same gates as execute_combat (non-staff).
+	if _is_forecast_allied_unit(attacker):
+		var actx: Dictionary = get_best_support_context(attacker)
+		var apart: Node2D = actx.get("partner", null) as Node2D
+		var arank: int = int(actx.get("rank", 0))
+		if apart != null and arank >= 2 and bool(actx.get("can_react", false)):
+			var dual_pct: int = SUPPORT_DUAL_STRIKE_CHANCE_RANK3 if arank >= 3 else SUPPORT_DUAL_STRIKE_CHANCE_RANK2
+			dual_pct += int(get_relationship_combat_modifiers(attacker).get("support_chance_bonus", 0))
+			lines.append("Dual Strike chance (partner bonus hit after yours): ~%d%%" % clampi(dual_pct, 0, 100))
+
+	# Guard & Defy Death: allied defender only; matches get_best_support_context + _apply_hit_with_support_reactions.
+	if _is_forecast_allied_unit(defender):
+		var dctx: Dictionary = get_best_support_context(defender)
+		var dpartner: Node2D = dctx.get("partner", null) as Node2D
+		var drank: int = int(dctx.get("rank", 0))
+		var dcan: bool = bool(dctx.get("can_react", false))
+		if dpartner != null and drank >= 2 and dcan:
+			var guard_pct: int = SUPPORT_GUARD_CHANCE_RANK3 if drank >= 3 else SUPPORT_GUARD_CHANCE_RANK2
+			guard_pct += int(get_relationship_combat_modifiers(defender).get("support_chance_bonus", 0))
+			lines.append("Guard chance (partner takes this hit): ~%d%%" % clampi(guard_pct, 0, 100))
+		if dpartner != null and drank >= 3 and dcan:
+			if bool(_defy_death_used.get(defender.get_instance_id(), false)):
+				lines.append("Defy Death: already used this battle for this unit.")
+			else:
+				lines.append("Defy Death: if a hit here would kill, survive at 1 HP once (A-rank bond).")
+
+	if defender.has_meta("is_burning") and defender.get_meta("is_burning") == true:
+		lines.append("Target is burning (DoT — hook only until turn processing exists).")
+
+	if attacker.get("ability") == "Hellfire":
+		lines.append("Hellfire: strong minigame outcome can ignite (sets burn for future turns).")
+
+	if lines.is_empty():
+		return ""
+	return "\n".join(lines)
+
+
 func _ensure_forecast_support_labels() -> void:
 	if forecast_panel == null:
 		return
@@ -10805,14 +10877,34 @@ func _ensure_forecast_support_labels() -> void:
 	if forecast_instruction_label == null:
 		forecast_instruction_label = Label.new()
 		forecast_instruction_label.name = "ForecastInstruction"
-		forecast_instruction_label.position = Vector2(8, 168)
-		forecast_instruction_label.size = Vector2(384, 32)
+		forecast_instruction_label.position = Vector2(8, 148)
+		forecast_instruction_label.size = Vector2(384, 26)
 		forecast_instruction_label.add_theme_font_size_override("font_size", 11)
 		forecast_instruction_label.add_theme_color_override("font_color", Color(0.78, 0.82, 0.9))
 		forecast_instruction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		forecast_instruction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		forecast_instruction_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		forecast_panel.add_child(forecast_instruction_label)
+
+	if forecast_reaction_label == null:
+		forecast_reaction_label = Label.new()
+		forecast_reaction_label.name = "ForecastReactionSummary"
+		forecast_reaction_label.position = Vector2(8, 174)
+		forecast_reaction_label.size = Vector2(384, 28)
+		forecast_reaction_label.add_theme_font_size_override("font_size", 10)
+		forecast_reaction_label.add_theme_color_override("font_color", Color(0.90, 0.84, 0.62))
+		forecast_reaction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		forecast_reaction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		forecast_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		forecast_panel.add_child(forecast_reaction_label)
+
+	# Keep bottom stack above Confirm/Cancel (~y 201+).
+	if forecast_instruction_label != null:
+		forecast_instruction_label.position = Vector2(8, 148)
+		forecast_instruction_label.size = Vector2(384, 26)
+	if forecast_reaction_label != null:
+		forecast_reaction_label.position = Vector2(8, 174)
+		forecast_reaction_label.size = Vector2(384, 28)
 
 func apply_campaign_settings() -> void:
 	camera_follows_enemies = CampaignManager.battle_follow_enemy_camera

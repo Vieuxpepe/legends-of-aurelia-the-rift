@@ -610,20 +610,8 @@ promotion_sound = ExtResource("2_v74fk")
 dash_fx_scene = ExtResource("7_dp7rq")
 slash_fx_scene = ExtResource("8_4k0yu")
 level_up_fx_scene = ExtResource("9_qy62q")
-GRID_SIZE = null
-zoom_step = null
-min_zoom = null
-max_zoom = null
-zoom_to_cursor = null
-camera_speed = null
-edge_margin = null
-use_fog_of_war = null
-default_vision_range = null
-vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_dm0ry")]([SubResource("Resource_8a6bc")])
-outro_dialogue = null
 map_objective = 1
-custom_objective_text = null
 turn_limit = 7
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
@@ -1158,7 +1146,6 @@ text = "Stats"
 horizontal_alignment = 1
 
 [node name="CombatForecastPanel" type="Panel" parent="UI" unique_id=1043626365]
-visible = false
 z_index = 10
 anchors_preset = 1
 anchor_left = 1.0
