@@ -63,6 +63,8 @@ func handle_input(event: InputEvent) -> void:
 					battlefield._on_forecast_confirm()
 				else:
 					battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+					if battlefield.battle_log and battlefield.battle_log.visible:
+						battlefield.add_combat_log("Forecast: click the enemy tile to confirm, or right-click to cancel.", "gray")
 			elif event.button_index == MOUSE_BUTTON_RIGHT:
 				battlefield._on_forecast_cancel()
 		return
@@ -98,6 +100,9 @@ func handle_input(event: InputEvent) -> void:
 
 	# --- Move ---
 	if active_unit.has_moved:
+		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		if battlefield.battle_log and battlefield.battle_log.visible:
+			battlefield.add_combat_log("Already moved — attack/heal a valid target, Wait/Defend on this unit, or cancel.", "gray")
 		clear_active_unit()
 		return
 
@@ -114,6 +119,8 @@ func handle_input(event: InputEvent) -> void:
 		battlefield.calculate_ranges(active_unit)
 	else:
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		if battlefield.battle_log and battlefield.battle_log.visible:
+			battlefield.add_combat_log("Can't move there — blocked, out of range, or not a blue tile.", "gray")
 		clear_active_unit()
 
 

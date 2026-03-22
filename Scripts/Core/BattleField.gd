@@ -1352,15 +1352,17 @@ func update_cursor_pos() -> void:
 		# Move the HoverGlow instantly or with a very fast tween
 		hover_glow.position = target_pos
 		
-		# Smoothly slide the cursor to the new tile over 0.1 seconds
+		# Smoothly slide the cursor to the new tile (snappier follow for battle readability)
 		var tween = create_tween()
-		tween.tween_property(cursor, "position", target_pos, 0.1)\
+		tween.tween_property(cursor, "position", target_pos, 0.07)\
 			.set_trans(Tween.TRANS_QUAD)\
 			.set_ease(Tween.EASE_OUT)
 
 func update_cursor_color() -> void:
 	# 1. Start by resetting to the default white color every frame
 	cursor_sprite.modulate = Color.WHITE
+	if is_instance_valid(hover_glow):
+		hover_glow.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	
 	# 2. Check if it is the player's turn and a unit is currently selected
 	if current_state == player_state and player_state.active_unit != null:
@@ -1374,6 +1376,15 @@ func update_cursor_color() -> void:
 				
 				# Tint the cursor red
 				cursor_sprite.modulate = Color(1.0, 0.3, 0.3)
+				if is_instance_valid(hover_glow):
+					hover_glow.modulate = Color(1.0, 0.35, 0.35, 1.0)
+				return
+		
+		# Valid move destination (blue range): cyan cursor + glow reads clearly vs neutral tiles
+		if not player_state.active_unit.has_moved and reachable_tiles.has(cursor_grid_pos):
+			cursor_sprite.modulate = Color(0.5, 0.92, 1.0)
+			if is_instance_valid(hover_glow):
+				hover_glow.modulate = Color(0.45, 0.88, 1.0, 0.95)
 
 func draw_preview_path() -> void:
 	if path_line == null:
@@ -1449,7 +1460,9 @@ func _draw() -> void:
 
 	if show_danger_zone:
 		for pos in danger_zone_tiles:
-			draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.0, 0.0, 0.35))
+			var danger_rect := Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y)
+			draw_rect(danger_rect, Color(1.0, 0.0, 0.0, 0.35))
+			draw_rect(danger_rect, Color(1.0, 0.45, 0.2, 0.9), false, 2.0)
 
 	for pos in reachable_tiles:
 		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.3, 0.5, 0.9, 0.5))
@@ -1761,13 +1774,23 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 		
 	obj_label.modulate.a = 1.0 # Ensure it's fully visible from the start
 		
+	var custom_obj: String = custom_objective_text.strip_edges()
 	match map_objective:
 		Objective.ROUT_ENEMY:
-			obj_label.text = "- Turn " + str(current_turn) + " : Rout the Enemy -"
+			if custom_obj != "":
+				obj_label.text = "- Turn " + str(current_turn) + " — " + custom_obj + " -"
+			else:
+				obj_label.text = "- Turn " + str(current_turn) + " : Rout the Enemy -"
 		Objective.SURVIVE_TURNS:
-			obj_label.text = "- Survive: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+			if custom_obj != "":
+				obj_label.text = "- " + custom_obj + " (" + str(current_turn) + " / " + str(turn_limit) + ") -"
+			else:
+				obj_label.text = "- Survive: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
 		Objective.DEFEND_TARGET:
-			obj_label.text = "- Defend Target: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+			if custom_obj != "":
+				obj_label.text = "- " + custom_obj + " — Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+			else:
+				obj_label.text = "- Defend Target: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
 	
 	# 5. Play Sound and Animate Opacity
 	var tween = create_tween()
@@ -1775,8 +1798,8 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 	# Fast fade in (0.2s)
 	tween.tween_property(phase_banner, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	
-	# --- THE DELAY: Hold on frame 0 for 1.5 seconds ---
-	tween.tween_interval(1.5) 
+	# Brief hold before ribbon unroll (tighter pacing than a long static beat)
+	tween.tween_interval(1.2) 
 	
 	# Trigger the unfolding animation AND the sound!
 	tween.tween_callback(func():
@@ -2205,7 +2228,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 				add_combat_log("Dual Strike!", "cyan")
 				spawn_loot_text("Dual Strike!", Color(0.4, 0.9, 1.0), defender.global_position + Vector2(32, -28))
 				_award_relationship_event(attacker, partner, "dual_strike", 1)
-				await get_tree().create_timer(0.3).timeout
+				await get_tree().create_timer(0.2, true, false, true).timeout
 				# Re-validate before executing: do not run if partner or defender became invalid (e.g. death cleanup).
 				if is_instance_valid(partner) and partner.current_hp > 0 and is_instance_valid(defender) and _is_valid_combat_unit(defender):
 					await _run_strike_sequence(partner, defender, false, true)
@@ -3755,6 +3778,9 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					await _play_critical_impact(impact_focus)
 				elif already_staggered or will_stagger:
 					await _play_guard_break_impact(impact_focus)
+				elif did_melee_normal_animation:
+					# Light hit-stop on normal melee only — ranged/magic keep prior pacing
+					await _do_hit_stop(0.007, 0.22, 0.04)
 				# ==========================================
 				
 				var final_dmg: int = damage * 3 if is_crit else damage
@@ -5063,8 +5089,16 @@ func _on_close_loot_pressed() -> void:
 	update_unit_info_panel()
 				
 func add_combat_log(message: String, color: String = "white") -> void:
-	# This wraps the message in a color tag and adds a line break
+	if battle_log == null:
+		return
+	const MAX_COMBAT_LOG_LINES: int = 220
 	battle_log.append_text("[color=" + color + "]" + message + "[/color]\n")
+	var raw: String = battle_log.text
+	var lines: PackedStringArray = raw.split("\n")
+	if lines.size() > MAX_COMBAT_LOG_LINES:
+		var start_idx: int = maxi(0, lines.size() - MAX_COMBAT_LOG_LINES)
+		var kept: PackedStringArray = lines.slice(start_idx)
+		battle_log.text = "[color=gray](Earlier log trimmed.)[/color]\n" + "\n".join(Array(kept))
 		
 # Adjacency: per-adjacent ally, support-rank scaled (original behavior). Support-combat layer adds separately via get_support_combat_bonus.
 func get_adjacency_bonus(unit: Node2D) -> Dictionary:
@@ -7079,9 +7113,13 @@ func toggle_danger_zone() -> void:
 	if show_danger_zone:
 		calculate_full_danger_zone()
 		play_ui_sfx(UISfx.TARGET_OK) # Sharp "On" sound
+		if battle_log and battle_log.visible:
+			add_combat_log("Enemy threat overlay: ON (Shift)", "gray")
 	else:
 		danger_zone_tiles.clear()
 		play_ui_sfx(UISfx.INVALID) # Soft "Off" sound
+		if battle_log and battle_log.visible:
+			add_combat_log("Enemy threat overlay: OFF", "gray")
 	queue_redraw()
 
 # ==========================================
@@ -7354,6 +7392,7 @@ func _on_support_talk_pressed() -> void:
 	var ally = player_state.trade_target_ally
 	
 	if initiator != null and ally != null:
+		play_ui_sfx(UISfx.TARGET_OK)
 		await play_support_dialogue(initiator, ally)
 		# End the initiator's turn after talking
 		initiator.finish_turn()
@@ -7409,6 +7448,10 @@ func play_support_dialogue(initiator: Node2D, target: Node2D) -> void:
 	
 	if level_up_sound.stream != null: level_up_sound.play()
 	spawn_loot_text("SUPPORT RANK " + new_rank_name + "!", Color.VIOLET, initiator.global_position + Vector2(0, -40))
+	if support_file_found != null:
+		var a_name: String = str(initiator.get("unit_name")) if initiator.get("unit_name") != null else "Unit"
+		var b_name: String = str(target.get("unit_name")) if target.get("unit_name") != null else "Ally"
+		add_combat_log(a_name + " & " + b_name + ": Support rank → " + new_rank_name + "!", "violet")
 
 # Safely handles the Player's custom name for Support Files
 func get_support_name(unit: Node2D) -> String:
