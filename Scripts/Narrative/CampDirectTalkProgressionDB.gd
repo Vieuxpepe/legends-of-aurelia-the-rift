@@ -20,11 +20,13 @@ const IDLE_FOLLOWUP_BY_UNIT: Dictionary = {
 		1: "If you want my read on something murky, ask before the rumor hardens into gospel.",
 		2: "I'll share the interpretation when it costs fewer lives than the silence would.",
 		3: "I'll bring the ugly reading early now—before camp does it for me with adjectives and casualties.",
+		4: "I stopped saving the polished version for later. You get the ugly reading first now; if the camp wants a kinder story, it can earn one after the facts are on the table.",
 	},
 	"Tamsin Reed": {
 		1: "I'm not hiding that I'm tired anymore—I'm just still working anyway.",
 		2: "If I hit a limit tonight, I'll say it plain. Borrow someone else's heroics if I do.",
 		3: "I'm naming the ceiling before I hit it—if I go quiet, it's triage, not a mystery.",
+		4: "I keep the extra chair out now. Not because you're fragile. Because rest is a tool, and I trust you more when you use the tools that keep your hands steady.",
 	},
 	"Celia": {
 		1: "I'm practicing the small version of right—not the loud one that looks like penance.",
@@ -35,11 +37,13 @@ const IDLE_FOLLOWUP_BY_UNIT: Dictionary = {
 		1: "The line's holding habits I'd trust without me hovering—good.",
 		2: "I'll back sergeants' calls when the mud disagrees with the manual. That's not weakness.",
 		3: "Notes from last shift are plain—distributed judgment isn't me gone; it's me not treating every call like it's rented.",
+		4: "The sergeants are answering to the second order without me standing over their shoulder now. That's the part that matters—judgment shared instead of hoarded.",
 	},
 	"Brother Alden": {
 		1: "I saw you drink water without performing martyrdom. Keep that; fevers love a commander who forgets the basics.",
 		2: "Pulse before pageant, still—if you parade a patient for morale, I'll look bored on purpose again.",
 		3: "Mercy moved into my hands before my mouth remembered how to argue—water, shade, quiet cots; the tent learns habit faster than lecture now.",
+		4: "You do not need me to call it holy for it to matter. Breath, water, and a clean bandage are enough. The rest is a sermon with too much echo.",
 	},
 	"Yselle Maris": {
 		1: "I'm practicing calm as labor, not as costume—if the line borrows my face, it's because panic spreads faster than hunger.",
@@ -80,6 +84,7 @@ const IDLE_FOLLOWUP_BY_UNIT: Dictionary = {
 		1: "Boredom's off the guest list on my section—rotate the pattern so the wall stops telling time to scouts.",
 		2: "Ledger's bent where reality asked—small fractures, same spine; grief can wait behind procedure.",
 		3: "My section bends and keeps spine—sergeants own small breaks while I stay with the grief in the room instead of burying it under the roster.",
+		4: "The wall knows the difference between strict and cruel. I'm still teaching it the difference between disciplined and cold, and you keep making that easier to hold.",
 	},
 	"Inez": {
 		1: "Shorter steps on gravel—still practice, not performance. The trees heard you first; I'm just catching up.",
@@ -90,6 +95,7 @@ const IDLE_FOLLOWUP_BY_UNIT: Dictionary = {
 		1: "Grief waits its turn—breathing first. I'm still not soft about it; I'm just done pretending hardness is the same as useful.",
 		2: "Greyspire's weight hasn't lifted—I'm watching you carry it without turning into the kind of officer who needs a corpse to feel righteous.",
 		3: "You kept moving when Emberwood wanted you to kneel in ash—that's the line I invest in now, not speeches about sacrifice.",
+		4: "I'm not asking you to be gentle. I'm asking you to keep choosing the people in front of you when the plan starts begging for a legend. That's the part I trust.",
 	},
 	"Liora": {
 		1: "Sanctum ink still stains my sleeves—I'm practicing seeing you before the Mark when the camp forgets how.",
