@@ -177,6 +177,9 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 			battlefield.show_trade_popup(target_node)
 			return true
 		else:
+			battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+			if battlefield.battle_log and battlefield.battle_log.visible:
+				battlefield.add_combat_log("Stand adjacent to an ally to trade or support talk.", "gray")
 			return false
 
 	# --- Clicked on chest ---
@@ -192,6 +195,9 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 
 	# --- Clicked on enemy or healable target in range ---
 	if not battlefield.is_in_range(active_unit, target_node):
+		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		if battlefield.battle_log and battlefield.battle_log.visible:
+			battlefield.add_combat_log("Target is outside weapon range.", "gray")
 		return false
 
 	battlefield.play_ui_sfx(BattleField.UISfx.TARGET_OK)

@@ -234,7 +234,7 @@ var detailed_unit_info_close_btn: Button
 # =============================================================================
 
 @onready var forecast_panel = $UI/CombatForecastPanel
-@onready var forecast_talk_btn = $UI/CombatForecastPanel/TalkButton
+@onready var forecast_talk_btn: Button = get_node_or_null("UI/CombatForecastPanel/TalkButton") as Button
 @onready var forecast_ability_btn = $UI/CombatForecastPanel/AbilityButton
 
 @onready var forecast_atk_name = $UI/CombatForecastPanel/AtkName
@@ -257,6 +257,7 @@ var detailed_unit_info_close_btn: Button
 
 var forecast_atk_support_label: Label
 var forecast_def_support_label: Label
+var forecast_instruction_label: Label
 
 
 # =============================================================================
@@ -519,7 +520,8 @@ func _ready() -> void:
 	trade_right_list.item_selected.connect(func(idx): _on_trade_item_clicked(idx, "right"))
 	$UI/CombatForecastPanel/ConfirmButton.pressed.connect(_on_forecast_confirm)
 	$UI/CombatForecastPanel/CancelButton.pressed.connect(_on_forecast_cancel)
-	forecast_talk_btn.pressed.connect(_on_forecast_talk)
+	if forecast_talk_btn:
+		forecast_talk_btn.pressed.connect(_on_forecast_talk)
 	if forecast_ability_btn:
 		forecast_ability_btn.pressed.connect(_on_forecast_ability_pressed)
 	convoy_button.pressed.connect(_on_convoy_pressed)
@@ -1821,10 +1823,15 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 	phase_banner.visible = false
 			
 func update_unit_info_panel() -> void:
-	var target_unit = null
+	var target_unit: Node2D = null
+	var hover_unit: Node2D = null
+	var show_cursor_unit_row: bool = false
 
 	if current_state == player_state and player_state.active_unit != null:
 		target_unit = player_state.active_unit
+		hover_unit = get_occupant_at(cursor_grid_pos)
+		if hover_unit != null and hover_unit != target_unit and hover_unit.get("data") != null:
+			show_cursor_unit_row = true
 	else:
 		target_unit = get_occupant_at(cursor_grid_pos)
 
@@ -1844,7 +1851,15 @@ func update_unit_info_panel() -> void:
 		var current_xp = target_unit.experience
 		var required_xp = target_unit.get_exp_required() if target_unit.has_method("get_exp_required") else 100
 		
-		unit_name_label.text = target_unit.unit_name + " (Lv " + str(target_unit.level) + " | XP: " + str(current_xp) + " / " + str(required_xp) + ")"
+		var active_tag: String = ""
+		if current_state == player_state and player_state.active_unit == target_unit:
+			if target_unit.is_exhausted:
+				active_tag = " [Turn done]"
+			elif target_unit.has_moved:
+				active_tag = " [Moved — act]"
+			else:
+				active_tag = " [ACTIVE]"
+		unit_name_label.text = target_unit.unit_name + active_tag + " (Lv " + str(target_unit.level) + " | XP: " + str(current_xp) + " / " + str(required_xp) + ")"
 		unit_hp_label.text = "HP: " + str(target_unit.current_hp) + " / " + str(target_unit.max_hp)
 
 		var display_def = target_unit.defense
@@ -1871,6 +1886,8 @@ func update_unit_info_panel() -> void:
 		var u_agi = target_unit.get("agility") if target_unit.get("agility") != null else 0
 
 		var s = "[center]"
+		if current_state == player_state and player_state.active_unit == target_unit:
+			s += "[color=cyan][b]Selected unit[/b][/color]\n"
 		s += "[color=gray]Class:[/color] %s [color=gray]|[/color] [color=gray]Move:[/color] %d\n" % [u_class, u_move]
 		s += "[color=gray]------------------------------------[/color]\n"
 		s += "[color=coral]STR:[/color] %d  [color=orchid]MAG:[/color] %d  [color=skyblue]SPD:[/color] %d\n" % [u_str, u_mag, u_spd]
@@ -1890,6 +1907,14 @@ func update_unit_info_panel() -> void:
 			s += "[color=gray]Eqp:[/color] [color=yellow]%s[/color] [color=gray](Dur: %d/%d)[/color]\n" % [wpn.weapon_name, d_cur, d_max]
 		else:
 			s += "[color=gray]Eqp: Unarmed[/color]\n"
+
+		if show_cursor_unit_row and is_instance_valid(hover_unit) and hover_unit.get("data") != null:
+			s += "[color=gray]————————————————————[/color]\n"
+			s += "[color=gold][b]Under cursor[/b][/color]: [color=white]%s[/color]  HP %d/%d\n" % [
+				hover_unit.unit_name, hover_unit.current_hp, hover_unit.max_hp
+			]
+			if hover_unit.get_parent() == enemy_container and hover_unit.data.get("is_recruitable") == true:
+				s += "[color=chartreuse]Recruitable — use Talk in combat preview when available.[/color]\n"
 
 		s += terrain_bb + "[/center]"
 		unit_stats_label.text = s
@@ -1991,14 +2016,14 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	var def_hit: int = clamp(80 + def_hit_bonus + def_tri_hit + def_adj["hit"] + def_sup["hit"] - atk_sup["avo"] + def_rel["hit"] - atk_rel["avo"] + (defender.agility * 2) - (attacker.speed * 2) - atk_terrain["avo"], 0, 100)
 	var def_crit: int = clamp(defender.agility / 2 + def_rel["crit_bonus"] - atk_sup["crit_avo"], 0, 100)
 	
-	# UI Updates
-	forecast_atk_name.text = attacker.unit_name
+	# UI Updates (columns: left = attacker / you, right = defender / target)
+	forecast_atk_name.text = "ATK: " + attacker.unit_name
 	forecast_atk_weapon.text = atk_wpn.weapon_name if atk_wpn else "Unarmed"
-	forecast_atk_hp.text = "HP: " + str(attacker.current_hp)
+	forecast_atk_hp.text = "HP: %d / %d" % [attacker.current_hp, attacker.max_hp]
 	
 	forecast_def_name.text = defender.unit_name
 	forecast_def_weapon.text = def_wpn.weapon_name if def_wpn else "Unarmed"
-	forecast_def_hp.text = "HP: " + str(defender.current_hp)
+	forecast_def_hp.text = "HP: %d / %d" % [defender.current_hp, defender.max_hp]
 	
 	# --- RESET UI MODULATES ---
 	forecast_atk_dmg.modulate = Color.WHITE
@@ -2006,14 +2031,15 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	
 	# --- HEALING VS ATTACKING LOGIC ---
 	if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
+		forecast_def_name.text = "Target: " + defender.unit_name
 		var heal_amount = attacker.magic + atk_wpn.might
 		forecast_atk_dmg.text = "HEAL: " + str(heal_amount)
 		forecast_atk_hit.text = "HIT: 100%"
 		forecast_atk_crit.text = "CRIT: 0%"
 		
-		forecast_def_dmg.text = "DMG: 0"
-		forecast_def_hit.text = "HIT: --"
-		forecast_def_crit.text = "CRIT: --"
+		forecast_def_dmg.text = "Damage: —"
+		forecast_def_hit.text = ""
+		forecast_def_crit.text = ""
 		
 		forecast_atk_adv.text = ""
 		forecast_def_adv.text = ""
@@ -2035,18 +2061,22 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 			crit_flash_tween.set_trans(Tween.TRANS_SINE)
 		
 		var def_is_healer = def_wpn != null and def_wpn.get("is_healing_staff") == true
+		if defender.get_parent() == enemy_container:
+			forecast_def_name.text = "DEF: " + defender.unit_name
+		else:
+			forecast_def_name.text = "Target: " + defender.unit_name
 		
 		if def_wpn == null or def_is_healer or not is_in_range(defender, attacker):
-			forecast_def_dmg.text = "DMG: --"
-			forecast_def_hit.text = "HIT: --"
-			forecast_def_crit.text = "CRIT: --"
+			forecast_def_dmg.text = "Counter: none"
+			forecast_def_hit.text = ""
+			forecast_def_crit.text = ""
 			forecast_def_double.text = ""
 		else:
-			forecast_def_dmg.text = "DMG: " + str(def_dmg)
-			forecast_def_hit.text = "HIT: " + str(def_hit) + "%"
-			forecast_def_crit.text = "CRIT: " + str(def_crit) + "%"
+			forecast_def_dmg.text = "Counter dmg: " + str(def_dmg)
+			forecast_def_hit.text = "Counter hit: " + str(def_hit) + "%"
+			forecast_def_crit.text = "Counter crit: " + str(def_crit) + "%"
 			var def_doubles = (defender.speed - attacker.speed) >= 4
-			forecast_def_double.text = " x2" if def_doubles else ""
+			forecast_def_double.text = "×2" if def_doubles else ""
 
 		# Advantage Indicators
 		if advantage == 1:
@@ -2079,7 +2109,7 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 			forecast_def_adv.modulate = Color.ORANGE
 			
 		var atk_doubles = (attacker.speed - defender.speed) >= 4
-		forecast_atk_double.text = " x2" if atk_doubles else ""
+		forecast_atk_double.text = "×2" if atk_doubles else ""
 
 	# --- FIGURE-8 ANIMATION TRIGGER ---
 	if forecast_atk_double.text != "" or forecast_def_double.text != "":
@@ -2087,10 +2117,15 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	else:
 		if figure_8_tween: figure_8_tween.kill()
 
-	if defender.get_parent() == enemy_container and defender.get("data") != null and defender.data.get("is_recruitable") == true:
-		forecast_talk_btn.visible = true
-	else:
-		forecast_talk_btn.visible = false
+	var talk_visible: bool = false
+	if forecast_talk_btn != null:
+		if defender.get_parent() == enemy_container and defender.get("data") != null and defender.data.get("is_recruitable") == true:
+			forecast_talk_btn.visible = true
+			talk_visible = true
+			forecast_talk_btn.tooltip_text = "Recruit this unit through dialogue (ends this unit's turn)."
+		else:
+			forecast_talk_btn.visible = false
+			forecast_talk_btn.tooltip_text = ""
 	
 	# --- ABILITY BUTTON LOGIC ---
 	if forecast_ability_btn:
@@ -2112,6 +2147,31 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 		forecast_atk_support_label.visible = true
 	if forecast_def_support_label:
 		forecast_def_support_label.visible = true
+	
+	var fc_btn: Button = forecast_panel.get_node_or_null("ConfirmButton") as Button
+	if fc_btn != null:
+		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
+			fc_btn.text = "Heal"
+		elif atk_wpn != null and atk_wpn.get("is_buff_staff") == true:
+			fc_btn.text = "Buff"
+		elif atk_wpn != null and atk_wpn.get("is_debuff_staff") == true:
+			fc_btn.text = "Debuff"
+		else:
+			fc_btn.text = "Attack"
+	
+	if forecast_instruction_label:
+		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
+			forecast_instruction_label.text = "Confirm to heal. Cancel or right-click to go back."
+		else:
+			var ins := "Left: your strike · Right: enemy counter (if any). Click the defender's tile to commit."
+			if talk_visible:
+				ins += " Talk = recruit (ends turn)."
+			forecast_instruction_label.text = ins
+	
+	if is_instance_valid(target_cursor):
+		target_cursor.z_index = 80
+		target_cursor.global_position = defender.global_position + Vector2(float(CELL_SIZE.x) * 0.5, float(CELL_SIZE.y) * 0.5)
+		target_cursor.visible = true
 	
 	forecast_panel.visible = true
 	# --- UPDATE THE AWAIT ---
@@ -2137,7 +2197,8 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 		forecast_def_support_label.visible = false
 	
 	forecast_panel.visible = false
-	target_cursor.visible = false
+	if is_instance_valid(target_cursor):
+		target_cursor.visible = false
 	return [action, used_ability]
 	
 func _on_forecast_confirm() -> void:
@@ -8495,7 +8556,7 @@ func update_objective_ui(skip_animation: bool = false) -> void:
 		else:
 			txt += "[color=gray]" + target_item + ": " + str(current_amt) + " / " + str(target_amt) + "[/color]"
 
-	txt += "[/center]"
+	txt += "\n[color=gray][font_size=15]Shift: enemy threat · Side panel: goals[/font_size][/color]\n[/center]"
 	
 	# Dynamically resize the panel based on whether a quest is active
 	if objective_panel.size.y != target_height:
@@ -10740,6 +10801,18 @@ func _ensure_forecast_support_labels() -> void:
 		forecast_def_support_label.add_theme_font_size_override("font_size", 16)
 		forecast_def_support_label.add_theme_color_override("font_color", Color(0.60, 0.95, 1.0))
 		forecast_panel.add_child(forecast_def_support_label)
+
+	if forecast_instruction_label == null:
+		forecast_instruction_label = Label.new()
+		forecast_instruction_label.name = "ForecastInstruction"
+		forecast_instruction_label.position = Vector2(8, 168)
+		forecast_instruction_label.size = Vector2(384, 32)
+		forecast_instruction_label.add_theme_font_size_override("font_size", 11)
+		forecast_instruction_label.add_theme_color_override("font_color", Color(0.78, 0.82, 0.9))
+		forecast_instruction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		forecast_instruction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		forecast_instruction_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		forecast_panel.add_child(forecast_instruction_label)
 
 func apply_campaign_settings() -> void:
 	camera_follows_enemies = CampaignManager.battle_follow_enemy_camera
