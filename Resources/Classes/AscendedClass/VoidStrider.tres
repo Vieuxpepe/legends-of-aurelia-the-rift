@@ -24,3 +24,6 @@ str_growth_bonus = 5
 spd_growth_bonus = 10
 agi_growth_bonus = 10
 mag_growth_bonus = 5
+class_combat_ability = "Ultimate Shadow Step"
+class_combat_ability_b = "Soul Harvest"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

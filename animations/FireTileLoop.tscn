@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://7j5xf8xpm7oo"]
 
 [ext_resource type="Texture2D" uid="uid://b1sj2j3n4a5rm" path="res://Group 6 - 5.png" id="1_2a4yi"]
+[ext_resource type="Script" uid="uid://budskqnpeko4m" path="res://animations/FireTileLoop.gd" id="2_firetile"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_lkq1p"]
 atlas = ExtResource("1_2a4yi")
@@ -67,7 +68,8 @@ animations = [{
 }]
 
 [node name="FireTileLoop" type="Node2D" unique_id=1399071111]
+script = ExtResource("2_firetile")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1505460694]
+scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_q04o0")
-frame_progress = 0.41680887

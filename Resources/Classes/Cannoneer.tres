@@ -23,3 +23,6 @@ str_growth_bonus = 15
 def_growth_bonus = 10
 spd_growth_bonus = -10
 agi_growth_bonus = -10
+class_combat_ability = "Ballista Shot"
+class_combat_ability_b = "Earthshatter"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

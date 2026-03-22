@@ -23,3 +23,6 @@ str_growth_bonus = 5
 spd_growth_bonus = 15
 agi_growth_bonus = 10
 res_growth_bonus = 10
+class_combat_ability = "Charge"
+class_combat_ability_b = "Parting Shot"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

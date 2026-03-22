@@ -873,7 +873,11 @@ func _on_start_confirmed() -> void:
 		"class_data": selected_class_res,
 		"unlocked_abilities": [chosen_ability],
 		"skill_points": 0,
-		"unlocked_skills": []
+		"unlocked_skills": [],
+		"traits": [],
+		"rookie_legacies": [],
+		"base_class_legacies": [],
+		"promoted_class_legacies": []
 	}
 	
 	match difficulty_dropdown.selected:

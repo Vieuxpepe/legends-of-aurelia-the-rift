@@ -18,3 +18,6 @@ promo_str_bonus = 2
 promo_def_bonus = 3
 promo_spd_bonus = 0
 promo_agi_bonus = 0
+class_combat_ability = "Earthshatter"
+class_combat_ability_b = "Adrenaline Rush"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

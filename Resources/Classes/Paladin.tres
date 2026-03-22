@@ -24,4 +24,6 @@ res_bonus = 2
 hp_growth_bonus = 10
 str_growth_bonus = 5
 res_growth_bonus = 10
+class_combat_ability = "Smite"
+class_combat_ability_b = "Aegis Strike"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

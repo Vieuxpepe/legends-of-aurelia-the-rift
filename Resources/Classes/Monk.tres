@@ -22,4 +22,6 @@ res_bonus = 1
 hp_growth_bonus = 15
 spd_growth_bonus = 10
 agi_growth_bonus = 10
+class_combat_ability = "Flurry Strike"
+class_combat_ability_b = "Chi Burst"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

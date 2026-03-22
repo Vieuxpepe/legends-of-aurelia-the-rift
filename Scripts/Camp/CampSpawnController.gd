@@ -301,6 +301,10 @@ func build_roster_entry_from_unit_data(unit_data: Resource) -> Dictionary:
 		"unlocked_skills": [],
 		"unlocked_abilities": [ability_name] if ability_name != "" else [],
 		"unit_tags": [],
+		"traits": [],
+		"rookie_legacies": [],
+		"base_class_legacies": [],
+		"promoted_class_legacies": [],
 	}
 
 

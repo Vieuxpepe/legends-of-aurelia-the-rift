@@ -20,6 +20,10 @@ enum MoveType { INFANTRY, ARMORED, FLYING, CAVALRY }
 ## If set, units with no personal `ability` (Shove / Grapple / etc.) gain this forecast tactical (cooldown button).
 @export var class_tactical_ability: String = ""
 
+## Class-granted PHASE B proc skills (QTE on hit / staff heal). Matches personal `ability`; first `elif` branch in BattleField still wins if multiple apply.
+@export var class_combat_ability: String = ""
+@export var class_combat_ability_b: String = ""
+
 @export_category("Promotion Data")
 # Replaces 'promotes_to' with an Array so you can have multiple branching paths!
 @export var promotion_options: Array[Resource] = []

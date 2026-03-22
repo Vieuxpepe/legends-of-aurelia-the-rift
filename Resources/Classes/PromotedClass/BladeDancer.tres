@@ -20,3 +20,6 @@ promo_def_bonus = 0
 promo_res_bonus = 0
 promo_spd_bonus = 2
 promo_agi_bonus = 2
+class_combat_ability = "Blade Tempest"
+class_combat_ability_b = "Flurry Strike"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

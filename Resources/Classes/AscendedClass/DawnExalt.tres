@@ -28,3 +28,6 @@ spd_growth_bonus = 5
 agi_growth_bonus = 5
 mag_growth_bonus = 10
 res_growth_bonus = 10
+class_combat_ability = "Sacred Judgment"
+class_combat_ability_b = "Elemental Convergence"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

@@ -65,6 +65,15 @@ const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
 	"Hundred Point Strike",
 ]
 
+# Rookie / civilian class passives (stack with personal creation abilities).
+const META_ROOKIE_RECRUIT_DRILL := "rookie_recruit_drill_used"
+const META_ROOKIE_VILLAGER_DESPERATE := "rookie_villager_desperate_turn"
+const META_ROOKIE_APPRENTICE_HITS := "rookie_apprentice_magic_hits_landed"
+const META_ROOKIE_NOVICE_DONE := "rookie_novice_blank_done"
+const META_ROOKIE_NOVICE_HIT := "rookie_novice_hit_bonus"
+const META_ROOKIE_NOVICE_DMG := "rookie_novice_dmg_bonus"
+const META_ROOKIE_NOVICE_CRIT := "rookie_novice_crit_bonus"
+
 # Relationship Web V1: combat modifiers from trust/rivalry/mentorship/grief/fear. Set true to log relationship combat effects.
 const DEBUG_RELATIONSHIP_COMBAT := false
 # Tags that trigger fear/disgust penalty when enemy has them (unit_tags).
@@ -636,12 +645,14 @@ func _ready() -> void:
 	# Checks if we are grinding (Undead) or playing Story
 	if CampaignManager.is_skirmish_mode:
 		setup_skirmish_battle()
-		
+		_reset_rookie_battle_tracking()
+
 	# --- ARENA LOGIC ---
 	if ArenaManager.current_opponent_data.size() > 0:
 		is_arena_match = true
 		setup_arena_battle()
-		
+		_reset_rookie_battle_tracking()
+
 	# ==========================================
 	# --- VIP ESCORT VICTORY CHECK ---
 	# ==========================================
@@ -1700,6 +1711,17 @@ func get_unit_at(pos: Vector2i) -> Node2D:
 			elif get_grid_pos(u) == pos: return u
 	return null
 
+## One step from `from_cell` toward `to_cell` on the grid (-1/0/1 each axis). Zero if cells coincide.
+func _attack_line_step(from_cell: Vector2i, to_cell: Vector2i) -> Vector2i:
+	var dx: int = to_cell.x - from_cell.x
+	var dy: int = to_cell.y - from_cell.y
+	var sx: int = 0 if dx == 0 else (1 if dx > 0 else -1)
+	var sy: int = 0 if dy == 0 else (1 if dy > 0 else -1)
+	if sx == 0 and sy == 0:
+		return Vector2i.ZERO
+	return Vector2i(sx, sy)
+
+
 func get_enemy_at(pos: Vector2i) -> Node2D:
 	for e in enemy_container.get_children():
 		# Added 'and e.visible' to prevent targeting enemies in the fog!
@@ -2197,6 +2219,8 @@ func update_unit_info_panel() -> void:
 		else:
 			s += "[color=gray]Eqp: Unarmed[/color]\n"
 
+		s += UnitTraitsDisplay.bbcode_section(UnitTraitsDisplay.trait_lines_from_unit(target_unit))
+
 		if show_cursor_unit_row and is_instance_valid(hover_unit) and hover_unit.get("data") != null:
 			s += "[color=gray]————————————————————[/color]\n"
 			s += "[color=gold][b]Under cursor[/b][/color]: [color=white]%s[/color]  HP %d/%d\n" % [
@@ -2239,6 +2263,108 @@ func _resolve_tactical_ability_name(attacker: Node2D) -> String:
 			if cta != null and not cta.is_empty():
 				return cta
 	return ""
+
+
+func _attacker_has_attack_skill(attacker: Node2D, skill_name: String) -> bool:
+	var abil: Variant = attacker.get("ability")
+	if str(abil) == skill_name:
+		return true
+	var cls: Variant = attacker.get("active_class_data")
+	if cls != null and cls is ClassData:
+		var cd: ClassData = cls as ClassData
+		if cd.class_combat_ability == skill_name or cd.class_combat_ability_b == skill_name:
+			return true
+	return false
+
+
+func _is_friendly_unit_on_field(u: Node2D) -> bool:
+	if u == null or not is_instance_valid(u):
+		return false
+	var p: Node = u.get_parent()
+	return p == player_container or (ally_container != null and p == ally_container)
+
+
+func _ensure_novice_blank_slate_roll(attacker: Node2D) -> void:
+	if attacker.has_meta(META_ROOKIE_NOVICE_DONE):
+		return
+	var job: String = str(attacker.get("unit_class_name", ""))
+	if job != "Novice":
+		return
+	attacker.set_meta(META_ROOKIE_NOVICE_DONE, true)
+	var r: int = randi() % 3
+	if r == 0:
+		attacker.set_meta(META_ROOKIE_NOVICE_HIT, 10)
+		add_combat_log(attacker.unit_name + ": Blank Slate — sharp instincts! (+Hit this battle)", "cyan")
+	elif r == 1:
+		attacker.set_meta(META_ROOKIE_NOVICE_DMG, 4)
+		add_combat_log(attacker.unit_name + ": Blank Slate — raw power! (+Damage this battle)", "cyan")
+	else:
+		attacker.set_meta(META_ROOKIE_NOVICE_CRIT, 8)
+		add_combat_log(attacker.unit_name + ": Blank Slate — lucky streak! (+Crit this battle)", "cyan")
+
+
+## apply_effects: true = combat resolution (sets meta, logs). false = forecast preview only (no consumption).
+func _rookie_passive_mods_internal(attacker: Node2D, defender: Node2D, is_magic: bool, wpn: WeaponData, apply_effects: bool) -> Dictionary:
+	var merged: Dictionary = {"hit": 0, "dmg": 0, "crit": 0, "log": ""}
+	if not _is_friendly_unit_on_field(attacker) or defender.get_parent() != enemy_container:
+		return merged
+	var roles: Array[String] = _rookie_ordered_unique_roles(attacker)
+	var log_parts: PackedStringArray = PackedStringArray()
+	for role in roles:
+		var part: Dictionary = _rookie_mods_for_job_role(attacker, defender, is_magic, wpn, role, apply_effects)
+		merged["hit"] = int(merged["hit"]) + int(part.get("hit", 0))
+		merged["dmg"] = int(merged["dmg"]) + int(part.get("dmg", 0))
+		merged["crit"] = int(merged["crit"]) + int(part.get("crit", 0))
+		var lg: String = str(part.get("log", ""))
+		if not lg.is_empty():
+			log_parts.append(lg)
+	if log_parts.size() > 0:
+		merged["log"] = " ".join(log_parts)
+	return merged
+
+
+func _forecast_rookie_class_passive_mods(attacker: Node2D, defender: Node2D, is_magic: bool, wpn: WeaponData) -> Dictionary:
+	return _rookie_passive_mods_internal(attacker, defender, is_magic, wpn, false)
+
+
+func _compute_rookie_class_passive_mods(attacker: Node2D, defender: Node2D, is_magic: bool, wpn: WeaponData) -> Dictionary:
+	return _rookie_passive_mods_internal(attacker, defender, is_magic, wpn, true)
+
+
+func _rookie_register_apprentice_magic_hit(attacker: Node2D, wpn: WeaponData, is_magic: bool, attack_connected: bool) -> void:
+	if not attack_connected or not _is_friendly_unit_on_field(attacker):
+		return
+	var legs: Array = attacker.get("rookie_legacies", []) if attacker.get("rookie_legacies") is Array else []
+	if str(attacker.get("unit_class_name", "")) != "Apprentice" and not legs.has(UnitTraitsDisplay.LEGACY_ID_APPRENTICE):
+		return
+	if not is_magic or wpn == null:
+		return
+	var wt: int = int(wpn.weapon_type)
+	if wt != WeaponData.WeaponType.TOME and wt != WeaponData.WeaponType.DARK_TOME:
+		return
+	var n: int = int(attacker.get_meta(META_ROOKIE_APPRENTICE_HITS, 0))
+	attacker.set_meta(META_ROOKIE_APPRENTICE_HITS, n + 1)
+
+
+func _reset_rookie_battle_tracking() -> void:
+	var keys: Array[String] = [
+		META_ROOKIE_RECRUIT_DRILL,
+		META_ROOKIE_APPRENTICE_HITS,
+		META_ROOKIE_NOVICE_DONE,
+		META_ROOKIE_NOVICE_HIT,
+		META_ROOKIE_NOVICE_DMG,
+		META_ROOKIE_NOVICE_CRIT,
+	]
+	for cont in [player_container, ally_container]:
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			var u: Node2D = c as Node2D
+			if not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			for k in keys:
+				if u.has_meta(k):
+					u.remove_meta(k)
 
 
 func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
@@ -2320,7 +2446,13 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	var atk_crit: int = clamp(attacker.agility / 2 + atk_rel["crit_bonus"] - def_sup["crit_avo"], 0, 100)
 	var def_hit: int = clamp(80 + def_hit_bonus + def_tri_hit + def_adj["hit"] + def_sup["hit"] - atk_sup["avo"] + def_rel["hit"] - atk_rel["avo"] + (defender.agility * 2) - (attacker.speed * 2) - atk_terrain["avo"], 0, 100)
 	var def_crit: int = clamp(defender.agility / 2 + def_rel["crit_bonus"] - atk_sup["crit_avo"], 0, 100)
-	
+
+	if atk_wpn == null or atk_wpn.get("is_healing_staff") != true:
+		var fr_rookie: Dictionary = _forecast_rookie_class_passive_mods(attacker, defender, atk_is_magic, atk_wpn)
+		atk_hit = clampi(atk_hit + int(fr_rookie.get("hit", 0)), 0, 100)
+		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
+		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
+
 	# UI Updates (columns: left = attacker / you, right = defender / target)
 	forecast_atk_name.text = "ATK: " + attacker.unit_name
 	forecast_atk_weapon.text = atk_wpn.weapon_name if atk_wpn else "Unarmed"
@@ -2656,7 +2788,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 #
 # 3. HOOK INTO _run_strike_sequence
 #    - OFFENSIVE ABILITIES (Buffs, Pierce, Combo prep): 
-#      -> Hook into "PHASE B". Add an `elif attacker.get("ability") == "Name":` block. Modify `force_hit`, `defense_stat`, etc.
+#      -> Hook into "PHASE B". Add `elif _attacker_has_attack_skill(attacker, "Name") and randi()...` (or match personal `ability` only if intended). Modify `force_hit`, `defense_stat`, etc.
 #    - DEFENSIVE ABILITIES (Blocks, Counters, Dodges): 
 #      -> Hook into "PHASE D". Add an `elif defender.get("ability") == "Name":` block. Set `defense_resolved_and_won = true` if the player succeeds so they don't take normal damage.
 #    - MULTI-HITS & POST-ATTACK (Flurries, Lifesteal application): 
@@ -2680,7 +2812,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 #    - CRITICAL: Use `Time.get_ticks_msec()` for timers so they don't break while paused.
 #
 # 2. HOOK INTO COMBAT MATH (`_run_strike_sequence`):
-#    - OFFENSIVE: Add to PHASE B. Trigger via: `if attacker.get("ability") == "Name" and randi() % 100 < get_ability_trigger_chance(attacker):`
+#    - OFFENSIVE: Add to PHASE B. Trigger via: `if _attacker_has_attack_skill(attacker, "Name") and randi() % 100 < get_ability_trigger_chance(attacker):`
 #    - DEFENSIVE: Add to PHASE D. Set `defense_resolved_and_won = true` if the player blocks the attack.
 #
 # ---------------------------------------------------------
@@ -2736,23 +2868,32 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 	# --- ALL QTE TEMP VARIABLES (GLOBAL SCOPE) ---
 	# ==========================================
 	var charge_bonus_damage: int = 0
+	var charge_collision_target: Node2D = null
+	var charge_collision_damage: int = 0
 	var incoming_damage_multiplier: float = 1.0
 	
 	# Archer
 	var deadeye_bonus_damage: int = 0
 	var volley_extra_hits: int = 0
 	var volley_damage_multiplier: float = 0.0
+	var volley_spread_target: Node2D = null
 	var rain_primary_bonus_damage: int = 0
 	var rain_splash_targets: Array[Node2D] = []
 	var rain_splash_damage: int = 0
+	var rain_tail_unit: Node2D = null
+	var rain_rear_extra_damage: int = 0
 	
 	# Mage + Mercenary
 	var fireball_bonus_damage: int = 0
 	var fireball_splash_targets: Array[Node2D] = []
 	var fireball_splash_damage: int = 0
+	var fireball_tail_unit: Node2D = null
+	var fireball_tail_extra_damage: int = 0
 	var meteor_storm_bonus_damage: int = 0
 	var meteor_storm_splash_targets: Array[Node2D] = []
 	var meteor_storm_splash_damage: int = 0
+	var meteor_tail_unit: Node2D = null
+	var meteor_tail_extra_damage: int = 0
 	var flurry_strike_hits: int = 0
 	var flurry_strike_damage_multiplier: float = 0.45
 	var battle_cry_bonus_damage: int = 0
@@ -2774,6 +2915,8 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 	# Paladin + Spellblade
 	var smite_bonus_damage: int = 0
+	var smite_splash_targets: Array[Node2D] = []
+	var smite_splash_damage: int = 0
 	var sacred_judgment_bonus_damage: int = 0
 	var sacred_judgment_splash_targets: Array[Node2D] = []
 	var sacred_judgment_splash_damage: int = 0
@@ -2815,6 +2958,8 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 	var hellfire_result: int = 0
 	var hellfire_bonus_damage: int = 0
 	var ballista_shot_bonus_damage: int = 0
+	var ballista_shot_pierce_targets: Array[Node2D] = []
+	var ballista_shot_pierce_damage: int = 0
 	var aegis_strike_bonus_damage: int = 0
 	
 	for i in range(total_attacks):
@@ -2824,13 +2969,25 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 		
 		# Clear splash targets for the new attack phase!
 		rain_splash_targets.clear()
+		rain_tail_unit = null
+		rain_rear_extra_damage = 0
+		volley_spread_target = null
+		smite_splash_targets.clear()
+		smite_splash_damage = 0
 		fireball_splash_targets.clear()
+		fireball_tail_unit = null
+		fireball_tail_extra_damage = 0
 		meteor_storm_splash_targets.clear()
+		meteor_tail_unit = null
+		meteor_tail_extra_damage = 0
 		blade_tempest_splash_targets.clear()
 		chi_burst_splash_targets.clear()
 		sacred_judgment_splash_targets.clear()
 		elemental_convergence_splash_targets.clear()
 		earthshatter_splash_targets.clear()
+		ballista_shot_pierce_targets.clear()
+		charge_collision_target = null
+		charge_collision_damage = 0
 		
 		var wpn = attacker.equipped_weapon
 		var is_heal: bool = wpn != null and wpn.get("is_healing_staff") == true
@@ -2855,7 +3012,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				var heal_amount: int = int(attacker.magic + wpn.might)
 				
 				var heal_trigger_chance: int = get_ability_trigger_chance(attacker)
-				if attacker.get("ability") == "Healing Light" and randi() % 100 < heal_trigger_chance:
+				if _attacker_has_attack_skill(attacker, "Healing Light") and randi() % 100 < heal_trigger_chance:
 					var result: int = await QTEManager.run_healing_light_minigame(self, attacker)
 					if result == 1:
 						ability_triggers_count += 1
@@ -2953,7 +3110,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 		
 		if attacker.get_parent() == player_container and defender.get_parent() == enemy_container:
 			# FOCUSED STRIKE
-			if attacker.get("ability") == "Focused Strike" and randi() % 100 < atk_trigger_chance: 
+			if _attacker_has_attack_skill(attacker, "Focused Strike") and randi() % 100 < atk_trigger_chance: 
 				var focus_result: int = await _run_focused_strike_minigame(attacker)
 				if focus_result > 0:
 					ability_triggers_count += 1
@@ -2970,7 +3127,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					focused_failed = true
 					
 			# BLOODTHIRSTER
-			elif attacker.get("ability") == "Bloodthirster" and randi() % 100 < atk_trigger_chance: 
+			elif _attacker_has_attack_skill(attacker, "Bloodthirster") and randi() % 100 < atk_trigger_chance: 
 				var hits_landed: int = await _run_bloodthirster_minigame(attacker)
 				if hits_landed > 0:
 					ability_triggers_count += 1
@@ -2982,7 +3139,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Bloodthirster Failed! Combo broken.", "gray")
 					
 			# HUNDRED POINT STRIKE
-			elif attacker.get("ability") == "Hundred Point Strike" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Hundred Point Strike") and randi() % 100 < atk_trigger_chance:
 				combo_hits = await _run_hundred_point_strike_minigame(attacker)
 				if combo_hits > 0:
 					ability_triggers_count += 1
@@ -2993,12 +3150,15 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					focused_failed = true
 					
 			# --- ARCHER: DEADEYE SHOT ---
-			elif attacker.get("ability") == "Deadeye Shot" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Deadeye Shot") and randi() % 100 < atk_trigger_chance:
 				var deadeye_result: int = await QTEManager.run_deadeye_shot_minigame(self, attacker)
 				if deadeye_result > 0:
 					ability_triggers_count += 1
 					force_hit = true
 					deadeye_bonus_damage = 6 if deadeye_result == 1 else 10
+					if get_distance(attacker, defender) >= 3:
+						deadeye_bonus_damage += 4
+						add_combat_log("Deadeye: long draw — full string tension!", "aquamarine")
 					if deadeye_result == 2:
 						force_crit = true
 						add_combat_log("PERFECT DEADEYE! Critical shot lined up!", "gold")
@@ -3007,9 +3167,10 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				else:
 					add_combat_log("Deadeye timing missed.", "gray")
 			
-			# --- ARCHER: VOLLEY ---
-			elif attacker.get("ability") == "Volley" and randi() % 100 < atk_trigger_chance:
+			# --- ARCHER: VOLLEY (perfect: second follow-up veers to a foe adjacent to the target) ---
+			elif _attacker_has_attack_skill(attacker, "Volley") and randi() % 100 < atk_trigger_chance:
 				var volley_result: int = await QTEManager.run_volley_minigame(self, attacker)
+				volley_spread_target = null
 				if volley_result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3017,13 +3178,20 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					volley_damage_multiplier = 0.55 if volley_result == 1 else 0.72
 					if volley_result == 2:
 						add_combat_log("PERFECT VOLLEY! Three arrows loose at once!", "gold")
+						var vd: Vector2i = get_grid_pos(defender)
+						for vdir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+							var ve: Node2D = get_enemy_at(vd + vdir)
+							if ve != null and ve != defender and is_instance_valid(ve) and not ve.is_queued_for_deletion() and ve.get_parent() == enemy_container and ve.current_hp > 0:
+								volley_spread_target = ve
+								add_combat_log("One shaft veers into " + str(ve.unit_name) + "!", "lightcyan")
+								break
 					else:
 						add_combat_log("VOLLEY! Bonus arrows incoming!", "cyan")
 				else:
 					add_combat_log("Volley fizzled. Not enough arrows loosed.", "gray")
 			
 			# --- ARCHER: RAIN OF ARROWS ---
-			elif attacker.get("ability") == "Rain of Arrows" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Rain of Arrows") and randi() % 100 < atk_trigger_chance:
 				var rain_result: int = await QTEManager.run_rain_of_arrows_minigame(self, attacker)
 				if rain_result > 0:
 					ability_triggers_count += 1
@@ -3038,9 +3206,26 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 						var splash_target: Node2D = get_enemy_at(center_tile + dir)
 						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not rain_splash_targets.has(splash_target):
 							rain_splash_targets.append(splash_target)
-			
+
+					rain_tail_unit = null
+					rain_rear_extra_damage = 0
+					var r_a: Vector2i = get_grid_pos(attacker)
+					var r_d: Vector2i = get_grid_pos(defender)
+					var r_step: Vector2i = _attack_line_step(r_a, r_d)
+					if r_step != Vector2i.ZERO:
+						var r_tail: Node2D = get_enemy_at(r_d + r_step)
+						if r_tail != null and r_tail != defender and is_instance_valid(r_tail) and not r_tail.is_queued_for_deletion() and r_tail.get_parent() == enemy_container and r_tail.current_hp > 0:
+							rain_tail_unit = r_tail
+							rain_rear_extra_damage = 6 if rain_result == 2 else 3
+							if not rain_splash_targets.has(r_tail):
+								rain_splash_targets.append(r_tail)
+							add_combat_log("The volley hammers the rear rank (" + str(r_tail.unit_name) + ")!", "wheat")
+
 					if rain_result == 1 and rain_splash_targets.size() > 1:
-						rain_splash_targets = [rain_splash_targets[0]]
+						if rain_tail_unit != null and rain_splash_targets.has(rain_tail_unit):
+							rain_splash_targets = [rain_tail_unit]
+						else:
+							rain_splash_targets = [rain_splash_targets[0]]
 			
 					if rain_result == 2:
 						add_combat_log("PERFECT RAIN OF ARROWS! The whole zone is covered!", "gold")
@@ -3049,8 +3234,8 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				else:
 					add_combat_log("Rain of Arrows sequence broken.", "gray")
 
-			# --- KNIGHT: CHARGE ---
-			elif attacker.get("ability") == "Charge" and randi() % 100 < atk_trigger_chance:
+			# --- KNIGHT: CHARGE (pin vs rear foe — extra crush when someone stands behind the target) ---
+			elif _attacker_has_attack_skill(attacker, "Charge") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_charge_minigame(self, attacker)
 				if result == 2:
 					ability_triggers_count += 1
@@ -3065,9 +3250,21 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("CHARGE! The Knight slams through with full momentum!", "orange")
 				else:
 					add_combat_log("Charge timing failed. Momentum lost.", "gray")
+				if result > 0:
+					var ca: Vector2i = get_grid_pos(attacker)
+					var cd: Vector2i = get_grid_pos(defender)
+					var cstep: Vector2i = _attack_line_step(ca, cd)
+					if cstep != Vector2i.ZERO:
+						var pin_cell: Vector2i = cd + cstep
+						var rear: Node2D = get_enemy_at(pin_cell)
+						if rear != null and rear != defender and is_instance_valid(rear) and not rear.is_queued_for_deletion() and rear.get_parent() == enemy_container and rear.current_hp > 0:
+							charge_collision_target = rear
+							charge_collision_damage = 12 if result == 2 else 6
+							charge_bonus_damage += 5 if result == 2 else 3
+							add_combat_log(str(defender.unit_name) + " is crushed against " + str(rear.unit_name) + "!", "coral")
 
 			# --- MAGE: FIREBALL ---
-			elif attacker.get("ability") == "Fireball" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Fireball") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_fireball_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3087,6 +3284,20 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not fireball_splash_targets.has(splash_target):
 							fireball_splash_targets.append(splash_target)
 
+					fireball_tail_unit = null
+					fireball_tail_extra_damage = 0
+					var fa: Vector2i = get_grid_pos(attacker)
+					var fd: Vector2i = get_grid_pos(defender)
+					var fstep: Vector2i = _attack_line_step(fa, fd)
+					if fstep != Vector2i.ZERO:
+						var f_tail: Node2D = get_enemy_at(fd + fstep)
+						if f_tail != null and f_tail != defender and is_instance_valid(f_tail) and not f_tail.is_queued_for_deletion() and f_tail.get_parent() == enemy_container and f_tail.current_hp > 0:
+							fireball_tail_unit = f_tail
+							fireball_tail_extra_damage = 6 if result == 2 else 3
+							if not fireball_splash_targets.has(f_tail):
+								fireball_splash_targets.append(f_tail)
+							add_combat_log("The fireball rolls through onto " + str(f_tail.unit_name) + "!", "orangered")
+
 					if result == 2:
 						add_combat_log("PERFECT FIREBALL! The blast fully engulfs the area!", "gold")
 					else:
@@ -3095,7 +3306,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Fireball fizzled. The spell landed poorly.", "gray")
 
 			# --- MAGE: METEOR STORM ---
-			elif attacker.get("ability") == "Meteor Storm" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Meteor Storm") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_meteor_storm_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3115,6 +3326,20 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not meteor_storm_splash_targets.has(splash_target):
 							meteor_storm_splash_targets.append(splash_target)
 
+					meteor_tail_unit = null
+					meteor_tail_extra_damage = 0
+					var ma: Vector2i = get_grid_pos(attacker)
+					var md: Vector2i = get_grid_pos(defender)
+					var mstep: Vector2i = _attack_line_step(ma, md)
+					if mstep != Vector2i.ZERO:
+						var m_tail: Node2D = get_enemy_at(md + mstep)
+						if m_tail != null and m_tail != defender and is_instance_valid(m_tail) and not m_tail.is_queued_for_deletion() and m_tail.get_parent() == enemy_container and m_tail.current_hp > 0:
+							meteor_tail_unit = m_tail
+							meteor_tail_extra_damage = 8 if result == 2 else 4
+							if not meteor_storm_splash_targets.has(m_tail):
+								meteor_storm_splash_targets.append(m_tail)
+							add_combat_log("A meteor fragment streaks into " + str(m_tail.unit_name) + "!", "tomato")
+
 					if result == 2:
 						force_crit = true
 						add_combat_log("PERFECT METEOR STORM! Cataclysmic impact across the battlefield!", "gold")
@@ -3124,7 +3349,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Meteor Storm sequence failed. The heavens do not answer.", "gray")
 
 			# --- MERCENARY: FLURRY STRIKE ---
-			elif attacker.get("ability") == "Flurry Strike" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Flurry Strike") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_flurry_strike_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3144,7 +3369,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Flurry Strike failed. The combo never began.", "gray")
 
 			# --- MERCENARY: BATTLE CRY ---
-			elif attacker.get("ability") == "Battle Cry" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Battle Cry") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_battle_cry_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3183,7 +3408,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Battle Cry falls flat. No momentum gained.", "gray")
 
 			# --- MERCENARY: BLADE TEMPEST ---
-			elif attacker.get("ability") == "Blade Tempest" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Blade Tempest") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_blade_tempest_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3211,7 +3436,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Blade Tempest loses rhythm before the storm begins.", "gray")
 
 			# --- MONK: CHAKRA ---
-			elif attacker.get("ability") == "Chakra" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Chakra") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_chakra_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3237,7 +3462,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Chakra faltered. The Monk failed to center their breathing.", "gray")
 
 			# --- MONK: CHI BURST ---
-			elif attacker.get("ability") == "Chi Burst" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Chi Burst") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_chi_burst_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3264,7 +3489,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Chi Burst collapsed before release.", "gray")
 
 			# --- MONSTER: ROAR ---
-			elif attacker.get("ability") == "Roar" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Roar") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_roar_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3311,7 +3536,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("The Roar came out weak and uneven.", "gray")
 
 			# --- MONSTER: FRENZY ---
-			elif attacker.get("ability") == "Frenzy" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Frenzy") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_frenzy_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3336,7 +3561,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Frenzy never took hold.", "gray")
 
 			# --- MONSTER: RENDING CLAW ---
-			elif attacker.get("ability") == "Rending Claw" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Rending Claw") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_rending_claw_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3352,8 +3577,10 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Rending Claw missed the weak point.", "gray")
 					
 			# --- PALADIN: SMITE ---
-			elif attacker.get("ability") == "Smite" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Smite") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_smite_minigame(self, attacker)
+				smite_splash_targets.clear()
+				smite_splash_damage = 0
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3361,15 +3588,26 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					if result == 2:
 						force_crit = true
 						smite_bonus_damage = 8 + int(attacker.magic / 2)
+						smite_splash_damage = 7 + int(attacker.magic / 4)
 						add_combat_log("PERFECT SMITE! A blinding ray of holy light obliterates the target!", "gold")
 					else:
 						smite_bonus_damage = 4 + int(attacker.magic / 3)
+						smite_splash_damage = 4 + int(attacker.magic / 5)
 						add_combat_log("SMITE! Holy energy sears the enemy!", "yellow")
+					var smite_center: Vector2i = get_grid_pos(defender)
+					for sm_dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+						if smite_splash_targets.size() >= 2:
+							break
+						var sm_e: Node2D = get_enemy_at(smite_center + sm_dir)
+						if sm_e != null and sm_e != defender and is_instance_valid(sm_e) and not sm_e.is_queued_for_deletion() and sm_e.get_parent() == enemy_container and sm_e.current_hp > 0 and not smite_splash_targets.has(sm_e):
+							smite_splash_targets.append(sm_e)
+					if smite_splash_targets.size() > 0:
+						add_combat_log("Holy light splashes onto nearby foes!", "khaki")
 				else:
 					add_combat_log("Smite failed to find its mark.", "gray")
 					
 			# --- PALADIN: SACRED JUDGMENT ---
-			elif attacker.get("ability") == "Sacred Judgment" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Sacred Judgment") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_sacred_judgment_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3397,7 +3635,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Sacred Judgment was released too early.", "gray")
 
 			# --- SPELLBLADE: FLAME BLADE ---
-			elif attacker.get("ability") == "Flame Blade" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Flame Blade") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_flame_blade_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3415,7 +3653,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Flame Blade fizzled out.", "gray")
 
 			# --- SPELLBLADE: ELEMENTAL CONVERGENCE ---
-			elif attacker.get("ability") == "Elemental Convergence" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Elemental Convergence") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_elemental_convergence_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3444,7 +3682,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("The elemental energies destabilized and vanished.", "gray")
 					
 			# --- THIEF: SHADOW STRIKE ---
-			elif attacker.get("ability") == "Shadow Strike" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Shadow Strike") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_shadow_strike_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3461,7 +3699,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Shadow Strike revealed. The element of surprise is gone.", "gray")
 					
 			# --- THIEF: ASSASSINATE ---
-			elif attacker.get("ability") == "Assassinate" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Assassinate") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_assassinate_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3476,7 +3714,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Assassinate failed to find an opening.", "gray")
 					
 			# --- THIEF: ULTIMATE SHADOW STEP ---
-			elif attacker.get("ability") == "Ultimate Shadow Step" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Ultimate Shadow Step") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_ultimate_shadow_step_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3492,7 +3730,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Ultimate Shadow Step collapsed. Sequence broken.", "gray")
 
 			# --- WARRIOR: POWER STRIKE ---
-			elif attacker.get("ability") == "Power Strike" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Power Strike") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_power_strike_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3508,7 +3746,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Power Strike whiffed entirely.", "gray")
 
 			# --- WARRIOR: ADRENALINE RUSH ---
-			elif attacker.get("ability") == "Adrenaline Rush" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Adrenaline Rush") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_adrenaline_rush_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3527,7 +3765,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Adrenaline Rush faded.", "gray")
 
 			# --- WARRIOR: EARTHSHATTER ---
-			elif attacker.get("ability") == "Earthshatter" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Earthshatter") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_earthshatter_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3555,7 +3793,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Earthshatter miscalculated. The strike hit dirt.", "gray")
 			
 			# --- PROMOTED ASSASSIN: SHADOW PIN ---
-			elif attacker.get("ability") == "Shadow Pin" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Shadow Pin") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_shadow_pin_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3573,7 +3811,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Shadow Pin missed the pressure point.", "gray")
 
 			# --- PROMOTED BERSERKER: SAVAGE TOSS ---
-			elif attacker.get("ability") == "Savage Toss" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Savage Toss") and randi() % 100 < atk_trigger_chance:
 				savage_toss_distance = await QTEManager.run_savage_toss_minigame(self, attacker)
 				if savage_toss_distance > 0:
 					ability_triggers_count += 1
@@ -3589,7 +3827,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Savage Toss failed to lift the target.", "gray")
 
 			# --- PROMOTED HERO: VANGUARD'S RALLY ---
-			elif attacker.get("ability") == "Vanguard's Rally" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Vanguard's Rally") and randi() % 100 < atk_trigger_chance:
 				var combos: int = await QTEManager.run_vanguards_rally_minigame(self, attacker)
 				if combos > 0:
 					ability_triggers_count += 1
@@ -3606,7 +3844,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Vanguard's Rally failed to build momentum.", "gray")
 
 			# --- PROMOTED BLADE MASTER: SEVERING STRIKE ---
-			elif attacker.get("ability") == "Severing Strike" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Severing Strike") and randi() % 100 < atk_trigger_chance:
 				severing_strike_hits = await QTEManager.run_severing_strike_minigame(self, attacker)
 				if severing_strike_hits > 0:
 					ability_triggers_count += 1
@@ -3623,7 +3861,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Severing Strike missed all vital points.", "gray")
 
 			# --- PROMOTED BLADE WEAVER: AETHER BIND ---
-			elif attacker.get("ability") == "Aether Bind" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Aether Bind") and randi() % 100 < atk_trigger_chance:
 				aether_bind_sparks = await QTEManager.run_aether_bind_minigame(self, attacker)
 				if aether_bind_sparks > 0:
 					ability_triggers_count += 1
@@ -3643,7 +3881,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Aether Bind failed to catch any magical energy.", "gray")
 
 			# --- PROMOTED BOW KNIGHT: PARTING SHOT ---
-			elif attacker.get("ability") == "Parting Shot" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Parting Shot") and randi() % 100 < atk_trigger_chance:
 				parting_shot_result = await QTEManager.run_parting_shot_minigame(self, attacker)
 				if parting_shot_result > 0:
 					ability_triggers_count += 1
@@ -3661,7 +3899,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Parting Shot execution failed.", "gray")
 
 			# --- PROMOTED DEATH KNIGHT: SOUL HARVEST ---
-			elif attacker.get("ability") == "Soul Harvest" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Soul Harvest") and randi() % 100 < atk_trigger_chance:
 				soul_harvest_result = await QTEManager.run_soul_harvest_minigame(self, attacker)
 				if soul_harvest_result > 0:
 					ability_triggers_count += 1
@@ -3685,7 +3923,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Soul Harvest grip broken.", "gray")
 
 			# --- PROMOTED FIRE SAGE: HELLFIRE ---
-			elif attacker.get("ability") == "Hellfire" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Hellfire") and randi() % 100 < atk_trigger_chance:
 				hellfire_result = await QTEManager.run_hellfire_minigame(self, attacker)
 				if hellfire_result == 2:
 					ability_triggers_count += 1
@@ -3696,8 +3934,8 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				else:
 					add_combat_log("Hellfire failed to reach critical mass.", "gray")
 
-			# --- PROMOTED HEAVY ARCHER: BALLISTA SHOT ---
-			elif attacker.get("ability") == "Ballista Shot" and randi() % 100 < atk_trigger_chance:
+			# --- CANNONEER / SIEGE: BALLISTA SHOT (overpenetration — foe behind primary target in line) ---
+			elif _attacker_has_attack_skill(attacker, "Ballista Shot") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_ballista_shot_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3709,11 +3947,23 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					else:
 						ballista_shot_bonus_damage = 8
 						add_combat_log("BALLISTA SHOT! A heavy bolt strikes the target!", "cyan")
+					# Identity: siege bolt punches through — next enemy on the same line behind the target eats spill damage.
+					ballista_shot_pierce_damage = 0
+					var a_cell: Vector2i = get_grid_pos(attacker)
+					var d_cell: Vector2i = get_grid_pos(defender)
+					var step: Vector2i = _attack_line_step(a_cell, d_cell)
+					if step != Vector2i.ZERO:
+						var behind_cell: Vector2i = d_cell + step
+						var pierce: Node2D = get_enemy_at(behind_cell)
+						if pierce != null and pierce != defender and is_instance_valid(pierce) and not pierce.is_queued_for_deletion() and pierce.get_parent() == enemy_container and pierce.current_hp > 0:
+							ballista_shot_pierce_targets.append(pierce)
+							ballista_shot_pierce_damage = 14 if result == 2 else 7
+							add_combat_log("The bolt overpenetrates toward " + str(pierce.unit_name) + "!", "lightskyblue")
 				else:
 					add_combat_log("Ballista Shot missed the mark.", "gray")
 
 			# --- PROMOTED HIGH PALADIN: AEGIS STRIKE ---
-			elif attacker.get("ability") == "Aegis Strike" and randi() % 100 < atk_trigger_chance:
+			elif _attacker_has_attack_skill(attacker, "Aegis Strike") and randi() % 100 < atk_trigger_chance:
 				var result: int = await QTEManager.run_aegis_strike_minigame(self, attacker)
 				if result > 0:
 					ability_triggers_count += 1
@@ -3728,9 +3978,15 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				else:
 					add_combat_log("Aegis Strike lost its alignment.", "gray")
 
+		var rookie_mods: Dictionary = _compute_rookie_class_passive_mods(attacker, defender, is_magic, wpn)
+		var rookie_hit: int = int(rookie_mods.get("hit", 0))
+		var rookie_dmg: int = int(rookie_mods.get("dmg", 0))
+		var rookie_crit: int = int(rookie_mods.get("crit", 0))
+		var rookie_log: String = str(rookie_mods.get("log", ""))
+
 		# --- FINAL HIT CHANCE MATH (support-combat: atk_sup hit, def_sup avo; relationship: atk_rel hit, def_rel avo) ---
 		var hit_chance: int = int(clamp(80 + (wpn.hit_bonus if wpn else 0) + tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100))
-		hit_chance = int(clamp(hit_chance + battle_cry_bonus_hit + chakra_bonus_hit + frenzy_bonus_hit - int(defender.get_meta("inner_peace_avo_bonus_temp", 0)), 0, 100))
+		hit_chance = int(clamp(hit_chance + battle_cry_bonus_hit + chakra_bonus_hit + frenzy_bonus_hit + rookie_hit - int(defender.get_meta("inner_peace_avo_bonus_temp", 0)), 0, 100))
 		if focused_failed: hit_chance = 0 
 		
 		# --- ARMOR PIERCING CALCULATION ---
@@ -3785,10 +4041,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 		damage += shadow_strike_bonus_damage + shadow_step_bonus_damage + power_strike_bonus_damage + earthshatter_bonus_damage
 		damage += shadow_pin_bonus_damage + savage_toss_bonus_damage + vanguards_rally_bonus_damage
 		damage += atk_rel["dmg_bonus"]
-		var crit_chance: int = int(clamp((attacker.agility / 2) + assassinate_crit_bonus + atk_rel["crit_bonus"] - def_sup["crit_avo"], 0, 100))
+		var crit_chance: int = int(clamp((attacker.agility / 2) + assassinate_crit_bonus + atk_rel["crit_bonus"] - def_sup["crit_avo"] + rookie_crit, 0, 100))
 		damage += hellfire_bonus_damage + ballista_shot_bonus_damage + aegis_strike_bonus_damage
+		damage += rookie_dmg
 		var is_crit: bool = force_crit or (randi() % 100 < crit_chance)
 		var attack_hits: bool = force_hit or (randi() % 100 < hit_chance)
+		if not rookie_log.is_empty():
+			add_combat_log(attacker.unit_name + ": " + rookie_log, "lightblue")
 		# ==========================================
 		# PHASE C: ATTACK LUNGE OR SHOOT
 		# ==========================================
@@ -4148,6 +4407,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 		
 		if not defense_resolved_and_won:
 			if attack_hits:
+				_rookie_register_apprentice_magic_hit(attacker, wpn, is_magic, true)
 				# ==========================================
 				# --- IMPACT JUICE (HIT-STOP & ZOOM) ---
 				# ==========================================
@@ -4391,7 +4651,10 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 							if volley_extra_hits > 0 and is_instance_valid(defender) and defender.current_hp > 0:
 								for volley_idx in range(volley_extra_hits):
 									await get_tree().create_timer(0.10).timeout
-									if not is_instance_valid(defender) or defender.current_hp <= 0:
+									var vol_tgt: Node2D = defender
+									if volley_idx == 1 and volley_spread_target != null and is_instance_valid(volley_spread_target) and not volley_spread_target.is_queued_for_deletion() and volley_spread_target.current_hp > 0 and volley_spread_target.get_parent() == enemy_container:
+										vol_tgt = volley_spread_target
+									elif not is_instance_valid(defender) or defender.current_hp <= 0:
 										break
 							
 									var volley_dmg: int = int(round(max(1.0, float(damage)) * volley_damage_multiplier))
@@ -4399,9 +4662,9 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 									if attack_sound and attack_sound.stream != null:
 										attack_sound.play()
 							
-									spawn_loot_text(str(volley_dmg), Color(0.70, 0.90, 1.00), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
-									add_combat_log(attacker.unit_name + "'s Volley arrow hits for " + str(volley_dmg) + ".", "cyan")
-									_apply_hit_with_support_reactions(defender, volley_dmg, attacker, attacker, false)
+									spawn_loot_text(str(volley_dmg), Color(0.70, 0.90, 1.00), vol_tgt.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
+									add_combat_log(attacker.unit_name + "'s Volley arrow hits " + str(vol_tgt.unit_name) + " for " + str(volley_dmg) + ".", "cyan")
+									_apply_hit_with_support_reactions(vol_tgt, volley_dmg, attacker, attacker, false)
 							
 							# --- ARCHER QTE: RAIN OF ARROWS SPLASH ---
 							if rain_splash_targets.size() > 0:
@@ -4415,10 +4678,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 							
 									if attack_sound and attack_sound.stream != null:
 										attack_sound.play()
+
+									var rain_d: int = rain_splash_damage
+									if rain_tail_unit != null and splash_target == rain_tail_unit and rain_rear_extra_damage > 0:
+										rain_d += rain_rear_extra_damage
 							
-									spawn_loot_text(str(rain_splash_damage) + " SPLASH", Color(1.0, 0.86, 0.45), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is struck by falling arrows for " + str(rain_splash_damage) + ".", "khaki")
-									splash_target.take_damage(rain_splash_damage, attacker)
+									spawn_loot_text(str(rain_d) + " SPLASH", Color(1.0, 0.86, 0.45), splash_target.global_position + Vector2(32, -16))
+									add_combat_log(splash_target.unit_name + " is struck by falling arrows for " + str(rain_d) + ".", "khaki")
+									splash_target.take_damage(rain_d, attacker)
 
 							# --- MAGE QTE: FIREBALL SPLASH ---
 							if fireball_splash_targets.size() > 0:
@@ -4433,9 +4700,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 									if attack_sound and attack_sound.stream != null:
 										attack_sound.play()
 
-									spawn_loot_text(str(fireball_splash_damage) + " BURN", Color(1.0, 0.65, 0.25), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is caught in the Fireball blast for " + str(fireball_splash_damage) + ".", "orange")
-									splash_target.take_damage(fireball_splash_damage, attacker)
+									var fb_splash: int = fireball_splash_damage
+									if fireball_tail_unit != null and splash_target == fireball_tail_unit:
+										fb_splash += fireball_tail_extra_damage
+									spawn_loot_text(str(fb_splash) + " BURN", Color(1.0, 0.65, 0.25), splash_target.global_position + Vector2(32, -16))
+									add_combat_log(splash_target.unit_name + " is caught in the Fireball blast for " + str(fb_splash) + ".", "orange")
+									splash_target.take_damage(fb_splash, attacker)
 
 							# --- MAGE QTE: METEOR STORM SPLASH ---
 							if meteor_storm_splash_targets.size() > 0:
@@ -4450,9 +4720,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 									if attack_sound and attack_sound.stream != null:
 										attack_sound.play()
 
-									spawn_loot_text(str(meteor_storm_splash_damage) + " METEOR", Color(1.0, 0.45, 0.25), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is smashed by falling meteors for " + str(meteor_storm_splash_damage) + ".", "tomato")
-									splash_target.take_damage(meteor_storm_splash_damage, attacker)
+									var met_splash: int = meteor_storm_splash_damage
+									if meteor_tail_unit != null and splash_target == meteor_tail_unit:
+										met_splash += meteor_tail_extra_damage
+									spawn_loot_text(str(met_splash) + " METEOR", Color(1.0, 0.45, 0.25), splash_target.global_position + Vector2(32, -16))
+									add_combat_log(splash_target.unit_name + " is smashed by falling meteors for " + str(met_splash) + ".", "tomato")
+									splash_target.take_damage(met_splash, attacker)
 
 							# --- MERCENARY QTE: FLURRY STRIKE FOLLOW-UP HITS ---
 							if flurry_strike_hits > 0 and is_instance_valid(defender) and defender.current_hp > 0:
@@ -4504,6 +4777,20 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 									add_combat_log(splash_target.unit_name + " is struck by the Chi Burst for " + str(chi_burst_splash_damage) + ".", "violet")
 									splash_target.take_damage(chi_burst_splash_damage, attacker)
 									
+							# --- PALADIN QTE: SMITE HOLY SPLASH (ortho neighbors of target) ---
+							if smite_splash_targets.size() > 0 and smite_splash_damage > 0:
+								await get_tree().create_timer(0.10).timeout
+								for sm_sp in smite_splash_targets:
+									if sm_sp == null or not is_instance_valid(sm_sp) or sm_sp.is_queued_for_deletion():
+										continue
+									if sm_sp.current_hp <= 0:
+										continue
+									if attack_sound and attack_sound.stream != null:
+										attack_sound.play()
+									spawn_loot_text(str(smite_splash_damage) + " HOLY", Color(1.0, 0.95, 0.55), sm_sp.global_position + Vector2(32, -16))
+									add_combat_log(sm_sp.unit_name + " is scorched by Smite's holy spill for " + str(smite_splash_damage) + ".", "yellow")
+									sm_sp.take_damage(smite_splash_damage, attacker)
+
 							# --- PALADIN QTE: SACRED JUDGMENT SPLASH ---
 							if sacred_judgment_splash_targets.size() > 0:
 								await get_tree().create_timer(0.12).timeout
@@ -4538,6 +4825,31 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 									add_combat_log(splash_target.unit_name + " is hit by the Elemental Convergence blast for " + str(elemental_convergence_splash_damage) + ".", "cyan")
 									splash_target.take_damage(elemental_convergence_splash_damage, attacker)
 									
+							# --- CHARGE: COLLISION DAMAGE (rear foe pinned in the charge line) ---
+							if charge_collision_target != null and charge_collision_damage > 0:
+								await get_tree().create_timer(0.08).timeout
+								var cc: Node2D = charge_collision_target
+								if is_instance_valid(cc) and not cc.is_queued_for_deletion() and cc.current_hp > 0 and cc.get_parent() == enemy_container:
+									if attack_sound and attack_sound.stream != null:
+										attack_sound.play()
+									spawn_loot_text(str(charge_collision_damage) + " PIN", Color(1.0, 0.55, 0.35), cc.global_position + Vector2(32, -16))
+									add_combat_log(cc.unit_name + " is slammed by the pinned charge for " + str(charge_collision_damage) + ".", "coral")
+									cc.take_damage(charge_collision_damage, attacker)
+
+							# --- BALLISTA SHOT: LINE OVERPENETRATION (behind primary target) ---
+							if ballista_shot_pierce_targets.size() > 0 and ballista_shot_pierce_damage > 0:
+								await get_tree().create_timer(0.10).timeout
+								for pierce_target in ballista_shot_pierce_targets:
+									if pierce_target == null or not is_instance_valid(pierce_target) or pierce_target.is_queued_for_deletion():
+										continue
+									if pierce_target.current_hp <= 0:
+										continue
+									if attack_sound and attack_sound.stream != null:
+										attack_sound.play()
+									spawn_loot_text(str(ballista_shot_pierce_damage) + " PIERCE", Color(0.55, 0.85, 1.0), pierce_target.global_position + Vector2(32, -16))
+									add_combat_log(pierce_target.unit_name + " is struck by the overpenetrating bolt for " + str(ballista_shot_pierce_damage) + ".", "lightskyblue")
+									pierce_target.take_damage(ballista_shot_pierce_damage, attacker)
+
 							# --- WARRIOR QTE: EARTHSHATTER SPLASH ---
 							if earthshatter_splash_targets.size() > 0:
 								await get_tree().create_timer(0.12).timeout
@@ -5921,7 +6233,15 @@ func load_campaign_data() -> void:
 			new_unit.active_class_data = saved["class_data"]
 		
 		if saved.has("ability"): new_unit.ability = saved["ability"]
-		
+		if saved.has("traits") and new_unit.get("traits") != null:
+			new_unit.traits = saved["traits"].duplicate()
+		if saved.has("rookie_legacies") and new_unit.get("rookie_legacies") != null:
+			new_unit.rookie_legacies = saved["rookie_legacies"].duplicate()
+		if saved.has("base_class_legacies") and new_unit.get("base_class_legacies") != null:
+			new_unit.base_class_legacies = saved["base_class_legacies"].duplicate()
+		if saved.has("promoted_class_legacies") and new_unit.get("promoted_class_legacies") != null:
+			new_unit.promoted_class_legacies = saved["promoted_class_legacies"].duplicate()
+
 		# --- THE FIX: TRANSFER SKILL DATA TO THE NODE ---
 		if saved.has("skill_points"): 
 			new_unit.skill_points = saved["skill_points"]
@@ -8479,7 +8799,10 @@ func execute_promotion(unit: Node2D, advanced_class: Resource) -> void:
 	, 2.0, 15.0, 2.0)
 	
 	# STAGE 2: THE FLASH & DATA SWAP
-	tween.chain().tween_callback(func(): 
+	tween.chain().tween_callback(func():
+		UnitTraitsDisplay.grant_rookie_legacy_on_promotion(unit, old_class_name)
+		UnitTraitsDisplay.grant_tier_class_legacy_on_promotion(unit, old_class_name, advanced_class)
+
 		var gains = {
 			"hp": advanced_class.get("promo_hp_bonus") if advanced_class.get("promo_hp_bonus") != null else 0,
 			"str": advanced_class.get("promo_str_bonus") if advanced_class.get("promo_str_bonus") != null else 0,
@@ -8799,6 +9122,7 @@ func _on_start_battle_pressed() -> void:
 	_enemy_damagers.clear()
 	# Boss Personal Dialogue: ensure one-time pre-attack tracking is reset when battle starts.
 	_boss_personal_dialogue_played.clear()
+	_reset_rookie_battle_tracking()
 	change_state(player_state) # Officially starts Turn 1!
 
 # ==========================================
@@ -11230,8 +11554,32 @@ func _build_forecast_reaction_summary(attacker: Node2D, defender: Node2D, atk_wp
 	if defender.has_meta("is_burning") and defender.get_meta("is_burning") == true:
 		lines.append("Target is burning (fire damage after each enemy phase).")
 
-	if attacker.get("ability") == "Hellfire":
+	if _attacker_has_attack_skill(attacker, "Hellfire"):
 		lines.append("Hellfire: strong minigame can ignite (burn DoT after enemy phase).")
+
+	if _attacker_has_attack_skill(attacker, "Ballista Shot"):
+		lines.append("Ballista Shot: on proc, bolt can overpenetrate — spill damage to a foe in the tile behind this target (same line).")
+
+	if _attacker_has_attack_skill(attacker, "Charge"):
+		lines.append("Charge: on proc, if another enemy stands behind this target in your line, they take collision damage and your impact is stronger.")
+
+	if _attacker_has_attack_skill(attacker, "Fireball"):
+		lines.append("Fireball: on proc, flames wash down the line — extra burn on a foe in the tile behind the target.")
+
+	if _attacker_has_attack_skill(attacker, "Meteor Storm"):
+		lines.append("Meteor Storm: on proc, a fragment may streak into a foe behind the target (same line) for extra splash damage.")
+
+	if _attacker_has_attack_skill(attacker, "Deadeye Shot"):
+		lines.append("Deadeye Shot: at range 3+, a successful proc gains extra precision damage.")
+
+	if _attacker_has_attack_skill(attacker, "Smite"):
+		lines.append("Smite: on proc, holy energy can splash to up to two foes orthogonally adjacent to the target.")
+
+	if _attacker_has_attack_skill(attacker, "Volley"):
+		lines.append("Volley: on a perfect proc, the second follow-up arrow can strike a different foe adjacent to the target.")
+
+	if _attacker_has_attack_skill(attacker, "Rain of Arrows"):
+		lines.append("Rain of Arrows: rear-rank pressure — extra damage to a foe in the tile behind the target (same line); non-perfect splash favors that foe when you must pick one.")
 
 	if lines.is_empty():
 		return ""

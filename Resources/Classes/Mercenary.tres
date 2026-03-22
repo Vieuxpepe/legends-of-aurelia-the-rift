@@ -21,4 +21,6 @@ agi_bonus = 1
 hp_growth_bonus = 10
 str_growth_bonus = 10
 def_growth_bonus = 10
+class_combat_ability = "Bloodthirster"
+class_combat_ability_b = "Power Strike"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

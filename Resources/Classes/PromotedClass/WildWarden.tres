@@ -18,3 +18,6 @@ promo_str_bonus = 2
 promo_def_bonus = 2
 promo_spd_bonus = 0
 promo_agi_bonus = 0
+class_combat_ability = "Rending Claw"
+class_combat_ability_b = "Roar"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

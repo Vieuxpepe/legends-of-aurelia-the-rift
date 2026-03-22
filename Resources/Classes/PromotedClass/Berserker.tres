@@ -18,4 +18,6 @@ promo_hp_bonus = 4
 promo_str_bonus = 2
 promo_res_bonus = 0
 promo_agi_bonus = 0
+class_combat_ability = "Adrenaline Rush"
+class_combat_ability_b = "Savage Toss"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

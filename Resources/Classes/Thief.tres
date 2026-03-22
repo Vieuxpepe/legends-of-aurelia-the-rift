@@ -19,4 +19,6 @@ agi_bonus = 4
 str_growth_bonus = -10
 spd_growth_bonus = 20
 agi_growth_bonus = 20
+class_combat_ability = "Shadow Strike"
+class_combat_ability_b = "Assassinate"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

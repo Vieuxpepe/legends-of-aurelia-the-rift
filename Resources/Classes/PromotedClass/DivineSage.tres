@@ -22,4 +22,6 @@ promo_mag_bonus = 2
 promo_res_bonus = 2
 promo_spd_bonus = 0
 promo_agi_bonus = 0
+class_combat_ability = "Healing Light"
+class_combat_ability_b = "Sacred Judgment"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

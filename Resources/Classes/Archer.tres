@@ -19,4 +19,6 @@ agi_bonus = 3
 str_growth_bonus = 5
 spd_growth_bonus = 15
 agi_growth_bonus = 10
+class_combat_ability = "Parting Shot"
+class_combat_ability_b = "Deadeye Shot"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

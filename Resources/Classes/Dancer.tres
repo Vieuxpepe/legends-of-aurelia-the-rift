@@ -27,3 +27,6 @@ spd_growth_bonus = 20
 agi_growth_bonus = 15
 mag_growth_bonus = 5
 res_growth_bonus = 10
+class_combat_ability = "Battle Cry"
+class_combat_ability_b = "Flurry Strike"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

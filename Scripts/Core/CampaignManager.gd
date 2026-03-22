@@ -797,6 +797,10 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		if u_copy.get("portrait") is Texture2D: u_copy["portrait"] = u_copy["portrait"].resource_path
 		if u_copy.get("battle_sprite") is Texture2D: u_copy["battle_sprite"] = u_copy["battle_sprite"].resource_path
 		u_copy["unit_tags"] = unit.get("unit_tags", [])
+		u_copy["traits"] = unit.get("traits", []).duplicate() if unit.get("traits") is Array else []
+		u_copy["rookie_legacies"] = unit.get("rookie_legacies", []).duplicate() if unit.get("rookie_legacies") is Array else []
+		u_copy["base_class_legacies"] = unit.get("base_class_legacies", []).duplicate() if unit.get("base_class_legacies") is Array else []
+		u_copy["promoted_class_legacies"] = unit.get("promoted_class_legacies", []).duplicate() if unit.get("promoted_class_legacies") is Array else []
 
 		roster_to_save.append(u_copy)
 
@@ -1186,7 +1190,15 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		if not unit.has("unlocked_abilities"): 
 			var curr_ab = unit.get("ability", "")
 			unit["unlocked_abilities"] = [curr_ab] if curr_ab != "" else []
-		
+		if not unit.has("traits"):
+			unit["traits"] = []
+		if not unit.has("rookie_legacies"):
+			unit["rookie_legacies"] = []
+		if not unit.has("base_class_legacies"):
+			unit["base_class_legacies"] = []
+		if not unit.has("promoted_class_legacies"):
+			unit["promoted_class_legacies"] = []
+
 		player_roster.append(unit)
 
 	claimed_rank_rewards.clear()
@@ -1687,7 +1699,11 @@ func save_party(battlefield: Node2D) -> void:
 				"skill_points": unit.get("skill_points") if unit.get("skill_points") != null else 0,
 				"unlocked_skills": unit.get("unlocked_skills").duplicate() if unit.get("unlocked_skills") != null else [],
 				"unlocked_abilities": unit.get("unlocked_abilities").duplicate() if unit.get("unlocked_abilities") != null else [],
-				"unit_tags": unit.get("unit_tags", []).duplicate()
+				"unit_tags": unit.get("unit_tags", []).duplicate(),
+				"traits": unit.get("traits").duplicate() if unit.get("traits") != null else [],
+				"rookie_legacies": unit.get("rookie_legacies").duplicate() if unit.get("rookie_legacies") != null else [],
+				"base_class_legacies": unit.get("base_class_legacies").duplicate() if unit.get("base_class_legacies") != null else [],
+				"promoted_class_legacies": unit.get("promoted_class_legacies").duplicate() if unit.get("promoted_class_legacies") != null else []
 			}
 
 			player_roster.append(unit_dict)

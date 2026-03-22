@@ -97,6 +97,14 @@ var ability: String = ""
 var unlocked_abilities: Array = []
 var skill_points: int = 0
 var unlocked_skills: Array = []
+## Stacked passive labels (e.g. legacy class effects). Display-only strings until combat hooks read them.
+var traits: Array = []
+## Rookie legacy ids (recruit, villager, …) — combat stacks these with current rookie job if any.
+var rookie_legacies: Array = []
+## Stacked ids (base_knight, …) when leaving a normal class for promoted; traits hold readable lines.
+var base_class_legacies: Array = []
+## Stacked ids (promoted_great_knight, …) when leaving a promoted class for ascended.
+var promoted_class_legacies: Array = []
 
 # ------------------------------------------------------------------------------
 # Turn State
@@ -439,7 +447,10 @@ func reset_turn() -> void:
 		
 	set_staggered_visuals(false)	
 	update_poise_visuals()
-	
+
+	if has_meta("rookie_villager_desperate_turn"):
+		remove_meta("rookie_villager_desperate_turn")
+
 func finish_turn() -> void:
 	in_canto_phase = false
 	canto_move_budget = 0.0
@@ -543,7 +554,23 @@ func setup_from_save_data(save_dict: Dictionary) -> void:
 	if save_dict.has("unlocked_abilities"):
 		unlocked_abilities.clear()
 		unlocked_abilities.append_array(save_dict["unlocked_abilities"])
-			
+	if save_dict.has("traits"):
+		traits = save_dict["traits"].duplicate()
+	else:
+		traits.clear()
+	if save_dict.has("rookie_legacies"):
+		rookie_legacies = save_dict["rookie_legacies"].duplicate()
+	else:
+		rookie_legacies.clear()
+	if save_dict.has("base_class_legacies"):
+		base_class_legacies = save_dict["base_class_legacies"].duplicate()
+	else:
+		base_class_legacies.clear()
+	if save_dict.has("promoted_class_legacies"):
+		promoted_class_legacies = save_dict["promoted_class_legacies"].duplicate()
+	else:
+		promoted_class_legacies.clear()
+
 # --- NEW: PHYSICALLY UPDATE VISUALS ---
 func apply_custom_visuals(sprite_tex: Texture2D, portrait_tex: Texture2D) -> void:
 	if sprite_tex:

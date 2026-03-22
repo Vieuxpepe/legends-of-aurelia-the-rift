@@ -17,3 +17,6 @@ promo_str_bonus = 2
 promo_def_bonus = 2
 promo_res_bonus = 0
 promo_spd_bonus = 0
+class_combat_ability = "Rain of Arrows"
+class_combat_ability_b = "Ballista Shot"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

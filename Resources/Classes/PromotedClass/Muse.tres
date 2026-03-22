@@ -21,3 +21,6 @@ promo_str_bonus = 0
 promo_mag_bonus = 2
 promo_def_bonus = 0
 promo_res_bonus = 2
+class_combat_ability = "Battle Cry"
+class_combat_ability_b = "Vanguard's Rally"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

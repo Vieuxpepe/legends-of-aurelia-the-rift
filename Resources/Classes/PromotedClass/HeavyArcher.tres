@@ -16,4 +16,6 @@ class_skill_tree = ExtResource("1_sdgon")
 promotion_options = Array[Resource]([ExtResource("3_gp44w"), ExtResource("4_tgqxy"), ExtResource("5_asl26")])
 promoted_battle_sprite = ExtResource("1_e23u6")
 promo_def_bonus = 3
+class_combat_ability = "Rain of Arrows"
+class_combat_ability_b = "Deadeye Shot"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

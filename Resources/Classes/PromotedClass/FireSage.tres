@@ -20,4 +20,6 @@ promo_mag_bonus = 2
 promo_res_bonus = 2
 promo_spd_bonus = 0
 promo_agi_bonus = 0
+class_combat_ability = "Hellfire"
+class_combat_ability_b = "Meteor Storm"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

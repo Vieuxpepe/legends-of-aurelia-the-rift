@@ -24,3 +24,6 @@ spd_growth_bonus = 5
 agi_growth_bonus = 5
 mag_growth_bonus = 15
 res_growth_bonus = 10
+class_combat_ability = "Aether Bind"
+class_combat_ability_b = "Meteor Storm"
+metadata/_custom_type_script = "uid://c45aax7tnes1o"

@@ -15,4 +15,6 @@ class_skill_tree = ExtResource("1_1ykpg")
 promotion_options = Array[Resource]([ExtResource("3_jpcab"), ExtResource("4_tl1tb"), ExtResource("5_xmgjy")])
 promoted_battle_sprite = ExtResource("1_8qreg")
 promo_str_bonus = 2
+class_combat_ability = "Blade Tempest"
+class_combat_ability_b = "Hundred Point Strike"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

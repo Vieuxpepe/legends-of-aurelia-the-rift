@@ -19,4 +19,6 @@ class_skill_tree = ExtResource("1_n2vcc")
 promotion_options = Array[Resource]([ExtResource("3_jul2t"), ExtResource("4_s54du"), ExtResource("5_8d86b")])
 promoted_battle_sprite = ExtResource("1_1cpab")
 promo_res_bonus = 2
+class_combat_ability = "Sacred Judgment"
+class_combat_ability_b = "Aegis Strike"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

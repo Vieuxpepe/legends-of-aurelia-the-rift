@@ -17,4 +17,6 @@ promoted_battle_sprite = ExtResource("1_2c3mc")
 promo_hp_bonus = 1
 promo_spd_bonus = 2
 promo_agi_bonus = 2
+class_combat_ability = "Ultimate Shadow Step"
+class_combat_ability_b = "Shadow Pin"
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

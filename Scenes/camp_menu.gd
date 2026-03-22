@@ -1746,6 +1746,12 @@ func _update_unit_info(unit_data: Dictionary) -> void:
 	lines.append("Weapon: [color=yellow]" + str(wpn_name) + "[/color]")
 	lines.append("Ability: [color=orange]" + str(active_ab) + "[/color]")
 	lines.append("")
+	var trait_lines_camp: PackedStringArray = UnitTraitsDisplay.trait_lines_from_roster_dict(unit_data)
+	if trait_lines_camp.size() > 0:
+		lines.append("[color=plum]-- TRAITS --[/color]")
+		for _tl in trait_lines_camp:
+			lines.append("• [color=wheat]" + str(_tl) + "[/color]")
+		lines.append("")
 	lines.append("[color=gold]-- RELATIONSHIPS --[/color]")
 	var unit_id: String = unit_data.get("unit_name", "Hero")
 	var candidate_ids: Array = []
