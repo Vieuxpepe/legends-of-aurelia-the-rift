@@ -45,9 +45,17 @@ func handle_input(event: InputEvent) -> void:
 			trade_target_ally = null
 			return
 		if active_unit != null:
+			if active_unit.get("in_canto_phase") == true:
+				active_unit.in_canto_phase = false
+				active_unit.canto_move_budget = 0
+				active_unit.finish_turn()
+				battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+				clear_active_unit()
+				return
 			if active_unit.has_moved:
 				active_unit.position = Vector2(original_pos.x * battlefield.CELL_SIZE.x, original_pos.y * battlefield.CELL_SIZE.y)
 				active_unit.has_moved = false
+				active_unit.move_points_used_this_turn = 0
 			battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 			clear_active_unit()
 		else:
@@ -99,7 +107,7 @@ func handle_input(event: InputEvent) -> void:
 			return
 
 	# --- Move ---
-	if active_unit.has_moved:
+	if active_unit.has_moved and active_unit.get("in_canto_phase") != true:
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 		if battlefield.battle_log and battlefield.battle_log.visible:
 			battlefield.add_combat_log("Already moved — attack/heal a valid target, Wait/Defend on this unit, or cancel.", "gray")
@@ -108,12 +116,21 @@ func handle_input(event: InputEvent) -> void:
 
 	var start_pos: Vector2i = battlefield.get_grid_pos(active_unit)
 	var path: Array = battlefield.get_unit_path(active_unit, start_pos, cursor_pos)
-	var move_range_val: float = float(active_unit.move_range)
+	var in_canto_move: bool = active_unit.get("in_canto_phase") == true
+	var move_range_val: float = float(active_unit.canto_move_budget) if in_canto_move else float(active_unit.move_range)
+	var path_cost: float = battlefield.get_path_move_cost(path, active_unit) if path.size() > 0 else 0.0
 
-	if path.size() > 0 and battlefield.get_path_move_cost(path, active_unit) <= move_range_val and battlefield.reachable_tiles.has(cursor_pos):
+	if path.size() > 0 and path_cost <= move_range_val and battlefield.reachable_tiles.has(cursor_pos):
 		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
 		battlefield.clear_ranges()
 		await active_unit.move_along_path(path)
+		if in_canto_move:
+			active_unit.in_canto_phase = false
+			active_unit.canto_move_budget = 0
+			active_unit.finish_turn()
+			clear_active_unit()
+			return
+		active_unit.move_points_used_this_turn += path_cost
 		battlefield.update_fog_of_war()
 		battlefield.rebuild_grid()
 		battlefield.calculate_ranges(active_unit)
@@ -161,6 +178,12 @@ func _handle_defend_click() -> void:
 
 
 func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> bool:
+	if active_unit.get("in_canto_phase") == true:
+		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
+		if battlefield.battle_log and battlefield.battle_log.visible:
+			battlefield.add_combat_log("Canto: use leftover movement only — no second attack.", "gray")
+		return false
+
 	var wpn: Resource = active_unit.equipped_weapon
 	var targets_allies: bool = wpn != null and (wpn.get("is_healing_staff") == true or wpn.get("is_buff_staff") == true)
 
@@ -219,14 +242,38 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 		return true
 	if action == "talk":
 		battlefield.execute_talk(active_unit, target_node)
-	elif action == "confirm":
-		await battlefield.execute_combat(active_unit, target_node, used_ability)
+		if is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:
+			while is_instance_valid(battlefield) and battlefield.get_tree().paused:
+				await battlefield.get_tree().process_frame
+		if is_instance_valid(active_unit):
+			active_unit.finish_turn()
+		clear_active_unit()
+		return true
+	if action != "confirm":
+		return true
+
+	await battlefield.execute_combat(active_unit, target_node, used_ability)
 
 	if is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:
 		while is_instance_valid(battlefield) and battlefield.get_tree().paused:
 			await battlefield.get_tree().process_frame
 
-	if is_instance_valid(active_unit):
-		active_unit.finish_turn()
+	if not is_instance_valid(active_unit) or active_unit.current_hp <= 0:
+		clear_active_unit()
+		return true
+
+	var used: float = float(active_unit.move_points_used_this_turn)
+	var rem: float = float(active_unit.move_range) - used
+	if battlefield.unit_supports_canto(active_unit) and rem > 0.001:
+		active_unit.has_moved = true
+		active_unit.in_canto_phase = true
+		active_unit.canto_move_budget = rem
+		if battlefield.battle_log and battlefield.battle_log.visible:
+			battlefield.add_combat_log(active_unit.unit_name + " — Canto (" + str(snappedf(rem, 0.1)) + " move left).", "cyan")
+		battlefield.rebuild_grid()
+		battlefield.calculate_ranges(active_unit)
+		return true
+
+	active_unit.finish_turn()
 	clear_active_unit()
 	return true

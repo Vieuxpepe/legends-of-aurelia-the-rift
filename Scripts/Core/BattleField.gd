@@ -81,6 +81,11 @@ const SUPPORT_GUARD_CHANCE_RANK3 := 20
 const SUPPORT_DUAL_STRIKE_CHANCE_RANK2 := 15
 const SUPPORT_DUAL_STRIKE_CHANCE_RANK3 := 25
 
+# Burn DoT: applied once per full round when the enemy phase ends (before turn counter increments).
+const BURN_TICK_MAX_HP_FRACTION := 0.06
+const BURN_TICK_DAMAGE_MIN := 1
+const BURN_TICK_DAMAGE_MAX := 10
+
 # Boss Personal Dialogue (V1): trigger logic and tracking in BattleField; content in BossPersonalDialogueDB.
 const BossDialogueDB = preload("res://Scripts/Narrative/BossPersonalDialogueDB.gd")
 # Defy Death rescue lines by savior support_personality; content in SupportRescueDialogueDB.
@@ -358,7 +363,9 @@ var enemy_reachable_tiles: Array[Vector2i] = []
 var enemy_attackable_tiles: Array[Vector2i] = []
 
 var show_danger_zone: bool = false
-var danger_zone_tiles: Array[Vector2i] = []
+var danger_zone_move_tiles: Array[Vector2i] = []
+var danger_zone_attack_tiles: Array[Vector2i] = []
+var _danger_zone_recalc_dirty: bool = false
 
 
 # =============================================================================
@@ -791,6 +798,11 @@ func _process(delta: float) -> void:
 	# === ADD THIS LINE ===
 	_process_fog(delta)
 	# =====================
+
+	if _danger_zone_recalc_dirty:
+		_danger_zone_recalc_dirty = false
+		if show_danger_zone:
+			calculate_full_danger_zone()
 	
 	if current_state:
 		current_state.update(delta)
@@ -944,6 +956,8 @@ func _on_ally_turn_finished() -> void:
 	change_state(enemy_state)
 
 func _on_enemy_turn_finished() -> void:
+	await _tick_burn_status_effects()
+	
 	# Tick the turn counter
 	current_turn += 1
 	
@@ -968,6 +982,59 @@ func _on_enemy_turn_finished() -> void:
 				u.set_meta("ability_cooldown", cd - 1)
 			
 	change_state(player_state)
+
+
+func _compute_burn_tick_damage(unit: Node2D) -> int:
+	if unit == null or unit.get("max_hp") == null:
+		return 0
+	var mh: int = maxi(1, int(unit.max_hp))
+	var raw: int = int(ceil(float(mh) * BURN_TICK_MAX_HP_FRACTION))
+	return clampi(maxi(raw, BURN_TICK_DAMAGE_MIN), BURN_TICK_DAMAGE_MIN, BURN_TICK_DAMAGE_MAX)
+
+
+## End-of-round burn for units with meta is_burning (Hellfire ignite). Uses RESISTANCE only — no attacker for EXP.
+func _tick_burn_status_effects() -> void:
+	var burn_units: Array[Node2D] = []
+	for cont in [player_container, ally_container, enemy_container]:
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			var u: Node2D = c as Node2D
+			if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			if u.get("current_hp") == null or int(u.current_hp) <= 0:
+				continue
+			if not u.has_meta("is_burning") or u.get_meta("is_burning") != true:
+				continue
+			burn_units.append(u)
+
+	if burn_units.is_empty():
+		return
+
+	for unit in burn_units:
+		if not is_instance_valid(unit) or unit.is_queued_for_deletion():
+			continue
+		if unit.get("current_hp") == null or int(unit.current_hp) <= 0:
+			continue
+		if not unit.has_meta("is_burning") or unit.get_meta("is_burning") != true:
+			continue
+
+		var base_dmg: int = _compute_burn_tick_damage(unit)
+		if base_dmg <= 0:
+			continue
+		var res: int = int(unit.resistance) if unit.get("resistance") != null else 0
+		var dmg: int = maxi(1, base_dmg - res / 3)
+
+		var nm: String = str(unit.unit_name) if unit.get("unit_name") != null else "Unit"
+		add_combat_log(nm + " burns for " + str(dmg) + " damage.", "orange")
+		spawn_loot_text("-" + str(dmg) + " BURN", Color(1.0, 0.42, 0.12), unit.global_position + Vector2(32, -26))
+
+		if unit.has_method("take_damage"):
+			await unit.take_damage(dmg, null)
+		await get_tree().create_timer(0.07, true, false, true).timeout
+
+	update_unit_info_panel()
+
 
 func _remove_dead_player_dragon(unit: Node2D) -> void:
 	if unit == null:
@@ -1384,7 +1451,7 @@ func update_cursor_color() -> void:
 				return
 		
 		# Valid move destination (blue range): cyan cursor + glow reads clearly vs neutral tiles
-		if not player_state.active_unit.has_moved and reachable_tiles.has(cursor_grid_pos):
+		if (not player_state.active_unit.has_moved or player_state.active_unit.get("in_canto_phase") == true) and reachable_tiles.has(cursor_grid_pos):
 			cursor_sprite.modulate = Color(0.5, 0.92, 1.0)
 			if is_instance_valid(hover_glow):
 				hover_glow.modulate = Color(0.45, 0.88, 1.0, 0.95)
@@ -1405,14 +1472,14 @@ func draw_preview_path() -> void:
 		return
 
 	var active = player_state.active_unit
-	if active.has_moved:
+	if active.has_moved and active.get("in_canto_phase") != true:
 		return
 
 	var start = get_grid_pos(active)
 	
 	# Use our new helper to get the path from the correct AStar grid (Flying vs Walking)
 	var path = get_unit_path(active, start, cursor_grid_pos)
-	var move_range: float = float(active.move_range)
+	var move_range: float = float(active.canto_move_budget) if active.get("in_canto_phase") == true else float(active.move_range)
 
 	# 1. Path must exist
 	# 2. Total terrain cost must be within unit's move range
@@ -1462,10 +1529,12 @@ func _draw() -> void:
 		draw_unit_bases.call(ally_container, ally_base_color)
 
 	if show_danger_zone:
-		for pos in danger_zone_tiles:
-			var danger_rect := Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y)
-			draw_rect(danger_rect, Color(1.0, 0.0, 0.0, 0.35))
-			draw_rect(danger_rect, Color(1.0, 0.45, 0.2, 0.9), false, 2.0)
+		for pos in danger_zone_move_tiles:
+			if _danger_overlay_cell_drawable(pos):
+				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.5, 0.0, 0.5, 0.4))
+		for pos in danger_zone_attack_tiles:
+			if _danger_overlay_cell_drawable(pos):
+				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.4, 0.0, 0.5))
 
 	for pos in reachable_tiles:
 		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.3, 0.5, 0.9, 0.5))
@@ -1488,10 +1557,12 @@ func _draw() -> void:
 
 	if CampaignManager.battle_show_enemy_threat:
 		for pos in enemy_reachable_tiles:
-			draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.5, 0.0, 0.5, 0.4))
+			if _danger_overlay_cell_drawable(pos):
+				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.5, 0.0, 0.5, 0.4))
 
 		for pos in enemy_attackable_tiles:
-			draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.4, 0.0, 0.5))
+			if _danger_overlay_cell_drawable(pos):
+				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.4, 0.0, 0.5))
 
 func get_grid_pos(node: Node2D) -> Vector2i:
 	return Vector2i(int(node.position.x / CELL_SIZE.x), int(node.position.y / CELL_SIZE.y))
@@ -1543,9 +1614,34 @@ func get_distance(node_a: Node2D, node_b: Node2D) -> int:
 	return min_dist
 
 func is_in_range(attacker: Node2D, defender: Node2D) -> bool:
-	if attacker.equipped_weapon == null: return false
-	var dist = get_distance(attacker, defender)
-	return dist >= attacker.equipped_weapon.min_range and dist <= attacker.equipped_weapon.max_range
+	if attacker.equipped_weapon == null:
+		return false
+	var wpn: Resource = attacker.equipped_weapon
+	var min_r: int = wpn.min_range
+	var max_r: int = wpn.max_range
+	var staff_like: bool = wpn.get("is_healing_staff") == true or wpn.get("is_buff_staff") == true or wpn.get("is_debuff_staff") == true
+	if staff_like:
+		var dist: int = get_distance(attacker, defender)
+		return dist >= min_r and dist <= max_r
+	var tiles_a: Array[Vector2i] = _unit_footprint_tiles(attacker)
+	var tiles_b: Array[Vector2i] = _unit_footprint_tiles(defender)
+	for ta in tiles_a:
+		for tb in tiles_b:
+			var d: int = abs(ta.x - tb.x) + abs(ta.y - tb.y)
+			if d < min_r or d > max_r:
+				continue
+			if _attack_has_clear_los(ta, tb):
+				return true
+	return false
+
+
+## ClassData.MoveType: FLYING = 2, CAVALRY = 3 — only these get post-action Canto (leftover move, no second attack).
+func unit_supports_canto(unit: Node2D) -> bool:
+	if unit == null:
+		return false
+	var mt: Variant = unit.get("move_type")
+	return mt == 2 or mt == 3
+
 
 func rebuild_grid() -> void:
 	astar.fill_solid_region(astar.region, false)
@@ -1613,7 +1709,7 @@ func rebuild_grid() -> void:
 		apply_solidity.call(u, false)
 
 	if show_danger_zone:
-		calculate_full_danger_zone()
+		_danger_zone_recalc_dirty = true
 		
 func get_occupant_at(pos: Vector2i) -> Node2D:
 	var containers = [player_container, enemy_container, ally_container, destructibles_container, chests_container]
@@ -1635,7 +1731,35 @@ func get_occupant_at(pos: Vector2i) -> Node2D:
 						return child
 
 	return null
-	
+
+
+func _unit_footprint_tiles(unit: Node2D) -> Array[Vector2i]:
+	if unit != null and unit.has_method("get_occupied_tiles"):
+		var raw: Array = unit.get_occupied_tiles(self)
+		var out: Array[Vector2i] = []
+		for t in raw:
+			if t is Vector2i:
+				out.append(t as Vector2i)
+		if out.size() > 0:
+			return out
+	return [get_grid_pos(unit)]
+
+
+func _danger_overlay_cell_drawable(cell: Vector2i) -> bool:
+	if not use_fog_of_war:
+		return true
+	return fow_grid.has(cell) and fow_grid[cell] == 2
+
+
+func _attack_has_clear_los(from_tile: Vector2i, to_tile: Vector2i) -> bool:
+	if from_tile == to_tile:
+		return true
+	var dist: int = abs(from_tile.x - to_tile.x) + abs(from_tile.y - to_tile.y)
+	if dist <= 1:
+		return true
+	return _check_line_of_sight(from_tile, to_tile)
+
+
 func clear_ranges() -> void:
 	reachable_tiles.clear()
 	attackable_tiles.clear()
@@ -1647,27 +1771,55 @@ func calculate_ranges(unit: Node2D) -> void:
 	clear_ranges()
 	if unit == null: return
 
-	var start = get_grid_pos(unit)
-	var move_range = unit.get("move_range") if unit.get("move_range") != null else 0
+	var footprint: Array[Vector2i] = _unit_footprint_tiles(unit)
+	var move_range: int = unit.get("move_range") if unit.get("move_range") != null else 0
+	var in_canto: bool = unit.get("in_canto_phase") == true
+	var eff_budget: float = float(move_range)
+	if in_canto:
+		eff_budget = float(unit.get("canto_move_budget"))
+	var budget_shape: int = maxi(int(ceil(eff_budget)), 1)
 
-	# 1. Walkable Tiles (Blue)
-	if not unit.has_moved:
-		for x in range(GRID_SIZE.x):
-			for y in range(GRID_SIZE.y):
-				var target = Vector2i(x, y)
-				if abs(start.x - target.x) + abs(start.y - target.y) > move_range:
-					continue
-				
-				var is_solid = flying_astar.is_point_solid(target) if unit.get("move_type") == 2 else astar.is_point_solid(target)
-				
-				if target == start or not is_solid:
+	# 1. Walkable Tiles (Blue): full phase, or Canto pivot (move only), or footprint-only for post-move attacks
+	if not unit.has_moved or in_canto:
+		var saved: Dictionary = {}
+		for t in footprint:
+			saved[t] = {"w": astar.is_point_solid(t), "fl": flying_astar.is_point_solid(t)}
+			astar.set_point_solid(t, false)
+			flying_astar.set_point_solid(t, false)
+
+		var reach_accum: Dictionary = {}
+		for start in footprint:
+			var x0: int = maxi(0, start.x - budget_shape)
+			var x1: int = mini(GRID_SIZE.x, start.x + budget_shape + 1)
+			var y0: int = maxi(0, start.y - budget_shape)
+			var y1: int = mini(GRID_SIZE.y, start.y + budget_shape + 1)
+			for x in range(x0, x1):
+				for y in range(y0, y1):
+					var target = Vector2i(x, y)
+					if abs(start.x - target.x) + abs(start.y - target.y) > budget_shape:
+						continue
+
+					var is_solid = flying_astar.is_point_solid(target) if unit.get("move_type") == 2 else astar.is_point_solid(target)
+
+					if target != start and is_solid:
+						continue
 					var path = get_unit_path(unit, start, target)
 					if path.size() > 0:
 						var path_cost = get_path_move_cost(path, unit)
-						if path_cost <= float(move_range):
-							reachable_tiles.append(target)
+						if path_cost <= eff_budget:
+							reach_accum[target] = true
+
+		for t in footprint:
+			var rec: Variant = saved.get(t, null)
+			if rec != null:
+				astar.set_point_solid(t, rec.w)
+				flying_astar.set_point_solid(t, rec.fl)
+
+		for k in reach_accum.keys():
+			reachable_tiles.append(k)
 	else:
-		reachable_tiles.append(start)
+		for t in footprint:
+			reachable_tiles.append(t)
 
 	# --- FILTER LANDING ZONES ---
 	# Ensure fliers don't end their turn hovering inside a wall, and no one lands on friends!
@@ -1689,24 +1841,32 @@ func calculate_ranges(unit: Node2D) -> void:
 			
 	reachable_tiles = final_reachable
 
-	# 2. Attackable Tiles (Red)
-	var min_r = 1
-	var max_r = 1
-	if unit.equipped_weapon != null:
-		min_r = unit.equipped_weapon.min_range
-		max_r = unit.equipped_weapon.max_range
+	# 2. Attackable Tiles (Red) — not during Canto (no second attack)
+	if not in_canto:
+		var min_r = 1
+		var max_r = 1
+		var wpn_res: Resource = unit.equipped_weapon
+		var use_attack_los: bool = true
+		if wpn_res != null:
+			min_r = wpn_res.min_range
+			max_r = wpn_res.max_range
+			if wpn_res.get("is_healing_staff") == true or wpn_res.get("is_buff_staff") == true or wpn_res.get("is_debuff_staff") == true:
+				use_attack_los = false
 
-	for r_tile in reachable_tiles:
-		for x in range(-max_r, max_r + 1):
-			for y in range(-max_r, max_r + 1):
-				var dist = abs(x) + abs(y)
-				if dist >= min_r and dist <= max_r:
-					var n = r_tile + Vector2i(x, y)
-					if n.x >= 0 and n.x < GRID_SIZE.x and n.y >= 0 and n.y < GRID_SIZE.y:
-						if not reachable_tiles.has(n) and not attackable_tiles.has(n):
-							attackable_tiles.append(n)
+		for r_tile in reachable_tiles:
+			for x in range(-max_r, max_r + 1):
+				for y in range(-max_r, max_r + 1):
+					var dist = abs(x) + abs(y)
+					if dist >= min_r and dist <= max_r:
+						var n = r_tile + Vector2i(x, y)
+						if n.x >= 0 and n.x < GRID_SIZE.x and n.y >= 0 and n.y < GRID_SIZE.y:
+							if not reachable_tiles.has(n) and not attackable_tiles.has(n):
+								if use_attack_los and not _attack_has_clear_los(r_tile, n):
+									continue
+								attackable_tiles.append(n)
 
-	if unit.has_moved: reachable_tiles.clear()
+	if unit.has_moved and not in_canto:
+		reachable_tiles.clear()
 	queue_redraw()
 		
 func show_phase_banner(phase_title: String, phase_color: Color) -> void:
@@ -1899,6 +2059,9 @@ func update_unit_info_panel() -> void:
 		if target_unit.has_method("get_current_poise"):
 			u_poise = str(target_unit.get_current_poise()) + "/" + str(target_unit.get_max_poise())
 		s += "[color=gold]POISE:[/color] %s\n" % [u_poise]
+		
+		if target_unit.has_meta("is_burning") and target_unit.get_meta("is_burning") == true:
+			s += "[color=orangered][b]BURNING[/b][/color] — fire damage after enemy phase\n"
 		
 		# --- UPDATED: WEAPON INFO WITH DURABILITY ---
 		if target_unit.equipped_weapon != null:
@@ -3951,7 +4114,8 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 								_apply_hit_with_support_reactions(defender, current_hit_dmg, attacker, exp_tgt, false)
 								# --- PROMOTED FIRE SAGE POST-HIT (Permanent Burn) ---
 							if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
-								defender.set_meta("is_burning", true) # They will now take damage every turn!
+								defender.set_meta("is_burning", true)
+								add_combat_log(attacker.unit_name + " ignited " + defender.unit_name + "!", "orange")
 								spawn_loot_text("IGNITED!", Color(1.0, 0.4, 0.1), defender.global_position + Vector2(32, -40))
 								
 								await get_tree().create_timer(0.1).timeout
@@ -4005,6 +4169,10 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 								loot_recipient = null
 								
 							_apply_hit_with_support_reactions(defender, final_dmg, attacker, attacker, false)
+							if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
+								defender.set_meta("is_burning", true)
+								add_combat_log(attacker.unit_name + " ignited " + defender.unit_name + "!", "orange")
+								spawn_loot_text("IGNITED!", Color(1.0, 0.4, 0.1), defender.global_position + Vector2(32, -40))
 							# --- PROMOTED BLADE MASTER POST-HIT (Multi-slash) ---
 							if severing_strike_hits > 1 and is_instance_valid(defender) and defender.current_hp > 0:
 								for hit_idx in range(severing_strike_hits - 1): # -1 because the first hit was the main attack
@@ -7071,33 +7239,51 @@ func calculate_enemy_threat_range(enemy: Node2D) -> void:
 	enemy_attackable_tiles.clear()
 	if enemy == null: return
 
-	var start = get_grid_pos(enemy)
+	var footprint: Array[Vector2i] = _unit_footprint_tiles(enemy)
 	var move_range = enemy.get("move_range") if enemy.get("move_range") != null else 0
 
-	var was_solid = astar.is_point_solid(start)
-	var was_flying_solid = flying_astar.is_point_solid(start)
-	astar.set_point_solid(start, false)
-	flying_astar.set_point_solid(start, false)
+	var saved: Dictionary = {}
+	for t in footprint:
+		saved[t] = {"w": astar.is_point_solid(t), "fl": flying_astar.is_point_solid(t)}
+		astar.set_point_solid(t, false)
+		flying_astar.set_point_solid(t, false)
 
-	for x in range(GRID_SIZE.x):
-		for y in range(GRID_SIZE.y):
-			var target = Vector2i(x, y)
-			if abs(start.x - target.x) + abs(start.y - target.y) > move_range: continue
-				
-			var path = get_unit_path(enemy, start, target)
-			if path.size() > 0:
-				var path_cost = get_path_move_cost(path, enemy)
-				if path_cost <= float(move_range):
-					enemy_reachable_tiles.append(target)
+	var reach_accum: Dictionary = {}
+	for start in footprint:
+		var x0: int = maxi(0, start.x - move_range)
+		var x1: int = mini(GRID_SIZE.x, start.x + move_range + 1)
+		var y0: int = maxi(0, start.y - move_range)
+		var y1: int = mini(GRID_SIZE.y, start.y + move_range + 1)
+		for x in range(x0, x1):
+			for y in range(y0, y1):
+				var target = Vector2i(x, y)
+				if abs(start.x - target.x) + abs(start.y - target.y) > move_range:
+					continue
 
-	astar.set_point_solid(start, was_solid)
-	flying_astar.set_point_solid(start, was_flying_solid)
+				var path = get_unit_path(enemy, start, target)
+				if path.size() > 0:
+					var path_cost = get_path_move_cost(path, enemy)
+					if path_cost <= float(move_range):
+						reach_accum[target] = true
+
+	for t in footprint:
+		var rec: Variant = saved.get(t, null)
+		if rec != null:
+			astar.set_point_solid(t, rec.w)
+			flying_astar.set_point_solid(t, rec.fl)
+
+	for k in reach_accum.keys():
+		enemy_reachable_tiles.append(k)
 
 	var min_r = 1
 	var max_r = 1
-	if enemy.equipped_weapon != null:
-		min_r = enemy.equipped_weapon.min_range
-		max_r = enemy.equipped_weapon.max_range
+	var ew: Resource = enemy.equipped_weapon
+	var enemy_use_los: bool = true
+	if ew != null:
+		min_r = ew.min_range
+		max_r = ew.max_range
+		if ew.get("is_healing_staff") == true or ew.get("is_buff_staff") == true or ew.get("is_debuff_staff") == true:
+			enemy_use_los = false
 
 	for r_tile in enemy_reachable_tiles:
 		for x in range(-max_r, max_r + 1):
@@ -7107,6 +7293,8 @@ func calculate_enemy_threat_range(enemy: Node2D) -> void:
 					var n = r_tile + Vector2i(x, y)
 					if n.x >= 0 and n.x < GRID_SIZE.x and n.y >= 0 and n.y < GRID_SIZE.y:
 						if not enemy_reachable_tiles.has(n) and not enemy_attackable_tiles.has(n):
+							if enemy_use_los and not _attack_has_clear_los(r_tile, n):
+								continue
 							enemy_attackable_tiles.append(n)
 	queue_redraw()
 		
@@ -7134,64 +7322,108 @@ func get_unit_path(unit: Node2D, start: Vector2i, target: Vector2i) -> Array[Vec
 	return astar.get_id_path(start, target)
 
 func calculate_full_danger_zone() -> void:
-	danger_zone_tiles.clear()
+	_danger_zone_recalc_dirty = false
+	danger_zone_move_tiles.clear()
+	danger_zone_attack_tiles.clear()
 	if enemy_container == null: return
-	
-	# We use a temporary set to avoid duplicate tiles (makes it faster)
-	var unique_tiles = {}
+
+	var union_move: Dictionary = {}
+	var union_attack: Dictionary = {}
 
 	for enemy in enemy_container.get_children():
-		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
-			# 1. Calculate this specific enemy's reach
-			var start = get_grid_pos(enemy)
-			var move_range = enemy.get("move_range") if enemy.get("move_range") != null else 0
-			
-			# Temporary pathfinding for this enemy
-			var was_solid = astar.is_point_solid(start)
-			var was_flying_solid = flying_astar.is_point_solid(start)
-			astar.set_point_solid(start, false)
-			flying_astar.set_point_solid(start, false)
-			
-			var reachable = []
-			# Check movement (Optimization: Only check tiles within move_range + weapon_max)
-			for x in range(start.x - move_range, start.x + move_range + 1):
-				for y in range(start.y - move_range, start.y + move_range + 1):
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		# Match get_enemy_at / FoW: hidden enemies do not contribute threat.
+		if not enemy.visible:
+			continue
+		if enemy.get("current_hp") != null and enemy.current_hp <= 0:
+			continue
+
+		var footprint: Array[Vector2i] = _unit_footprint_tiles(enemy)
+		var move_range = enemy.get("move_range") if enemy.get("move_range") != null else 0
+
+		var saved: Dictionary = {}
+		for t in footprint:
+			saved[t] = {"w": astar.is_point_solid(t), "fl": flying_astar.is_point_solid(t)}
+			astar.set_point_solid(t, false)
+			flying_astar.set_point_solid(t, false)
+
+		var reachable: Array[Vector2i] = []
+		var reach_seen: Dictionary = {}
+		for start in footprint:
+			var x0: int = maxi(0, start.x - move_range)
+			var x1: int = mini(GRID_SIZE.x, start.x + move_range + 1)
+			var y0: int = maxi(0, start.y - move_range)
+			var y1: int = mini(GRID_SIZE.y, start.y + move_range + 1)
+			for x in range(x0, x1):
+				for y in range(y0, y1):
 					var target = Vector2i(x, y)
-					if target.x < 0 or target.x >= GRID_SIZE.x or target.y < 0 or target.y >= GRID_SIZE.y: continue
-					
+					if abs(start.x - target.x) + abs(start.y - target.y) > move_range:
+						continue
 					var path = get_unit_path(enemy, start, target)
-					if path.size() > 0 and get_path_move_cost(path, enemy) <= float(move_range):
-						reachable.append(target)
-			
-			astar.set_point_solid(start, was_solid)
-			flying_astar.set_point_solid(start, was_flying_solid)
-			
-			# 2. Add attack range for this enemy to the master list
-			var max_r = 1
-			if enemy.equipped_weapon: max_r = enemy.equipped_weapon.max_range
-			
-			for r_tile in reachable:
-				for x in range(-max_r, max_r + 1):
-					for y in range(-max_r, max_r + 1):
-						if abs(x) + abs(y) <= max_r: # Simplified check for danger zone
-							var n = r_tile + Vector2i(x, y)
-							if n.x >= 0 and n.x < GRID_SIZE.x and n.y >= 0 and n.y < GRID_SIZE.y:
-								unique_tiles[n] = true
-	
-	# Convert back to array
-	for tile in unique_tiles.keys():
-		danger_zone_tiles.append(tile)
+					if path.size() > 0:
+						var path_cost = get_path_move_cost(path, enemy)
+						if path_cost <= float(move_range):
+							if not reach_seen.has(target):
+								reach_seen[target] = true
+								reachable.append(target)
+
+		for t in footprint:
+			var rec: Variant = saved.get(t, null)
+			if rec != null:
+				astar.set_point_solid(t, rec.w)
+				flying_astar.set_point_solid(t, rec.fl)
+
+		var reachable_set: Dictionary = {}
+		for t in reachable:
+			reachable_set[t] = true
+			union_move[t] = true
+
+		var min_r = 1
+		var max_r = 1
+		var ew2: Resource = enemy.equipped_weapon
+		var danger_use_los: bool = true
+		if ew2 != null:
+			min_r = ew2.min_range
+			max_r = ew2.max_range
+			if ew2.get("is_healing_staff") == true or ew2.get("is_buff_staff") == true or ew2.get("is_debuff_staff") == true:
+				danger_use_los = false
+
+		for r_tile in reachable:
+			for ox in range(-max_r, max_r + 1):
+				for oy in range(-max_r, max_r + 1):
+					var dist = abs(ox) + abs(oy)
+					if dist < min_r or dist > max_r:
+						continue
+					var n = r_tile + Vector2i(ox, oy)
+					if n.x < 0 or n.x >= GRID_SIZE.x or n.y < 0 or n.y >= GRID_SIZE.y:
+						continue
+					if reachable_set.has(n):
+						continue
+					if union_attack.has(n):
+						continue
+					if danger_use_los and not _attack_has_clear_los(r_tile, n):
+						continue
+					union_attack[n] = true
+
+	for k in union_move.keys():
+		danger_zone_move_tiles.append(k)
+	for k in union_attack.keys():
+		danger_zone_attack_tiles.append(k)
 	queue_redraw()
 
 func toggle_danger_zone() -> void:
 	show_danger_zone = !show_danger_zone
 	if show_danger_zone:
+		_danger_zone_recalc_dirty = false
 		calculate_full_danger_zone()
 		play_ui_sfx(UISfx.TARGET_OK) # Sharp "On" sound
 		if battle_log and battle_log.visible:
-			add_combat_log("Enemy threat overlay: ON (Shift)", "gray")
+			add_combat_log("Enemy threat overlay: ON (Shift) — visible enemies; purple = move, orange = attack", "gray")
 	else:
-		danger_zone_tiles.clear()
+		_danger_zone_recalc_dirty = false
+		danger_zone_move_tiles.clear()
+		danger_zone_attack_tiles.clear()
 		play_ui_sfx(UISfx.INVALID) # Soft "Off" sound
 		if battle_log and battle_log.visible:
 			add_combat_log("Enemy threat overlay: OFF", "gray")
@@ -10842,10 +11074,10 @@ func _build_forecast_reaction_summary(attacker: Node2D, defender: Node2D, atk_wp
 				lines.append("Defy Death: if a hit here would kill, survive at 1 HP once (A-rank bond).")
 
 	if defender.has_meta("is_burning") and defender.get_meta("is_burning") == true:
-		lines.append("Target is burning (DoT — hook only until turn processing exists).")
+		lines.append("Target is burning (fire damage after each enemy phase).")
 
 	if attacker.get("ability") == "Hellfire":
-		lines.append("Hellfire: strong minigame outcome can ignite (sets burn for future turns).")
+		lines.append("Hellfire: strong minigame can ignite (burn DoT after enemy phase).")
 
 	if lines.is_empty():
 		return ""
@@ -10939,9 +11171,12 @@ func apply_campaign_settings() -> void:
 
 	show_danger_zone = CampaignManager.battle_show_danger_zone_default
 	if show_danger_zone:
+		_danger_zone_recalc_dirty = false
 		calculate_full_danger_zone()
 	else:
-		danger_zone_tiles.clear()
+		_danger_zone_recalc_dirty = false
+		danger_zone_move_tiles.clear()
+		danger_zone_attack_tiles.clear()
 
 	if main_camera != null:
 		_camera_zoom_target = clampf(main_camera.zoom.x, min_zoom, max_zoom)

@@ -367,6 +367,56 @@ func _incoming_damage_at(pos: Vector2i, unit: Node2D, enemies: Array[Node2D], ig
 			total += max(1, _estimate_raw_damage(e, unit))
 	return total
 
+
+## Flying/cavalry only: after combat, spend leftover move to step toward lower threat (retreat / reposition).
+func _ai_try_canto_move(unit: Node2D, remaining: float) -> void:
+	if battlefield == null or not is_instance_valid(unit) or remaining <= 0.001:
+		return
+	if not battlefield.unit_supports_canto(unit):
+		return
+	unit.has_moved = true
+	unit.in_canto_phase = true
+	unit.canto_move_budget = remaining
+	battlefield.rebuild_grid()
+	battlefield.calculate_ranges(unit)
+	var here: Vector2i = battlefield.get_grid_pos(unit)
+	var candidates: Array[Vector2i] = []
+	for t in battlefield.reachable_tiles:
+		if t == here:
+			continue
+		candidates.append(t)
+	if candidates.is_empty():
+		unit.in_canto_phase = false
+		unit.canto_move_budget = 0
+		return
+	var enemies: Array[Node2D] = _get_live_units_in(_hostile_parents())
+	var best: Vector2i = candidates[0]
+	var best_score: float = -999999.0
+	for t in candidates:
+		var dang: int = _incoming_damage_at(t, unit, enemies, null)
+		var score: float = -float(dang) * 2.0
+		score += float(_distance_to_nearest_unit_from(t, enemies)) * 1.5
+		if score > best_score:
+			best_score = score
+			best = t
+	var path: Array = battlefield.get_unit_path(unit, here, best)
+	if path.size() <= 1:
+		unit.in_canto_phase = false
+		unit.canto_move_budget = 0
+		return
+	var pc: float = battlefield.get_path_move_cost(path, unit)
+	if pc > remaining + 0.001:
+		unit.in_canto_phase = false
+		unit.canto_move_budget = 0
+		return
+	await unit.move_along_path(path)
+	unit.in_canto_phase = false
+	unit.canto_move_budget = 0
+	if faction == "ally":
+		battlefield.update_fog_of_war()
+	battlefield.rebuild_grid()
+
+
 # -----------------------------------------------------------------------------
 # Planning
 # -----------------------------------------------------------------------------
@@ -1510,9 +1560,12 @@ func execute_ai_turn(my_container: Node) -> void:
 			if not is_instance_valid(battlefield):
 				return
 
+		var performed_attack_action: bool = false
+
 		# Move
 		if move_path.size() > 1:
 			await unit.move_along_path(move_path)
+			unit.move_points_used_this_turn = battlefield.get_path_move_cost(move_path, unit)
 
 			if not is_instance_valid(target) and targeted_crate == null:
 				if is_instance_valid(unit) and unit.has_method("finish_turn"):
@@ -1538,6 +1591,7 @@ func execute_ai_turn(my_container: Node) -> void:
 			if battlefield.is_in_range(unit, targeted_crate):
 				unit.look_at_pos(battlefield.get_grid_pos(targeted_crate))
 				await battlefield.execute_combat(unit, targeted_crate)
+				performed_attack_action = true
 		else:
 			if target_type == TYPE_ESCAPE and battlefield.get_distance(unit, target) <= 1:
 				battlefield.add_combat_log(unit.unit_name + " escaped the map with the loot!", "tomato")
@@ -1561,19 +1615,23 @@ func execute_ai_turn(my_container: Node) -> void:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
 						await battlefield.execute_combat(unit, target)
 						_focus_target = target
+						performed_attack_action = true
 
 					TYPE_CRATE:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
 						await battlefield.execute_combat(unit, target)
+						performed_attack_action = true
 
 					TYPE_ALLY_HEAL:
 						if _i(target, "current_hp") < _i(target, "max_hp"):
 							unit.look_at_pos(battlefield.get_grid_pos(target))
 							await battlefield.execute_combat(unit, target)
+							performed_attack_action = true
 
 					TYPE_ALLY_BUFF:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
 						await battlefield.execute_combat(unit, target)
+						performed_attack_action = true
 
 					TYPE_ALLY_FOLLOW:
 						pass
@@ -1582,6 +1640,12 @@ func execute_ai_turn(my_container: Node) -> void:
 			return
 
 		if is_instance_valid(unit) and _i(unit, "current_hp") > 0:
+			if performed_attack_action and battlefield.unit_supports_canto(unit):
+				var mpu_v: Variant = unit.get("move_points_used_this_turn")
+				var mpu_f: float = 0.0 if mpu_v == null else float(mpu_v)
+				var rem_c: float = float(_i(unit, "move_range")) - mpu_f
+				if rem_c > 0.001:
+					await _ai_try_canto_move(unit, rem_c)
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()
 

@@ -102,6 +102,11 @@ var unlocked_skills: Array = []
 # Turn State
 # ------------------------------------------------------------------------------
 var has_moved: bool = false
+## Move cost (terrain-weighted) spent on the main move before combat this turn; used for Canto (cav/flier).
+var move_points_used_this_turn: float = 0.0
+## After an action, flying/cavalry may pivot with this remaining budget (move only, no second attack).
+var in_canto_phase: bool = false
+var canto_move_budget: float = 0.0
 var is_exhausted: bool = false
 var base_color: Color = Color.WHITE
 var is_defending: bool = false
@@ -410,6 +415,9 @@ func take_damage(amount: int, attacker: Node2D = null) -> void:
 ## Clears has_moved, is_exhausted, is_defending; resets poise meta and stagger visuals.
 func reset_turn() -> void:
 	has_moved = false
+	move_points_used_this_turn = 0.0
+	in_canto_phase = false
+	canto_move_budget = 0.0
 	is_exhausted = false
 	is_defending = false
 	if defend_icon != null:
@@ -426,6 +434,8 @@ func reset_turn() -> void:
 	update_poise_visuals()
 	
 func finish_turn() -> void:
+	in_canto_phase = false
+	canto_move_budget = 0.0
 	is_exhausted = true
 	
 	# Turn off ALL selection visuals

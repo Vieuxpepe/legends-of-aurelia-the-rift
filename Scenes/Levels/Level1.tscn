@@ -1146,6 +1146,7 @@ text = "Stats"
 horizontal_alignment = 1
 
 [node name="CombatForecastPanel" type="Panel" parent="UI" unique_id=1043626365]
+visible = false
 z_index = 10
 anchors_preset = 1
 anchor_left = 1.0
