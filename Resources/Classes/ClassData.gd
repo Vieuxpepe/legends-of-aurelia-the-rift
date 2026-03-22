@@ -17,6 +17,9 @@ enum MoveType { INFANTRY, ARMORED, FLYING, CAVALRY }
 # Links the class to a specific skill tree!
 @export var class_skill_tree: SkillTree
 
+## If set, units with no personal `ability` (Shove / Grapple / etc.) gain this forecast tactical (cooldown button).
+@export var class_tactical_ability: String = ""
+
 @export_category("Promotion Data")
 # Replaces 'promotes_to' with an Array so you can have multiple branching paths!
 @export var promotion_options: Array[Resource] = []

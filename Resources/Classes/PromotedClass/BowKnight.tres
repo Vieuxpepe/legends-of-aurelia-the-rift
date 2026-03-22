@@ -11,7 +11,7 @@
 script = ExtResource("1_xbckr")
 job_name = "BowKnight"
 move_range = 6
-move_type = 1
+move_type = 3
 allowed_weapon_types = Array[int]([3, 0])
 class_skill_tree = ExtResource("1_f8y2u")
 promotion_options = Array[Resource]([ExtResource("3_j1i5o"), ExtResource("4_dsc4b"), ExtResource("5_mq85p")])

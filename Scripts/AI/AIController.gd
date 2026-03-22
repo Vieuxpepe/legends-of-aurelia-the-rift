@@ -7,6 +7,8 @@ const TYPE_ALLY_HEAL: String = "ally_heal"
 const TYPE_ALLY_BUFF: String = "ally_buff"
 const TYPE_ALLY_FOLLOW: String = "ally_follow"
 
+const AI_FIRE_TILE_STEP_PENALTY_INT: int = 18
+
 @export var faction: String = "enemy" # "enemy" or "ally"
 var _focus_target: Node2D = null
 
@@ -191,6 +193,20 @@ func _get_best_plan_for(unit: Node2D, battlefield: Node2D) -> Dictionary:
 	return {"node": best_target, "type": best_type, "score": best_score}
 
 
+func _fire_path_penalty_int(bf: Node2D, unit: Node2D, from_cell: Vector2i, to_cell: Vector2i) -> int:
+	if bf == null or unit == null or not bf.has_method("is_fire_tile"):
+		return 0
+	var path: Array = bf.get_unit_path(unit, from_cell, to_cell)
+	if path.size() <= 1:
+		return 0
+	var pen: int = 0
+	for i in range(1, path.size()):
+		var c: Vector2i = path[i]
+		if bf.is_fire_tile(c):
+			pen += AI_FIRE_TILE_STEP_PENALTY_INT
+	return pen
+
+
 # -------------------------
 # Movement: pick a good in-range tile (min/max range)
 # Returns steps excluding the start tile (same style as your old AIController).
@@ -244,6 +260,8 @@ func _compute_best_move_steps(
 
 			if spot == start_pos:
 				s += 5
+
+			s -= _fire_path_penalty_int(battlefield, unit, start_pos, spot)
 
 			if s > best_score:
 				best_score = s

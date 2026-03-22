@@ -57,6 +57,14 @@ const SUPPORT_COMBAT_RANK_BONUSES: Dictionary = {
 # Set true to log when support-combat bonuses are applied (one line per unit that receives non-zero bonus).
 const DEBUG_SUPPORT_COMBAT := false
 
+# Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage → Fire Trap).
+const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
+	"Bloodthirster",
+	"Shield Clash",
+	"Focused Strike",
+	"Hundred Point Strike",
+]
+
 # Relationship Web V1: combat modifiers from trust/rivalry/mentorship/grief/fear. Set true to log relationship combat effects.
 const DEBUG_RELATIONSHIP_COMBAT := false
 # Tags that trigger fear/disgust penalty when enemy has them (unit_tags).
@@ -118,6 +126,11 @@ var detailed_unit_info_close_btn: Button
 @export var dash_fx_scene: PackedScene
 @export var slash_fx_scene: PackedScene
 @export var level_up_fx_scene: PackedScene
+
+@export_category("Hazards — Fire tiles")
+@export var fire_tile_loop_vfx_scene: PackedScene
+@export var default_fire_tile_damage: int = 3
+@export var fire_tile_extinguish_shrink_sec: float = 0.18
 
 @export var GRID_SIZE: Vector2i = Vector2i(16, 10)
 
@@ -404,6 +417,9 @@ var crit_flash_tween: Tween
 var atk_double_origin: Vector2
 var def_double_origin: Vector2
 var figure_8_tween: Tween
+
+## Runtime fire hazards: Vector2i cell -> { remaining_turns: int, damage: int, vfx: Node }
+var fire_tiles: Dictionary = {}
 
 
 # =============================================================================
@@ -960,6 +976,7 @@ func _on_enemy_turn_finished() -> void:
 	
 	# Tick the turn counter
 	current_turn += 1
+	tick_fire_tiles_for_new_turn()
 	
 	update_objective_ui()
 	
@@ -1034,6 +1051,114 @@ func _tick_burn_status_effects() -> void:
 		await get_tree().create_timer(0.07, true, false, true).timeout
 
 	update_unit_info_panel()
+
+
+func spawn_fire_tile(cell: Vector2i, damage: int = -1, duration: int = 3) -> void:
+	if cell.x < 0 or cell.y < 0 or cell.x >= GRID_SIZE.x or cell.y >= GRID_SIZE.y:
+		return
+	if duration < 1:
+		duration = 1
+	if damage < 0:
+		damage = default_fire_tile_damage
+	if fire_tiles.has(cell):
+		extinguish_fire_tile(cell, true)
+	var entry: Dictionary = {"remaining_turns": duration, "damage": damage, "vfx": null}
+	if fire_tile_loop_vfx_scene != null:
+		var inst: Node = fire_tile_loop_vfx_scene.instantiate()
+		add_child(inst)
+		inst.z_index = 5
+		inst.position = Vector2(
+			float(cell.x * CELL_SIZE.x) + float(CELL_SIZE.x) * 0.5,
+			float(cell.y * CELL_SIZE.y) + float(CELL_SIZE.y) * 0.5
+		)
+		entry["vfx"] = inst
+	fire_tiles[cell] = entry
+
+
+func is_fire_tile(cell: Vector2i) -> bool:
+	return fire_tiles.has(cell)
+
+
+func get_fire_tile_data(cell: Vector2i) -> Dictionary:
+	if not fire_tiles.has(cell):
+		return {}
+	var raw: Variant = fire_tiles[cell]
+	if raw is Dictionary:
+		return (raw as Dictionary).duplicate()
+	return {}
+
+
+func extinguish_fire_tile(cell: Vector2i, instant: bool = false) -> void:
+	if not fire_tiles.has(cell):
+		return
+	var e: Dictionary = fire_tiles[cell]
+	fire_tiles.erase(cell)
+	var vfx: Variant = e.get("vfx")
+	if vfx == null or not is_instance_valid(vfx as Node):
+		return
+	var node: Node = vfx as Node
+	if instant:
+		node.queue_free()
+		return
+	var dur: float = maxf(0.05, fire_tile_extinguish_shrink_sec)
+	if node is Node2D:
+		var n2: Node2D = node as Node2D
+		var tw: Tween = create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(n2, "scale", Vector2(0.001, 0.001), dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_property(n2, "modulate:a", 0.0, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.finished.connect(func():
+			if is_instance_valid(node):
+				node.queue_free()
+		)
+	else:
+		node.queue_free()
+
+
+func tick_fire_tiles_for_new_turn() -> void:
+	if fire_tiles.is_empty():
+		return
+	var cells: Array = fire_tiles.keys()
+	var to_extinguish: Array[Vector2i] = []
+	for k in cells:
+		if not fire_tiles.has(k):
+			continue
+		var cell: Vector2i = k as Vector2i
+		var entry: Dictionary = fire_tiles[cell]
+		var rt: int = int(entry.get("remaining_turns", 1)) - 1
+		entry["remaining_turns"] = rt
+		if rt <= 0:
+			to_extinguish.append(cell)
+	for c in to_extinguish:
+		extinguish_fire_tile(c)
+
+
+func apply_fire_tile_damage_to_unit(unit: Node2D, cell: Vector2i) -> void:
+	if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+		return
+	if not is_fire_tile(cell):
+		return
+	var data: Dictionary = fire_tiles[cell]
+	var dmg: int = int(data.get("damage", default_fire_tile_damage))
+	if dmg <= 0:
+		return
+	if unit.get("current_hp") != null and int(unit.current_hp) <= 0:
+		return
+	var nm: String = str(unit.unit_name) if unit.get("unit_name") != null else "Unit"
+	add_combat_log(nm + " takes " + str(dmg) + " damage from fire.", "orange")
+	spawn_loot_text("-" + str(dmg) + " FIRE", Color(1.0, 0.35, 0.1), unit.global_position + Vector2(32, -26))
+	if unit.has_method("take_damage"):
+		await unit.take_damage(dmg, null)
+	if is_instance_valid(self) and is_inside_tree():
+		await get_tree().create_timer(0.05, true, false, true).timeout
+	update_unit_info_panel()
+
+
+## Called only from Unit.move_along_path after each committed step (not preview / AI planning).
+func on_unit_committed_move_enter_cell(unit: Node2D, cell: Vector2i) -> void:
+	if not is_fire_tile(cell):
+		return
+	await apply_fire_tile_damage_to_unit(unit, cell)
 
 
 func _remove_dead_player_dragon(unit: Node2D) -> void:
@@ -2100,6 +2225,22 @@ func _on_unit_leveled_up(unit: Node2D, gains: Dictionary) -> void:
 	await run_theatrical_stat_reveal(unit, "LEVEL UP: " + unit.unit_name, gains)
 	update_unit_info_panel()
 	
+func _resolve_tactical_ability_name(attacker: Node2D) -> String:
+	var ability_raw: Variant = attacker.get("ability")
+	var unit_abil: String = str(ability_raw) if ability_raw != null else ""
+	if unit_abil == "Shove" or unit_abil == "Grapple Hook" or unit_abil == "Fire Trap":
+		return unit_abil
+	# Everyone picks a passive at creation; class-granted tactics (Fire Trap) use the same forecast slot as Shove/Pull.
+	var may_use_class_tac: bool = unit_abil.is_empty() or PASSIVE_FORECAST_SLOT_ABILITIES.has(unit_abil)
+	if may_use_class_tac:
+		var cls: Variant = attacker.get("active_class_data")
+		if cls != null and cls is ClassData:
+			var cta: String = (cls as ClassData).class_tactical_ability
+			if cta != null and not cta.is_empty():
+				return cta
+	return ""
+
+
 func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	if attacker == null or defender == null:
 		return []
@@ -2295,8 +2436,8 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	if forecast_ability_btn:
 		forecast_ability_btn.visible = false # Hide by default
 		
-		var abil = attacker.get("ability")
-		if abil == "Shove" or abil == "Grapple Hook":
+		var abil: String = _resolve_tactical_ability_name(attacker)
+		if abil == "Shove" or abil == "Grapple Hook" or abil == "Fire Trap":
 			var cooldown = attacker.get_meta("ability_cooldown", 0)
 			
 			forecast_ability_btn.visible = true
@@ -2547,8 +2688,8 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 # (e.g., Shove, Grapple Hook, Suplex)
 # ---------------------------------------------------------
 # 1. SHOW THE BUTTON: In `show_combat_forecast()`, find the `# --- ABILITY BUTTON LOGIC ---` block.
-#    - Add your new ability name to the `if` statement so the UI button appears: 
-#      `if abil == "Shove" or abil == "Grapple Hook" or abil == "MyNewAbility":`
+#    - Either set the unit's `ability` string, or set `class_tactical_ability` on ClassData when personal ability is empty.
+#    - Add the name to `_resolve_tactical_ability_name()` / the forecast `if` alongside Shove & Grapple Hook.
 #
 # 2. ADD THE LOGIC: In `_run_strike_sequence()`, scroll to `PHASE G: FORCED MOVEMENT`.
 #    - Add an `elif abil == "MyNewAbility":` block inside the `if force_active_ability:` check.
@@ -4438,77 +4579,90 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					if miss_sound.stream != null: miss_sound.play() # Play a negative sound
 
 		# ==========================================
-		# PHASE G: FORCED MOVEMENT (SHOVE & PULL)
+		# PHASE G: FORCED MOVEMENT (SHOVE & PULL) + FIRE TRAP
 		# ==========================================
 		if force_active_ability and attack_hits and is_instance_valid(defender) and defender.current_hp > 0:
-			var abil = attacker.get("ability")
-			
-			var is_perfect: bool = await _run_tactical_action_minigame(attacker, abil)
-			var max_distance: int = 2 if is_perfect else 1
-			
-			var a_pos: Vector2i = get_grid_pos(attacker)
-			var d_pos: Vector2i = get_grid_pos(defender)
-			var push_dir: Vector2i = Vector2i.ZERO
-			
-			if d_pos.x > a_pos.x: push_dir = Vector2i(1, 0)
-			elif d_pos.x < a_pos.x: push_dir = Vector2i(-1, 0)
-			elif d_pos.y > a_pos.y: push_dir = Vector2i(0, 1)
-			elif d_pos.y < a_pos.y: push_dir = Vector2i(0, -1)
-			
-			var target_tile: Vector2i = d_pos
-			var tiles_moved: int = 0
-			var crashed: bool = false
-			
-			if abil == "Shove":
-				add_combat_log(attacker.unit_name + " shoved " + defender.unit_name + "!", "yellow")
-				spawn_loot_text("SHOVE!", Color.ORANGE, defender.global_position + Vector2(32, -32))
-				
-				for step in range(max_distance):
-					var next_tile: Vector2i = target_tile + push_dir
-					if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
-						if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
-							target_tile = next_tile
-							tiles_moved += 1
+			var abil: String = _resolve_tactical_ability_name(attacker)
+
+			if abil == "Fire Trap":
+				var is_perfect_ft: bool = await _run_tactical_action_minigame(attacker, abil)
+				var trap_cell: Vector2i = get_grid_pos(defender)
+				var mag: int = int(attacker.get("magic")) if attacker.get("magic") != null else 0
+				var ft_dmg: int = default_fire_tile_damage + mag / 3
+				ft_dmg = maxi(1, ft_dmg)
+				if is_perfect_ft:
+					ft_dmg += 2
+				var ft_dur: int = 5 if is_perfect_ft else 3
+				spawn_fire_tile(trap_cell, ft_dmg, ft_dur)
+				add_combat_log(attacker.unit_name + " sears the ground under " + defender.unit_name + "!", "orange")
+				spawn_loot_text("FIRE TRAP!", Color(1.0, 0.35, 0.12), defender.global_position + Vector2(32, -32))
+			elif abil == "Shove" or abil == "Grapple Hook":
+				var is_perfect: bool = await _run_tactical_action_minigame(attacker, abil)
+				var max_distance: int = 2 if is_perfect else 1
+
+				var a_pos: Vector2i = get_grid_pos(attacker)
+				var d_pos: Vector2i = get_grid_pos(defender)
+				var push_dir: Vector2i = Vector2i.ZERO
+
+				if d_pos.x > a_pos.x: push_dir = Vector2i(1, 0)
+				elif d_pos.x < a_pos.x: push_dir = Vector2i(-1, 0)
+				elif d_pos.y > a_pos.y: push_dir = Vector2i(0, 1)
+				elif d_pos.y < a_pos.y: push_dir = Vector2i(0, -1)
+
+				var target_tile: Vector2i = d_pos
+				var tiles_moved: int = 0
+				var crashed: bool = false
+
+				if abil == "Shove":
+					add_combat_log(attacker.unit_name + " shoved " + defender.unit_name + "!", "yellow")
+					spawn_loot_text("SHOVE!", Color.ORANGE, defender.global_position + Vector2(32, -32))
+
+					for step in range(max_distance):
+						var next_tile: Vector2i = target_tile + push_dir
+						if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
+							if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
+								target_tile = next_tile
+								tiles_moved += 1
+							else:
+								crashed = true
+								break
 						else:
 							crashed = true
 							break
-					else:
-						crashed = true
-						break
-						
-			elif abil == "Grapple Hook":
-				add_combat_log(attacker.unit_name + " hooked " + defender.unit_name + "!", "purple")
-				spawn_loot_text("PULLED!", Color.VIOLET, defender.global_position + Vector2(32, -32))
-				
-				for step in range(max_distance):
-					var next_tile: Vector2i = target_tile - push_dir
-					if next_tile == a_pos:
-						break 
-					if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
-						if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
-							target_tile = next_tile
-							tiles_moved += 1
+
+				elif abil == "Grapple Hook":
+					add_combat_log(attacker.unit_name + " hooked " + defender.unit_name + "!", "purple")
+					spawn_loot_text("PULLED!", Color.VIOLET, defender.global_position + Vector2(32, -32))
+
+					for step in range(max_distance):
+						var next_tile: Vector2i = target_tile - push_dir
+						if next_tile == a_pos:
+							break
+						if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
+							if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
+								target_tile = next_tile
+								tiles_moved += 1
+							else:
+								crashed = true
+								break
 						else:
 							crashed = true
 							break
-					else:
-						crashed = true
-						break
-			
-			if tiles_moved > 0:
-				var slide_tween: Tween = create_tween()
-				slide_tween.tween_property(defender, "global_position", Vector2(target_tile.x * CELL_SIZE.x, target_tile.y * CELL_SIZE.y), 0.15 * tiles_moved).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-				astar.set_point_solid(d_pos, false)
-				astar.set_point_solid(target_tile, true)
-				await slide_tween.finished
-				
-			if crashed:
-				spawn_loot_text("CRASH!", Color.RED, defender.global_position + Vector2(32, -16))
-				screen_shake(18.0 if is_perfect else 12.0, 0.25)
-				if attack_sound.stream != null: attack_sound.play()
-				var crash_dmg: int = 10 if is_perfect else 5
-				_apply_hit_with_support_reactions(defender, crash_dmg, attacker, attacker, false)
-				add_combat_log(defender.unit_name + " crashed into an obstacle for " + str(crash_dmg) + " damage!", "tomato")
+
+				if tiles_moved > 0:
+					var slide_tween: Tween = create_tween()
+					slide_tween.tween_property(defender, "global_position", Vector2(target_tile.x * CELL_SIZE.x, target_tile.y * CELL_SIZE.y), 0.15 * tiles_moved).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+					astar.set_point_solid(d_pos, false)
+					astar.set_point_solid(target_tile, true)
+					await slide_tween.finished
+
+				if crashed:
+					spawn_loot_text("CRASH!", Color.RED, defender.global_position + Vector2(32, -16))
+					screen_shake(18.0 if is_perfect else 12.0, 0.25)
+					if attack_sound.stream != null: attack_sound.play()
+					var crash_dmg: int = 10 if is_perfect else 5
+					_apply_hit_with_support_reactions(defender, crash_dmg, attacker, attacker, false)
+					add_combat_log(defender.unit_name + " crashed into an obstacle for " + str(crash_dmg) + " damage!", "tomato")
 					
 		await get_tree().create_timer(0.25).timeout
 		
@@ -9604,7 +9758,7 @@ func _run_tactical_action_minigame(attacker: Node2D, ability_name: String) -> bo
 	bar_bg.add_child(qte_cursor)
 
 	var help_text = Label.new()
-	help_text.text = "STOP IN GREEN FOR 2x DISTANCE!"
+	help_text.text = "STOP IN GREEN FOR +DAMAGE & TRAP DURATION!" if ability_name == "Fire Trap" else "STOP IN GREEN FOR 2x DISTANCE!"
 	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	help_text.add_theme_font_size_override("font_size", 24)
 	help_text.add_theme_color_override("font_color", Color.CYAN)

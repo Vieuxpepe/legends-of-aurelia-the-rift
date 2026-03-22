@@ -39,6 +39,7 @@ const ARCHETYPE_OPPORTUNIST: String = "opportunist"
 const DANGER_WEIGHT_RANGED: float = 2.5
 const DANGER_WEIGHT_MELEE: float = 1.5
 const DANGER_DEATH_PENALTY: float = 60.0
+const AI_FIRE_TILE_STEP_PENALTY: float = 18.0
 
 # Set true to log one line per unit when flier dive or squad/focus reasons apply. Easy to disable.
 const DEBUG_AI_SCORING: bool = false
@@ -368,6 +369,20 @@ func _incoming_damage_at(pos: Vector2i, unit: Node2D, enemies: Array[Node2D], ig
 	return total
 
 
+func _ai_fire_path_penalty(unit: Node2D, from_cell: Vector2i, to_cell: Vector2i) -> float:
+	if battlefield == null or unit == null:
+		return 0.0
+	var path: Array[Vector2i] = battlefield.get_unit_path(unit, from_cell, to_cell)
+	if path.size() <= 1:
+		return 0.0
+	var pen: float = 0.0
+	for i in range(1, path.size()):
+		var c: Vector2i = path[i]
+		if battlefield.is_fire_tile(c):
+			pen += AI_FIRE_TILE_STEP_PENALTY
+	return pen
+
+
 ## Flying/cavalry only: after combat, spend leftover move to step toward lower threat (retreat / reposition).
 func _ai_try_canto_move(unit: Node2D, remaining: float) -> void:
 	if battlefield == null or not is_instance_valid(unit) or remaining <= 0.001:
@@ -396,6 +411,7 @@ func _ai_try_canto_move(unit: Node2D, remaining: float) -> void:
 		var dang: int = _incoming_damage_at(t, unit, enemies, null)
 		var score: float = -float(dang) * 2.0
 		score += float(_distance_to_nearest_unit_from(t, enemies)) * 1.5
+		score -= _ai_fire_path_penalty(unit, here, t)
 		if score > best_score:
 			best_score = score
 			best = t
@@ -1147,6 +1163,8 @@ func execute_ai_turn(my_container: Node) -> void:
 					if not is_aggressive and threats_at_spot >= 2:
 						score_spot -= 45
 
+				score_spot -= _ai_fire_path_penalty(unit, start_pos, spot)
+
 				if score_spot > best_spot_score:
 					best_spot_score = score_spot
 					best_spot = spot
@@ -1271,6 +1289,9 @@ func execute_ai_turn(my_container: Node) -> void:
 									step_threats += 1
 							if not is_aggressive_progress and step_threats >= 2:
 								progress_score -= 35.0
+
+						if battlefield.is_fire_tile(step_pos):
+							progress_score -= AI_FIRE_TILE_STEP_PENALTY
 
 						if progress_score > best_progress_score:
 							best_progress_score = progress_score
@@ -1406,6 +1427,7 @@ func execute_ai_turn(my_container: Node) -> void:
 										threats_at_spot += 1
 								if not (my_beh == 4) and threats_at_spot >= 2:
 									score_spot -= 45
+							score_spot -= _ai_fire_path_penalty(unit, start_pos, spot)
 							if score_spot > best_spot_score:
 								best_spot_score = score_spot
 								best_spot = spot
@@ -1503,6 +1525,8 @@ func execute_ai_turn(my_container: Node) -> void:
 											step_threats += 1
 									if not is_aggressive_progress and step_threats >= 2:
 										progress_score -= 35.0
+								if battlefield.is_fire_tile(step_pos):
+									progress_score -= AI_FIRE_TILE_STEP_PENALTY
 								if progress_score > best_progress_score:
 									best_progress_score = progress_score
 									best_progress_index = i

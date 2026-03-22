@@ -139,7 +139,8 @@ const ABILITY_DESCRIPTIONS = {
 	"Focused Strike": "OFFENSIVE: Charge a powerful blow with a timing minigame.\nSuccess makes the attack IGNORE 100% of Enemy Defense\nand guarantees a hit.",
 	"Hundred Point Strike": "OFFENSIVE: Chain a flurry of blows by matching directional keys.\nEach correct input adds an extra strike to the attack sequence.\nHigh risk, high reward.",
 	"Shove": "TACTICAL: Push an adjacent enemy 1 tile away after attacking.\nIf they collide with an obstacle or unit, they take bonus damage.\nCooldown: 3 Turns.",
-	"Grapple Hook": "TACTICAL: Pull an enemy 1 tile closer to you after attacking.\nGreat for dragging vulnerable targets into range of your allies.\nCooldown: 3 Turns."
+	"Grapple Hook": "TACTICAL: Pull an enemy 1 tile closer to you after attacking.\nGreat for dragging vulnerable targets into range of your allies.\nCooldown: 3 Turns.",
+	"Fire Trap": "TACTICAL (Fire Sage): After a hit, sear the defender's tile with lingering flames.\nPerfect timing improves damage and duration.\nCooldown: 3 Turns."
 }
 
 # undo stack

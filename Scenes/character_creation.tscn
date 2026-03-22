@@ -34,6 +34,7 @@
 [ext_resource type="Resource" uid="uid://dripsbbvug6em" path="res://Resources/Classes/Paladin.tres" id="15_ov3hu"]
 [ext_resource type="Resource" uid="uid://dekndssahuvia" path="res://Resources/Classes/Monk.tres" id="16_5lasm"]
 [ext_resource type="Texture2D" uid="uid://cmaicws2p2tq6" path="res://Assets/Portraits/Hero 9 Portrait.png" id="16_li0qw"]
+[ext_resource type="Resource" uid="uid://crrxowmyf6sgg" path="res://Resources/Classes/PromotedClass/FireSage.tres" id="17_i78rj"]
 [ext_resource type="Texture2D" uid="uid://igsbktvia7ft" path="res://Assets/Sprites/Hero 3 Sprite.png" id="19_m2mew"]
 [ext_resource type="Texture2D" uid="uid://c7nth7mrqul2p" path="res://Assets/Sprites/Hero 4 Sprite.png" id="20_ly0t1"]
 [ext_resource type="Texture2D" uid="uid://idx0bkqm10cc" path="res://Assets/Sprites/Hero 5 Sprite.png" id="21_7ut5u"]
@@ -63,7 +64,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_r633d")
 menu_music_tracks = Array[AudioStream]([ExtResource("2_5wfhc"), ExtResource("3_803qg"), ExtResource("4_cobm1"), ExtResource("5_7mrxg")])
-available_classes = Array[ExtResource("6_3kvu2")]([ExtResource("7_mrstd"), ExtResource("13_bo54i"), ExtResource("9_i78rj"), ExtResource("10_x7gs6"), ExtResource("11_1txcx"), ExtResource("12_g8kdx"), ExtResource("15_ov3hu"), ExtResource("14_ighe5"), ExtResource("8_bu5ra"), ExtResource("16_5lasm")])
+available_classes = Array[ExtResource("6_3kvu2")]([ExtResource("7_mrstd"), ExtResource("13_bo54i"), ExtResource("9_i78rj"), ExtResource("10_x7gs6"), ExtResource("11_1txcx"), ExtResource("12_g8kdx"), ExtResource("15_ov3hu"), ExtResource("14_ighe5"), ExtResource("8_bu5ra"), ExtResource("16_5lasm"), ExtResource("17_i78rj")])
 available_starting_weapons = Array[ExtResource("2_7tq0x")]([ExtResource("3_xl8pn"), ExtResource("4_5dsw6"), ExtResource("5_lkas7"), ExtResource("6_6s5oo"), ExtResource("7_4aeq3"), ExtResource("23_bu5ra"), ExtResource("24_i78rj")])
 available_sprites = Array[Texture2D]([ExtResource("2_7mrxg"), ExtResource("3_j7ydm"), ExtResource("10_j3eh0"), ExtResource("11_d8n08"), ExtResource("12_gknpx"), ExtResource("13_qmjt2"), ExtResource("14_yrcbi"), ExtResource("15_2wq48"), ExtResource("16_li0qw"), ExtResource("21_ly0t1"), ExtResource("22_7ut5u"), ExtResource("23_4wb02"), ExtResource("24_3wyab")])
 available_battle_sprites = Array[Texture2D]([ExtResource("3_30vww"), ExtResource("5_6byny"), ExtResource("19_m2mew"), ExtResource("20_ly0t1"), ExtResource("21_7ut5u"), ExtResource("22_4wb02"), ExtResource("23_3wyab"), ExtResource("24_32liq"), ExtResource("25_4aoqo"), ExtResource("34_32liq"), ExtResource("35_4aoqo"), ExtResource("36_te75h"), ExtResource("37_x15tg")])

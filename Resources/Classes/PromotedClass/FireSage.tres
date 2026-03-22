@@ -12,6 +12,7 @@ script = ExtResource("2_gm8yr")
 job_name = "Fire Sage"
 allowed_weapon_types = Array[int]([4])
 class_skill_tree = ExtResource("1_gm8yr")
+class_tactical_ability = "Fire Trap"
 promotion_options = Array[Resource]([ExtResource("3_lii7r"), ExtResource("4_gi3jd"), ExtResource("5_1ewr3")])
 promoted_battle_sprite = ExtResource("1_g84y7")
 promo_str_bonus = 0

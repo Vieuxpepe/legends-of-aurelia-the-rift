@@ -349,17 +349,24 @@ func move_along_path(path: Array[Vector2i]) -> void:
 	# ----------------------------------
 		
 	has_moved = true
-	var tween = create_tween()
-	
-	# Start at index 1 so they don't awkwardly tween to the tile they are already standing on
+
+	# One step at a time so hazards (e.g. fire tiles) resolve on real entry, not path preview.
 	for i in range(1, path.size()):
-		var grid_pos = path[i]
-		# Logic to face the movement direction
+		if not is_instance_valid(self):
+			return
+		var grid_pos: Vector2i = path[i]
 		look_at_pos(grid_pos)
 		var world_target := Vector2(grid_pos.x * DEFAULT_CELL_SIZE, grid_pos.y * DEFAULT_CELL_SIZE)
-		tween.tween_property(self, "position", world_target, CampaignManager.unit_move_speed)
-		
-	await tween.finished
+		var step_tween: Tween = create_tween()
+		step_tween.tween_property(self, "position", world_target, CampaignManager.unit_move_speed)
+		await step_tween.finished
+		if not is_instance_valid(self):
+			return
+		if battlefield != null and battlefield.has_method("on_unit_committed_move_enter_cell"):
+			await battlefield.on_unit_committed_move_enter_cell(self, grid_pos)
+		if not is_instance_valid(self):
+			return
+
 	emit_signal("moved", path[path.size() - 1])
 	
 ## Emits [signal died], hides visuals, optionally waits for death sound, then [method Node.queue_free].
