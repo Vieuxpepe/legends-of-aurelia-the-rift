@@ -57,6 +57,9 @@ const SUPPORT_COMBAT_RANK_BONUSES: Dictionary = {
 # Set true to log when support-combat bonuses are applied (one line per unit that receives non-zero bonus).
 const DEBUG_SUPPORT_COMBAT := false
 
+## Static helpers + legacy ids (preload so BattleField does not depend on global class registration order).
+const UnitTraitsLib = preload("res://Scripts/Core/UnitTraitsDisplay.gd")
+
 # Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage → Fire Trap).
 const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
 	"Bloodthirster",
@@ -68,6 +71,7 @@ const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
 # Rookie / civilian class passives (stack with personal creation abilities).
 const META_ROOKIE_RECRUIT_DRILL := "rookie_recruit_drill_used"
 const META_ROOKIE_VILLAGER_DESPERATE := "rookie_villager_desperate_turn"
+const META_ROOKIE_VILLAGER_LAST_PROC_TURN := "rookie_villager_last_proc_turn"
 const META_ROOKIE_APPRENTICE_HITS := "rookie_apprentice_magic_hits_landed"
 const META_ROOKIE_NOVICE_DONE := "rookie_novice_blank_done"
 const META_ROOKIE_NOVICE_HIT := "rookie_novice_hit_bonus"
@@ -2219,7 +2223,7 @@ func update_unit_info_panel() -> void:
 		else:
 			s += "[color=gray]Eqp: Unarmed[/color]\n"
 
-		s += UnitTraitsDisplay.bbcode_section(UnitTraitsDisplay.trait_lines_from_unit(target_unit))
+		s += UnitTraitsLib.bbcode_section(UnitTraitsLib.trait_lines_from_unit(target_unit))
 
 		if show_cursor_unit_row and is_instance_valid(hover_unit) and hover_unit.get("data") != null:
 			s += "[color=gray]————————————————————[/color]\n"
@@ -2287,7 +2291,8 @@ func _is_friendly_unit_on_field(u: Node2D) -> bool:
 func _ensure_novice_blank_slate_roll(attacker: Node2D) -> void:
 	if attacker.has_meta(META_ROOKIE_NOVICE_DONE):
 		return
-	var job: String = str(attacker.get("unit_class_name", ""))
+	var _ucn: Variant = attacker.get("unit_class_name")
+	var job: String = str(_ucn) if _ucn != null else ""
 	if job != "Novice":
 		return
 	attacker.set_meta(META_ROOKIE_NOVICE_DONE, true)
@@ -2303,11 +2308,76 @@ func _ensure_novice_blank_slate_roll(attacker: Node2D) -> void:
 		add_combat_log(attacker.unit_name + ": Blank Slate — lucky streak! (+Crit this battle)", "cyan")
 
 
+func _rookie_ordered_unique_roles(attacker: Node2D) -> Array[String]:
+	var out: Array[String] = []
+	var seen: Dictionary = {}
+	var ujob_v: Variant = attacker.get("unit_class_name")
+	var ujob: String = str(ujob_v) if ujob_v != null else ""
+	if UnitTraitsLib.ROOKIE_JOB_NAMES.has(ujob):
+		out.append(ujob)
+		seen[ujob] = true
+	var legs_v: Variant = attacker.get("rookie_legacies")
+	if legs_v is Array:
+		for lid in legs_v:
+			var jn: String = UnitTraitsLib.rookie_job_name_for_legacy_id(str(lid))
+			if jn.is_empty() or seen.has(jn):
+				continue
+			out.append(jn)
+			seen[jn] = true
+	return out
+
+
+func _rookie_mods_for_job_role(attacker: Node2D, defender: Node2D, is_magic: bool, _wpn: WeaponData, role: String, apply_effects: bool) -> Dictionary:
+	var part: Dictionary = {"hit": 0, "dmg": 0, "crit": 0, "log": ""}
+	match role:
+		"Recruit":
+			if not attacker.has_meta(META_ROOKIE_RECRUIT_DRILL):
+				part["hit"] = 12
+				part["log"] = "Drill Formation (+Hit)."
+				if apply_effects:
+					attacker.set_meta(META_ROOKIE_RECRUIT_DRILL, true)
+		"Villager":
+			if attacker.current_hp < attacker.max_hp:
+				var last_t: int = int(attacker.get_meta(META_ROOKIE_VILLAGER_LAST_PROC_TURN, -1))
+				if last_t < current_turn:
+					part["dmg"] = 5
+					part["crit"] = 10
+					part["log"] = "Desperate Measure (+dmg/crit)."
+					if apply_effects:
+						attacker.set_meta(META_ROOKIE_VILLAGER_LAST_PROC_TURN, current_turn)
+		"Urchin":
+			if defender.current_hp >= defender.max_hp:
+				part["hit"] = 8
+				part["dmg"] = 4
+				part["log"] = "Pickpocket's Eye vs. full HP."
+		"Apprentice":
+			if is_magic and _wpn != null:
+				var wt: int = int(_wpn.weapon_type)
+				if wt == WeaponData.WeaponType.TOME or wt == WeaponData.WeaponType.DARK_TOME:
+					var n: int = int(attacker.get_meta(META_ROOKIE_APPRENTICE_HITS, 0))
+					if n >= 2 and (n % 3) == 2:
+						part["dmg"] = 6
+						part["log"] = "Cantrip Surge (3rd tome hit)."
+		"Novice":
+			part["hit"] = int(attacker.get_meta(META_ROOKIE_NOVICE_HIT, 0))
+			part["dmg"] = int(attacker.get_meta(META_ROOKIE_NOVICE_DMG, 0))
+			part["crit"] = int(attacker.get_meta(META_ROOKIE_NOVICE_CRIT, 0))
+			if part["hit"] > 0 or part["dmg"] > 0 or part["crit"] > 0:
+				part["log"] = "Blank Slate."
+	return part
+
+
 ## apply_effects: true = combat resolution (sets meta, logs). false = forecast preview only (no consumption).
 func _rookie_passive_mods_internal(attacker: Node2D, defender: Node2D, is_magic: bool, wpn: WeaponData, apply_effects: bool) -> Dictionary:
 	var merged: Dictionary = {"hit": 0, "dmg": 0, "crit": 0, "log": ""}
 	if not _is_friendly_unit_on_field(attacker) or defender.get_parent() != enemy_container:
 		return merged
+	var ujob_v2: Variant = attacker.get("unit_class_name")
+	var ujob_s: String = str(ujob_v2) if ujob_v2 != null else ""
+	var legs_v2: Variant = attacker.get("rookie_legacies")
+	var legs_arr: Array = legs_v2 if legs_v2 is Array else []
+	if ujob_s == "Novice" or legs_arr.has(UnitTraitsLib.LEGACY_ID_NOVICE):
+		_ensure_novice_blank_slate_roll(attacker)
 	var roles: Array[String] = _rookie_ordered_unique_roles(attacker)
 	var log_parts: PackedStringArray = PackedStringArray()
 	for role in roles:
@@ -2334,8 +2404,11 @@ func _compute_rookie_class_passive_mods(attacker: Node2D, defender: Node2D, is_m
 func _rookie_register_apprentice_magic_hit(attacker: Node2D, wpn: WeaponData, is_magic: bool, attack_connected: bool) -> void:
 	if not attack_connected or not _is_friendly_unit_on_field(attacker):
 		return
-	var legs: Array = attacker.get("rookie_legacies", []) if attacker.get("rookie_legacies") is Array else []
-	if str(attacker.get("unit_class_name", "")) != "Apprentice" and not legs.has(UnitTraitsDisplay.LEGACY_ID_APPRENTICE):
+	var rl: Variant = attacker.get("rookie_legacies")
+	var legs: Array = rl if rl is Array else []
+	var ap_uj: Variant = attacker.get("unit_class_name")
+	var ap_job: String = str(ap_uj) if ap_uj != null else ""
+	if ap_job != "Apprentice" and not legs.has(UnitTraitsLib.LEGACY_ID_APPRENTICE):
 		return
 	if not is_magic or wpn == null:
 		return
@@ -2350,6 +2423,7 @@ func _reset_rookie_battle_tracking() -> void:
 	var keys: Array[String] = [
 		META_ROOKIE_RECRUIT_DRILL,
 		META_ROOKIE_APPRENTICE_HITS,
+		META_ROOKIE_VILLAGER_LAST_PROC_TURN,
 		META_ROOKIE_NOVICE_DONE,
 		META_ROOKIE_NOVICE_HIT,
 		META_ROOKIE_NOVICE_DMG,
@@ -8800,8 +8874,8 @@ func execute_promotion(unit: Node2D, advanced_class: Resource) -> void:
 	
 	# STAGE 2: THE FLASH & DATA SWAP
 	tween.chain().tween_callback(func():
-		UnitTraitsDisplay.grant_rookie_legacy_on_promotion(unit, old_class_name)
-		UnitTraitsDisplay.grant_tier_class_legacy_on_promotion(unit, old_class_name, advanced_class)
+		UnitTraitsLib.grant_rookie_legacy_on_promotion(unit, old_class_name)
+		UnitTraitsLib.grant_tier_class_legacy_on_promotion(unit, old_class_name, advanced_class)
 
 		var gains = {
 			"hp": advanced_class.get("promo_hp_bonus") if advanced_class.get("promo_hp_bonus") != null else 0,
