@@ -15,6 +15,7 @@
 [ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="14_31w6i"]
 [ext_resource type="Script" uid="uid://d0wh8hdqrhxx2" path="res://Scripts/TavernNoticeBoard.gd" id="14_qldpy"]
 [ext_resource type="Resource" uid="uid://bl8fighi5vacc" path="res://Resources/Music Discs/Disc_EpicTheme.tres" id="15_bvlwd"]
+[ext_resource type="Script" path="res://Scripts/TavernCartographer.gd" id="16_cartographer"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_klcnk"]
 bg_color = Color(0, 0, 0, 1)
@@ -240,9 +241,22 @@ offset_bottom = 360.0
 text = "Board"
 script = ExtResource("14_qldpy")
 
+[node name="CartographerButton" type="Button" parent="." unique_id=1770010194]
+layout_mode = 0
+offset_left = 1354.0
+offset_top = 365.0
+offset_right = 1822.0
+offset_bottom = 402.0
+theme_override_font_sizes/font_size = 24
+text = "Cartographer"
+
 [node name="SeraphinaController" type="Node" parent="." unique_id=1218661190 node_paths=PackedStringArray("portrait_node")]
 script = ExtResource("11_8sa06")
 portrait_node = NodePath("../SeraphinaPortrait")
+
+[node name="CartographerController" type="Node" parent="." unique_id=870217944 node_paths=PackedStringArray("cartographer_button")]
+script = ExtResource("16_cartographer")
+cartographer_button = NodePath("../CartographerButton")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1121217850]
 

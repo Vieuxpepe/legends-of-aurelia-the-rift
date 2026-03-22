@@ -150,6 +150,7 @@ var camp_shop_stock: Array[Resource] = []
 var camp_discount_item: Resource = null
 var camp_has_haggled: bool = false
 var blacksmith_unlocked: bool = false
+var owned_expedition_maps: Array[String] = []
 
 # --- WORLD MAP & PROGRESSION ---
 var current_level_index: int = 0
@@ -480,6 +481,7 @@ func reset_campaign_data() -> void:
 	relationship_web.clear()
 	claimed_rank_rewards.clear()
 	blacksmith_unlocked = false
+	owned_expedition_maps.clear()
 	has_recipe_book = false
 	has_smelter = false
 	unlocked_recipes.clear()
@@ -853,6 +855,7 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"camp_discount_uid": discount_uid,
 		"camp_has_haggled": camp_has_haggled,
 		"blacksmith_unlocked": blacksmith_unlocked,
+		"owned_expedition_maps": owned_expedition_maps.duplicate(),
 		"has_recipe_book": has_recipe_book,
 		"has_smelter": has_smelter,
 		"unlocked_music_paths": unlocked_music_paths,
@@ -1074,6 +1077,7 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	for r in save_data.get("unlocked_recipes", []): unlocked_recipes.append(str(r))
 		
 	blacksmith_unlocked = save_data.get("blacksmith_unlocked", false)
+	owned_expedition_maps = _sanitize_owned_expedition_maps(save_data.get("owned_expedition_maps", []))
 	has_smelter = save_data.get("has_smelter", false)
 	
 	player_structures.clear()
@@ -1777,6 +1781,82 @@ func save_current_progress(slot: int = -1) -> void:
 		return
 		
 	save_game(target_slot)
+
+func _sanitize_owned_expedition_maps(raw: Variant) -> Array[String]:
+	var out: Array[String] = []
+	if raw == null or typeof(raw) != TYPE_ARRAY:
+		return out
+
+	for v in raw:
+		var map_id: String = str(v).strip_edges()
+		if map_id == "":
+			continue
+		if out.has(map_id):
+			continue
+		out.append(map_id)
+
+	return out
+
+func has_expedition_map(map_id: String) -> bool:
+	var key: String = str(map_id).strip_edges()
+	if key == "":
+		return false
+	return owned_expedition_maps.has(key)
+
+func add_expedition_map(map_id: String) -> bool:
+	var key: String = str(map_id).strip_edges()
+	if key == "":
+		return false
+	if owned_expedition_maps.has(key):
+		return false
+	owned_expedition_maps.append(key)
+	return true
+
+func get_owned_expedition_maps() -> Array[String]:
+	return owned_expedition_maps.duplicate()
+
+func get_coop_eligible_expedition_map_ids() -> Array[String]:
+	var eligible: Array[String] = []
+	for map_id in owned_expedition_maps:
+		var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(map_id)
+		if map_data.is_empty():
+			continue
+		if not bool(map_data.get("coop_enabled", false)):
+			continue
+		eligible.append(map_id)
+	return eligible
+
+func can_use_expedition_for_coop(map_id: String) -> bool:
+	if not has_expedition_map(map_id):
+		return false
+	var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(map_id)
+	if map_data.is_empty():
+		return false
+	return bool(map_data.get("coop_enabled", false))
+
+func both_players_have_same_map(map_id: String, remote_owned_maps: Array[String]) -> bool:
+	if not can_use_expedition_for_coop(map_id):
+		return false
+	for remote_map_id in remote_owned_maps:
+		if str(remote_map_id).strip_edges() == str(map_id).strip_edges():
+			return true
+	return false
+
+func grant_debug_expedition_map(map_id: String) -> bool:
+	var added: bool = add_expedition_map(map_id)
+	if added:
+		save_current_progress()
+	return added
+
+func grant_first_debug_expedition_map() -> String:
+	var maps: Array[Dictionary] = ExpeditionMapDatabase.get_all_maps()
+	for map_data in maps:
+		var map_id: String = str(map_data.get("id", "")).strip_edges()
+		if map_id == "":
+			continue
+		if grant_debug_expedition_map(map_id):
+			return map_id
+	return ""
 
 ## Returns how much of this scavenger score this player has already claimed (persisted). Used so refresh does not resurface claimed quantity.
 func get_claimed_scavenger_quantity(score_id: String) -> int:

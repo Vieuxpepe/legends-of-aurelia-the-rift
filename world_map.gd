@@ -99,6 +99,7 @@ var _player_bob_tween: Tween
 var _player_arrival_tween: Tween
 var _music_fade_tween: Tween
 var _announcement_tween: Tween
+var _logged_expedition_unlocks: Dictionary = {}
 
 # --- BASE FEEDBACK RUNTIME STATE ---
 var fanfare_player: AudioStreamPlayer = null
@@ -111,6 +112,7 @@ var _base_banner_tween: Tween
 # Announcement: timestamp-based debounce (no _process or Timer).
 var _announce_last_show_time_msec: int = 0
 const ANNOUNCE_DEBOUNCE_MSEC: int = 220
+const DEBUG_EXPEDITION_NODE_LOGS: bool = true
 
 # Cached node display names (avoids repeated _get_node_display_name / property scans).
 var _node_display_names: Array[String] = []
@@ -142,6 +144,7 @@ func _ready() -> void:
 
 	_connect_level_nodes()
 	_connect_ui_buttons()
+	_apply_expedition_node_requirements()
 	_cache_all_base_scales()
 	_cache_node_display_names()
 	_refresh_node_visuals()
@@ -338,14 +341,18 @@ func _refresh_node_visuals() -> void:
 		if node == null:
 			continue
 
-		var is_locked := i > CampaignManager.max_unlocked_index
+		var progression_locked := i > CampaignManager.max_unlocked_index
+		var expedition_locked := _is_expedition_locked_for_index(i)
+		var is_locked := progression_locked or expedition_locked
 		var is_current := i == CampaignManager.current_level_index
 		var is_completed := i < CampaignManager.max_unlocked_index
 
 		if node is BaseButton:
 			node.disabled = is_locked
 
-		if is_locked:
+		if expedition_locked:
+			node.modulate = Color(0.20, 0.28, 0.36, 0.55)
+		elif is_locked:
 			node.modulate = Color(0.35, 0.35, 0.35, 0.55)
 		elif is_current:
 			node.modulate = Color(1.0, 1.0, 1.0, 1.0)
@@ -354,6 +361,7 @@ func _refresh_node_visuals() -> void:
 		else:
 			node.modulate = Color(0.95, 0.95, 0.95, 1.0)
 
+		_log_expedition_unlock_once(i)
 		node.scale = _get_base_scale(node)
 
 	_start_current_node_pulse()
@@ -451,6 +459,9 @@ func _on_node_mouse_entered(index: int) -> void:
 	var node = level_nodes[index]
 	if node == null:
 		return
+	if _is_expedition_locked_for_index(index):
+		_show_announcement_debounced(_get_expedition_lock_message(index), false)
+		return
 	if node is BaseButton and node.disabled:
 		return
 
@@ -508,6 +519,9 @@ func _on_node_pressed(index: int) -> void:
 	if index < 0 or index >= level_nodes.size():
 		return
 	if level_nodes[index] == null:
+		return
+	if _is_expedition_locked_for_index(index):
+		_show_announcement(_get_expedition_lock_message(index), true)
 		return
 	if index > CampaignManager.max_unlocked_index:
 		return
@@ -696,6 +710,65 @@ func _get_node_display_name_impl(index: int) -> String:
 
 	var fallback := String(node.name)
 	return fallback.replace("_", " ")
+
+func _apply_expedition_node_requirements() -> void:
+	var requirements: Dictionary = ExpeditionMapDatabase.get_world_node_requirements()
+	for node_name in requirements.keys():
+		var map_id: String = str(requirements[node_name]).strip_edges()
+		if map_id == "":
+			continue
+
+		var node_path := "MapNodes/%s" % str(node_name)
+		var map_node = get_node_or_null(node_path)
+		if map_node == null:
+			push_warning("WorldMap: Expedition map '%s' references missing node '%s'." % [map_id, str(node_name)])
+			continue
+
+		map_node.set_meta("required_expedition_map_id", map_id)
+
+func _get_required_expedition_map_id(index: int) -> String:
+	if index < 0 or index >= level_nodes.size():
+		return ""
+
+	var node = level_nodes[index]
+	if node == null:
+		return ""
+	if not node.has_meta("required_expedition_map_id"):
+		return ""
+
+	return str(node.get_meta("required_expedition_map_id")).strip_edges()
+
+func _is_expedition_locked_for_index(index: int) -> bool:
+	var required_map_id: String = _get_required_expedition_map_id(index)
+	if required_map_id == "":
+		return false
+	return not CampaignManager.has_expedition_map(required_map_id)
+
+func _get_expedition_lock_message(index: int) -> String:
+	var required_map_id: String = _get_required_expedition_map_id(index)
+	if required_map_id == "":
+		return "That route is currently inaccessible."
+
+	var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(required_map_id)
+	if map_data.is_empty():
+		return "That route requires an expedition map."
+
+	return "Locked: Requires %s from the Grand Tavern Cartographer." % str(map_data.get("display_name", required_map_id))
+
+func _log_expedition_unlock_once(index: int) -> void:
+	if not DEBUG_EXPEDITION_NODE_LOGS:
+		return
+	var required_map_id: String = _get_required_expedition_map_id(index)
+	if required_map_id == "":
+		return
+	if _is_expedition_locked_for_index(index):
+		return
+
+	var key: String = "%d|%s" % [index, required_map_id]
+	if _logged_expedition_unlocks.get(key, false):
+		return
+	_logged_expedition_unlocks[key] = true
+	print("WorldMap: Expedition node unlocked by map ownership -> ", _get_node_display_name(index), " [", required_map_id, "]")
 
 
 func _get_active_map_camera() -> Camera2D:
@@ -1476,3 +1549,11 @@ func _input(event: InputEvent) -> void:
 				elif item.get("item_name") != null:
 					i_name = item.item_name
 				print("- ", i_name)
+
+		elif event.keycode == KEY_M and event.ctrl_pressed:
+			var granted_map_id: String = CampaignManager.grant_first_debug_expedition_map()
+			if granted_map_id == "":
+				_show_announcement("Debug: No new expedition map available to grant.", true)
+				return
+			_refresh_node_visuals()
+			_show_announcement("Debug: Granted expedition map " + granted_map_id, true)
