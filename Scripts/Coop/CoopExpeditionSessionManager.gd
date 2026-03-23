@@ -137,6 +137,9 @@ func enet_send_coop_battle_sync_action(payload: Dictionary) -> void:
 	if not uses_enet_coop_transport():
 		return
 	if _enet_battle_sync_battlefield == null or not is_instance_valid(_enet_battle_sync_battlefield):
+		if OS.is_debug_build():
+			var act_missing_bf: String = str(payload.get("action", "")).strip_edges()
+			push_warning("CoopExpeditionSessionManager: drop local coop_battle_sync '%s' (no registered battlefield)" % act_missing_bf)
 		return
 	var tr: ENetCoopTransport = _transport as ENetCoopTransport
 	if not tr.is_session_wired():
@@ -152,6 +155,9 @@ func enet_send_coop_battle_sync_action(payload: Dictionary) -> void:
 func _enet_apply_incoming_coop_battle_sync(body: Dictionary) -> void:
 	var bf: Node = _enet_battle_sync_battlefield
 	if bf == null or not is_instance_valid(bf):
+		if OS.is_debug_build():
+			var act_missing_bf: String = str(body.get("action", "")).strip_edges()
+			push_warning("CoopExpeditionSessionManager: drop incoming coop_battle_sync '%s' (no registered battlefield)" % act_missing_bf)
 		return
 	if int(body.get("v", 0)) != 1:
 		return

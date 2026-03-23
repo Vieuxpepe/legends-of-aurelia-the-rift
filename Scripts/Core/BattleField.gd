@@ -1195,6 +1195,9 @@ func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
 
 func apply_remote_coop_enet_sync(body: Dictionary) -> void:
 	if not is_mock_coop_unit_ownership_active():
+		if OS.is_debug_build():
+			var act_no_owner: String = str(body.get("action", "")).strip_edges()
+			push_warning("BattleField: drop incoming coop sync '%s' (mock ownership inactive on this battlefield)" % act_no_owner)
 		return
 	_coop_enet_remote_sync_queue.append(body.duplicate(true))
 	_coop_enet_pump_remote_sync_queue()
@@ -1853,6 +1856,12 @@ func _ready() -> void:
 	_mock_coop_battle_context = null
 	_mock_coop_ownership_assignments.clear()
 	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
+	var has_live_enet_coop_phase: bool = (
+			CoopExpeditionSessionManager.uses_enet_coop_transport()
+			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	)
+	if has_live_enet_coop_phase:
+		CoopExpeditionSessionManager.register_enet_coop_battle_sync_battlefield(self)
 	if not _consumed_mock_coop_battle_handoff.is_empty():
 		_mock_coop_battle_context = MockCoopBattleContext.from_consumed_handoff(_consumed_mock_coop_battle_handoff)
 		if _mock_coop_battle_context != null:
@@ -1861,9 +1870,12 @@ func _ready() -> void:
 		print("[MockCoopHandoff] battle start keys=%s" % str(_consumed_mock_coop_battle_handoff.keys()))
 		_present_mock_coop_joint_expedition_charter()
 		_assign_mock_coop_unit_ownership_from_context()
-		if is_mock_coop_unit_ownership_active() and CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE:
-			CoopExpeditionSessionManager.register_enet_coop_battle_sync_battlefield(self)
+		if is_mock_coop_unit_ownership_active() and has_live_enet_coop_phase:
 			CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed()
+	elif has_live_enet_coop_phase and OS.is_debug_build():
+		push_warning("BattleField: ENet co-op battle loaded without a pending mock handoff; battle sync is registered, but ownership is inactive.")
+	if has_live_enet_coop_phase and not is_mock_coop_unit_ownership_active() and OS.is_debug_build():
+		push_warning("BattleField: ENet co-op battle has no active mock ownership assignment; local player moves will not mirror until the handoff/ownership path is valid.")
 	
 	# --- INITIALIZE FOG OF WAR ---
 	if use_fog_of_war:
