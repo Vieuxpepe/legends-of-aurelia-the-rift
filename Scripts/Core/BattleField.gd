@@ -518,6 +518,9 @@ var _consumed_mock_coop_battle_handoff: Dictionary = {}
 var _mock_coop_battle_context: MockCoopBattleContext = null
 ## Mock co-op only: per-unit ownership after assignment (empty when inactive or context invalid).
 var _mock_coop_ownership_assignments: Array[Dictionary] = []
+var _mock_coop_local_player_phase_ready: bool = false
+var _mock_coop_remote_player_phase_ready: bool = false
+var _mock_coop_player_phase_transition_pending: bool = false
 var _mock_coop_skip_button_glow_active: bool = false
 var _skip_button_base_modulate: Color = Color.WHITE
 var _skip_button_base_modulate_captured: bool = false
@@ -1257,6 +1260,8 @@ func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
 			await _coop_remote_sync_player_post_combat(body)
 		"player_finish_turn":
 			await _coop_remote_sync_player_finish_turn(body)
+		"player_phase_ready":
+			_coop_remote_sync_player_phase_ready(body)
 		_:
 			if OS.is_debug_build():
 				push_warning("Coop battle sync: unknown action '%s'" % action)
@@ -1430,6 +1435,21 @@ func _coop_remote_sync_player_finish_turn(body: Dictionary) -> void:
 			player_state.clear_active_unit()
 
 
+func _coop_remote_sync_player_phase_ready(body: Dictionary) -> void:
+	if not bool(body.get("ready", true)):
+		return
+	if _mock_coop_remote_player_phase_ready:
+		return
+	_mock_coop_remote_player_phase_ready = true
+	if battle_log != null and battle_log.visible:
+		if _mock_coop_local_player_phase_ready:
+			add_combat_log("Co-op: partner detachment is ready. Advancing to the next phase.", "gold")
+		else:
+			add_combat_log("Co-op: partner detachment is ready. Finish your commands when you are ready.", "gold")
+	update_objective_ui(true)
+	_mock_coop_try_advance_player_phase_after_ready_sync()
+
+
 ## Drops selection if active_unit somehow points at a partner-owned unit (mock co-op only). Skips while forecasting to avoid tearing an in-flight forecast await.
 func _sanitize_player_phase_active_unit_for_mock_coop_ownership() -> void:
 	if current_state != player_state or player_state == null:
@@ -1505,6 +1525,51 @@ func is_mock_partner_placeholder_active() -> bool:
 	return lt > 0 and lr == 0 and pf > 0
 
 
+func _mock_coop_player_phase_ready_sync_active() -> bool:
+	return (
+			is_mock_coop_unit_ownership_active()
+			and CoopExpeditionSessionManager.uses_enet_coop_transport()
+			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	)
+
+
+func _reset_mock_coop_player_phase_ready_state() -> void:
+	_mock_coop_local_player_phase_ready = false
+	_mock_coop_remote_player_phase_ready = false
+	_mock_coop_player_phase_transition_pending = false
+
+
+func _mock_coop_try_advance_player_phase_after_ready_sync() -> void:
+	if current_state != player_state:
+		return
+	if not _mock_coop_player_phase_ready_sync_active():
+		return
+	if not _mock_coop_local_player_phase_ready or not _mock_coop_remote_player_phase_ready:
+		return
+	if _mock_coop_player_phase_transition_pending:
+		return
+	_mock_coop_player_phase_transition_pending = true
+	if ally_container and ally_container.get_child_count() > 0:
+		change_state(ally_state)
+	else:
+		change_state(enemy_state)
+
+
+func _mock_coop_set_local_player_phase_ready(send_sync: bool = true) -> void:
+	if not _mock_coop_player_phase_ready_sync_active():
+		return
+	if _mock_coop_local_player_phase_ready:
+		_mock_coop_try_advance_player_phase_after_ready_sync()
+		return
+	_mock_coop_local_player_phase_ready = true
+	if send_sync:
+		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_phase_ready", "ready": true})
+	if battle_log != null and battle_log.visible and not _mock_coop_remote_player_phase_ready:
+		add_combat_log("Co-op: your detachment is ready. Waiting for your partner to end phase.", "gold")
+	update_objective_ui(true)
+	_mock_coop_try_advance_player_phase_after_ready_sync()
+
+
 func _process_mock_partner_placeholder_frame() -> void:
 	if not is_mock_partner_placeholder_active():
 		_mock_partner_placeholder_combat_log_done = false
@@ -1519,7 +1584,12 @@ func _process_mock_partner_placeholder_frame() -> void:
 		return
 	_mock_partner_placeholder_combat_log_done = true
 	if battle_log != null and battle_log.visible:
-		add_combat_log("Mock co-op: awaiting ally orders (placeholder). Use End / Skip phase to continue.", "gold")
+		if _mock_coop_local_player_phase_ready and not _mock_coop_remote_player_phase_ready:
+			add_combat_log("Co-op: your detachment is ready. Waiting for your partner to end phase.", "gold")
+		elif _mock_coop_remote_player_phase_ready and not _mock_coop_local_player_phase_ready:
+			add_combat_log("Co-op: partner detachment is ready. End / Skip when you are ready.", "gold")
+		else:
+			add_combat_log("Mock co-op: all your units have acted. End / Skip phase when you are ready.", "gold")
 
 
 ## Player phase only: BBCode for objective panel — local-owned, fielded, alive units; ready = not is_exhausted.
@@ -1533,11 +1603,19 @@ func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
 	if total <= 0:
 		return ""
 	var s: String = "\n[color=cyan][b]Co-op — Your units ready: %d / %d[/b][/color]" % [ready, total]
-	if ready == 0:
+	if partner_fielded > 0:
+		var partner_state: String = "Ready" if _mock_coop_remote_player_phase_ready else "Acting"
+		s += "\n[color=gold][b]Partner commander: %s[/b][/color]" % partner_state
+	if _mock_coop_local_player_phase_ready:
+		s += "\n[color=cyan][font_size=16]You have ended your phase for this turn.[/font_size][/color]"
+		if partner_fielded > 0 and not _mock_coop_remote_player_phase_ready:
+			s += "\n[color=gold][b]Waiting for your partner to proceed to enemy phase.[/b][/color]"
+	elif ready == 0:
 		s += "\n[color=gray][font_size=16]All your fielded units have acted this phase.[/font_size][/color]"
 		if partner_fielded > 0:
 			s += "\n[color=orange][font_size=16]Partner detachment still on the field — not under your command. End or Skip phase when you are ready.[/font_size][/color]"
-			s += "\n[color=gold][b]Awaiting ally orders[/b][/color] [color=gray](mock co-op placeholder)[/color]\n"
+	elif partner_fielded > 0 and _mock_coop_remote_player_phase_ready:
+		s += "\n[color=gold][font_size=16]Partner is ready. Finish your commands when you are ready.[/font_size][/color]"
 	return s + "\n"
 
 
@@ -1849,13 +1927,14 @@ func _ready() -> void:
 		if FileAccess.file_exists(test_path):
 			print("Direct Scene Start detected. Loading existing save data from Slot 1...")
 			CampaignManager.load_game(1)
-			
+
+	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
 	load_campaign_data()
 	apply_campaign_settings()
 
 	_mock_coop_battle_context = null
 	_mock_coop_ownership_assignments.clear()
-	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
+	_reset_mock_coop_player_phase_ready_state()
 	var has_live_enet_coop_phase: bool = (
 			CoopExpeditionSessionManager.uses_enet_coop_transport()
 			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
@@ -2168,6 +2247,8 @@ func change_state(new_state: GameState) -> void:
 		current_state.exit()
 		
 	current_state = null 
+	if new_state == player_state:
+		_reset_mock_coop_player_phase_ready_state()
 	
 	if new_state == player_state:
 		await show_phase_banner("PLAYER PHASE", Color(0.4, 0.6, 0.9))
@@ -2224,19 +2305,25 @@ func _on_skip_button_pressed() -> void:
 					if is_local_player_command_blocked_for_mock_coop_unit(u):
 						continue
 					if u.get("is_exhausted") == false:
-						u.set("is_defending", true)
-						
-						# Use the new helper!
+						if u.has_method("trigger_defend"):
+							u.trigger_defend()
+						else:
+							u.set("is_defending", true)
+							if u.has_method("finish_turn"):
+								u.finish_turn()
 						animate_shield_drop(u)
-						
-						if u.has_method("finish_turn"):
-							u.finish_turn()
+						coop_enet_sync_after_local_defend(u)
 						auto_defended_anyone = true
 		
 		# Play the shield sound once if anyone braced for impact!
 		if auto_defended_anyone and defend_sound != null and defend_sound.stream != null:
 			defend_sound.play()
 		# --------------------------------------
+
+		if _mock_coop_player_phase_ready_sync_active():
+			_mock_coop_set_local_player_phase_ready(true)
+			if not _mock_coop_remote_player_phase_ready:
+				return
 
 		# If we have green units, they go next. Otherwise, skip to enemies.
 		if ally_container and ally_container.get_child_count() > 0:
@@ -7788,6 +7875,18 @@ func _build_deployment_roster() -> Array:
 			roster.append(_make_dragon_battle_entry(dragon))
 
 	return roster
+
+
+func _build_deployment_roster_from_consumed_mock_coop_handoff() -> Array:
+	if _consumed_mock_coop_battle_handoff.is_empty():
+		return []
+	var snap_raw: Variant = _consumed_mock_coop_battle_handoff.get("battle_roster_snapshot", [])
+	if typeof(snap_raw) != TYPE_ARRAY:
+		return []
+	var roster: Array = CampaignManager.hydrate_mock_coop_battle_roster_snapshot(snap_raw)
+	if OS.is_debug_build() and not roster.is_empty():
+		print("[MockCoopHandoff] using shared battle roster snapshot units=%d" % roster.size())
+	return roster
 	
 func load_campaign_data() -> void:
 	# 1. Load global resources
@@ -7795,7 +7894,9 @@ func load_campaign_data() -> void:
 	player_inventory = CampaignManager.global_inventory.duplicate()
 	update_gold_display()
 
-	var roster = _build_deployment_roster()
+	var roster: Array = _build_deployment_roster_from_consumed_mock_coop_handoff()
+	if roster.is_empty():
+		roster = _build_deployment_roster()
 	
 	# ==========================================
 	# --- BASE DEFENSE SPAWN LOGIC ---
@@ -7852,7 +7953,10 @@ func load_campaign_data() -> void:
 		
 		# 2. PASS CRITICAL DATA BEFORE ADDING TO TREE
 		# For the Avatar, we need to flag them!
-		if saved.get("unit_name") == CampaignManager.custom_avatar.get("name"):
+		var saved_unit_name: String = str(saved.get("unit_name", "")).strip_edges()
+		var avatar_name: String = str(CampaignManager.custom_avatar.get("name", "")).strip_edges()
+		var avatar_unit_name: String = str(CampaignManager.custom_avatar.get("unit_name", "")).strip_edges()
+		if bool(saved.get("is_custom_avatar", false)) or (saved_unit_name != "" and (saved_unit_name == avatar_name or saved_unit_name == avatar_unit_name)):
 			new_unit.set("is_custom_avatar", true)
 		else:
 			new_unit.set("is_custom_avatar", false)

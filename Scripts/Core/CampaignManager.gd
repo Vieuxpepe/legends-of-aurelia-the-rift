@@ -3261,6 +3261,178 @@ func get_available_roster() -> Array[Dictionary]:
 		if not unit.get("is_garrisoned", false):
 			available.append(unit)
 	return available
+
+
+func _serialize_mock_coop_battle_roster_unit(unit: Dictionary) -> Dictionary:
+	var u_copy: Dictionary = unit.duplicate(true)
+	var unit_name: String = str(unit.get("unit_name", unit.get("name", ""))).strip_edges()
+	var avatar_name: String = str(custom_avatar.get("name", "")).strip_edges()
+	var avatar_unit_name: String = str(custom_avatar.get("unit_name", "")).strip_edges()
+	u_copy["is_custom_avatar"] = (
+			(unit_name != "" and avatar_name != "" and unit_name == avatar_name)
+			or (unit_name != "" and avatar_unit_name != "" and unit_name == avatar_unit_name)
+	)
+
+	u_copy["equipped_weapon"] = {}
+	var eq: Resource = unit.get("equipped_weapon")
+	if eq != null:
+		u_copy["equipped_weapon"] = _serialize_item(eq)
+
+	var unit_inv_saved: Array = []
+	if unit.has("inventory"):
+		for it in unit["inventory"]:
+			var s: Dictionary = _serialize_item(it)
+			if not s.is_empty():
+				unit_inv_saved.append(s)
+	u_copy["inventory"] = unit_inv_saved
+
+	if u_copy.get("data") is Resource:
+		var data_res: Resource = u_copy["data"]
+		var data_path: String = str(data_res.resource_path).strip_edges()
+		if data_path == "" and data_res.has_meta("original_path"):
+			data_path = str(data_res.get_meta("original_path")).strip_edges()
+		if data_path == "":
+			data_path = str(u_copy.get("data_path_hint", "")).strip_edges()
+		u_copy["data"] = data_path if data_path != "" else ""
+	if u_copy.get("class_data") is Resource:
+		u_copy["class_data"] = u_copy["class_data"].resource_path
+	if u_copy.get("portrait") is Texture2D:
+		u_copy["portrait"] = u_copy["portrait"].resource_path
+	if u_copy.get("battle_sprite") is Texture2D:
+		u_copy["battle_sprite"] = u_copy["battle_sprite"].resource_path
+	u_copy["unit_tags"] = unit.get("unit_tags", [])
+	u_copy["traits"] = unit.get("traits", []).duplicate() if unit.get("traits") is Array else []
+	u_copy["rookie_legacies"] = unit.get("rookie_legacies", []).duplicate() if unit.get("rookie_legacies") is Array else []
+	u_copy["base_class_legacies"] = unit.get("base_class_legacies", []).duplicate() if unit.get("base_class_legacies") is Array else []
+	u_copy["promoted_class_legacies"] = unit.get("promoted_class_legacies", []).duplicate() if unit.get("promoted_class_legacies") is Array else []
+	return u_copy
+
+
+## Host-auth snapshot for mock co-op battle entry. Intentionally capped to the live deployment limit so the ENet handoff stays compact.
+func build_mock_coop_battle_roster_snapshot(max_units: int = 6) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var cap: int = maxi(0, int(max_units))
+	if cap <= 0:
+		return out
+
+	for unit in get_available_roster():
+		if out.size() >= cap:
+			break
+		if typeof(unit) != TYPE_DICTIONARY:
+			continue
+		out.append(_serialize_mock_coop_battle_roster_unit(unit as Dictionary))
+
+	if out.size() >= cap:
+		return out
+
+	for dragon in DragonManager.player_dragons:
+		if out.size() >= cap:
+			break
+		if typeof(dragon) != TYPE_DICTIONARY:
+			continue
+		var d: Dictionary = (dragon as Dictionary).duplicate(true)
+		if int(d.get("stage", 0)) < 3:
+			continue
+		d["is_dragon"] = true
+		out.append(d)
+
+	return out
+
+
+func hydrate_mock_coop_battle_roster_snapshot(raw: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if typeof(raw) != TYPE_ARRAY:
+		return out
+
+	for entry_raw in raw as Array:
+		if typeof(entry_raw) != TYPE_DICTIONARY:
+			continue
+		var unit: Dictionary = (entry_raw as Dictionary).duplicate(true)
+
+		if bool(unit.get("is_dragon", false)) or str(unit.get("element", "")).strip_edges() != "":
+			out.append(unit)
+			continue
+
+		var eq_data: Variant = unit.get("equipped_weapon", {})
+		var loaded_inv: Array = []
+		if unit.has("inventory"):
+			for d in unit["inventory"]:
+				var it: Resource = _deserialize_item(d)
+				if it != null:
+					loaded_inv.append(it)
+		unit["inventory"] = loaded_inv
+
+		unit["equipped_weapon"] = null
+		if typeof(eq_data) == TYPE_DICTIONARY and not (eq_data as Dictionary).is_empty():
+			var eq_dict: Dictionary = eq_data as Dictionary
+			var target_uid: String = str(eq_dict.get("uid", ""))
+			if target_uid != "":
+				for inv_item in loaded_inv:
+					if inv_item != null and inv_item.has_meta("uid") and str(inv_item.get_meta("uid")) == target_uid:
+						unit["equipped_weapon"] = inv_item
+						break
+
+			if unit["equipped_weapon"] == null:
+				var target_path: String = str(eq_dict.get("path", ""))
+				var target_dur: int = int(eq_dict.get("current_durability", -1))
+				for inv_item in loaded_inv:
+					if inv_item == null:
+						continue
+					var inv_path: String = ""
+					if inv_item.resource_path != "":
+						inv_path = inv_item.resource_path
+					elif inv_item.has_meta("original_path"):
+						inv_path = str(inv_item.get_meta("original_path"))
+					if inv_path != target_path:
+						continue
+					if inv_item is WeaponData and target_dur >= 0:
+						if inv_item.current_durability == target_dur:
+							unit["equipped_weapon"] = inv_item
+							break
+					else:
+						unit["equipped_weapon"] = inv_item
+						break
+
+		if unit["equipped_weapon"] == null:
+			for inv_item in loaded_inv:
+				if inv_item is WeaponData:
+					unit["equipped_weapon"] = inv_item
+					break
+
+		if unit.get("data") is String and ResourceLoader.exists(unit["data"]):
+			unit["data"] = load(unit["data"])
+		elif unit.get("data") == null:
+			var data_hint: String = str(unit.get("data_path_hint", "")).strip_edges()
+			if data_hint != "" and ResourceLoader.exists(data_hint):
+				unit["data"] = load(data_hint)
+		if unit.get("class_data") is String and ResourceLoader.exists(unit["class_data"]):
+			unit["class_data"] = load(unit["class_data"])
+		if unit.get("portrait") is String and ResourceLoader.exists(unit["portrait"]):
+			unit["portrait"] = load(unit["portrait"])
+		if unit.get("battle_sprite") is String and ResourceLoader.exists(unit["battle_sprite"]):
+			unit["battle_sprite"] = load(unit["battle_sprite"])
+
+		if not unit.has("unit_tags"):
+			unit["unit_tags"] = []
+		if not unit.has("skill_points"):
+			unit["skill_points"] = 0
+		if not unit.has("unlocked_skills"):
+			unit["unlocked_skills"] = []
+		if not unit.has("unlocked_abilities"):
+			var curr_ab: String = str(unit.get("ability", "")).strip_edges()
+			unit["unlocked_abilities"] = [curr_ab] if curr_ab != "" else []
+		if not unit.has("traits"):
+			unit["traits"] = []
+		if not unit.has("rookie_legacies"):
+			unit["rookie_legacies"] = []
+		if not unit.has("base_class_legacies"):
+			unit["base_class_legacies"] = []
+		if not unit.has("promoted_class_legacies"):
+			unit["promoted_class_legacies"] = []
+
+		out.append(unit)
+
+	return out
 	
 # Purpose: Calculates passive income based on base location and rolls for enemy attacks.
 # Inputs: None.

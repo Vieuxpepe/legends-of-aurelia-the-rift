@@ -525,6 +525,7 @@ func build_expedition_coop_launch_payload() -> Dictionary:
 		"local_player": local_player_payload.duplicate(true),
 		"remote_player": remote_player_payload.duplicate(true),
 		"mock_detachment_assignment": MockCoopDetachmentAssignment.build_handoff_payload_dict(),
+		"battle_roster_snapshot": CampaignManager.build_mock_coop_battle_roster_snapshot(),
 	}
 
 func _default_local_payload() -> Dictionary:

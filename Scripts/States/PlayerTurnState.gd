@@ -15,6 +15,13 @@ var targeted_enemy: Node2D = null
 var trade_target_ally: Node2D = null
 
 
+func _sync_local_finish_turn(unit: Node2D) -> void:
+	if battlefield == null or unit == null or not is_instance_valid(unit):
+		return
+	if battlefield.has_method("coop_enet_sync_after_local_finish_turn"):
+		battlefield.coop_enet_sync_after_local_finish_turn(unit)
+
+
 func clear_active_unit() -> void:
 	"""Clears the current unit selection, resets defend flow, and rebuilds grid/ranges."""
 	if is_instance_valid(active_unit):
@@ -52,6 +59,7 @@ func handle_input(event: InputEvent) -> void:
 				active_unit.in_canto_phase = false
 				active_unit.canto_move_budget = 0
 				active_unit.finish_turn()
+				_sync_local_finish_turn(active_unit)
 				battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 				clear_active_unit()
 				return
@@ -225,6 +233,7 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 			battlefield.play_ui_sfx(BattleField.UISfx.TARGET_OK)
 			battlefield._on_chest_opened(target_node, active_unit)
 			active_unit.finish_turn()
+			_sync_local_finish_turn(active_unit)
 			clear_active_unit()
 		else:
 			battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
@@ -261,6 +270,7 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 				await battlefield.get_tree().process_frame
 		if is_instance_valid(active_unit):
 			active_unit.finish_turn()
+			_sync_local_finish_turn(active_unit)
 		clear_active_unit()
 		return true
 	if action != "confirm":
