@@ -29,6 +29,8 @@ var is_exhausted: bool = false
 var current_marker_idx: int = 0
 var is_custom_avatar: bool = false
 var ai_behavior: int = 999 
+var last_turn_path: Array[Vector2i] = []
+var last_turn_reached_destination: bool = false
 
 @onready var health_bar = $HealthBar 
 
@@ -72,8 +74,13 @@ func take_damage(amount: int, attacker: Node2D = null) -> void:
 func process_escort_turn(battlefield: Node2D) -> void:
 	has_moved = true
 	is_exhausted = true
-	
-	if current_hp <= 0 or path_markers.is_empty(): 
+	last_turn_path.clear()
+	last_turn_reached_destination = false
+
+	var start_pos := Vector2i(int(global_position.x / 64), int(global_position.y / 64))
+	last_turn_path.append(start_pos)
+
+	if current_hp <= 0 or path_markers.is_empty():
 		emit_signal("turn_completed")
 		return
 		
@@ -89,6 +96,7 @@ func process_escort_turn(battlefield: Node2D) -> void:
 		if my_pos == target_pos:
 			current_marker_idx += 1
 			if current_marker_idx >= path_markers.size():
+				last_turn_reached_destination = true
 				emit_signal("reached_destination")
 				emit_signal("turn_completed")
 				return
@@ -131,6 +139,7 @@ func process_escort_turn(battlefield: Node2D) -> void:
 			
 		stepped_at_least_once = true
 		var pixel_pos = Vector2(next_base_tile.x * 64, next_base_tile.y * 64)
+		last_turn_path.append(next_base_tile)
 		
 		var tween = create_tween()
 		tween.tween_property(self, "global_position", pixel_pos, 0.25).set_trans(Tween.TRANS_LINEAR)
@@ -143,6 +152,7 @@ func process_escort_turn(battlefield: Node2D) -> void:
 		battlefield.rebuild_grid() 
 
 		if next_base_tile == battlefield.get_grid_pos(path_markers.back()):
+			last_turn_reached_destination = true
 			emit_signal("reached_destination")
 			break
 			

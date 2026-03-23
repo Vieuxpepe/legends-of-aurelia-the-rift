@@ -63,6 +63,7 @@ var active_class_data: ClassData = null
 var selection_tween: Tween
 var stagger_tween: Tween
 var _poise_bar_tween: Tween
+var _mock_coop_owner_sprite_tint: Color = Color.WHITE
 
 # ------------------------------------------------------------------------------
 # Identity & Data
@@ -264,17 +265,67 @@ func apply_mock_coop_owner_visual(owner_key: String) -> void:
 		return
 	var parent_name: String = get_parent().name if get_parent() != null else ""
 	if owner_key == "remote":
-		team_glow.color = Color(0.98, 0.52, 0.12, 0.4)
+		team_glow.color = Color(1.0, 0.58, 0.12, 0.74)
+		_mock_coop_owner_sprite_tint = Color(1.08, 0.98, 0.9, 1.0)
+		if sprite != null:
+			sprite.self_modulate = _mock_coop_owner_sprite_tint
 		return
 	if owner_key != "local":
 		refresh_standard_team_glow()
+		_mock_coop_owner_sprite_tint = Color.WHITE
+		if sprite != null:
+			sprite.self_modulate = Color.WHITE
 		return
 	if parent_name == "PlayerUnits":
-		team_glow.color = Color(0.12, 0.48, 1.0, 0.36)
+		team_glow.color = Color(0.08, 0.56, 1.0, 0.62)
 	elif parent_name == "AllyUnits":
-		team_glow.color = Color(0.18, 0.78, 0.52, 0.36)
+		team_glow.color = Color(0.16, 0.88, 0.56, 0.58)
 	else:
 		refresh_standard_team_glow()
+	_mock_coop_owner_sprite_tint = Color(0.94, 1.0, 1.08, 1.0)
+	if sprite != null:
+		sprite.self_modulate = _mock_coop_owner_sprite_tint
+
+
+func _get_battlefield_node() -> Node:
+	var parent_node: Node = get_parent()
+	if parent_node == null:
+		return null
+	return parent_node.get_parent()
+
+
+func _set_remote_coop_pending_death_visual() -> void:
+	set_meta("coop_remote_pending_death", true)
+	if sprite != null:
+		sprite.visible = false
+	if health_bar != null:
+		health_bar.visible = false
+	if exp_bar != null:
+		exp_bar.visible = false
+	if team_glow != null:
+		team_glow.visible = false
+	if defend_icon != null:
+		defend_icon.visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+
+func clear_remote_coop_pending_death_visual() -> void:
+	if has_meta("coop_remote_pending_death"):
+		remove_meta("coop_remote_pending_death")
+	if death_sound_player != null and death_sound_player.playing:
+		death_sound_player.stop()
+	if sprite != null:
+		sprite.visible = true
+		sprite.self_modulate = _mock_coop_owner_sprite_tint
+	if health_bar != null:
+		health_bar.visible = true
+	if exp_bar != null:
+		exp_bar.visible = true
+	if team_glow != null:
+		team_glow.visible = true
+	if defend_icon != null:
+		defend_icon.visible = is_defending
+	process_mode = Node.PROCESS_MODE_INHERIT
 
 
 func gain_exp(amount: int) -> void:
@@ -410,6 +461,10 @@ func die(killer: Node2D = null) -> void:
 		death_sound_player.pitch_scale = randf_range(0.9, 1.1)
 		death_sound_player.play()
 	emit_signal("died", self, killer)
+	var battlefield: Node = _get_battlefield_node()
+	if battlefield != null and battlefield.has_method("is_coop_remote_combat_replay_active") and battlefield.is_coop_remote_combat_replay_active():
+		_set_remote_coop_pending_death_visual()
+		return
 	if sprite != null:
 		sprite.visible = false
 	if health_bar != null:
@@ -508,7 +563,7 @@ func set_selected(is_selected: bool) -> void:
 		selection_tween.tween_property(team_glow, "color:a", 0.7, 0.5)
 		selection_tween.tween_property(team_glow, "color:a", 0.3, 0.5)
 	else:
-		team_glow.color.a = 0.3
+		team_glow.color.a = maxf(team_glow.color.a, 0.3)
 		modulate = Color(0.3, 0.3, 0.3) if is_exhausted else Color.WHITE
 
 # Call this function with true to start glowing, false to stop.

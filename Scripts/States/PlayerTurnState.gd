@@ -310,6 +310,8 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 		coop_pre_alive = battlefield.coop_net_snapshot_alive_unit_ids()
 	if coop_packed >= 0 and battlefield.has_method("coop_net_begin_local_combat_qte_capture"):
 		battlefield.coop_net_begin_local_combat_qte_capture()
+	if coop_packed >= 0 and battlefield.has_method("coop_net_begin_local_combat_loot_capture"):
+		battlefield.coop_net_begin_local_combat_loot_capture()
 	await battlefield.execute_combat(active_unit, target_node, used_ability)
 	var coop_qte_snap: Dictionary = {}
 	if battlefield.has_method("coop_net_end_local_combat_qte_capture"):
@@ -319,13 +321,17 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 		while is_instance_valid(battlefield) and battlefield.get_tree().paused:
 			await battlefield.get_tree().process_frame
 
+	var coop_loot_events: Array = []
+	if battlefield.has_method("coop_net_end_local_combat_loot_capture"):
+		coop_loot_events = battlefield.coop_net_end_local_combat_loot_capture()
+
 	var coop_auth_snap: Dictionary = {}
 	if coop_packed >= 0 and battlefield.has_method("coop_net_build_authoritative_combat_snapshot"):
 		coop_auth_snap = battlefield.coop_net_build_authoritative_combat_snapshot(coop_pre_alive)
 
 	if not is_instance_valid(active_unit) or active_unit.current_hp <= 0:
 		if battlefield.has_method("coop_enet_sync_local_combat_done"):
-			battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, null, false, 0.0, coop_packed, coop_qte_snap, coop_auth_snap)
+			battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, null, false, 0.0, coop_packed, coop_qte_snap, coop_auth_snap, false, coop_loot_events)
 		clear_active_unit()
 		return true
 
@@ -340,11 +346,11 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 		battlefield.rebuild_grid()
 		battlefield.calculate_ranges(active_unit)
 		if battlefield.has_method("coop_enet_sync_local_combat_done"):
-			battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, active_unit, true, rem, coop_packed, coop_qte_snap, coop_auth_snap)
+			battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, active_unit, true, rem, coop_packed, coop_qte_snap, coop_auth_snap, false, coop_loot_events)
 		return true
 
 	if battlefield.has_method("coop_enet_sync_local_combat_done"):
-		battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, active_unit, false, 0.0, coop_packed, coop_qte_snap, coop_auth_snap)
+		battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, active_unit, false, 0.0, coop_packed, coop_qte_snap, coop_auth_snap, false, coop_loot_events)
 	active_unit.finish_turn()
 	clear_active_unit()
 	return true

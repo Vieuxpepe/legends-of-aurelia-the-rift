@@ -66,6 +66,7 @@ var faction: String = "enemy"
 
 # Tracks a target that the faction is already focusing on.
 var _focus_target: Node2D = null
+var active_unit: Node2D = null
 
 func _init(p_faction: String = "enemy") -> void:
 	faction = p_faction
@@ -87,6 +88,63 @@ func _ai_execute_combat(bf: Node2D, attacker: Node2D, defender: Node2D, used_abi
 		await bf.coop_enet_ai_execute_combat(attacker, defender, used_ability)
 	else:
 		await bf.execute_combat(attacker, defender, used_ability)
+
+
+func _is_host_authority_enemy_turn_host() -> bool:
+	return (
+		faction == "enemy"
+		and battlefield != null
+		and is_instance_valid(battlefield)
+		and battlefield.has_method("coop_enet_is_host_authority_enemy_turn_host")
+		and battlefield.coop_enet_is_host_authority_enemy_turn_host()
+	)
+
+
+func _should_wait_for_host_authority_enemy_turn() -> bool:
+	return (
+		faction == "enemy"
+		and battlefield != null
+		and is_instance_valid(battlefield)
+		and battlefield.has_method("coop_enet_should_wait_for_host_authority_enemy_turn")
+		and battlefield.coop_enet_should_wait_for_host_authority_enemy_turn()
+	)
+
+
+func _sync_host_authority_enemy_move(unit: Node2D, path: Array, path_cost: float) -> void:
+	if not _is_host_authority_enemy_turn_host():
+		return
+	if battlefield.has_method("coop_enet_sync_after_host_authority_enemy_move"):
+		battlefield.coop_enet_sync_after_host_authority_enemy_move(unit, path, path_cost)
+
+
+func _sync_host_authority_enemy_finish_turn(unit: Node2D) -> void:
+	if not _is_host_authority_enemy_turn_host():
+		return
+	if battlefield.has_method("coop_enet_sync_after_host_authority_enemy_finish_turn"):
+		battlefield.coop_enet_sync_after_host_authority_enemy_finish_turn(unit)
+
+
+func _sync_host_authority_enemy_escape(unit: Node2D) -> void:
+	if not _is_host_authority_enemy_turn_host():
+		return
+	if battlefield.has_method("coop_enet_sync_after_host_authority_enemy_escape"):
+		battlefield.coop_enet_sync_after_host_authority_enemy_escape(unit)
+
+
+func _sync_host_authority_enemy_chest_open(opener: Node2D, chest: Node2D, stolen_items: Array) -> void:
+	if not _is_host_authority_enemy_turn_host():
+		return
+	if battlefield.has_method("coop_enet_sync_after_host_authority_enemy_chest_open"):
+		battlefield.coop_enet_sync_after_host_authority_enemy_chest_open(opener, chest, stolen_items)
+
+
+func _wait_for_host_authority_enemy_turn_completion() -> void:
+	if battlefield == null or not is_instance_valid(battlefield):
+		turn_finished.emit()
+		return
+	if battlefield.has_method("coop_enet_guest_wait_for_enemy_turn_end"):
+		await battlefield.coop_enet_guest_wait_for_enemy_turn_end()
+	turn_finished.emit()
 
 
 func _weapon(u: Object) -> Resource:
@@ -263,6 +321,7 @@ func _can_reach_target_this_turn(unit: Node2D, target: Node2D, target_type: Stri
 func enter(p_battlefield: Node2D) -> void:
 	super.enter(p_battlefield)
 	_focus_target = null
+	active_unit = null
 
 	var my_container: Node = (battlefield.enemy_container as Node) if faction == "enemy" else (battlefield.ally_container as Node)
 	if my_container == null:
@@ -273,6 +332,10 @@ func enter(p_battlefield: Node2D) -> void:
 		var u := unit as Node2D
 		if is_instance_valid(u) and u.has_method("reset_turn"):
 			u.reset_turn()
+
+	if _should_wait_for_host_authority_enemy_turn():
+		call_deferred("_wait_for_host_authority_enemy_turn_completion")
+		return
 
 	execute_ai_turn(my_container)
 
@@ -436,6 +499,7 @@ func _ai_try_canto_move(unit: Node2D, remaining: float) -> void:
 		unit.canto_move_budget = 0
 		return
 	await unit.move_along_path(path)
+	_sync_host_authority_enemy_move(unit, path, pc)
 	unit.in_canto_phase = false
 	unit.canto_move_budget = 0
 	if faction == "ally":
@@ -986,11 +1050,13 @@ func execute_ai_turn(my_container: Node) -> void:
 
 		if unit.has_method("process_escort_turn"):
 			continue
+		active_unit = unit
 
 		var plan: Dictionary = get_best_plan_for(unit)
 		if plan.is_empty():
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()
+				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
 			await battlefield.get_tree().create_timer(0.2).timeout
 			continue
@@ -1001,6 +1067,7 @@ func execute_ai_turn(my_container: Node) -> void:
 		if target == null or not is_instance_valid(target):
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()
+				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
 			await battlefield.get_tree().create_timer(0.2).timeout
 			continue
@@ -1008,6 +1075,7 @@ func execute_ai_turn(my_container: Node) -> void:
 		if not _is_valid_ai_target(target):
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()
+				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
 			await battlefield.get_tree().create_timer(0.2).timeout
 			continue
@@ -1555,6 +1623,7 @@ func execute_ai_turn(my_container: Node) -> void:
 		if valid_firing_spots.is_empty() and (move_path.is_empty() or move_path.size() <= 1):
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()
+				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
 			await battlefield.get_tree().create_timer(0.2).timeout
 			continue
@@ -1599,11 +1668,14 @@ func execute_ai_turn(my_container: Node) -> void:
 		# Move
 		if move_path.size() > 1:
 			await unit.move_along_path(move_path)
-			unit.move_points_used_this_turn = battlefield.get_path_move_cost(move_path, unit)
+			var move_cost: float = battlefield.get_path_move_cost(move_path, unit)
+			unit.move_points_used_this_turn = move_cost
+			_sync_host_authority_enemy_move(unit, move_path, move_cost)
 
 			if not is_instance_valid(target) and targeted_crate == null:
 				if is_instance_valid(unit) and unit.has_method("finish_turn"):
 					unit.finish_turn()
+					_sync_host_authority_enemy_finish_turn(unit)
 				continue
 
 			if battlefield == null:
@@ -1634,6 +1706,7 @@ func execute_ai_turn(my_container: Node) -> void:
 				tween.tween_property(unit, "modulate:a", 0.0, 0.3)
 				await tween.finished
 
+				_sync_host_authority_enemy_escape(unit)
 				unit.queue_free()
 				continue
 
@@ -1641,9 +1714,18 @@ func execute_ai_turn(my_container: Node) -> void:
 				match target_type:
 					TYPE_CHEST:
 						if battlefield.get_distance(unit, target) <= 1:
+							var pre_stolen_count: int = 0
+							if unit.get("stolen_loot") != null:
+								pre_stolen_count = (unit.stolen_loot as Array).size()
 							unit.look_at_pos(battlefield.get_grid_pos(target))
 							if battlefield.has_method("_on_chest_opened"):
 								battlefield._on_chest_opened(target, unit)
+							var stolen_items: Array = []
+							if unit.get("stolen_loot") != null:
+								var loot_arr: Array = unit.stolen_loot as Array
+								for i in range(pre_stolen_count, loot_arr.size()):
+									stolen_items.append(loot_arr[i])
+							_sync_host_authority_enemy_chest_open(unit, target, stolen_items)
 
 					TYPE_HOSTILE:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
@@ -1682,11 +1764,15 @@ func execute_ai_turn(my_container: Node) -> void:
 					await _ai_try_canto_move(unit, rem_c)
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()
+				_sync_host_authority_enemy_finish_turn(unit)
 
 		battlefield.rebuild_grid()
 		await battlefield.get_tree().create_timer(0.2).timeout
 
+	active_unit = null
 	await battlefield.get_tree().create_timer(0.35).timeout
+	if _is_host_authority_enemy_turn_host() and battlefield.has_method("coop_enet_sync_after_host_authority_enemy_turn_end"):
+		battlefield.coop_enet_sync_after_host_authority_enemy_turn_end()
 	turn_finished.emit()
 	
 func _focus_camera_on_ai_unit(unit: Node2D, duration: float = 0.45) -> void:

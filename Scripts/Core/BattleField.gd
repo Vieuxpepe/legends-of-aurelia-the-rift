@@ -27,6 +27,9 @@ signal dialogue_advanced
 signal promotion_chosen(chosen_class_res: Resource)
 ## ENet mock co-op: guest finished applying host-resolved combat for the guest's own attacker (see [method coop_enet_guest_delegate_player_combat_to_host]).
 signal coop_guest_host_combat_resolved
+signal coop_remote_enemy_turn_finished
+signal coop_remote_escort_turn_finished
+signal loot_window_closed
 
 
 # =============================================================================
@@ -39,6 +42,7 @@ enum UISfx { MOVE_OK, TARGET_OK, INVALID }
 const CELL_SIZE = Vector2i(64, 64)
 ## Co-op: wire schema for [method coop_net_build_authoritative_combat_snapshot] / peer apply (no second combat sim).
 const COOP_AUTH_BATTLE_SNAPSHOT_VER: int = 1
+const COOP_ENEMY_PHASE_SETUP_SNAPSHOT_VER: int = 1
 
 const LEVELUP_HOLD_TIME_NORMAL := 4.2
 const LEVELUP_HOLD_TIME_PERFECT := 6.0
@@ -498,6 +502,7 @@ var selected_inventory_meta: Dictionary = {}
 var unit_managing_inventory: Node2D = null
 
 var pending_loot: Array[Resource] = []
+var _deferred_battle_result_after_loot: String = ""
 
 var player_gold: int = 0
 var player_inventory: Array[Resource] = []
@@ -529,6 +534,14 @@ var _skip_button_base_modulate: Color = Color.WHITE
 var _skip_button_base_modulate_captured: bool = false
 var _mock_partner_placeholder_combat_log_done: bool = false
 var _mock_coop_start_battle_button_base_text: String = ""
+var _coop_remote_combat_replay_active: bool = false
+var _coop_remote_battle_result_applying: bool = false
+var _coop_host_battle_result_broadcast: String = ""
+var _coop_finalized_battle_result: String = ""
+var _coop_waiting_for_host_battle_result: String = ""
+var _coop_battle_result_resolution_in_progress: String = ""
+var _coop_remote_escort_turn_completed: bool = false
+var _coop_pending_escort_destination_victory: bool = false
 
 const MOCK_COOP_BATTLE_OWNER_META: String = "mock_coop_battle_owner"
 const MOCK_COOP_COMMAND_ID_META: String = "mock_coop_command_id"
@@ -536,6 +549,11 @@ const MOCK_COOP_OWNER_LOCAL: String = "local"
 const MOCK_COOP_OWNER_REMOTE: String = "remote"
 const MOCK_COOP_COMMANDER_DEPLOYMENT_SLOT_COUNT: int = 2
 const MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY: float = -1000.0
+const COOP_REMOTE_AI_CAMERA_OFFSET_Y: float = 250.0
+const COOP_REMOTE_AI_CAMERA_LEFT_MARGIN: float = -400.0
+const COOP_REMOTE_AI_CAMERA_RIGHT_MARGIN: float = 400.0
+const COOP_REMOTE_AI_CAMERA_TOP_MARGIN: float = -250.0
+const COOP_REMOTE_AI_CAMERA_BOTTOM_MARGIN: float = 400.0
 
 func get_consumed_mock_coop_battle_handoff_snapshot() -> Dictionary:
 	return _consumed_mock_coop_battle_handoff.duplicate(true)
@@ -593,6 +611,50 @@ func try_allow_local_player_select_unit_for_command(unit: Node2D) -> bool:
 	return true
 
 
+func _infer_mock_coop_command_prefix_for_node(unit: Node2D) -> String:
+	if unit == null or not is_instance_valid(unit):
+		return ""
+	var parent: Node = unit.get_parent()
+	if parent == player_container:
+		return "player"
+	if parent == ally_container:
+		return "ally"
+	if parent == enemy_container:
+		return "enemy"
+	if parent == destructibles_container:
+		return "destructible"
+	if parent == chests_container:
+		return "chest"
+	return ""
+
+
+func _ensure_mock_coop_command_id_for_node(unit: Node2D) -> String:
+	if unit == null or not is_instance_valid(unit):
+		return ""
+	if unit.has_meta(MOCK_COOP_COMMAND_ID_META):
+		var existing: String = str(unit.get_meta(MOCK_COOP_COMMAND_ID_META, "")).strip_edges()
+		if existing != "":
+			return existing
+	var prefix: String = _infer_mock_coop_command_prefix_for_node(unit)
+	if prefix == "":
+		return get_relationship_id(unit).strip_edges()
+	var parent: Node = unit.get_parent()
+	var sibling_index: int = -1
+	if parent != null:
+		sibling_index = parent.get_children().find(unit)
+	var base_name: String = ""
+	if unit.get("unit_name") != null:
+		base_name = str(unit.get("unit_name")).strip_edges()
+	if base_name == "":
+		base_name = str(unit.name).strip_edges()
+	if base_name == "":
+		base_name = prefix
+	base_name = base_name.replace("::", "_")
+	var stable_id: String = "%s::%03d::%s" % [prefix, maxi(sibling_index, 0), base_name]
+	unit.set_meta(MOCK_COOP_COMMAND_ID_META, stable_id)
+	return stable_id
+
+
 func _get_mock_coop_command_id(unit_or_name: Variant) -> String:
 	if unit_or_name is Node2D:
 		var unit: Node2D = unit_or_name as Node2D
@@ -600,10 +662,65 @@ func _get_mock_coop_command_id(unit_or_name: Variant) -> String:
 			var meta_id: String = str(unit.get_meta(MOCK_COOP_COMMAND_ID_META, "")).strip_edges()
 			if meta_id != "":
 				return meta_id
-		return get_relationship_id(unit).strip_edges()
+		return _ensure_mock_coop_command_id_for_node(unit)
 	if unit_or_name is String:
 		return str(unit_or_name).strip_edges()
 	return ""
+
+
+func _seed_mock_coop_command_ids_for_live_battle_nodes() -> void:
+	for cont in [player_container, ally_container, enemy_container, destructibles_container, chests_container]:
+		if cont == null:
+			continue
+		for child in cont.get_children():
+			if not child is Node2D:
+				continue
+			var node: Node2D = child as Node2D
+			if not is_instance_valid(node) or node.is_queued_for_deletion():
+				continue
+			_ensure_mock_coop_command_id_for_node(node)
+
+
+func _coop_focus_camera_on_world_point(world_point: Vector2, duration: float) -> void:
+	if main_camera == null or not camera_follows_enemies:
+		return
+	var cam: Camera2D = main_camera
+	var vp: Vector2 = get_viewport_rect().size
+	var target_cam_pos: Vector2 = world_point + Vector2(0, COOP_REMOTE_AI_CAMERA_OFFSET_Y)
+	if cam.anchor_mode == Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT:
+		var half_vp_world: Vector2 = (vp * 0.5) / cam.zoom
+		target_cam_pos -= half_vp_world
+	var map_limit_x: float = float(GRID_SIZE.x * CELL_SIZE.x)
+	var map_limit_y: float = float(GRID_SIZE.y * CELL_SIZE.y)
+	target_cam_pos.x = clamp(
+		target_cam_pos.x,
+		COOP_REMOTE_AI_CAMERA_LEFT_MARGIN,
+		map_limit_x + COOP_REMOTE_AI_CAMERA_RIGHT_MARGIN
+	)
+	target_cam_pos.y = clamp(
+		target_cam_pos.y,
+		COOP_REMOTE_AI_CAMERA_TOP_MARGIN,
+		map_limit_y + COOP_REMOTE_AI_CAMERA_BOTTOM_MARGIN
+	)
+	var camera_tween: Tween = create_tween()
+	camera_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	camera_tween.tween_property(cam, "global_position", target_cam_pos, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await camera_tween.finished
+
+
+func _coop_focus_camera_on_unit(unit: Node2D, duration: float = 0.55) -> void:
+	if unit == null or not is_instance_valid(unit):
+		return
+	await _coop_focus_camera_on_world_point(unit.global_position + Vector2(32, 32), duration)
+
+
+func _coop_focus_camera_on_action(attacker: Node2D, target: Node2D, duration: float = 0.4) -> void:
+	if attacker == null or target == null:
+		return
+	if not is_instance_valid(attacker) or not is_instance_valid(target):
+		return
+	var focus_point: Vector2 = ((attacker.global_position + Vector2(32, 32)) + (target.global_position + Vector2(32, 32))) * 0.5
+	await _coop_focus_camera_on_world_point(focus_point, duration)
 
 
 func _mock_coop_battle_sync_active() -> bool:
@@ -728,6 +845,7 @@ var _coop_net_local_combat_seq: int = 0
 var _coop_net_incoming_enemy_combat_fifo: Array = []
 ## Guest: relationship id of attacker while waiting for host [code]player_combat[/code] / [code]player_post_combat[/code] after [method coop_enet_guest_delegate_player_combat_to_host].
 var _coop_guest_awaiting_combat_aid: String = ""
+var _coop_remote_enemy_turn_completed: bool = false
 
 func _exit_tree() -> void:
 	_coop_net_reset_battle_rng_sync()
@@ -744,7 +862,691 @@ func _coop_net_reset_battle_rng_sync() -> void:
 	_coop_qte_mirror_dict.clear()
 	_coop_qte_capture_active = false
 	_coop_qte_capture_dict.clear()
+	_coop_combat_loot_capture_active = false
+	_coop_combat_loot_capture_events.clear()
 	_coop_guest_awaiting_combat_aid = ""
+	_coop_remote_enemy_turn_completed = false
+	_coop_remote_battle_result_applying = false
+	_coop_host_battle_result_broadcast = ""
+	_coop_finalized_battle_result = ""
+	_coop_waiting_for_host_battle_result = ""
+	_coop_battle_result_resolution_in_progress = ""
+	_coop_remote_escort_turn_completed = false
+	_coop_pending_escort_destination_victory = false
+
+
+func coop_enet_enemy_turn_host_authority_active() -> bool:
+	return (
+		is_mock_coop_unit_ownership_active()
+		and CoopExpeditionSessionManager.uses_enet_coop_transport()
+		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	)
+
+
+func coop_enet_is_host_authority_enemy_turn_host() -> bool:
+	return coop_enet_enemy_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST
+
+
+func coop_enet_should_wait_for_host_authority_enemy_turn() -> bool:
+	return coop_enet_enemy_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+
+
+func coop_enet_guest_wait_for_enemy_turn_end() -> void:
+	if not coop_enet_should_wait_for_host_authority_enemy_turn():
+		return
+	if _coop_remote_enemy_turn_completed:
+		_coop_remote_enemy_turn_completed = false
+		return
+	while is_inside_tree():
+		await coop_remote_enemy_turn_finished
+		if _coop_remote_enemy_turn_completed:
+			_coop_remote_enemy_turn_completed = false
+			return
+
+
+func coop_enet_escort_turn_host_authority_active() -> bool:
+	return (
+		map_objective == Objective.DEFEND_TARGET
+		and is_instance_valid(vip_target)
+		and vip_target.has_method("process_escort_turn")
+		and CoopExpeditionSessionManager.uses_enet_coop_transport()
+		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	)
+
+
+func coop_enet_is_host_authority_escort_turn_host() -> bool:
+	return coop_enet_escort_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST
+
+
+func coop_enet_should_wait_for_host_authority_escort_turn() -> bool:
+	return coop_enet_escort_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+
+
+func coop_enet_guest_wait_for_escort_turn_end() -> void:
+	if not coop_enet_should_wait_for_host_authority_escort_turn():
+		return
+	if _coop_remote_escort_turn_completed:
+		_coop_remote_escort_turn_completed = false
+		return
+	while is_inside_tree():
+		await coop_remote_escort_turn_finished
+		if _coop_remote_escort_turn_completed:
+			_coop_remote_escort_turn_completed = false
+			return
+
+
+func _coop_normalize_battle_result(result: String) -> String:
+	var normalized: String = str(result).strip_edges().to_upper()
+	if normalized == "":
+		return ""
+	return normalized
+
+
+func coop_enet_battle_result_host_authority_active() -> bool:
+	return coop_enet_enemy_turn_host_authority_active()
+
+
+func coop_enet_should_wait_for_host_authoritative_battle_result() -> bool:
+	return coop_enet_battle_result_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+
+
+func _coop_send_host_authoritative_battle_result(result: String) -> void:
+	var normalized: String = _coop_normalize_battle_result(result)
+	if normalized == "":
+		return
+	if not coop_enet_battle_result_host_authority_active() or CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
+		return
+	if _coop_host_battle_result_broadcast == normalized:
+		return
+	_coop_host_battle_result_broadcast = normalized
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "battle_result",
+		"result": normalized,
+	})
+
+
+func _coop_wait_for_host_authoritative_battle_result(result: String) -> void:
+	var normalized: String = _coop_normalize_battle_result(result)
+	if normalized == "":
+		return
+	if _coop_finalized_battle_result != "":
+		return
+	if _coop_waiting_for_host_battle_result == normalized:
+		return
+	_coop_waiting_for_host_battle_result = normalized
+	change_state(null)
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: waiting for host to confirm %s." % normalized.to_lower(), "gold")
+
+
+func _is_loot_window_active() -> bool:
+	return loot_window != null and is_instance_valid(loot_window) and loot_window.visible
+
+
+func _wait_for_loot_window_close() -> void:
+	while is_inside_tree() and _is_loot_window_active():
+		await loot_window_closed
+
+
+func _defer_battle_result_until_loot_if_needed(result: String) -> bool:
+	var normalized: String = _coop_normalize_battle_result(result)
+	if normalized == "":
+		normalized = str(result).strip_edges()
+	if normalized == "":
+		return false
+	if not _is_loot_window_active():
+		return false
+	_deferred_battle_result_after_loot = normalized
+	return true
+
+
+func _apply_deferred_battle_result_after_loot(result: String) -> void:
+	var normalized: String = _coop_normalize_battle_result(result)
+	if normalized == "":
+		normalized = str(result).strip_edges()
+	if normalized == "" or _coop_finalized_battle_result != "":
+		return
+	if normalized == "VICTORY":
+		await _trigger_victory()
+	else:
+		trigger_game_over(normalized)
+
+
+func _coop_wire_serialize_items(items: Array) -> Array:
+	var out: Array = []
+	for item in items:
+		if not (item is Resource):
+			continue
+		var entry: Dictionary = {}
+		if CampaignManager != null and CampaignManager.has_method("_serialize_item"):
+			entry = CampaignManager._serialize_item(item as Resource)
+		if entry.is_empty():
+			var res: Resource = item as Resource
+			var path: String = res.resource_path
+			if path == "" and res.has_meta("original_path"):
+				path = str(res.get_meta("original_path", "")).strip_edges()
+			if path != "":
+				entry = {"path": path}
+		if not entry.is_empty():
+			out.append(entry)
+	return out
+
+
+func _coop_wire_deserialize_items(raw: Variant) -> Array:
+	var out: Array = []
+	if typeof(raw) != TYPE_ARRAY:
+		return out
+	for item_data in raw as Array:
+		var inst: Resource = null
+		if item_data is Dictionary and CampaignManager != null and CampaignManager.has_method("_deserialize_item"):
+			inst = CampaignManager._deserialize_item(item_data as Dictionary)
+		elif item_data is String:
+			var loaded: Resource = load(str(item_data)) as Resource
+			if loaded != null:
+				inst = CampaignManager.duplicate_item(loaded) if CampaignManager != null else loaded.duplicate(true)
+		if inst != null:
+			out.append(inst)
+	return out
+
+
+func _coop_wire_resource_path(res: Resource) -> String:
+	if res == null:
+		return ""
+	var path: String = str(res.resource_path).strip_edges()
+	if path == "" and res.has_meta("original_path"):
+		path = str(res.get_meta("original_path", "")).strip_edges()
+	return path
+
+
+func _coop_wire_serialize_item_single(item: Resource) -> Variant:
+	if item == null:
+		return {}
+	var raw: Array = _coop_wire_serialize_items([item])
+	if raw.is_empty():
+		return {}
+	return raw[0]
+
+
+func _coop_wire_deserialize_item_single(raw: Variant) -> Resource:
+	var wrapped: Array = [raw]
+	var out: Array = _coop_wire_deserialize_items(wrapped)
+	if out.is_empty():
+		return null
+	return out[0] as Resource
+
+
+func _coop_capture_enemy_death_loot_for_sync(source_unit: Node2D, total_gold: int, items: Array, recipient: Node2D) -> void:
+	if not _coop_combat_loot_capture_active:
+		return
+	if total_gold <= 0 and items.is_empty():
+		return
+	var entry: Dictionary = {"gold": total_gold}
+	if source_unit != null and is_instance_valid(source_unit):
+		var gp: Vector2i = get_grid_pos(source_unit)
+		entry["gx"] = gp.x
+		entry["gy"] = gp.y
+		var source_id: String = _get_mock_coop_command_id(source_unit)
+		if source_id != "":
+			entry["source_id"] = source_id
+	if recipient != null and is_instance_valid(recipient):
+		var recipient_id: String = _get_mock_coop_command_id(recipient)
+		if recipient_id != "":
+			entry["recipient_id"] = recipient_id
+	if not items.is_empty():
+		entry["items"] = _coop_wire_serialize_items(items)
+	_coop_combat_loot_capture_events.append(entry)
+
+
+func _coop_apply_remote_synced_enemy_death_loot_events(raw: Variant) -> void:
+	if typeof(raw) != TYPE_ARRAY:
+		return
+	var combined_items: Array = []
+	var recipient_id: String = ""
+	for event_raw in raw as Array:
+		if not (event_raw is Dictionary):
+			continue
+		var event: Dictionary = event_raw as Dictionary
+		var gold_amount: int = int(event.get("gold", 0))
+		if gold_amount > 0:
+			var world_pos := Vector2.ZERO
+			if event.has("gx") and event.has("gy"):
+				world_pos = Vector2(int(event.get("gx", 0)) * CELL_SIZE.x, int(event.get("gy", 0)) * CELL_SIZE.y)
+			animate_flying_gold(world_pos, gold_amount)
+			if battle_log != null and battle_log.visible:
+				add_combat_log("Found " + str(gold_amount) + " gold.", "yellow")
+		var items: Array = _coop_wire_deserialize_items(event.get("items", []))
+		if not items.is_empty():
+			combined_items.append_array(items)
+			if recipient_id == "":
+				recipient_id = str(event.get("recipient_id", "")).strip_edges()
+	if combined_items.is_empty():
+		return
+	var recipient: Node2D = null
+	if recipient_id != "":
+		recipient = _coop_find_player_side_unit_by_relationship_id(recipient_id)
+	pending_loot.clear()
+	pending_loot.append_array(combined_items)
+	loot_recipient = recipient
+	show_loot_window()
+
+
+func _coop_build_runtime_unit_wire_snapshot(unit: Node2D) -> Dictionary:
+	if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+		return {}
+	var unit_id: String = _get_mock_coop_command_id(unit)
+	if unit_id == "":
+		return {}
+	var gp: Vector2i = get_grid_pos(unit)
+	var entry: Dictionary = {
+		"id": unit_id,
+		"gx": gp.x,
+		"gy": gp.y,
+		"visible": true,
+		"modulate": [1.0, 1.0, 1.0, 1.0],
+	}
+	var scene_path: String = str(unit.get("scene_file_path")).strip_edges()
+	if scene_path == "":
+		if unit.get_parent() == enemy_container and enemy_scene != null:
+			scene_path = str(enemy_scene.resource_path).strip_edges()
+		elif player_unit_scene != null:
+			scene_path = str(player_unit_scene.resource_path).strip_edges()
+	if scene_path != "":
+		entry["scene_path"] = scene_path
+	var data_res: Resource = unit.get("data") as Resource
+	var data_path: String = _coop_wire_resource_path(data_res)
+	if data_path != "":
+		entry["data_path"] = data_path
+	var class_res: Resource = unit.get("active_class_data") as Resource
+	var class_path: String = _coop_wire_resource_path(class_res)
+	if class_path != "":
+		entry["class_data"] = class_path
+	var portrait_res: Resource = unit.get("portrait") as Resource
+	var portrait_path: String = _coop_wire_resource_path(portrait_res)
+	if portrait_path != "":
+		entry["portrait"] = portrait_path
+	var sprite_res: Resource = unit.get("battle_sprite") as Resource
+	var sprite_path: String = _coop_wire_resource_path(sprite_res)
+	if sprite_path != "":
+		entry["battle_sprite"] = sprite_path
+	if unit.get("unit_name") != null:
+		entry["unit_name"] = str(unit.get("unit_name"))
+	if unit.get("unit_class_name") != null:
+		entry["unit_class_name"] = str(unit.get("unit_class_name"))
+	if unit.get("team") != null:
+		entry["team"] = int(unit.get("team"))
+	if unit.get("is_enemy") != null:
+		entry["is_enemy"] = bool(unit.get("is_enemy"))
+	if unit.get("is_custom_avatar") != null:
+		entry["is_custom_avatar"] = bool(unit.get("is_custom_avatar"))
+	for key in ["level", "experience", "max_hp", "current_hp", "strength", "magic", "defense", "resistance", "speed", "agility", "move_range", "skill_points", "ai_intelligence", "experience_reward"]:
+		var val: Variant = unit.get(key)
+		if val != null:
+			entry[key] = int(val)
+	for key in ["has_moved", "is_exhausted", "is_defending"]:
+		var flag_val: Variant = unit.get(key)
+		if flag_val != null:
+			entry[key] = bool(flag_val)
+	if unit.get("move_points_used_this_turn") != null:
+		entry["move_points_used_this_turn"] = float(unit.get("move_points_used_this_turn"))
+	if unit.get("move_type") != null:
+		entry["move_type"] = unit.get("move_type")
+	if unit.get("ability") != null:
+		entry["ability"] = unit.get("ability")
+	var unit_tags_raw: Variant = unit.get("unit_tags")
+	if unit_tags_raw is Array:
+		entry["unit_tags"] = (unit_tags_raw as Array).duplicate(true)
+	for list_key in ["traits", "rookie_legacies", "base_class_legacies", "promoted_class_legacies", "unlocked_skills"]:
+		var list_raw: Variant = unit.get(list_key)
+		if list_raw is Array:
+			entry[list_key] = (list_raw as Array).duplicate(true)
+	var inv_raw: Variant = unit.get("inventory")
+	if inv_raw is Array:
+		entry["inventory"] = _coop_wire_serialize_items(inv_raw as Array)
+	var eq_raw: Resource = unit.get("equipped_weapon") as Resource
+	var eq_ser: Variant = _coop_wire_serialize_item_single(eq_raw)
+	if typeof(eq_ser) == TYPE_DICTIONARY and not (eq_ser as Dictionary).is_empty():
+		entry["equipped_weapon"] = eq_ser
+	elif eq_ser is String and str(eq_ser).strip_edges() != "":
+		entry["equipped_weapon"] = eq_ser
+	if unit is CanvasItem:
+		var ci: CanvasItem = unit as CanvasItem
+		entry["visible"] = ci.visible
+		entry["modulate"] = [ci.modulate.r, ci.modulate.g, ci.modulate.b, ci.modulate.a]
+	return entry
+
+
+func _coop_instantiate_runtime_unit_from_snapshot(entry: Dictionary, target_parent: Node) -> Node2D:
+	if target_parent == null:
+		return null
+	var scene_path: String = str(entry.get("scene_path", "")).strip_edges()
+	var packed: PackedScene = null
+	if scene_path != "":
+		var loaded_scene: Resource = load(scene_path)
+		if loaded_scene is PackedScene:
+			packed = loaded_scene as PackedScene
+	if packed == null:
+		if target_parent == enemy_container and enemy_scene != null:
+			packed = enemy_scene
+		elif player_unit_scene != null:
+			packed = player_unit_scene
+	if packed == null:
+		if OS.is_debug_build():
+			push_warning("Coop enemy phase setup: failed to load unit scene for '%s'" % str(entry.get("id", "")))
+		return null
+	var unit: Node2D = packed.instantiate() as Node2D
+	if unit == null:
+		return null
+	var unit_id: String = str(entry.get("id", "")).strip_edges()
+	if unit_id != "":
+		unit.set_meta(MOCK_COOP_COMMAND_ID_META, unit_id)
+	var data_path: String = str(entry.get("data_path", "")).strip_edges()
+	if data_path != "":
+		var data_loaded: Resource = load(data_path) as Resource
+		if data_loaded != null and unit.get("data") != null:
+			unit.set("data", data_loaded.duplicate(true))
+			var data_copy: Resource = unit.get("data") as Resource
+			if data_copy != null and data_path != "":
+				data_copy.set_meta("original_path", data_path)
+	target_parent.add_child(unit)
+	if unit.has_signal("died") and not unit.died.is_connected(_on_unit_died):
+		unit.died.connect(_on_unit_died)
+	if unit.has_signal("leveled_up") and not unit.leveled_up.is_connected(_on_unit_leveled_up):
+		unit.leveled_up.connect(_on_unit_leveled_up)
+	return unit
+
+
+func _coop_apply_runtime_unit_wire_snapshot(entry: Dictionary, target_parent: Node) -> Node2D:
+	var unit_id: String = str(entry.get("id", "")).strip_edges()
+	if unit_id == "":
+		return null
+	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(unit_id)
+	if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+		unit = _coop_instantiate_runtime_unit_from_snapshot(entry, target_parent)
+	if unit == null or not is_instance_valid(unit):
+		return null
+	var gx: int = int(entry.get("gx", get_grid_pos(unit).x))
+	var gy: int = int(entry.get("gy", get_grid_pos(unit).y))
+	unit.position = Vector2(gx * CELL_SIZE.x, gy * CELL_SIZE.y)
+	for key in ["unit_name", "unit_class_name", "move_type", "ability"]:
+		if entry.has(key):
+			unit.set(key, entry[key])
+	for key in ["team", "level", "experience", "max_hp", "current_hp", "strength", "magic", "defense", "resistance", "speed", "agility", "move_range", "skill_points", "ai_intelligence", "experience_reward"]:
+		if entry.has(key):
+			unit.set(key, int(entry[key]))
+	for key in ["has_moved", "is_exhausted", "is_defending"]:
+		if entry.has(key) and unit.get(key) != null:
+			unit.set(key, bool(entry[key]))
+	if entry.has("move_points_used_this_turn") and unit.get("move_points_used_this_turn") != null:
+		unit.set("move_points_used_this_turn", float(entry["move_points_used_this_turn"]))
+	if entry.has("is_enemy") and unit.get("is_enemy") != null:
+		unit.set("is_enemy", bool(entry["is_enemy"]))
+	if entry.has("is_custom_avatar") and unit.get("is_custom_avatar") != null:
+		unit.set("is_custom_avatar", bool(entry["is_custom_avatar"]))
+	if entry.has("class_data") and unit.get("active_class_data") != null:
+		var class_loaded: Resource = load(str(entry["class_data"])) as Resource
+		if class_loaded != null:
+			unit.set("active_class_data", class_loaded)
+	if entry.has("portrait") and unit.get("portrait") != null:
+		var portrait_loaded: Resource = load(str(entry["portrait"])) as Resource
+		if portrait_loaded != null:
+			unit.set("portrait", portrait_loaded)
+	if entry.has("battle_sprite") and unit.get("battle_sprite") != null:
+		var sprite_loaded: Resource = load(str(entry["battle_sprite"])) as Resource
+		if sprite_loaded != null:
+			unit.set("battle_sprite", sprite_loaded)
+	if entry.has("traits") and unit.get("traits") != null:
+		unit.set("traits", (entry["traits"] as Array).duplicate(true))
+	if entry.has("rookie_legacies") and unit.get("rookie_legacies") != null:
+		unit.set("rookie_legacies", (entry["rookie_legacies"] as Array).duplicate(true))
+	if entry.has("base_class_legacies") and unit.get("base_class_legacies") != null:
+		unit.set("base_class_legacies", (entry["base_class_legacies"] as Array).duplicate(true))
+	if entry.has("promoted_class_legacies") and unit.get("promoted_class_legacies") != null:
+		unit.set("promoted_class_legacies", (entry["promoted_class_legacies"] as Array).duplicate(true))
+	if entry.has("unlocked_skills") and unit.get("unlocked_skills") != null:
+		unit.set("unlocked_skills", (entry["unlocked_skills"] as Array).duplicate(true))
+	if entry.has("unit_tags") and unit.get("unit_tags") != null:
+		unit.set("unit_tags", (entry["unit_tags"] as Array).duplicate(true))
+	if entry.has("inventory") and unit.get("inventory") != null:
+		var inv_items: Array = _coop_wire_deserialize_items(entry["inventory"])
+		unit.inventory.clear()
+		unit.inventory.append_array(inv_items)
+	if entry.has("equipped_weapon") and unit.get("equipped_weapon") != null:
+		var eq_loaded: Resource = _coop_wire_deserialize_item_single(entry["equipped_weapon"])
+		if eq_loaded != null:
+			unit.set("equipped_weapon", eq_loaded)
+	if unit.get("health_bar") != null:
+		unit.health_bar.value = unit.current_hp
+	if unit is CanvasItem:
+		var ci: CanvasItem = unit as CanvasItem
+		ci.visible = bool(entry.get("visible", true))
+		var mod_raw: Variant = entry.get("modulate", [])
+		if mod_raw is Array and (mod_raw as Array).size() >= 4:
+			var mod_arr: Array = mod_raw as Array
+			ci.modulate = Color(float(mod_arr[0]), float(mod_arr[1]), float(mod_arr[2]), float(mod_arr[3]))
+	return unit
+
+
+func _coop_build_enemy_phase_setup_snapshot() -> Dictionary:
+	var enemy_units: Array = []
+	if enemy_container != null:
+		for child in enemy_container.get_children():
+			if not child is Node2D:
+				continue
+			var enemy: Node2D = child as Node2D
+			if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+				continue
+			var unit_snap: Dictionary = _coop_build_runtime_unit_wire_snapshot(enemy)
+			if not unit_snap.is_empty():
+				enemy_units.append(unit_snap)
+	var spawners: Array = []
+	if destructibles_container != null:
+		for child in destructibles_container.get_children():
+			if not child is Node2D:
+				continue
+			var node: Node2D = child as Node2D
+			if not is_instance_valid(node) or node.is_queued_for_deletion() or not node.has_method("process_turn"):
+				continue
+			var spawner_id: String = _get_mock_coop_command_id(node)
+			if spawner_id == "":
+				continue
+			var entry: Dictionary = {"id": spawner_id}
+			var script_res: Script = node.get_script() as Script
+			if script_res != null and str(script_res.resource_path).strip_edges() != "":
+				entry["script_path"] = str(script_res.resource_path).strip_edges()
+			if node.get("has_warned") != null:
+				entry["has_warned"] = bool(node.get("has_warned"))
+			if node.get("has_triggered") != null:
+				entry["has_triggered"] = bool(node.get("has_triggered"))
+			var slot_timers_raw: Variant = node.get("slot_timers")
+			if slot_timers_raw is Array:
+				entry["slot_timers"] = (slot_timers_raw as Array).duplicate(true)
+			if node is CanvasItem:
+				var ci: CanvasItem = node as CanvasItem
+				entry["visible"] = ci.visible
+				entry["alpha"] = ci.modulate.a
+			var script_path: String = str(entry.get("script_path", "")).strip_edges()
+			if bool(entry.get("has_triggered", false)) and script_path.ends_with("AmbushSpawner.gd"):
+				entry["remove_on_guest"] = true
+			spawners.append(entry)
+	return {
+		"v": COOP_ENEMY_PHASE_SETUP_SNAPSHOT_VER,
+		"enemy_units": enemy_units,
+		"spawners": spawners,
+	}
+
+
+func _coop_apply_enemy_phase_setup_snapshot(snap: Dictionary) -> void:
+	if int(snap.get("v", 0)) != COOP_ENEMY_PHASE_SETUP_SNAPSHOT_VER:
+		if OS.is_debug_build():
+			push_warning("Coop enemy phase setup: reject snapshot (bad v).")
+		return
+	for raw_unit in snap.get("enemy_units", []):
+		if not raw_unit is Dictionary:
+			continue
+		_coop_apply_runtime_unit_wire_snapshot(raw_unit as Dictionary, enemy_container)
+	var live_spawner_ids: Dictionary = {}
+	for raw_spawner in snap.get("spawners", []):
+		if not raw_spawner is Dictionary:
+			continue
+		var entry: Dictionary = raw_spawner as Dictionary
+		var sid: String = str(entry.get("id", "")).strip_edges()
+		if sid == "":
+			continue
+		live_spawner_ids[sid] = true
+		var node: Node2D = _coop_find_unit_by_relationship_id_any_side(sid)
+		if node == null or not is_instance_valid(node) or node.is_queued_for_deletion():
+			continue
+		if entry.has("slot_timers") and node.get("slot_timers") != null:
+			node.set("slot_timers", (entry["slot_timers"] as Array).duplicate(true))
+		if entry.has("has_warned") and node.get("has_warned") != null:
+			node.set("has_warned", bool(entry["has_warned"]))
+		if entry.has("has_triggered") and node.get("has_triggered") != null:
+			node.set("has_triggered", bool(entry["has_triggered"]))
+		if node is CanvasItem:
+			var ci: CanvasItem = node as CanvasItem
+			if entry.has("visible"):
+				ci.visible = bool(entry["visible"])
+			if entry.has("alpha"):
+				var mod: Color = ci.modulate
+				mod.a = float(entry["alpha"])
+				ci.modulate = mod
+		if node.has_method("queue_redraw"):
+			node.call("queue_redraw")
+		if bool(entry.get("remove_on_guest", false)):
+			node.queue_free()
+	for child in destructibles_container.get_children():
+		if not child is Node2D:
+			continue
+		var node: Node2D = child as Node2D
+		if not is_instance_valid(node) or node.is_queued_for_deletion() or not node.has_method("process_turn"):
+			continue
+		var sid: String = _get_mock_coop_command_id(node)
+		if sid != "" and not live_spawner_ids.has(sid):
+			node.queue_free()
+	rebuild_grid()
+	update_fog_of_war()
+	update_objective_ui()
+
+
+func coop_enet_sync_after_host_authority_enemy_move(unit: Node2D, path: Array, path_cost: float) -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	if unit == null or not is_instance_valid(unit):
+		return
+	var uid: String = _get_mock_coop_command_id(unit)
+	if uid == "":
+		return
+	var serial: Array = []
+	for p in path:
+		var v := Vector2i.ZERO
+		if p is Vector2i:
+			v = p as Vector2i
+		elif typeof(p) == TYPE_VECTOR2I:
+			v = p as Vector2i
+		else:
+			continue
+		serial.append([v.x, v.y])
+	if serial.size() < 2:
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "enemy_turn_move",
+		"unit_id": uid,
+		"path": serial,
+		"path_cost": float(path_cost),
+	})
+
+
+func coop_enet_sync_after_host_authority_enemy_finish_turn(unit: Node2D) -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	if unit == null or not is_instance_valid(unit):
+		return
+	var uid: String = _get_mock_coop_command_id(unit)
+	if uid == "":
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "enemy_turn_finish",
+		"unit_id": uid,
+	})
+
+
+func coop_enet_sync_after_host_authority_enemy_escape(unit: Node2D) -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	if unit == null or not is_instance_valid(unit):
+		return
+	var uid: String = _get_mock_coop_command_id(unit)
+	if uid == "":
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "enemy_turn_escape",
+		"unit_id": uid,
+	})
+
+
+func coop_enet_sync_after_host_authority_enemy_chest_open(opener: Node2D, chest: Node2D, stolen_items: Array) -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	if opener == null or chest == null or not is_instance_valid(opener) or not is_instance_valid(chest):
+		return
+	var opener_id: String = _get_mock_coop_command_id(opener)
+	var chest_id: String = _get_mock_coop_command_id(chest)
+	if opener_id == "" or chest_id == "":
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "enemy_turn_chest_open",
+		"opener_id": opener_id,
+		"chest_id": chest_id,
+		"stolen_items": _coop_wire_serialize_items(stolen_items),
+	})
+
+
+func coop_enet_sync_after_host_authority_enemy_turn_end() -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "enemy_turn_end"})
+
+
+func coop_enet_sync_after_host_authority_enemy_phase_setup() -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	var snap: Dictionary = _coop_build_enemy_phase_setup_snapshot()
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "enemy_phase_setup",
+		"setup": snap,
+	})
+
+
+func coop_enet_sync_after_host_authoritative_battle_result(result: String) -> void:
+	_coop_send_host_authoritative_battle_result(result)
+
+
+func coop_enet_sync_after_host_authority_escort_turn(convoy: Node2D) -> void:
+	if not coop_enet_is_host_authority_escort_turn_host():
+		return
+	if convoy == null or not is_instance_valid(convoy):
+		return
+	var path_payload: Array = []
+	var path_raw: Variant = convoy.get("last_turn_path")
+	if path_raw is Array:
+		for cell in path_raw as Array:
+			if cell is Vector2i:
+				var grid: Vector2i = cell as Vector2i
+				path_payload.append([grid.x, grid.y])
+			elif cell is Array:
+				var arr: Array = cell as Array
+				if arr.size() >= 2:
+					path_payload.append([int(arr[0]), int(arr[1])])
+	var payload: Dictionary = {
+		"action": "escort_turn",
+		"path": path_payload,
+		"current_marker_idx": int(convoy.get("current_marker_idx")),
+		"current_hp": int(convoy.get("current_hp")),
+		"has_moved": bool(convoy.get("has_moved")),
+		"is_exhausted": bool(convoy.get("is_exhausted")),
+		"reached_destination": bool(convoy.get("last_turn_reached_destination")),
+	}
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(payload)
 
 
 ## Called on host + guest when the session locks RNG for this battle ([method CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed]).
@@ -796,6 +1598,8 @@ var _coop_qte_mirror_active: bool = false
 var _coop_qte_mirror_dict: Dictionary = {}
 var _coop_qte_capture_active: bool = false
 var _coop_qte_capture_dict: Dictionary = {}
+var _coop_combat_loot_capture_active: bool = false
+var _coop_combat_loot_capture_events: Array = []
 
 
 func _coop_qte_tick_reset_for_execute_combat() -> void:
@@ -812,6 +1616,20 @@ func coop_net_end_local_combat_qte_capture() -> Dictionary:
 		return {}
 	_coop_qte_capture_active = false
 	return _coop_qte_capture_dict.duplicate(true)
+
+
+func coop_net_begin_local_combat_loot_capture() -> void:
+	_coop_combat_loot_capture_events.clear()
+	_coop_combat_loot_capture_active = true
+
+
+func coop_net_end_local_combat_loot_capture() -> Array:
+	var out: Array = []
+	if _coop_combat_loot_capture_active:
+		out = _coop_combat_loot_capture_events.duplicate(true)
+	_coop_combat_loot_capture_active = false
+	_coop_combat_loot_capture_events.clear()
+	return out
 
 
 func coop_net_apply_remote_combat_qte_snapshot(snap: Variant) -> void:
@@ -1035,6 +1853,8 @@ func _coop_apply_authoritative_combat_snapshot(snap: Dictionary) -> void:
 			u2.set_meta("is_staggered_this_combat", bool(entry["stagger"]))
 		if entry.has("defending") and u2.get("is_defending") != null:
 			u2.is_defending = bool(entry["defending"])
+		if u2.has_method("clear_remote_coop_pending_death_visual") and int(entry.get("hp", u2.current_hp)) > 0:
+			u2.clear_remote_coop_pending_death_visual()
 		if u2.get("health_bar") != null:
 			u2.health_bar.value = u2.current_hp
 		if u2.has_method("update_poise_visuals"):
@@ -1043,6 +1863,55 @@ func _coop_apply_authoritative_combat_snapshot(snap: Dictionary) -> void:
 	rebuild_grid()
 	update_fog_of_war()
 	update_objective_ui()
+	_coop_validate_authoritative_post_combat_outcome()
+
+
+func is_coop_remote_combat_replay_active() -> bool:
+	return _coop_remote_combat_replay_active
+
+
+func _coop_execute_remote_combat_replay(attacker: Node2D, defender: Node2D, used_ability: bool, qte_snapshot: Variant, rng_packed: int = -1) -> void:
+	if attacker == null or defender == null:
+		return
+	_coop_remote_combat_replay_active = true
+	coop_net_apply_remote_combat_qte_snapshot(qte_snapshot)
+	if rng_packed >= 0:
+		coop_enet_apply_remote_combat_packed_id(rng_packed)
+	await execute_combat(attacker, defender, used_ability)
+	coop_net_clear_remote_combat_qte_snapshot()
+	_coop_remote_combat_replay_active = false
+
+
+func _coop_validate_authoritative_post_combat_outcome() -> void:
+	if player_container != null:
+		for p in player_container.get_children():
+			if not is_instance_valid(p) or p.is_queued_for_deletion():
+				continue
+			if p.get("is_custom_avatar") == true and int(p.get("current_hp")) <= 0:
+				add_combat_log("The Leader has fallen! All is lost...", "red")
+				trigger_game_over("DEFEAT")
+				return
+		var living_players: int = 0
+		for p in player_container.get_children():
+			if not is_instance_valid(p) or p.is_queued_for_deletion():
+				continue
+			if int(p.get("current_hp")) > 0:
+				living_players += 1
+		if living_players <= 0:
+			add_combat_log("MISSION FAILED: Entire party wiped out.", "red")
+			trigger_game_over("DEFEAT")
+			return
+	match map_objective:
+		Objective.ROUT_ENEMY:
+			if _count_alive_enemies() == 0 and _count_active_enemy_spawners() == 0:
+				add_combat_log("MISSION ACCOMPLISHED: All enemies routed.", "lime")
+				_trigger_victory()
+				return
+		Objective.DEFEND_TARGET:
+			if vip_target != null and is_instance_valid(vip_target) and int(vip_target.get("current_hp")) <= 0:
+				add_combat_log("MISSION FAILED: VIP Target was killed.", "red")
+				trigger_game_over("DEFEAT")
+				return
 
 
 ## ENet co-op: host allocates [method coop_enet_begin_synchronized_combat_round] + runs combat, then broadcasts; guest waits FIFO and mirrors (crit/miss match).
@@ -1066,20 +1935,80 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 	if aid == "" or did == "":
 		await execute_combat(attacker, defender, used_ability)
 		return
+	if current_state == enemy_state and coop_enet_should_wait_for_host_authority_enemy_turn():
+		return
+	if current_state == enemy_state and coop_enet_is_host_authority_enemy_turn_host():
+		var pre_enemy_turn: Dictionary = coop_net_snapshot_alive_unit_ids()
+		var packed_enemy_turn: int = coop_enet_begin_synchronized_combat_round()
+		var defender_is_destructible: bool = defender.get_parent() == destructibles_container
+		var defender_name_before: String = str(defender.get("object_name")) if defender.get("object_name") != null else str(defender.get("unit_name"))
+		var pre_stolen_gold: int = int(attacker.get("stolen_gold")) if attacker.get("stolen_gold") != null else 0
+		var pre_stolen_loot_size: int = 0
+		if attacker.get("stolen_loot") != null:
+			pre_stolen_loot_size = (attacker.stolen_loot as Array).size()
+		coop_net_begin_local_combat_qte_capture()
+		coop_net_begin_local_combat_loot_capture()
+		await execute_combat(attacker, defender, used_ability)
+		await _wait_for_loot_window_close()
+		var qte_enemy_turn: Dictionary = coop_net_end_local_combat_qte_capture()
+		var loot_events_enemy_turn: Array = coop_net_end_local_combat_loot_capture()
+		var auth_enemy_turn: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_enemy_turn)
+		var spoils: Dictionary = {}
+		if defender_is_destructible:
+			var defender_dead: bool = not is_instance_valid(defender) or defender.is_queued_for_deletion() or int(defender.get("current_hp")) <= 0
+			if defender_dead:
+				var gold_after: int = int(attacker.get("stolen_gold")) if attacker.get("stolen_gold") != null else pre_stolen_gold
+				var gold_delta: int = maxi(0, gold_after - pre_stolen_gold)
+				var new_items: Array = []
+				if attacker.get("stolen_loot") != null:
+					var loot_after: Array = attacker.stolen_loot as Array
+					for i in range(pre_stolen_loot_size, loot_after.size()):
+						new_items.append(loot_after[i])
+				if gold_delta > 0 or not new_items.is_empty():
+					spoils = {
+						"gold": gold_delta,
+						"items": _coop_wire_serialize_items(new_items),
+					}
+		var body: Dictionary = {
+			"action": "enemy_turn_combat",
+			"attacker_id": aid,
+			"defender_id": did,
+			"used_ability": used_ability,
+			"rng_packed": packed_enemy_turn,
+			"qte_snapshot": qte_enemy_turn,
+			"auth_snapshot": auth_enemy_turn,
+			"auth_v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
+		}
+		if not loot_events_enemy_turn.is_empty():
+			body["loot_events"] = loot_events_enemy_turn.duplicate(true)
+		if not spoils.is_empty():
+			body["destructible_spoils"] = spoils
+			body["destructible_name"] = defender_name_before
+		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(body)
+		return
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
 		var pre_enemy: Dictionary = coop_net_snapshot_alive_unit_ids()
 		var packed: int = coop_enet_begin_synchronized_combat_round()
+		coop_net_begin_local_combat_qte_capture()
+		coop_net_begin_local_combat_loot_capture()
 		await execute_combat(attacker, defender, used_ability)
+		await _wait_for_loot_window_close()
+		var qte_enemy: Dictionary = coop_net_end_local_combat_qte_capture()
+		var loot_events_enemy: Array = coop_net_end_local_combat_loot_capture()
 		var auth_enemy: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_enemy)
-		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		var enemy_body: Dictionary = {
 			"action": "enemy_combat",
 			"attacker_id": aid,
 			"defender_id": did,
 			"used_ability": used_ability,
 			"rng_packed": packed,
+			"qte_snapshot": qte_enemy,
 			"auth_snapshot": auth_enemy,
 			"auth_v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
-		})
+		}
+		if not loot_events_enemy.is_empty():
+			enemy_body["loot_events"] = loot_events_enemy.duplicate(true)
+		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(enemy_body)
 		return
 	## Guest: wait for host-ordered strike packet, then mirror RNG + combat.
 	while is_inside_tree():
@@ -1093,15 +2022,14 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 				_coop_net_incoming_enemy_combat_fifo.pop_front()
 				var av: int = int(head.get("auth_v", 0))
 				var ar: Variant = head.get("auth_snapshot", {})
+				var rp: int = int(head.get("rng_packed", -1))
+				var qte_raw: Variant = head.get("qte_snapshot", {})
+				await _coop_execute_remote_combat_replay(attacker, defender, bool(head.get("used_ability", used_ability)), qte_raw, rp)
 				if ar is Dictionary and av == COOP_AUTH_BATTLE_SNAPSHOT_VER:
 					var ad: Dictionary = ar as Dictionary
 					if ad.size() > 0:
 						_coop_apply_authoritative_combat_snapshot(ad)
-						return
-				var rp: int = int(head.get("rng_packed", -1))
-				if rp >= 0:
-					coop_enet_apply_remote_combat_packed_id(rp)
-				await execute_combat(attacker, defender, bool(head.get("used_ability", used_ability)))
+				_coop_apply_remote_synced_enemy_death_loot_events(head.get("loot_events", []))
 				return
 			if OS.is_debug_build():
 				push_warning("Coop enemy combat FIFO mismatch: expected %s→%s, got %s→%s" % [aid, did, h_aid, h_did])
@@ -1200,9 +2128,12 @@ func _coop_host_resolve_player_combat_request_async(body: Dictionary) -> void:
 		return
 	var pre_alive: Dictionary = coop_net_snapshot_alive_unit_ids()
 	var packed: int = coop_enet_begin_synchronized_combat_round()
+	coop_net_begin_local_combat_qte_capture()
+	coop_net_begin_local_combat_loot_capture()
 	await execute_combat(att, defu, used_ab)
-	while is_inside_tree() and get_tree().paused:
-		await get_tree().process_frame
+	var qte_snap: Dictionary = coop_net_end_local_combat_qte_capture()
+	await _wait_for_loot_window_close()
+	var loot_events: Array = coop_net_end_local_combat_loot_capture()
 	var auth: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_alive)
 	var att_after: Node2D = _coop_find_player_side_unit_by_relationship_id(aid)
 	var entered_canto: bool = false
@@ -1223,7 +2154,7 @@ func _coop_host_resolve_player_combat_request_async(body: Dictionary) -> void:
 	var alive_after: Node2D = null
 	if att_after != null and is_instance_valid(att_after) and int(att_after.current_hp) > 0:
 		alive_after = att_after
-	coop_enet_sync_local_combat_done(aid, did, used_ab, alive_after, entered_canto, canto_budget, packed, {}, auth, true)
+	coop_enet_sync_local_combat_done(aid, did, used_ab, alive_after, entered_canto, canto_budget, packed, qte_snap, auth, true, loot_events)
 	if alive_after != null and is_instance_valid(alive_after) and int(alive_after.current_hp) > 0 and not entered_canto and alive_after.has_method("finish_turn"):
 		alive_after.finish_turn()
 
@@ -1315,7 +2246,7 @@ func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
 
 
 ## IDs captured before [method execute_combat] so we still notify peer if the attacker dies. Post-combat packet only if [param attacker_after] is still alive.
-func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false) -> void:
+func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false, loot_events: Array = []) -> void:
 	if not is_mock_coop_unit_ownership_active():
 		return
 	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
@@ -1343,6 +2274,8 @@ func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, 
 		combat_body["auth_v"] = COOP_AUTH_BATTLE_SNAPSHOT_VER
 	if combat_host_authority:
 		combat_body["host_authority"] = true
+	if not loot_events.is_empty():
+		combat_body["loot_events"] = loot_events.duplicate(true)
 	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(combat_body)
 	if attacker_after == null or not is_instance_valid(attacker_after) or int(attacker_after.current_hp) <= 0:
 		return
@@ -1408,19 +2341,40 @@ func _coop_find_unit_by_relationship_id_any_side(rid: String) -> Node2D:
 	if u != null:
 		return u
 	var r: String = str(rid).strip_edges()
-	if r == "" or enemy_container == null:
+	if r == "":
 		return null
-	for e in enemy_container.get_children():
-		if not is_instance_valid(e):
+	for cont in [enemy_container, destructibles_container, chests_container]:
+		if cont == null:
 			continue
-		if _get_mock_coop_command_id(e) == r:
-			return e as Node2D
+		for e in cont.get_children():
+			if not is_instance_valid(e):
+				continue
+			if _get_mock_coop_command_id(e) == r:
+				return e as Node2D
 	return null
 
 
 func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
 	var action: String = str(body.get("action", "")).strip_edges()
 	match action:
+		"battle_result":
+			await _coop_remote_sync_battle_result(body)
+		"escort_turn":
+			await _coop_remote_sync_escort_turn(body)
+		"enemy_phase_setup":
+			_coop_remote_sync_enemy_phase_setup(body)
+		"enemy_turn_move":
+			await _coop_remote_sync_enemy_turn_move(body)
+		"enemy_turn_combat":
+			await _coop_remote_sync_enemy_turn_combat(body)
+		"enemy_turn_finish":
+			await _coop_remote_sync_enemy_turn_finish(body)
+		"enemy_turn_chest_open":
+			await _coop_remote_sync_enemy_turn_chest_open(body)
+		"enemy_turn_escape":
+			await _coop_remote_sync_enemy_turn_escape(body)
+		"enemy_turn_end":
+			_coop_remote_sync_enemy_turn_end(body)
 		"prebattle_layout":
 			_coop_remote_sync_prebattle_layout(body)
 		"prebattle_ready":
@@ -1442,6 +2396,196 @@ func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
 				push_warning("Coop battle sync: unknown action '%s'" % action)
 	_coop_enet_remote_sync_busy = false
 	_coop_enet_pump_remote_sync_queue()
+
+
+func _coop_wait_for_enemy_state_ready() -> void:
+	while is_inside_tree() and current_state != enemy_state:
+		await get_tree().process_frame
+
+
+func _coop_remote_sync_enemy_phase_setup(body: Dictionary) -> void:
+	var raw: Variant = body.get("setup", {})
+	if raw is Dictionary:
+		_coop_apply_enemy_phase_setup_snapshot(raw as Dictionary)
+
+
+func _coop_remote_sync_battle_result(body: Dictionary) -> void:
+	var normalized: String = _coop_normalize_battle_result(str(body.get("result", "")))
+	if normalized == "":
+		return
+	if _coop_finalized_battle_result != "":
+		return
+	await _wait_for_loot_window_close()
+	_coop_waiting_for_host_battle_result = ""
+	_coop_remote_battle_result_applying = true
+	if normalized == "VICTORY":
+		await _trigger_victory()
+	else:
+		trigger_game_over(normalized)
+	_coop_remote_battle_result_applying = false
+
+
+func _coop_remote_sync_escort_turn(body: Dictionary) -> void:
+	if not is_instance_valid(vip_target):
+		return
+	var path_raw: Variant = body.get("path", [])
+	var path_typed: Array[Vector2i] = []
+	if path_raw is Array:
+		for item in path_raw as Array:
+			if item is Array:
+				var arr: Array = item as Array
+				if arr.size() >= 2:
+					path_typed.append(Vector2i(int(arr[0]), int(arr[1])))
+			elif item is Dictionary:
+				var d: Dictionary = item as Dictionary
+				path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
+	var convoy: Node2D = vip_target
+	for i in range(1, path_typed.size()):
+		var step_grid: Vector2i = path_typed[i]
+		var tween := create_tween()
+		tween.tween_property(convoy, "global_position", Vector2(step_grid.x * CELL_SIZE.x, step_grid.y * CELL_SIZE.y), 0.25).set_trans(Tween.TRANS_LINEAR)
+		if select_sound != null and select_sound.stream != null:
+			select_sound.pitch_scale = 0.8
+			select_sound.play()
+		await tween.finished
+		rebuild_grid()
+	if path_typed.is_empty():
+		var marker_idx_now: int = int(body.get("current_marker_idx", int(convoy.get("current_marker_idx"))))
+		if marker_idx_now >= 0:
+			convoy.set("current_marker_idx", marker_idx_now)
+	if body.has("current_hp"):
+		convoy.set("current_hp", int(body.get("current_hp", convoy.get("current_hp"))))
+	if body.has("has_moved"):
+		convoy.set("has_moved", bool(body.get("has_moved", convoy.get("has_moved"))))
+	if body.has("is_exhausted"):
+		convoy.set("is_exhausted", bool(body.get("is_exhausted", convoy.get("is_exhausted"))))
+	if body.has("current_marker_idx"):
+		convoy.set("current_marker_idx", int(body.get("current_marker_idx", convoy.get("current_marker_idx"))))
+	if convoy.get("health_bar") != null:
+		convoy.health_bar.value = int(convoy.get("current_hp"))
+	rebuild_grid()
+	update_fog_of_war()
+	update_objective_ui()
+	_coop_remote_escort_turn_completed = true
+	coop_remote_escort_turn_finished.emit()
+
+
+func _coop_remote_sync_enemy_turn_move(body: Dictionary) -> void:
+	await _coop_wait_for_enemy_state_ready()
+	var uid: String = str(body.get("unit_id", "")).strip_edges()
+	var path_raw: Variant = body.get("path", [])
+	var path_typed: Array[Vector2i] = []
+	if path_raw is Array:
+		for item in path_raw as Array:
+			if item is Array:
+				var a: Array = item as Array
+				if a.size() >= 2:
+					path_typed.append(Vector2i(int(a[0]), int(a[1])))
+			elif item is Dictionary:
+				var d: Dictionary = item as Dictionary
+				path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
+	if path_typed.size() < 2:
+		return
+	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
+	if unit == null or not is_instance_valid(unit):
+		return
+	await _coop_focus_camera_on_unit(unit, 0.55)
+	await unit.move_along_path(path_typed)
+	unit.move_points_used_this_turn = float(body.get("path_cost", get_path_move_cost(path_typed, unit)))
+	rebuild_grid()
+
+
+func _coop_remote_sync_enemy_turn_combat(body: Dictionary) -> void:
+	await _coop_wait_for_enemy_state_ready()
+	var aid: String = str(body.get("attacker_id", "")).strip_edges()
+	var did: String = str(body.get("defender_id", "")).strip_edges()
+	var att: Node2D = _coop_find_unit_by_relationship_id_any_side(aid)
+	var defu: Node2D = _coop_find_unit_by_relationship_id_any_side(did)
+	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
+		if OS.is_debug_build():
+			push_warning("Coop enemy turn sync: combat resolve failed ids att=%s def=%s" % [aid, did])
+		return
+	await _coop_focus_camera_on_action(att, defu, 0.4)
+	var rp: int = int(body.get("rng_packed", -1))
+	var qte_raw: Variant = body.get("qte_snapshot", {})
+	await _coop_execute_remote_combat_replay(att, defu, bool(body.get("used_ability", false)), qte_raw, rp)
+	var auth_v: int = int(body.get("auth_v", 0))
+	var auth_raw: Variant = body.get("auth_snapshot", {})
+	if auth_raw is Dictionary and auth_v == COOP_AUTH_BATTLE_SNAPSHOT_VER and (auth_raw as Dictionary).size() > 0:
+		_coop_apply_authoritative_combat_snapshot(auth_raw as Dictionary)
+	_coop_apply_remote_synced_enemy_death_loot_events(body.get("loot_events", []))
+	var spoils_raw: Variant = body.get("destructible_spoils", {})
+	if spoils_raw is Dictionary and is_instance_valid(att):
+		var spoils: Dictionary = spoils_raw as Dictionary
+		var gold_delta: int = int(spoils.get("gold", 0))
+		var items: Array = _coop_wire_deserialize_items(spoils.get("items", []))
+		if gold_delta > 0 and att.get("stolen_gold") != null:
+			att.stolen_gold += gold_delta
+		if not items.is_empty() and att.get("stolen_loot") != null:
+			att.stolen_loot.append_array(items)
+		if (gold_delta > 0 or not items.is_empty()) and battle_log != null and battle_log.visible:
+			var destroyed_name: String = str(body.get("destructible_name", "a crate"))
+			add_combat_log(att.unit_name + " destroyed " + destroyed_name + " and took the loot!", "tomato")
+			spawn_loot_text("STOLEN!", Color.TOMATO, att.global_position + Vector2(32, -32))
+	await _wait_for_loot_window_close()
+
+
+func _coop_remote_sync_enemy_turn_finish(body: Dictionary) -> void:
+	await _coop_wait_for_enemy_state_ready()
+	var uid: String = str(body.get("unit_id", "")).strip_edges()
+	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
+	if unit == null or not is_instance_valid(unit):
+		return
+	if unit.has_method("finish_turn"):
+		unit.finish_turn()
+	rebuild_grid()
+
+
+func _coop_remote_sync_enemy_turn_chest_open(body: Dictionary) -> void:
+	await _coop_wait_for_enemy_state_ready()
+	var opener_id: String = str(body.get("opener_id", "")).strip_edges()
+	var chest_id: String = str(body.get("chest_id", "")).strip_edges()
+	var opener: Node2D = _coop_find_unit_by_relationship_id_any_side(opener_id)
+	var chest: Node2D = _coop_find_unit_by_relationship_id_any_side(chest_id)
+	if opener == null or chest == null or not is_instance_valid(opener) or not is_instance_valid(chest):
+		return
+	opener.look_at_pos(get_grid_pos(chest))
+	if chest.has_method("play_open_effect"):
+		await chest.play_open_effect()
+	elif is_instance_valid(chest):
+		chest.queue_free()
+	var stolen_items: Array = _coop_wire_deserialize_items(body.get("stolen_items", []))
+	if not stolen_items.is_empty() and opener.get("stolen_loot") != null:
+		opener.stolen_loot.append_array(stolen_items)
+	if battle_log != null and battle_log.visible:
+		add_combat_log(opener.unit_name + " picked the lock and stole the contents!", "tomato")
+		spawn_loot_text("STOLEN!", Color.TOMATO, opener.global_position + Vector2(32, -32))
+	rebuild_grid()
+	update_fog_of_war()
+	update_objective_ui()
+
+
+func _coop_remote_sync_enemy_turn_escape(body: Dictionary) -> void:
+	await _coop_wait_for_enemy_state_ready()
+	var uid: String = str(body.get("unit_id", "")).strip_edges()
+	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
+	if unit == null or not is_instance_valid(unit):
+		return
+	if battle_log != null and battle_log.visible:
+		add_combat_log(unit.unit_name + " escaped the map with the loot!", "tomato")
+	var tween := create_tween()
+	tween.tween_property(unit, "modulate:a", 0.0, 0.3)
+	await tween.finished
+	if is_instance_valid(unit):
+		unit.queue_free()
+	rebuild_grid()
+	update_fog_of_war()
+	update_objective_ui()
+
+
+func _coop_remote_sync_enemy_turn_end(_body: Dictionary) -> void:
+	_coop_remote_enemy_turn_completed = true
+	coop_remote_enemy_turn_finished.emit()
 
 
 func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
@@ -1614,35 +2758,29 @@ func _coop_remote_sync_player_combat(body: Dictionary) -> void:
 	var auth_v: int = int(body.get("auth_v", 0))
 	var auth_raw: Variant = body.get("auth_snapshot", {})
 	var has_auth: bool = auth_raw is Dictionary and auth_v == COOP_AUTH_BATTLE_SNAPSHOT_VER and (auth_raw as Dictionary).size() > 0
-	if guest_own_host_auth:
-		if not has_auth:
-			if OS.is_debug_build():
-				push_warning("Coop battle sync: host-authority guest combat requires auth_snapshot")
-			return
-		_coop_apply_authoritative_combat_snapshot(auth_raw as Dictionary)
-		coop_net_clear_remote_combat_qte_snapshot()
-		if battle_log != null and battle_log.visible:
-			add_combat_log("Co-op: your combat applied (host state).", "gray")
-		if not bool(body.get("has_post_combat_followup", true)):
-			_coop_emit_guest_host_combat_resolved_if_waiting(aid)
+	var rp: int = int(body.get("rng_packed", -1))
+	var qte_raw: Variant = body.get("qte_snapshot", {})
+	var should_replay: bool = rp >= 0 or (qte_raw is Dictionary and (qte_raw as Dictionary).size() > 0)
+	if should_replay:
+		await _coop_execute_remote_combat_replay(att, defu, bool(body.get("used_ability", false)), qte_raw, rp)
+	elif not has_auth:
+		if OS.is_debug_build():
+			push_warning("Coop battle sync: combat mirror missing replay data and auth_snapshot (aid=%s def=%s)" % [aid, did])
 		return
 	if has_auth:
 		var auth_d: Dictionary = auth_raw as Dictionary
 		_coop_apply_authoritative_combat_snapshot(auth_d)
-		coop_net_clear_remote_combat_qte_snapshot()
-		if battle_log != null and battle_log.visible:
-			add_combat_log("Co-op: partner combat applied (host state).", "gray")
-		if not bool(body.get("has_post_combat_followup", true)):
-			_coop_emit_guest_host_combat_resolved_if_waiting(aid)
-		return
-	coop_net_apply_remote_combat_qte_snapshot(body.get("qte_snapshot", {}))
-	var rp: int = int(body.get("rng_packed", -1))
-	if rp >= 0:
-		coop_enet_apply_remote_combat_packed_id(rp)
-	await execute_combat(att, defu, bool(body.get("used_ability", false)))
-	coop_net_clear_remote_combat_qte_snapshot()
+	_coop_apply_remote_synced_enemy_death_loot_events(body.get("loot_events", []))
+	await _wait_for_loot_window_close()
 	if battle_log != null and battle_log.visible:
-		add_combat_log("Co-op: partner combat resolved (%s)." % aid, "gray")
+		if guest_own_host_auth:
+			add_combat_log("Co-op: your combat applied (host state).", "gray")
+		elif has_auth:
+			add_combat_log("Co-op: partner combat applied (host state).", "gray")
+		else:
+			add_combat_log("Co-op: partner combat resolved (%s)." % aid, "gray")
+	if not bool(body.get("has_post_combat_followup", true)):
+		_coop_emit_guest_host_combat_resolved_if_waiting(aid)
 
 
 func _coop_remote_sync_player_post_combat(body: Dictionary) -> void:
@@ -2223,6 +3361,7 @@ func _ready() -> void:
 	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
 	load_campaign_data()
 	apply_campaign_settings()
+	_seed_mock_coop_command_ids_for_live_battle_nodes()
 
 	_mock_coop_battle_context = null
 	_mock_coop_ownership_assignments.clear()
@@ -2298,13 +3437,13 @@ func _ready() -> void:
 	# ==========================================
 	if map_objective == Objective.DEFEND_TARGET and is_instance_valid(vip_target):
 		if vip_target.has_signal("reached_destination"):
-			# When the Donkey shouts that it arrived, trigger the victory!
+			# Defer victory handling to the ally-phase flow so co-op can sync the escort turn first.
 			vip_target.reached_destination.connect(func(): 
 				if has_method("add_combat_log"):
 					add_combat_log("MISSION ACCOMPLISHED: The convoy escaped!", "lime")
 				if _battle_resonance_allowed():
 					CampaignManager.mark_battle_resonance("protected_civilians_first")
-				_trigger_victory() # <--- CHANGED!
+				_coop_pending_escort_destination_victory = true
 			)
 			
 	# ==========================================
@@ -2568,15 +3707,30 @@ func change_state(new_state: GameState) -> void:
 				c_tween.tween_property(main_camera, "global_position", target_cam_pos, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				await c_tween.finished
 				await get_tree().create_timer(0.3).timeout
-				
-				vip_target.process_escort_turn(self)
-				await vip_target.turn_completed 
+
+				if coop_enet_is_host_authority_escort_turn_host():
+					vip_target.process_escort_turn(self)
+					await vip_target.turn_completed
+					coop_enet_sync_after_host_authority_escort_turn(vip_target)
+				elif coop_enet_should_wait_for_host_authority_escort_turn():
+					await coop_enet_guest_wait_for_escort_turn_end()
+				else:
+					vip_target.process_escort_turn(self)
+					await vip_target.turn_completed
 				_clamp_camera_position()
 				await get_tree().create_timer(0.5).timeout
+				if _coop_pending_escort_destination_victory:
+					_coop_pending_escort_destination_victory = false
+					await _trigger_victory()
+					return
 				
 	elif new_state == enemy_state:
 		await show_phase_banner("ENEMY PHASE", Color(0.85, 0.3, 0.3))
-		await _process_spawners(0) # <--- ADDED AWAIT
+		if coop_enet_is_host_authority_enemy_turn_host():
+			await _process_spawners(0)
+			coop_enet_sync_after_host_authority_enemy_phase_setup()
+		elif not coop_enet_should_wait_for_host_authority_enemy_turn():
+			await _process_spawners(0)
 		
 	current_state = new_state
 	if current_state:
@@ -2903,6 +4057,10 @@ func _on_unit_died(unit: Node2D, killer: Node2D):
 
 	var grid_pos = get_grid_pos(unit)
 	astar.set_point_solid(grid_pos, false)
+	if _coop_remote_combat_replay_active:
+		update_fog_of_war()
+		update_objective_ui()
+		return
 	if unit.get_parent() == player_container and unit.get_meta("is_dragon", false):
 		_remove_dead_player_dragon(unit)
 		add_combat_log(unit.unit_name + " has fallen permanently!", "red")
@@ -2999,7 +4157,7 @@ func _on_unit_died(unit: Node2D, killer: Node2D):
 	# --- LOOT LOGIC (Enemies only) ---
 	if unit.get_parent() == enemy_container and unit.data != null:
 		var u_data = unit.data
-		pending_loot.clear() 
+		pending_loot.clear()
 		
 		# --- LOOT LOGIC (Enemies only) ---
 		var total_gold = 0
@@ -3034,9 +4192,16 @@ func _on_unit_died(unit: Node2D, killer: Node2D):
 			for s_loot in unit.stolen_loot:
 				if s_loot != null: # Safety check here too!
 					pending_loot.append(CampaignManager.duplicate_item(s_loot))
-		
+		var local_loot_recipient: Node2D = null
+		if killer != null and is_instance_valid(killer):
+			var killer_parent: Node = killer.get_parent()
+			if killer_parent == player_container or (ally_container != null and killer_parent == ally_container):
+				local_loot_recipient = killer
+		if local_loot_recipient == null and player_state != null:
+			local_loot_recipient = player_state.active_unit
+		_coop_capture_enemy_death_loot_for_sync(unit, total_gold, pending_loot, local_loot_recipient)
 		if not pending_loot.is_empty():
-			loot_recipient = player_state.active_unit
+			loot_recipient = local_loot_recipient
 			show_loot_window()
 
 	# ==========================================
@@ -3054,21 +4219,45 @@ func _on_unit_died(unit: Node2D, killer: Node2D):
 		Objective.ROUT_ENEMY:
 			if _count_alive_enemies(unit) == 0 and _count_active_enemy_spawners() == 0:
 				add_combat_log("MISSION ACCOMPLISHED: All enemies routed.", "lime")
-				_trigger_victory()
+				if _defer_battle_result_until_loot_if_needed("VICTORY"):
+					pass
+				else:
+					_trigger_victory()
 					
 		Objective.DEFEND_TARGET:
 			if unit == vip_target:
 				add_combat_log("MISSION FAILED: VIP Target was killed.", "red")
-				trigger_game_over("DEFEAT")
+				if _defer_battle_result_until_loot_if_needed("DEFEAT"):
+					pass
+				else:
+					trigger_game_over("DEFEAT")
 	
 	
 	update_fog_of_war()
 	update_objective_ui()
 		
 func trigger_game_over(result: String) -> void:
+	var normalized_result: String = _coop_normalize_battle_result(result)
+	if normalized_result == "":
+		normalized_result = str(result).strip_edges()
+	if _coop_finalized_battle_result != "":
+		return
+	if not _coop_remote_battle_result_applying and normalized_result != "VICTORY":
+		if coop_enet_should_wait_for_host_authoritative_battle_result():
+			_coop_wait_for_host_authoritative_battle_result(normalized_result)
+			return
+		if _defer_battle_result_until_loot_if_needed(normalized_result):
+			return
+		coop_enet_sync_after_host_authoritative_battle_result(normalized_result)
+	elif _defer_battle_result_until_loot_if_needed(normalized_result):
+		return
+	_coop_waiting_for_host_battle_result = ""
+	_coop_battle_result_resolution_in_progress = normalized_result
+	_coop_finalized_battle_result = normalized_result
+
 	change_state(null)
 	if CampaignManager and not is_arena_match and not CampaignManager.is_skirmish_mode:
-		CampaignManager.record_story_battle_outcome_for_camp(result, player_deaths_count, ally_deaths_count)
+		CampaignManager.record_story_battle_outcome_for_camp(normalized_result, player_deaths_count, ally_deaths_count)
 
 	# 1. THE PAUSE FIX: Force the game to freeze, but keep the UI panel awake
 	get_tree().paused = true
@@ -3085,7 +4274,7 @@ func trigger_game_over(result: String) -> void:
 		# Save old state for the animated sequence in the city
 		ArenaManager.last_match_old_mmr = my_mmr
 
-		if result == "VICTORY":
+		if normalized_result == "VICTORY":
 			mmr_change = 25 + int(max(0, (opp_mmr - my_mmr) / 10.0))
 			ArenaManager.last_match_result = "VICTORY"
 			
@@ -3112,8 +4301,8 @@ func trigger_game_over(result: String) -> void:
 		ArenaManager.last_match_new_mmr = my_mmr + mmr_change
 	# ==========================================
 	
-	result_label.text = result
-	if result == "VICTORY":
+	result_label.text = normalized_result
+	if normalized_result == "VICTORY":
 		result_label.modulate = Color(0.2, 0.8, 0.2)
 		continue_button.visible = true
 		restart_button.visible = false
@@ -3127,7 +4316,7 @@ func trigger_game_over(result: String) -> void:
 	# ==========================================
 	# --- FAME & SCORE CALCULATION ---
 	# ==========================================
-	var base_clear = 500 if result == "VICTORY" else 0
+	var base_clear = 500 if normalized_result == "VICTORY" else 0
 	var ability_pts = ability_triggers_count * 50
 	var kill_pts = enemy_kills_count * 25
 	var p_death_pen = player_deaths_count * -250
@@ -7850,6 +9039,11 @@ func _on_close_loot_pressed() -> void:
 	
 	if player_state: player_state.is_forecasting = false
 	get_tree().paused = false
+	var deferred_result: String = _deferred_battle_result_after_loot
+	_deferred_battle_result_after_loot = ""
+	loot_window_closed.emit()
+	if deferred_result != "":
+		call_deferred("_apply_deferred_battle_result_after_loot", deferred_result)
 	
 	update_unit_info_panel()
 				
@@ -7909,6 +9103,10 @@ func get_adjacency_bonus(unit: Node2D) -> Dictionary:
 func _on_destructible_died(node: Node2D, killer: Node2D = null) -> void:
 	var grid_pos = get_grid_pos(node)
 	astar.set_point_solid(grid_pos, false)
+	if _coop_remote_combat_replay_active:
+		update_fog_of_war()
+		update_objective_ui()
+		return
 	
 	# --- SMART KILLER DETECTION ---
 	var is_player_kill = false
@@ -11828,6 +13026,21 @@ func _toggle_minimap() -> void:
 # --- OUTRO CINEMATIC & VICTORY ---
 # ==========================================
 func _trigger_victory() -> void:
+	if _coop_finalized_battle_result != "":
+		return
+	if _coop_battle_result_resolution_in_progress == "VICTORY":
+		return
+	if not _coop_remote_battle_result_applying:
+		if coop_enet_should_wait_for_host_authoritative_battle_result():
+			_coop_wait_for_host_authoritative_battle_result("VICTORY")
+			return
+		if _defer_battle_result_until_loot_if_needed("VICTORY"):
+			return
+		coop_enet_sync_after_host_authoritative_battle_result("VICTORY")
+	elif _defer_battle_result_until_loot_if_needed("VICTORY"):
+		return
+	_coop_battle_result_resolution_in_progress = "VICTORY"
+
 	# 1. Play the Outro Dialogue (if any exists!)
 	if not CampaignManager.is_skirmish_mode and outro_dialogue.size() > 0:
 		var avatar_node = null
