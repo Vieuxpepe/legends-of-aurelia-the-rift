@@ -25,11 +25,14 @@ signal closed
 @onready var _lan_join_button: Button = %LanJoinButton
 @onready var _lan_loopback_button: Button = %LanLoopbackButton
 @onready var _lan_status_label: Label = %LanStatusLabel
+@onready var _local_companion_option: OptionButton = %LocalCompanionOption
+@onready var _partner_companion_value: Label = %PartnerCompanionValue
 
 var _map_id: String = ""
 var _last_launch_error: String = ""
 var _style_launch_status_warn: StyleBoxFlat
 var _style_launch_status_ok: StyleBoxFlat
+var _local_companion_option_ids: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
@@ -43,6 +46,7 @@ func _ready() -> void:
 	_lan_host_button.pressed.connect(_on_lan_host_pressed)
 	_lan_join_button.pressed.connect(_on_lan_join_pressed)
 	_lan_loopback_button.pressed.connect(_on_lan_loopback_pressed)
+	_local_companion_option.item_selected.connect(_on_local_companion_selected)
 	if not CoopExpeditionSessionManager.session_state_changed.is_connected(_on_session_state_changed):
 		CoopExpeditionSessionManager.session_state_changed.connect(_on_session_state_changed)
 	if not CoopExpeditionSessionManager.enet_battle_launch_committed.is_connected(_on_enet_battle_launch_committed):
@@ -176,8 +180,18 @@ func _charter_deployment_display_names_ordered() -> PackedStringArray:
 func _format_detachment_command_preview_bbcode(ordered_names: PackedStringArray) -> String:
 	var lines: PackedStringArray = PackedStringArray()
 	lines.append("[font_size=16][color=#d8c8a8][b]Command preview[/b][/color][/font_size]")
-	lines.append("[font_size=12][color=#918888][i]Split is [b]locked when you sign the charter[/b] from this roster order ([b]ceil(n/2)[/b] to you, rest to partner). Pre-battle moves do [b]not[/b] reassign command. Scenario allies not on this roster use partner command unless listed in a future handoff revision.[/i][/color][/font_size]")
+	lines.append("[font_size=12][color=#918888][i]Each commander brings [b]exactly two units[/b]: their Avatar and one selected companion. Signing the charter locks a shared four-unit battle handoff so both LAN peers load the same commander roster.[/i][/color][/font_size]")
 	lines.append("")
+	lines.append("[color=#6ec8e8][b]Your detachment[/b][/color] [color=#8a9088](commander of record)[/color]")
+	lines.append("   [color=#c8e8f8]-[/color]  %s" % _get_local_avatar_preview_name())
+	lines.append("   [color=#c8e8f8]-[/color]  %s" % _get_local_companion_preview_name())
+	lines.append("")
+	lines.append("[color=#e8a868][b]Partner detachment[/b][/color] [color=#8a9088](co-commander)[/color]")
+	lines.append("   [color=#f0c898]-[/color]  %s" % _get_remote_avatar_preview_name())
+	lines.append("   [color=#f0c898]-[/color]  %s" % _get_remote_companion_preview_name())
+	lines.append("")
+	lines.append("[font_size=12][color=#7a7068][i]Pre-battle deployment only uses these four commander units. Partner-owned units stay partner-owned in battle, and deployment sync mirrors those same four units instead of rebuilding from each save's full roster.[/i][/font_size]")
+	return "\n".join(lines)
 	var n: int = ordered_names.size()
 	if n == 0:
 		lines.append("[color=#a89888]No names in your current deployment roster preview — the split applies once units are fielded.[/color]")
@@ -206,6 +220,97 @@ func _format_detachment_command_preview_bbcode(ordered_names: PackedStringArray)
 	return "\n".join(lines)
 
 
+func _get_local_avatar_preview_name() -> String:
+	var payload: Dictionary = CoopExpeditionSessionManager.local_player_payload
+	var name_str: String = str(payload.get("coop_party_avatar_display_name", "")).strip_edges()
+	if name_str == "":
+		name_str = str(payload.get("display_name", "")).strip_edges()
+	if name_str == "":
+		name_str = str(CampaignManager.custom_avatar.get("unit_name", CampaignManager.custom_avatar.get("name", "Commander"))).strip_edges()
+	return name_str if name_str != "" else "Commander"
+
+
+func _get_remote_avatar_preview_name() -> String:
+	if not CoopExpeditionSessionManager.has_remote_peer_for_staging():
+		return "Awaiting partner"
+	var payload: Dictionary = CoopExpeditionSessionManager.remote_player_payload
+	var name_str: String = str(payload.get("coop_party_avatar_display_name", "")).strip_edges()
+	if name_str == "":
+		name_str = str(payload.get("display_name", "")).strip_edges()
+	return name_str if name_str != "" else "Partner Commander"
+
+
+func _get_local_companion_preview_name() -> String:
+	var payload: Dictionary = CoopExpeditionSessionManager.local_player_payload
+	var name_str: String = str(payload.get("selected_companion_display_name", "")).strip_edges()
+	if name_str != "":
+		return name_str
+	var unit_id: String = str(payload.get("selected_companion_unit_id", "")).strip_edges()
+	return unit_id if unit_id != "" else "Select a companion"
+
+
+func _get_remote_companion_preview_name() -> String:
+	if not CoopExpeditionSessionManager.has_remote_peer_for_staging():
+		return "Awaiting selection"
+	var payload: Dictionary = CoopExpeditionSessionManager.remote_player_payload
+	var name_str: String = str(payload.get("selected_companion_display_name", "")).strip_edges()
+	if name_str != "":
+		return name_str
+	var unit_id: String = str(payload.get("selected_companion_unit_id", "")).strip_edges()
+	return unit_id if unit_id != "" else "Awaiting selection"
+
+
+func _refresh_local_companion_selector(coop_ok: bool) -> void:
+	if _local_companion_option == null:
+		return
+	_local_companion_option.clear()
+	_local_companion_option_ids = PackedStringArray()
+	var entries: Array[Dictionary] = CampaignManager.get_mock_coop_companion_candidate_entries()
+	var enabled: bool = coop_ok and not entries.is_empty()
+	_local_companion_option.disabled = not enabled
+	if not enabled:
+		_local_companion_option.add_item("No eligible companion")
+		_local_companion_option.select(0)
+		return
+	var selected_id: String = CoopExpeditionSessionManager.get_local_selected_companion_unit_id()
+	if selected_id == "":
+		var default_id: String = CampaignManager.get_default_mock_coop_companion_unit_id()
+		if default_id != "":
+			CoopExpeditionSessionManager.set_local_selected_companion_unit_id(default_id)
+			selected_id = CoopExpeditionSessionManager.get_local_selected_companion_unit_id()
+	var selected_index: int = -1
+	for i in range(entries.size()):
+		var entry: Dictionary = entries[i]
+		var unit_id: String = str(entry.get("unit_id", "")).strip_edges()
+		var display_name: String = str(entry.get("display_name", unit_id)).strip_edges()
+		if display_name == "":
+			display_name = unit_id if unit_id != "" else "Unknown"
+		_local_companion_option.add_item(display_name)
+		_local_companion_option_ids.append(unit_id)
+		if unit_id == selected_id:
+			selected_index = i
+	if selected_index < 0 and _local_companion_option_ids.size() > 0:
+		var fallback_id: String = str(_local_companion_option_ids[0]).strip_edges()
+		if fallback_id != "":
+			CoopExpeditionSessionManager.set_local_selected_companion_unit_id(fallback_id)
+		selected_index = 0
+	if selected_index >= 0:
+		_local_companion_option.select(selected_index)
+
+
+func _on_local_companion_selected(index: int) -> void:
+	if index < 0 or index >= _local_companion_option_ids.size():
+		return
+	var unit_id: String = str(_local_companion_option_ids[index]).strip_edges()
+	if unit_id == "":
+		return
+	if not CoopExpeditionSessionManager.set_local_selected_companion_unit_id(unit_id):
+		_last_launch_error = "Unable to reserve that companion for co-op staging."
+	else:
+		_last_launch_error = ""
+	_refresh_ui()
+
+
 func _refresh_ui() -> void:
 	var entry: Dictionary = ExpeditionMapDatabase.get_map_by_id(_map_id)
 	_title_label.text = "Expedition Charter"
@@ -225,16 +330,18 @@ func _refresh_ui() -> void:
 
 	_local_participant_rt.text = _format_local_participant_card()
 	_partner_participant_rt.text = _format_partner_participant_card(coop_ok)
+	_refresh_local_companion_selector(coop_ok)
+	if _partner_companion_value != null:
+		_partner_companion_value.text = _get_remote_companion_preview_name()
 
 	var body_bb: PackedStringArray = PackedStringArray()
-	var roster_preview: PackedStringArray = _charter_deployment_display_names_ordered()
 	if not coop_ok:
 		body_bb.append("[color=#e8a070][b]Contract note[/b][/color]")
 		body_bb.append("This chart cannot be staged for co-op from your current campaign state (ownership or expedition flags).")
 		body_bb.append("")
 		body_bb.append(_divider_bb())
 		body_bb.append("")
-		body_bb.append(_format_detachment_command_preview_bbcode(roster_preview))
+		body_bb.append(_format_detachment_command_preview_bbcode(PackedStringArray()))
 	else:
 		body_bb.append("[font_size=16][color=#d8c8a8][b]Route and contract[/b][/color][/font_size]")
 		if hazard != "":
@@ -247,7 +354,7 @@ func _refresh_ui() -> void:
 		body_bb.append("")
 		body_bb.append(_divider_bb())
 		body_bb.append("")
-		body_bb.append(_format_detachment_command_preview_bbcode(roster_preview))
+		body_bb.append(_format_detachment_command_preview_bbcode(PackedStringArray()))
 
 	_body.text = "\n".join(body_bb)
 	_body.scroll_to_line(0)

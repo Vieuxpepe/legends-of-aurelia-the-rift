@@ -263,6 +263,46 @@ autowrap_mode = 3
 [node name="SepLan" type="HSeparator" parent="MainPanel/Margin/VBox"]
 layout_mode = 2
 
+[node name="SelectionRow" type="HBoxContainer" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="LocalSelectionVBox" type="VBoxContainer" parent="MainPanel/Margin/VBox/SelectionRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="LocalCompanionLabel" type="Label" parent="MainPanel/Margin/VBox/SelectionRow/LocalSelectionVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.88, 0.96, 1)
+theme_override_font_sizes/font_size = 14
+text = "Your second unit"
+
+[node name="LocalCompanionOption" type="OptionButton" parent="MainPanel/Margin/VBox/SelectionRow/LocalSelectionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+
+[node name="PartnerSelectionVBox" type="VBoxContainer" parent="MainPanel/Margin/VBox/SelectionRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="PartnerCompanionLabel" type="Label" parent="MainPanel/Margin/VBox/SelectionRow/PartnerSelectionVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.8, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Partner second unit"
+
+[node name="PartnerCompanionValue" type="Label" parent="MainPanel/Margin/VBox/SelectionRow/PartnerSelectionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.82, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = "Awaiting selection"
+autowrap_mode = 3
+
 [node name="BodyRichText" type="RichTextLabel" parent="MainPanel/Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2

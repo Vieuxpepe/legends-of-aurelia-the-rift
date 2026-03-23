@@ -203,18 +203,70 @@ func join_session(session_descriptor: String) -> Dictionary:
 		return {"ok": false, "error": "no_transport"}
 	return _transport.join_session(session_descriptor)
 
-func refresh_local_player_payload_from_campaign() -> void:
-	var name_str: String = str(CampaignManager.custom_avatar.get("unit_name", "Commander")).strip_edges()
+func _mock_coop_role_key_for_phase(p: int = phase) -> String:
+	match p:
+		Phase.HOST:
+			return "host"
+		Phase.GUEST:
+			return "guest"
+		_:
+			return "host"
+
+func _build_coop_player_payload_from_campaign(player_id_str: String, display_name_override: String, ready_value: bool, role_key: String, owned_map_ids: Array[String], selected_companion_id: String = "") -> Dictionary:
+	var name_str: String = str(display_name_override).strip_edges()
+	if name_str == "":
+		name_str = str(CampaignManager.custom_avatar.get("unit_name", "Commander")).strip_edges()
 	if name_str == "":
 		name_str = "Commander"
-	# owned_expedition_map_ids = owned + DB coop_enabled subset (not full owned expedition list).
-	local_player_payload = {
-		"player_id": "local",
+	var party: Dictionary = CampaignManager.build_mock_coop_player_party_payload(selected_companion_id, role_key)
+	return {
+		"player_id": str(player_id_str).strip_edges(),
 		"display_name": name_str,
-		"owned_expedition_map_ids": CampaignManager.get_coop_eligible_expedition_map_ids(),
+		"owned_expedition_map_ids": owned_map_ids.duplicate(),
 		"custom_avatar_snapshot": _snapshot_avatar_for_coop_payload(CampaignManager.custom_avatar),
-		"ready": local_ready,
+		"ready": ready_value,
+		"selected_companion_unit_id": str(party.get("selected_companion_unit_id", "")).strip_edges(),
+		"selected_companion_display_name": str(party.get("selected_companion_display_name", "")).strip_edges(),
+		"coop_party_avatar_command_id": str(party.get("avatar_command_id", "")).strip_edges(),
+		"coop_party_avatar_display_name": str(party.get("avatar_display_name", name_str)).strip_edges(),
+		"coop_party_avatar_snapshot": (party.get("avatar_snapshot", {}) as Dictionary).duplicate(true) if party.get("avatar_snapshot", {}) is Dictionary else {},
+		"coop_party_companion_command_id": str(party.get("selected_companion_command_id", "")).strip_edges(),
+		"coop_party_companion_snapshot": (party.get("selected_companion_snapshot", {}) as Dictionary).duplicate(true) if party.get("selected_companion_snapshot", {}) is Dictionary else {},
 	}
+
+
+func refresh_local_player_payload_from_campaign() -> void:
+	var selected_companion_id: String = str(local_player_payload.get("selected_companion_unit_id", "")).strip_edges()
+	local_player_payload = _build_coop_player_payload_from_campaign(
+			"local",
+			"",
+			local_ready,
+			_mock_coop_role_key_for_phase(),
+			CampaignManager.get_coop_eligible_expedition_map_ids(),
+			selected_companion_id
+	)
+
+
+func get_local_selected_companion_unit_id() -> String:
+	return str(local_player_payload.get("selected_companion_unit_id", "")).strip_edges()
+
+
+func set_local_selected_companion_unit_id(unit_id: String) -> bool:
+	var requested: String = str(unit_id).strip_edges()
+	var before: String = get_local_selected_companion_unit_id()
+	local_player_payload["selected_companion_unit_id"] = requested
+	refresh_local_player_payload_from_campaign()
+	var after: String = get_local_selected_companion_unit_id()
+	if after == "":
+		return false
+	if before == after and requested == after:
+		return true
+	session_state_changed.emit()
+	if _transport is ENetCoopTransport and phase == Phase.GUEST:
+		_enet_guest_push_participant()
+	elif _transport is ENetCoopTransport and phase == Phase.HOST:
+		_enet_broadcast_session_snapshot()
+	return true
 
 func set_local_ready(value: bool) -> void:
 	local_ready = value
@@ -486,10 +538,69 @@ func _collect_coop_launch_blockers() -> PackedStringArray:
 		remote_owned = []
 	if not ExpeditionCoopEligibility.can_start_coop_expedition(mid, remote_owned):
 		out.append("remote_does_not_own_selected_coop_map")
+	if not _player_payload_has_required_mock_coop_party(local_player_payload):
+		out.append("local_commander_party_incomplete")
+	if not _player_payload_has_required_mock_coop_party(remote_player_payload):
+		out.append("remote_commander_party_incomplete")
 	if not local_ready:
 		out.append("local_not_ready")
 	if not remote_ready:
 		out.append("remote_not_ready")
+	return out
+
+
+func _player_payload_has_required_mock_coop_party(payload: Dictionary) -> bool:
+	var avatar_id: String = str(payload.get("coop_party_avatar_command_id", "")).strip_edges()
+	var avatar_snap: Variant = payload.get("coop_party_avatar_snapshot", {})
+	var companion_id: String = str(payload.get("coop_party_companion_command_id", "")).strip_edges()
+	var companion_snap: Variant = payload.get("coop_party_companion_snapshot", {})
+	return (
+			avatar_id != ""
+			and avatar_snap is Dictionary
+			and not (avatar_snap as Dictionary).is_empty()
+			and companion_id != ""
+			and companion_snap is Dictionary
+			and not (companion_snap as Dictionary).is_empty()
+	)
+
+
+func _append_payload_party_unit_snapshot(out: Array, payload: Dictionary, snapshot_key: String) -> void:
+	var raw: Variant = payload.get(snapshot_key, {})
+	if raw is Dictionary and not (raw as Dictionary).is_empty():
+		out.append((raw as Dictionary).duplicate(true))
+
+
+func _build_mock_coop_detachment_assignment_from_session_players() -> Dictionary:
+	var local_ids: Array = []
+	var remote_ids: Array = []
+	var local_avatar_id: String = str(local_player_payload.get("coop_party_avatar_command_id", "")).strip_edges()
+	var local_companion_id: String = str(local_player_payload.get("coop_party_companion_command_id", "")).strip_edges()
+	var remote_avatar_id: String = str(remote_player_payload.get("coop_party_avatar_command_id", "")).strip_edges()
+	var remote_companion_id: String = str(remote_player_payload.get("coop_party_companion_command_id", "")).strip_edges()
+	if local_avatar_id != "":
+		local_ids.append(local_avatar_id)
+	if local_companion_id != "":
+		local_ids.append(local_companion_id)
+	if remote_avatar_id != "":
+		remote_ids.append(remote_avatar_id)
+	if remote_companion_id != "":
+		remote_ids.append(remote_companion_id)
+	var ordered: Array = local_ids.duplicate()
+	ordered.append_array(remote_ids)
+	return {
+		"rule": MockCoopDetachmentAssignment.RULE_FIRST_HALF_LOCAL_CEIL_LOCKED,
+		"ordered_command_unit_ids": ordered,
+		"local_command_unit_ids": local_ids,
+		"partner_command_unit_ids": remote_ids,
+	}
+
+
+func _build_mock_coop_shared_battle_roster_snapshot_from_session_players() -> Array:
+	var out: Array = []
+	_append_payload_party_unit_snapshot(out, local_player_payload, "coop_party_avatar_snapshot")
+	_append_payload_party_unit_snapshot(out, local_player_payload, "coop_party_companion_snapshot")
+	_append_payload_party_unit_snapshot(out, remote_player_payload, "coop_party_avatar_snapshot")
+	_append_payload_party_unit_snapshot(out, remote_player_payload, "coop_party_companion_snapshot")
 	return out
 
 func is_session_launchable() -> bool:
@@ -524,8 +635,8 @@ func build_expedition_coop_launch_payload() -> Dictionary:
 		"local_is_host": phase == Phase.HOST,
 		"local_player": local_player_payload.duplicate(true),
 		"remote_player": remote_player_payload.duplicate(true),
-		"mock_detachment_assignment": MockCoopDetachmentAssignment.build_handoff_payload_dict(),
-		"battle_roster_snapshot": CampaignManager.build_mock_coop_battle_roster_snapshot(),
+		"mock_detachment_assignment": _build_mock_coop_detachment_assignment_from_session_players(),
+		"battle_roster_snapshot": _build_mock_coop_shared_battle_roster_snapshot_from_session_players(),
 	}
 
 func _default_local_payload() -> Dictionary:
@@ -855,13 +966,14 @@ func apply_loopback_partner_staging_payload(owned_map_ids: Array, partner_ready:
 		var s: String = str(x).strip_edges()
 		if s != "":
 			ids.append(s)
-	var guest_payload: Dictionary = {
-		"player_id": "loopback_guest",
-		"display_name": "Loopback Guest",
-		"owned_expedition_map_ids": ids,
-		"custom_avatar_snapshot": {"unit_name": "Loopback Guest"},
-		"ready": partner_ready,
-	}
+	var guest_payload: Dictionary = _build_coop_player_payload_from_campaign(
+			"loopback_guest",
+			"Loopback Guest",
+			partner_ready,
+			"guest",
+			ids,
+			get_local_selected_companion_unit_id()
+	)
 	get_transport().send_session_payload("guest_staging_join", guest_payload)
 	return {"ok": true, "staging_state": get_coop_staging_state()}
 
@@ -884,13 +996,14 @@ func debug_apply_mock_host_payload_for_staging(owned_map_ids: Array, host_ready:
 		var s: String = str(x).strip_edges()
 		if s != "":
 			ids.append(s)
-	var host_payload: Dictionary = {
-		"player_id": "loopback_host",
-		"display_name": "Loopback Host",
-		"owned_expedition_map_ids": ids,
-		"custom_avatar_snapshot": {"unit_name": "Loopback Host"},
-		"ready": host_ready,
-	}
+	var host_payload: Dictionary = _build_coop_player_payload_from_campaign(
+			"loopback_host",
+			"Loopback Host",
+			host_ready,
+			"host",
+			ids,
+			get_local_selected_companion_unit_id()
+	)
 	get_transport().send_session_payload("host_staging_join", host_payload)
 	return {"ok": true, "staging_state": get_coop_staging_state()}
 
@@ -907,13 +1020,14 @@ func debug_simulate_ready_coop_pair(map_id: String) -> Dictionary:
 		leave_session()
 		return {"ok": false, "error": "local_not_eligible"}
 	refresh_local_player_payload_from_campaign()
-	remote_player_payload = {
-		"player_id": "mock_remote",
-		"display_name": "Mock Co-op Partner",
-		"owned_expedition_map_ids": [key],
-		"custom_avatar_snapshot": {"unit_name": "Mock Partner"},
-		"ready": true,
-	}
+	remote_player_payload = _build_coop_player_payload_from_campaign(
+			"mock_remote",
+			"Mock Co-op Partner",
+			true,
+			"guest",
+			[key],
+			get_local_selected_companion_unit_id()
+	)
 	remote_ready = true
 	local_ready = true
 	local_player_payload["ready"] = true

@@ -3263,6 +3263,113 @@ func get_available_roster() -> Array[Dictionary]:
 	return available
 
 
+func _mock_coop_command_unit_id_from_roster_entry(unit: Dictionary) -> String:
+	var un: String = str(unit.get("unit_name", unit.get("name", ""))).strip_edges()
+	var av_name: String = str(custom_avatar.get("name", "")).strip_edges()
+	var av_unit: String = str(custom_avatar.get("unit_name", "")).strip_edges()
+	if un != "" and ((av_name != "" and un == av_name) or (av_unit != "" and un == av_unit)):
+		return "Avatar"
+	return un
+
+
+func _is_mock_coop_avatar_roster_entry(unit: Dictionary) -> bool:
+	return _mock_coop_command_unit_id_from_roster_entry(unit) == "Avatar"
+
+
+func _find_mock_coop_available_roster_entry(command_unit_id: String) -> Dictionary:
+	var target: String = str(command_unit_id).strip_edges()
+	if target == "":
+		return {}
+	for unit in get_available_roster():
+		if typeof(unit) != TYPE_DICTIONARY:
+			continue
+		var unit_dict: Dictionary = unit as Dictionary
+		if _mock_coop_command_unit_id_from_roster_entry(unit_dict) == target:
+			return unit_dict.duplicate(true)
+	return {}
+
+
+func _build_mock_coop_avatar_roster_entry() -> Dictionary:
+	var avatar_entry: Dictionary = _find_mock_coop_available_roster_entry("Avatar")
+	if not avatar_entry.is_empty():
+		return avatar_entry
+	return custom_avatar.duplicate(true)
+
+
+func get_mock_coop_companion_candidate_entries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for unit in get_available_roster():
+		if typeof(unit) != TYPE_DICTIONARY:
+			continue
+		var unit_dict: Dictionary = unit as Dictionary
+		if _is_mock_coop_avatar_roster_entry(unit_dict):
+			continue
+		var unit_id: String = _mock_coop_command_unit_id_from_roster_entry(unit_dict)
+		if unit_id == "":
+			continue
+		var display_name: String = str(unit_dict.get("unit_name", unit_dict.get("name", unit_id))).strip_edges()
+		if display_name == "":
+			display_name = unit_id
+		out.append({
+			"unit_id": unit_id,
+			"display_name": display_name,
+		})
+	return out
+
+
+func get_default_mock_coop_companion_unit_id() -> String:
+	var entries: Array[Dictionary] = get_mock_coop_companion_candidate_entries()
+	if entries.is_empty():
+		return ""
+	return str(entries[0].get("unit_id", "")).strip_edges()
+
+
+func _mock_coop_party_command_id(role_key: String, raw_unit_id: String) -> String:
+	var role: String = str(role_key).strip_edges().to_lower()
+	if role == "":
+		role = "host"
+	var raw: String = str(raw_unit_id).strip_edges()
+	return "%s::%s" % [role, raw]
+
+
+func build_mock_coop_player_party_payload(selected_companion_unit_id: String, role_key: String) -> Dictionary:
+	var payload: Dictionary = {}
+	var avatar_entry: Dictionary = _build_mock_coop_avatar_roster_entry()
+	if not avatar_entry.is_empty():
+		var avatar_snapshot: Dictionary = _serialize_mock_coop_battle_roster_unit(avatar_entry)
+		var avatar_display_name: String = str(avatar_entry.get("unit_name", avatar_entry.get("name", custom_avatar.get("unit_name", "Commander")))).strip_edges()
+		if avatar_display_name == "":
+			avatar_display_name = str(custom_avatar.get("unit_name", custom_avatar.get("name", "Commander"))).strip_edges()
+		avatar_snapshot["is_custom_avatar"] = false
+		avatar_snapshot["mock_coop_command_id"] = _mock_coop_party_command_id(role_key, "Avatar")
+		avatar_snapshot["mock_coop_raw_unit_id"] = "Avatar"
+		payload["avatar_command_id"] = str(avatar_snapshot.get("mock_coop_command_id", ""))
+		payload["avatar_display_name"] = avatar_display_name
+		payload["avatar_snapshot"] = avatar_snapshot
+
+	var companion_id: String = str(selected_companion_unit_id).strip_edges()
+	if companion_id == "":
+		companion_id = get_default_mock_coop_companion_unit_id()
+	var companion_entry: Dictionary = _find_mock_coop_available_roster_entry(companion_id)
+	if companion_entry.is_empty() and companion_id != "":
+		companion_id = get_default_mock_coop_companion_unit_id()
+		companion_entry = _find_mock_coop_available_roster_entry(companion_id)
+	if not companion_entry.is_empty() and not _is_mock_coop_avatar_roster_entry(companion_entry):
+		var companion_snapshot: Dictionary = _serialize_mock_coop_battle_roster_unit(companion_entry)
+		var companion_display_name: String = str(companion_entry.get("unit_name", companion_entry.get("name", companion_id))).strip_edges()
+		if companion_display_name == "":
+			companion_display_name = companion_id
+		companion_snapshot["is_custom_avatar"] = false
+		companion_snapshot["mock_coop_command_id"] = _mock_coop_party_command_id(role_key, companion_id)
+		companion_snapshot["mock_coop_raw_unit_id"] = companion_id
+		payload["selected_companion_unit_id"] = companion_id
+		payload["selected_companion_display_name"] = companion_display_name
+		payload["selected_companion_command_id"] = str(companion_snapshot.get("mock_coop_command_id", ""))
+		payload["selected_companion_snapshot"] = companion_snapshot
+
+	return payload
+
+
 func _serialize_mock_coop_battle_roster_unit(unit: Dictionary) -> Dictionary:
 	var u_copy: Dictionary = unit.duplicate(true)
 	var unit_name: String = str(unit.get("unit_name", unit.get("name", ""))).strip_edges()

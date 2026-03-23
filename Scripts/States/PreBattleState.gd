@@ -49,8 +49,32 @@ func _get_deployed_count() -> int:
 			n += 1
 	return n
 
-func _find_first_empty_slot() -> Vector2i:
-	for slot in valid_deployment_slots:
+func _allowed_deployment_slots_for_unit(unit: Node2D) -> Array[Vector2i]:
+	if unit == null or not is_instance_valid(unit):
+		return []
+	if battlefield != null and battlefield.has_method("get_mock_coop_allowed_prebattle_slots_for_unit"):
+		var allowed: Variant = battlefield.get_mock_coop_allowed_prebattle_slots_for_unit(unit)
+		if typeof(allowed) == TYPE_ARRAY and not (allowed as Array).is_empty():
+			var typed: Array[Vector2i] = []
+			for slot in allowed as Array:
+				if slot is Vector2i:
+					typed.append(slot)
+				elif typeof(slot) == TYPE_VECTOR2I:
+					typed.append(slot as Vector2i)
+			if not typed.is_empty():
+				return typed
+	return valid_deployment_slots
+
+
+func _slot_allowed_for_unit(unit: Node2D, slot: Vector2i) -> bool:
+	return slot in _allowed_deployment_slots_for_unit(unit)
+
+
+func _find_first_empty_slot(for_unit: Node2D = null) -> Vector2i:
+	var candidate_slots: Array[Vector2i] = valid_deployment_slots
+	if for_unit != null:
+		candidate_slots = _allowed_deployment_slots_for_unit(for_unit)
+	for slot in candidate_slots:
 		if battlefield.get_unit_at(slot) == null and not _get_barricade(slot):
 			return slot
 	return Vector2i(-1, -1)
@@ -71,7 +95,8 @@ func enter(p_battlefield: Node2D) -> void:
 			var gy = int(marker.global_position.y / float(cs.y))
 			valid_deployment_slots.append(Vector2i(gx, gy))
 
-	max_deployment = mini(MAX_DEPLOYMENT_CAP, valid_deployment_slots.size())
+	var roster_cap: int = battlefield.player_container.get_child_count() if battlefield.player_container != null else MAX_DEPLOYMENT_CAP
+	max_deployment = mini(MAX_DEPLOYMENT_CAP, mini(valid_deployment_slots.size(), roster_cap))
 
 	var start_btn = battlefield.get_node_or_null("UI/StartBattleButton")
 	if start_btn:
@@ -131,7 +156,7 @@ func update(_delta: float) -> void:
 			ghost_sprite.visible = true
 	elif current_mode == DeployMode.UNIT and selected_unit != null:
 		var occupant = battlefield.get_unit_at(grid_pos)
-		if occupant != selected_unit:
+		if occupant != selected_unit and _slot_allowed_for_unit(selected_unit, grid_pos):
 			var spr = selected_unit.get_node_or_null("Sprite")
 			if spr == null:
 				spr = selected_unit.get_node_or_null("Sprite2D")
@@ -372,7 +397,7 @@ func _on_list_item_selected(index: int) -> void:
 		if _get_deployed_count() >= max_deployment:
 			battlefield.play_ui_sfx(battlefield.UISfx.INVALID)
 		else:
-			var slot := _find_first_empty_slot()
+			var slot := _find_first_empty_slot(unit)
 			if slot.x >= 0:
 				unit.position = _grid_to_world(slot)
 				unit.visible = true
@@ -432,6 +457,9 @@ func handle_input(event: InputEvent) -> void:
 					selected_unit.set_selected_glow(true)
 					battlefield.play_ui_sfx(battlefield.UISfx.MOVE_OK)
 			else:
+				if not _slot_allowed_for_unit(selected_unit, pos):
+					battlefield.play_ui_sfx(battlefield.UISfx.INVALID)
+					return
 				if clicked_unit != null and clicked_unit != selected_unit:
 					if battlefield.is_local_player_command_blocked_for_mock_coop_unit(clicked_unit):
 						battlefield.notify_mock_coop_remote_command_blocked(clicked_unit)

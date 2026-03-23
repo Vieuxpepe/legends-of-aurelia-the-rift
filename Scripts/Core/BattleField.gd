@@ -531,8 +531,10 @@ var _mock_partner_placeholder_combat_log_done: bool = false
 var _mock_coop_start_battle_button_base_text: String = ""
 
 const MOCK_COOP_BATTLE_OWNER_META: String = "mock_coop_battle_owner"
+const MOCK_COOP_COMMAND_ID_META: String = "mock_coop_command_id"
 const MOCK_COOP_OWNER_LOCAL: String = "local"
 const MOCK_COOP_OWNER_REMOTE: String = "remote"
+const MOCK_COOP_COMMANDER_DEPLOYMENT_SLOT_COUNT: int = 2
 const MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY: float = -1000.0
 
 func get_consumed_mock_coop_battle_handoff_snapshot() -> Dictionary:
@@ -591,6 +593,19 @@ func try_allow_local_player_select_unit_for_command(unit: Node2D) -> bool:
 	return true
 
 
+func _get_mock_coop_command_id(unit_or_name: Variant) -> String:
+	if unit_or_name is Node2D:
+		var unit: Node2D = unit_or_name as Node2D
+		if unit.has_meta(MOCK_COOP_COMMAND_ID_META):
+			var meta_id: String = str(unit.get_meta(MOCK_COOP_COMMAND_ID_META, "")).strip_edges()
+			if meta_id != "":
+				return meta_id
+		return get_relationship_id(unit).strip_edges()
+	if unit_or_name is String:
+		return str(unit_or_name).strip_edges()
+	return ""
+
+
 func _mock_coop_battle_sync_active() -> bool:
 	return (
 			is_mock_coop_unit_ownership_active()
@@ -601,6 +616,55 @@ func _mock_coop_battle_sync_active() -> bool:
 
 func _mock_coop_prebattle_ready_sync_active() -> bool:
 	return _mock_coop_battle_sync_active()
+
+
+func _mock_coop_role_key_from_command_id(command_id: String) -> String:
+	var cid: String = str(command_id).strip_edges()
+	if cid == "":
+		return ""
+	var parts: PackedStringArray = cid.split("::", false, 1)
+	if parts.size() < 2:
+		return ""
+	return str(parts[0]).strip_edges().to_lower()
+
+
+func get_mock_coop_allowed_prebattle_slots_for_command_id(command_id: String) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if pre_battle_state == null:
+		return out
+	var slots: Array[Vector2i] = pre_battle_state.valid_deployment_slots
+	if slots.is_empty():
+		return out
+	if not is_mock_coop_unit_ownership_active():
+		return slots.duplicate()
+	var role_key: String = _mock_coop_role_key_from_command_id(command_id)
+	if role_key == "":
+		return slots.duplicate()
+	var party_slot_count: int = mini(MOCK_COOP_COMMANDER_DEPLOYMENT_SLOT_COUNT, slots.size())
+	if party_slot_count <= 0:
+		return out
+	var start: int = 0
+	if role_key == "guest":
+		start = party_slot_count
+	elif role_key != "host":
+		return slots.duplicate()
+	var end_exclusive: int = mini(start + party_slot_count, slots.size())
+	for i in range(start, end_exclusive):
+		out.append(slots[i])
+	return out
+
+
+func get_mock_coop_allowed_prebattle_slots_for_unit(unit: Node2D) -> Array[Vector2i]:
+	if unit == null or not is_instance_valid(unit):
+		return []
+	return get_mock_coop_allowed_prebattle_slots_for_command_id(_get_mock_coop_command_id(unit))
+
+
+func is_mock_coop_prebattle_slot_allowed_for_unit(unit: Node2D, slot: Vector2i) -> bool:
+	var allowed: Array[Vector2i] = get_mock_coop_allowed_prebattle_slots_for_unit(unit)
+	if allowed.is_empty():
+		return false
+	return slot in allowed
 
 
 func _reset_mock_coop_prebattle_ready_state() -> void:
@@ -801,7 +865,7 @@ func coop_net_snapshot_alive_unit_ids() -> Dictionary:
 			var u: Node2D = c as Node2D
 			if not is_instance_valid(u) or u.is_queued_for_deletion():
 				continue
-			var rid: String = get_relationship_id(u).strip_edges()
+			var rid: String = _get_mock_coop_command_id(u)
 			if rid == "":
 				continue
 			d[rid] = true
@@ -843,7 +907,7 @@ func coop_net_build_authoritative_combat_snapshot(pre_alive_ids: Dictionary) -> 
 				continue
 			if int(u.get("current_hp")) <= 0:
 				continue
-			var rid: String = get_relationship_id(u).strip_edges()
+			var rid: String = _get_mock_coop_command_id(u)
 			if rid == "":
 				continue
 			post_alive[rid] = true
@@ -997,8 +1061,8 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
 		await execute_combat(attacker, defender, used_ability)
 		return
-	var aid: String = get_relationship_id(attacker).strip_edges()
-	var did: String = get_relationship_id(defender).strip_edges()
+	var aid: String = _get_mock_coop_command_id(attacker)
+	var did: String = _get_mock_coop_command_id(defender)
 	if aid == "" or did == "":
 		await execute_combat(attacker, defender, used_ability)
 		return
@@ -1187,7 +1251,7 @@ func _build_local_mock_coop_prebattle_layout_snapshot() -> Array[Dictionary]:
 			continue
 		if get_mock_coop_unit_owner_for_unit(u) != MOCK_COOP_OWNER_LOCAL:
 			continue
-		var uid: String = get_relationship_id(u).strip_edges()
+		var uid: String = _get_mock_coop_command_id(u)
 		if uid == "":
 			continue
 		var entry: Dictionary = {
@@ -1206,6 +1270,8 @@ func coop_enet_sync_after_local_prebattle_layout_change() -> void:
 		return
 	if not _mock_coop_battle_sync_active():
 		return
+	if _mock_coop_local_prebattle_ready:
+		_mock_coop_clear_local_prebattle_ready(true)
 	var units: Array[Dictionary] = _build_local_mock_coop_prebattle_layout_snapshot()
 	if units.is_empty():
 		return
@@ -1218,7 +1284,7 @@ func coop_enet_sync_after_local_prebattle_layout_change() -> void:
 func coop_enet_sync_after_local_player_move(unit: Node2D, path: Array, _path_cost: float, finish_after_move: bool = false) -> void:
 	if not _coop_enet_sync_eligible_command_unit(unit):
 		return
-	var uid: String = get_relationship_id(unit).strip_edges()
+	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
 	var serial: Array = []
@@ -1242,7 +1308,7 @@ func coop_enet_sync_after_local_player_move(unit: Node2D, path: Array, _path_cos
 func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
 	if not _coop_enet_sync_eligible_command_unit(unit):
 		return
-	var uid: String = get_relationship_id(unit).strip_edges()
+	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
 	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_defend", "unit_id": uid})
@@ -1295,7 +1361,7 @@ func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, 
 func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
 	if not _coop_enet_sync_eligible_command_unit(unit):
 		return
-	var uid: String = get_relationship_id(unit).strip_edges()
+	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
 	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_finish_turn", "unit_id": uid})
@@ -1332,7 +1398,7 @@ func _coop_find_player_side_unit_by_relationship_id(rid: String) -> Node2D:
 		for u in cont.get_children():
 			if not is_instance_valid(u):
 				continue
-			if get_relationship_id(u) == r:
+			if _get_mock_coop_command_id(u) == r:
 				return u as Node2D
 	return null
 
@@ -1347,7 +1413,7 @@ func _coop_find_unit_by_relationship_id_any_side(rid: String) -> Node2D:
 	for e in enemy_container.get_children():
 		if not is_instance_valid(e):
 			continue
-		if get_relationship_id(e) == r:
+		if _get_mock_coop_command_id(e) == r:
 			return e as Node2D
 	return null
 
@@ -1413,6 +1479,11 @@ func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
 					have_pos = true
 			if not have_pos:
 				continue
+			var allowed_slots: Array[Vector2i] = get_mock_coop_allowed_prebattle_slots_for_unit(unit)
+			if not allowed_slots.is_empty() and grid_pos not in allowed_slots:
+				if OS.is_debug_build():
+					push_warning("Coop battle sync: refuse prebattle slot outside unit band '%s' -> %s" % [uid, str(grid_pos)])
+				continue
 			unit.position = Vector2(grid_pos.x * CELL_SIZE.x, grid_pos.y * CELL_SIZE.y)
 			unit.visible = true
 			unit.process_mode = Node.PROCESS_MODE_INHERIT
@@ -1423,6 +1494,12 @@ func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
 		changed_any = true
 	if not changed_any:
 		return
+	if _mock_coop_remote_prebattle_ready:
+		_mock_coop_remote_prebattle_ready = false
+		_mock_coop_prebattle_transition_pending = false
+		if battle_log != null and battle_log.visible:
+			add_combat_log("Co-op: partner updated deployment. Start readiness cleared until they confirm again.", "gold")
+		_update_mock_coop_start_battle_button_state()
 	rebuild_grid()
 	queue_redraw()
 	if current_state == pre_battle_state and pre_battle_state != null and pre_battle_state.has_method("_refresh_ui_list"):
@@ -1430,7 +1507,15 @@ func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
 
 
 func _coop_remote_sync_prebattle_ready(body: Dictionary) -> void:
-	if not bool(body.get("ready", true)):
+	var ready_now: bool = bool(body.get("ready", true))
+	if not ready_now:
+		if not _mock_coop_remote_prebattle_ready:
+			return
+		_mock_coop_remote_prebattle_ready = false
+		_mock_coop_prebattle_transition_pending = false
+		if battle_log != null and battle_log.visible:
+			add_combat_log("Co-op: partner revised deployment. Waiting for them to press Start again.", "gold")
+		_update_mock_coop_start_battle_button_state()
 		return
 	if _mock_coop_remote_prebattle_ready:
 		return
@@ -1718,6 +1803,20 @@ func _mock_coop_set_local_prebattle_ready(send_sync: bool = true) -> void:
 	_mock_coop_try_advance_prebattle_after_ready_sync()
 
 
+func _mock_coop_clear_local_prebattle_ready(send_sync: bool = true) -> void:
+	if not _mock_coop_prebattle_ready_sync_active():
+		return
+	if not _mock_coop_local_prebattle_ready:
+		return
+	_mock_coop_local_prebattle_ready = false
+	_mock_coop_prebattle_transition_pending = false
+	if send_sync:
+		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "prebattle_ready", "ready": false})
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: deployment changed. Press Start again when you are ready.", "gold")
+	_update_mock_coop_start_battle_button_state()
+
+
 func _mock_coop_player_phase_ready_sync_active() -> bool:
 	return (
 			is_mock_coop_unit_ownership_active()
@@ -1925,7 +2024,7 @@ func _apply_mock_coop_locked_detachment_assignment(assign: Dictionary) -> void:
 		return
 	var deploy_index: int = 0
 	for u in units:
-		var rid: String = get_relationship_id(u)
+		var rid: String = _get_mock_coop_command_id(u)
 		var owner_s: String
 		if local_set.has(rid):
 			owner_s = MOCK_COOP_OWNER_LOCAL
@@ -8079,8 +8178,16 @@ func _build_deployment_roster() -> Array:
 func _build_deployment_roster_from_consumed_mock_coop_handoff() -> Array:
 	if _consumed_mock_coop_battle_handoff.is_empty():
 		return []
-	var snap_raw: Variant = _consumed_mock_coop_battle_handoff.get("battle_roster_snapshot", [])
+	var snap_raw: Variant = _consumed_mock_coop_battle_handoff.get("battle_roster_snapshot", null)
 	if typeof(snap_raw) != TYPE_ARRAY:
+		var launch_raw: Variant = _consumed_mock_coop_battle_handoff.get("launch_snapshot", {})
+		if typeof(launch_raw) == TYPE_DICTIONARY:
+			snap_raw = (launch_raw as Dictionary).get("battle_roster_snapshot", [])
+			if OS.is_debug_build() and typeof(snap_raw) == TYPE_ARRAY and not (snap_raw as Array).is_empty():
+				push_warning("[MockCoopHandoff] using legacy launch_snapshot.battle_roster_snapshot fallback; promote snapshot to top-level handoff.")
+	if typeof(snap_raw) != TYPE_ARRAY:
+		if OS.is_debug_build():
+			push_warning("[MockCoopHandoff] missing shared battle_roster_snapshot; falling back to local deployment roster.")
 		return []
 	var roster: Array = CampaignManager.hydrate_mock_coop_battle_roster_snapshot(snap_raw)
 	if OS.is_debug_build() and not roster.is_empty():
@@ -8159,6 +8266,11 @@ func load_campaign_data() -> void:
 			new_unit.set("is_custom_avatar", true)
 		else:
 			new_unit.set("is_custom_avatar", false)
+		var mock_coop_command_id: String = str(saved.get("mock_coop_command_id", "")).strip_edges()
+		if mock_coop_command_id != "":
+			new_unit.set_meta(MOCK_COOP_COMMAND_ID_META, mock_coop_command_id)
+		elif new_unit.has_meta(MOCK_COOP_COMMAND_ID_META):
+			new_unit.remove_meta(MOCK_COOP_COMMAND_ID_META)
 
 		if saved.get("data") is Resource:
 			var original_path = saved["data"].resource_path

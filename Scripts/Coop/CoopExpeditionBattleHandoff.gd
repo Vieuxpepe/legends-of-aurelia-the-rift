@@ -34,6 +34,10 @@ static func prepare_from_finalize_result(finalize_result: Dictionary) -> Diction
 	var det_d: Dictionary = {}
 	if typeof(det) == TYPE_DICTIONARY:
 		det_d = (det as Dictionary).duplicate(true)
+	var roster_raw: Variant = launch.get("battle_roster_snapshot", [])
+	var roster_snapshot: Array = []
+	if typeof(roster_raw) == TYPE_ARRAY:
+		roster_snapshot = (roster_raw as Array).duplicate(true)
 	var handoff: Dictionary = {
 		"schema_version": SCHEMA_VERSION,
 		"kind": HANDOFF_KIND,
@@ -46,6 +50,7 @@ static func prepare_from_finalize_result(finalize_result: Dictionary) -> Diction
 		"local_player": _duplicate_player_dict(launch.get("local_player", {})),
 		"remote_player": _duplicate_player_dict(launch.get("remote_player", {})),
 		"mock_detachment_assignment": det_d,
+		"battle_roster_snapshot": roster_snapshot,
 		"launch_snapshot": launch.duplicate(true),
 	}
 	var val_errs: PackedStringArray = validate_handoff(handoff)
@@ -92,6 +97,7 @@ static func validate_handoff(handoff: Dictionary) -> PackedStringArray:
 	_append_player_errors(out, "local_player", handoff.get("local_player", {}))
 	_append_player_errors(out, "remote_player", handoff.get("remote_player", {}))
 	_append_mock_detachment_assignment_errors(out, handoff.get("mock_detachment_assignment", null))
+	_append_battle_roster_snapshot_errors(out, handoff.get("battle_roster_snapshot", null))
 	return out
 
 
@@ -139,3 +145,17 @@ static func _append_player_errors(out: PackedStringArray, label: String, player:
 	var owned: Variant = d.get("owned_expedition_map_ids", [])
 	if typeof(owned) != TYPE_ARRAY:
 		out.append("%s_owned_expedition_map_ids_not_array" % label)
+
+
+static func _append_battle_roster_snapshot_errors(out: PackedStringArray, raw: Variant) -> void:
+	if typeof(raw) != TYPE_ARRAY:
+		out.append("battle_roster_snapshot_missing_or_invalid")
+		return
+	var roster: Array = raw as Array
+	if roster.is_empty():
+		out.append("battle_roster_snapshot_empty")
+		return
+	for entry in roster:
+		if typeof(entry) != TYPE_DICTIONARY:
+			out.append("battle_roster_snapshot_entry_invalid")
+			return
