@@ -76,6 +76,8 @@ func enter(p_battlefield: Node2D) -> void:
 	var start_btn = battlefield.get_node_or_null("UI/StartBattleButton")
 	if start_btn:
 		start_btn.visible = true
+		if battlefield.has_method("_update_mock_coop_start_battle_button_state"):
+			battlefield.call("_update_mock_coop_start_battle_button_state")
 
 	roster_panel = battlefield.get_node_or_null("UI/RosterPanel")
 	if roster_panel:
@@ -357,11 +359,13 @@ func _on_list_item_selected(index: int) -> void:
 		battlefield.play_ui_sfx(battlefield.UISfx.INVALID)
 		return
 
+	var layout_changed := false
 	battlefield.play_ui_sfx(battlefield.UISfx.MOVE_OK)
 	if unit.visible:
 		unit.visible = false
 		unit.process_mode = Node.PROCESS_MODE_DISABLED
 		unit.position = Vector2(BENCH_OFFSCREEN_XY, BENCH_OFFSCREEN_XY)
+		layout_changed = true
 		if selected_unit == unit:
 			_deselect()
 	else:
@@ -373,9 +377,12 @@ func _on_list_item_selected(index: int) -> void:
 				unit.position = _grid_to_world(slot)
 				unit.visible = true
 				unit.process_mode = Node.PROCESS_MODE_INHERIT
+				layout_changed = true
 	roster_list.deselect_all()
 	_refresh_ui_list()
 	battlefield.rebuild_grid()
+	if layout_changed and battlefield.has_method("coop_enet_sync_after_local_prebattle_layout_change"):
+		battlefield.coop_enet_sync_after_local_prebattle_layout_change()
 
 func handle_input(event: InputEvent) -> void:
 	if not event is InputEventMouseButton or not event.pressed:
@@ -415,6 +422,7 @@ func handle_input(event: InputEvent) -> void:
 			return
 
 		if current_mode == DeployMode.UNIT:
+			var layout_changed := false
 			var clicked_unit = battlefield.get_unit_at(pos)
 			if selected_unit == null:
 				if clicked_unit != null:
@@ -435,15 +443,19 @@ func handle_input(event: InputEvent) -> void:
 					selected_unit.global_position = clicked_unit.global_position
 					clicked_unit.global_position = tmp
 					battlefield.play_ui_sfx(battlefield.UISfx.TARGET_OK)
+					layout_changed = true
 				elif clicked_unit == null and _get_barricade(pos) == null:
 					if battlefield.is_local_player_command_blocked_for_mock_coop_unit(selected_unit):
 						battlefield.notify_mock_coop_remote_command_blocked(selected_unit)
 						return
 					selected_unit.global_position = _grid_to_world(pos)
 					battlefield.play_ui_sfx(battlefield.UISfx.TARGET_OK)
+					layout_changed = true
 				_deselect()
 			_refresh_ui_list()
 			battlefield.rebuild_grid()
+			if layout_changed and battlefield.has_method("coop_enet_sync_after_local_prebattle_layout_change"):
+				battlefield.coop_enet_sync_after_local_prebattle_layout_change()
 		return
 
 	if event.button_index == MOUSE_BUTTON_RIGHT:

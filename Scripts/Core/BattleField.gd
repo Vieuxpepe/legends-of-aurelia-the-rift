@@ -518,6 +518,9 @@ var _consumed_mock_coop_battle_handoff: Dictionary = {}
 var _mock_coop_battle_context: MockCoopBattleContext = null
 ## Mock co-op only: per-unit ownership after assignment (empty when inactive or context invalid).
 var _mock_coop_ownership_assignments: Array[Dictionary] = []
+var _mock_coop_local_prebattle_ready: bool = false
+var _mock_coop_remote_prebattle_ready: bool = false
+var _mock_coop_prebattle_transition_pending: bool = false
 var _mock_coop_local_player_phase_ready: bool = false
 var _mock_coop_remote_player_phase_ready: bool = false
 var _mock_coop_player_phase_transition_pending: bool = false
@@ -525,10 +528,12 @@ var _mock_coop_skip_button_glow_active: bool = false
 var _skip_button_base_modulate: Color = Color.WHITE
 var _skip_button_base_modulate_captured: bool = false
 var _mock_partner_placeholder_combat_log_done: bool = false
+var _mock_coop_start_battle_button_base_text: String = ""
 
 const MOCK_COOP_BATTLE_OWNER_META: String = "mock_coop_battle_owner"
 const MOCK_COOP_OWNER_LOCAL: String = "local"
 const MOCK_COOP_OWNER_REMOTE: String = "remote"
+const MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY: float = -1000.0
 
 func get_consumed_mock_coop_battle_handoff_snapshot() -> Dictionary:
 	return _consumed_mock_coop_battle_handoff.duplicate(true)
@@ -584,6 +589,69 @@ func try_allow_local_player_select_unit_for_command(unit: Node2D) -> bool:
 		notify_mock_coop_remote_command_blocked(unit)
 		return false
 	return true
+
+
+func _mock_coop_battle_sync_active() -> bool:
+	return (
+			is_mock_coop_unit_ownership_active()
+			and CoopExpeditionSessionManager.uses_enet_coop_transport()
+			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	)
+
+
+func _mock_coop_prebattle_ready_sync_active() -> bool:
+	return _mock_coop_battle_sync_active()
+
+
+func _reset_mock_coop_prebattle_ready_state() -> void:
+	_mock_coop_local_prebattle_ready = false
+	_mock_coop_remote_prebattle_ready = false
+	_mock_coop_prebattle_transition_pending = false
+	_update_mock_coop_start_battle_button_state()
+
+
+func _update_mock_coop_start_battle_button_state() -> void:
+	var btn: Button = get_node_or_null("UI/StartBattleButton") as Button
+	if btn == null:
+		return
+	if _mock_coop_start_battle_button_base_text == "":
+		var live_text: String = str(btn.text).strip_edges()
+		_mock_coop_start_battle_button_base_text = live_text if live_text != "" else "Start Battle"
+	var base_text: String = _mock_coop_start_battle_button_base_text
+	if current_state != pre_battle_state or not btn.visible:
+		btn.text = base_text
+		btn.disabled = false
+		return
+	if not _mock_coop_prebattle_ready_sync_active():
+		btn.text = base_text
+		btn.disabled = false
+		return
+	if _mock_coop_local_prebattle_ready and _mock_coop_remote_prebattle_ready:
+		btn.text = "Starting..."
+		btn.disabled = true
+	elif _mock_coop_local_prebattle_ready:
+		btn.text = "Ready - Waiting"
+		btn.disabled = true
+	elif _mock_coop_remote_prebattle_ready:
+		btn.text = "Partner Ready - Start"
+		btn.disabled = false
+	else:
+		btn.text = base_text
+		btn.disabled = false
+
+
+func _mock_coop_try_advance_prebattle_after_ready_sync() -> void:
+	if current_state != pre_battle_state:
+		return
+	if not _mock_coop_prebattle_ready_sync_active():
+		return
+	if not _mock_coop_local_prebattle_ready or not _mock_coop_remote_prebattle_ready:
+		return
+	if _mock_coop_prebattle_transition_pending:
+		return
+	_mock_coop_prebattle_transition_pending = true
+	_update_mock_coop_start_battle_button_state()
+	_start_battle_from_deployment()
 
 
 var _coop_enet_remote_sync_queue: Array = []
@@ -1110,6 +1178,43 @@ func _coop_enet_sync_eligible_command_unit(unit: Node2D) -> bool:
 	return true
 
 
+func _build_local_mock_coop_prebattle_layout_snapshot() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if player_container == null:
+		return out
+	for u in player_container.get_children():
+		if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
+			continue
+		if get_mock_coop_unit_owner_for_unit(u) != MOCK_COOP_OWNER_LOCAL:
+			continue
+		var uid: String = get_relationship_id(u).strip_edges()
+		if uid == "":
+			continue
+		var entry: Dictionary = {
+			"unit_id": uid,
+			"deployed": _is_mock_coop_deployed_player_side_unit(u),
+		}
+		if bool(entry.get("deployed", false)):
+			var gp: Vector2i = get_grid_pos(u)
+			entry["grid_pos"] = {"x": gp.x, "y": gp.y}
+		out.append(entry)
+	return out
+
+
+func coop_enet_sync_after_local_prebattle_layout_change() -> void:
+	if current_state != pre_battle_state:
+		return
+	if not _mock_coop_battle_sync_active():
+		return
+	var units: Array[Dictionary] = _build_local_mock_coop_prebattle_layout_snapshot()
+	if units.is_empty():
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "prebattle_layout",
+		"units": units,
+	})
+
+
 func coop_enet_sync_after_local_player_move(unit: Node2D, path: Array, _path_cost: float, finish_after_move: bool = false) -> void:
 	if not _coop_enet_sync_eligible_command_unit(unit):
 		return
@@ -1250,6 +1355,10 @@ func _coop_find_unit_by_relationship_id_any_side(rid: String) -> Node2D:
 func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
 	var action: String = str(body.get("action", "")).strip_edges()
 	match action:
+		"prebattle_layout":
+			_coop_remote_sync_prebattle_layout(body)
+		"prebattle_ready":
+			_coop_remote_sync_prebattle_ready(body)
 		"player_move":
 			await _coop_remote_sync_player_move(body)
 		"player_defend":
@@ -1267,6 +1376,72 @@ func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
 				push_warning("Coop battle sync: unknown action '%s'" % action)
 	_coop_enet_remote_sync_busy = false
 	_coop_enet_pump_remote_sync_queue()
+
+
+func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
+	var raw_units: Variant = body.get("units", [])
+	if typeof(raw_units) != TYPE_ARRAY:
+		return
+	var changed_any: bool = false
+	for item in raw_units as Array:
+		if typeof(item) != TYPE_DICTIONARY:
+			continue
+		var entry: Dictionary = item as Dictionary
+		var uid: String = str(entry.get("unit_id", "")).strip_edges()
+		if uid == "":
+			continue
+		var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
+		if unit == null or not is_instance_valid(unit):
+			continue
+		if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
+			if OS.is_debug_build():
+				push_warning("Coop battle sync: refuse prebattle layout for non-partner unit '%s'" % uid)
+			continue
+		var deployed: bool = bool(entry.get("deployed", false))
+		if deployed:
+			var pos_raw: Variant = entry.get("grid_pos", {})
+			var grid_pos := Vector2i.ZERO
+			var have_pos: bool = false
+			if typeof(pos_raw) == TYPE_DICTIONARY:
+				var pos_dict: Dictionary = pos_raw as Dictionary
+				grid_pos = Vector2i(int(pos_dict.get("x", 0)), int(pos_dict.get("y", 0)))
+				have_pos = true
+			elif pos_raw is Array:
+				var pos_arr: Array = pos_raw as Array
+				if pos_arr.size() >= 2:
+					grid_pos = Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+					have_pos = true
+			if not have_pos:
+				continue
+			unit.position = Vector2(grid_pos.x * CELL_SIZE.x, grid_pos.y * CELL_SIZE.y)
+			unit.visible = true
+			unit.process_mode = Node.PROCESS_MODE_INHERIT
+		else:
+			unit.visible = false
+			unit.process_mode = Node.PROCESS_MODE_DISABLED
+			unit.position = Vector2(MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY, MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY)
+		changed_any = true
+	if not changed_any:
+		return
+	rebuild_grid()
+	queue_redraw()
+	if current_state == pre_battle_state and pre_battle_state != null and pre_battle_state.has_method("_refresh_ui_list"):
+		pre_battle_state.call("_refresh_ui_list")
+
+
+func _coop_remote_sync_prebattle_ready(body: Dictionary) -> void:
+	if not bool(body.get("ready", true)):
+		return
+	if _mock_coop_remote_prebattle_ready:
+		return
+	_mock_coop_remote_prebattle_ready = true
+	if battle_log != null and battle_log.visible:
+		if _mock_coop_local_prebattle_ready:
+			add_combat_log("Co-op: partner commander is ready. Starting the battle.", "gold")
+		else:
+			add_combat_log("Co-op: partner commander is ready to start. Finish deployment and press Start when you are ready.", "gold")
+	_update_mock_coop_start_battle_button_state()
+	_mock_coop_try_advance_prebattle_after_ready_sync()
 
 
 func _coop_remote_sync_player_move(body: Dictionary) -> void:
@@ -1523,6 +1698,24 @@ func is_mock_partner_placeholder_active() -> bool:
 	var lr: int = int(c.get("local_ready", 0))
 	var pf: int = int(c.get("partner_fielded", 0))
 	return lt > 0 and lr == 0 and pf > 0
+
+
+func _mock_coop_set_local_prebattle_ready(send_sync: bool = true) -> void:
+	if not _mock_coop_prebattle_ready_sync_active():
+		return
+	if _mock_coop_local_prebattle_ready:
+		_mock_coop_try_advance_prebattle_after_ready_sync()
+		return
+	_mock_coop_local_prebattle_ready = true
+	if send_sync:
+		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "prebattle_ready", "ready": true})
+	if battle_log != null and battle_log.visible:
+		if _mock_coop_remote_prebattle_ready:
+			add_combat_log("Co-op: your commander is ready. Starting the battle.", "gold")
+		else:
+			add_combat_log("Co-op: your commander is ready. Waiting for your partner to press Start.", "gold")
+	_update_mock_coop_start_battle_button_state()
+	_mock_coop_try_advance_prebattle_after_ready_sync()
 
 
 func _mock_coop_player_phase_ready_sync_active() -> bool:
@@ -1934,6 +2127,7 @@ func _ready() -> void:
 
 	_mock_coop_battle_context = null
 	_mock_coop_ownership_assignments.clear()
+	_reset_mock_coop_prebattle_ready_state()
 	_reset_mock_coop_player_phase_ready_state()
 	var has_live_enet_coop_phase: bool = (
 			CoopExpeditionSessionManager.uses_enet_coop_transport()
@@ -2167,6 +2361,8 @@ func _process(delta: float) -> void:
 	update_cursor_pos()
 	update_cursor_color()
 	update_unit_info_panel()
+	if current_state == pre_battle_state:
+		_update_mock_coop_start_battle_button_state()
 	_sanitize_player_phase_active_unit_for_mock_coop_ownership()
 	if is_mock_coop_unit_ownership_active() and current_state == player_state:
 		update_objective_ui(true)
@@ -2243,10 +2439,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		current_state.handle_input(event)
 
 func change_state(new_state: GameState) -> void:
+	var previous_state: GameState = current_state
 	if current_state:
 		current_state.exit()
 		
 	current_state = null 
+	if previous_state == pre_battle_state and new_state != pre_battle_state:
+		_reset_mock_coop_prebattle_ready_state()
 	if new_state == player_state:
 		_reset_mock_coop_player_phase_ready_state()
 	
@@ -10887,8 +11086,8 @@ func _create_evolution_burst_vfx(target_pos: Vector2) -> CPUParticles2D:
 	vfx.color_ramp = gradient
 	
 	return vfx
-	
-func _on_start_battle_pressed() -> void:
+
+func _start_battle_from_deployment() -> void:
 	if select_sound.stream != null: select_sound.play()
 	# Phase 2: ensure Defy Death tracking is reset when battle starts (in case scene was reused without reload).
 	_defy_death_used.clear()
@@ -10899,6 +11098,16 @@ func _on_start_battle_pressed() -> void:
 	_boss_personal_dialogue_played.clear()
 	_reset_rookie_battle_tracking()
 	change_state(player_state) # Officially starts Turn 1!
+
+
+func _on_start_battle_pressed() -> void:
+	if current_state == pre_battle_state and _mock_coop_prebattle_ready_sync_active():
+		var will_only_mark_ready: bool = not _mock_coop_remote_prebattle_ready
+		if will_only_mark_ready and select_sound.stream != null:
+			select_sound.play()
+		_mock_coop_set_local_prebattle_ready(true)
+		return
+	_start_battle_from_deployment()
 
 # ==========================================
 # --- OBJECTIVE UI SYSTEM ---
