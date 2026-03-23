@@ -93,10 +93,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -438.0
-offset_top = -352.0
-offset_right = 438.0
-offset_bottom = 352.0
+offset_left = -450.0
+offset_top = -420.0
+offset_right = 450.0
+offset_bottom = 420.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_main")
@@ -185,6 +185,82 @@ theme_override_colors/default_color = Color(0.88, 0.84, 0.76, 1)
 theme_override_font_sizes/normal_font_size = 15
 
 [node name="SepContract" type="HSeparator" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="LanSectionVBox" type="VBoxContainer" parent="MainPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LanSectionTitle" type="Label" parent="MainPanel/Margin/VBox/LanSectionVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.78, 0.55, 1)
+theme_override_font_sizes/font_size = 15
+text = "Play together (internet / LAN)"
+horizontal_alignment = 1
+
+[node name="LanHostRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/LanSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LanPortLabel" type="Label" parent="MainPanel/Margin/VBox/LanSectionVBox/LanHostRow"]
+custom_minimum_size = Vector2(88, 0)
+layout_mode = 2
+text = "Host port"
+
+[node name="LanPortField" type="LineEdit" parent="MainPanel/Margin/VBox/LanSectionVBox/LanHostRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(80, 28)
+theme_override_font_sizes/font_size = 14
+placeholder_text = "7779"
+text = "7779"
+
+[node name="LanHostButton" type="Button" parent="MainPanel/Margin/VBox/LanSectionVBox/LanHostRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 32)
+layout_mode = 2
+text = "Host LAN game"
+
+[node name="LanJoinRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/LanSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LanAddrLabel" type="Label" parent="MainPanel/Margin/VBox/LanSectionVBox/LanJoinRow"]
+custom_minimum_size = Vector2(88, 0)
+layout_mode = 2
+text = "Join address"
+
+[node name="LanAddressField" type="LineEdit" parent="MainPanel/Margin/VBox/LanSectionVBox/LanJoinRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(200, 28)
+theme_override_font_sizes/font_size = 14
+placeholder_text = "e.g. 192.168.1.10:7779"
+text = "127.0.0.1:7779"
+
+[node name="LanJoinButton" type="Button" parent="MainPanel/Margin/VBox/LanSectionVBox/LanJoinRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 32)
+layout_mode = 2
+text = "Join LAN game"
+
+[node name="LanLoopbackButton" type="Button" parent="MainPanel/Margin/VBox/LanSectionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Same-PC rehearsal (offline test partner)"
+
+[node name="LanStatusLabel" type="Label" parent="MainPanel/Margin/VBox/LanSectionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+autowrap_mode = 3
+
+[node name="SepLan" type="HSeparator" parent="MainPanel/Margin/VBox"]
 layout_mode = 2
 
 [node name="BodyRichText" type="RichTextLabel" parent="MainPanel/Margin/VBox"]

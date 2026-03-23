@@ -20,6 +20,7 @@
 [node name="WorldMap" type="Node2D" unique_id=601850729]
 script = ExtResource("1_jvasx")
 music_track = ExtResource("2_rktdp")
+allow_coop_staging_debug_panel_in_release = true
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=248743043]
 offset_right = 1956.0

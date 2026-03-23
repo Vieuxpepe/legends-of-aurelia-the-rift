@@ -79,6 +79,16 @@ func _b(u: Object, key: String, default_val: bool = false) -> bool:
 	var v = u.get(key)
 	return default_val if v == null else bool(v)
 
+
+func _ai_execute_combat(bf: Node2D, attacker: Node2D, defender: Node2D, used_ability: bool = false) -> void:
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_ai_execute_combat"):
+		await bf.coop_enet_ai_execute_combat(attacker, defender, used_ability)
+	else:
+		await bf.execute_combat(attacker, defender, used_ability)
+
+
 func _weapon(u: Object) -> Resource:
 	return u.get("equipped_weapon") as Resource
 
@@ -1614,7 +1624,7 @@ func execute_ai_turn(my_container: Node) -> void:
 		if targeted_crate != null:
 			if battlefield.is_in_range(unit, targeted_crate):
 				unit.look_at_pos(battlefield.get_grid_pos(targeted_crate))
-				await battlefield.execute_combat(unit, targeted_crate)
+				await _ai_execute_combat(battlefield, unit, targeted_crate, false)
 				performed_attack_action = true
 		else:
 			if target_type == TYPE_ESCAPE and battlefield.get_distance(unit, target) <= 1:
@@ -1637,24 +1647,24 @@ func execute_ai_turn(my_container: Node) -> void:
 
 					TYPE_HOSTILE:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
-						await battlefield.execute_combat(unit, target)
+						await _ai_execute_combat(battlefield, unit, target, false)
 						_focus_target = target
 						performed_attack_action = true
 
 					TYPE_CRATE:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
-						await battlefield.execute_combat(unit, target)
+						await _ai_execute_combat(battlefield, unit, target, false)
 						performed_attack_action = true
 
 					TYPE_ALLY_HEAL:
 						if _i(target, "current_hp") < _i(target, "max_hp"):
 							unit.look_at_pos(battlefield.get_grid_pos(target))
-							await battlefield.execute_combat(unit, target)
+							await _ai_execute_combat(battlefield, unit, target, false)
 							performed_attack_action = true
 
 					TYPE_ALLY_BUFF:
 						unit.look_at_pos(battlefield.get_grid_pos(target))
-						await battlefield.execute_combat(unit, target)
+						await _ai_execute_combat(battlefield, unit, target, false)
 						performed_attack_action = true
 
 					TYPE_ALLY_FOLLOW:

@@ -76,6 +76,10 @@ const ExpeditionCharterStagingUIScene: PackedScene = preload("res://Scenes/UI/Ex
 @export var fanfare_sound: AudioStream
 @export var thud_sound: AudioStream
 
+## Release exports: OS.is_debug_build() is false. Enable on the WorldMap root (or in WorldMap.tscn) so Ctrl+Shift+P opens co-op staging + ENet.
+@export_group("Co-op staging debug (Ctrl+Shift+P)")
+@export var allow_coop_staging_debug_panel_in_release: bool = false
+
 # --- BASE MANAGEMENT UI ---
 var node_context_menu: PanelContainer = null
 var base_garrison_ui: CanvasLayer = null
@@ -111,6 +115,8 @@ var _coop_staging_debug_layer: CanvasLayer = null
 var _coop_staging_debug_status_label: Label = null
 var _coop_staging_debug_last_finalize: Dictionary = {}
 var _coop_staging_debug_last_handoff: Dictionary = {}
+var _coop_enet_port_field: LineEdit = null
+var _coop_enet_join_field: LineEdit = null
 
 # --- BASE FEEDBACK RUNTIME STATE ---
 var fanfare_player: AudioStreamPlayer = null
@@ -858,7 +864,7 @@ func _show_expedition_solo_or_charter_choice(exp_map_id: String) -> void:
 	layer.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(440, 200)
+	panel.custom_minimum_size = Vector2(440, 260)
 	center.add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -894,6 +900,15 @@ func _show_expedition_solo_or_charter_choice(exp_map_id: String) -> void:
 	)
 	vbox.add_child(charter_btn)
 
+	var join_lan_btn := Button.new()
+	join_lan_btn.text = "Join friend's LAN (co-op)"
+	join_lan_btn.tooltip_text = "Connect as guest first, then open the charter. Use the host's LAN IP and port (not 127.0.0.1 on a second PC)."
+	join_lan_btn.pressed.connect(func():
+		_close_expedition_mode_chooser()
+		_open_expedition_lan_join_dialog(exp_map_id)
+	)
+	vbox.add_child(join_lan_btn)
+
 	var cancel_btn := Button.new()
 	cancel_btn.text = "Cancel"
 	cancel_btn.pressed.connect(_close_expedition_mode_chooser)
@@ -909,6 +924,86 @@ func _launch_expedition_solo_from_world_map(exp_map_id: String) -> void:
 			_show_announcement("Expedition: this contract is already fulfilled.", true)
 		else:
 			_show_announcement("Expedition: launch failed. Check expedition data and campaign registration.", true)
+
+
+func _open_expedition_lan_join_dialog(exp_map_id: String) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 42
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0, 0, 0, 0.68)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(420, 0)
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_bottom", 14)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	margin.add_child(vbox)
+	var title := Label.new()
+	title.text = "Join LAN co-op"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 20)
+	vbox.add_child(title)
+	var hint := Label.new()
+	hint.text = "Enter the host's address and port. On another computer, use their LAN IP (e.g. 192.168.0.12:7779), not 127.0.0.1."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size = Vector2(380, 0)
+	vbox.add_child(hint)
+	var addr := LineEdit.new()
+	addr.text = "127.0.0.1:7779"
+	addr.placeholder_text = "host:port"
+	addr.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(addr)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	var cancel := Button.new()
+	cancel.text = "Cancel"
+	var join := Button.new()
+	join.text = "Join & open charter"
+	row.add_child(cancel)
+	row.add_child(join)
+	vbox.add_child(row)
+	add_child(layer)
+	var close_layer := func() -> void:
+		if is_instance_valid(layer):
+			layer.queue_free()
+	cancel.pressed.connect(close_layer)
+	dim.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			close_layer.call()
+	)
+	join.pressed.connect(func() -> void:
+		var jp: String = str(addr.text).strip_edges()
+		if jp == "":
+			_show_announcement("Enter host:port (example: 192.168.1.5:7779).", true)
+			return
+		CoopExpeditionSessionManager.leave_session()
+		var tr := ENetCoopTransport.new()
+		if jp.contains(":"):
+			var parts: PackedStringArray = jp.split(":")
+			if parts.size() >= 2:
+				var pt: int = int(str(parts[parts.size() - 1]).strip_edges())
+				if pt > 0:
+					tr.configure_listen_port(pt)
+		CoopExpeditionSessionManager.set_transport(tr)
+		var r: Dictionary = CoopExpeditionSessionManager.join_session(jp)
+		if not bool(r.get("ok", false)):
+			_show_announcement("Join failed: %s" % str(r.get("error", r)), true)
+			return
+		close_layer.call()
+		_open_expedition_charter_for_map(exp_map_id)
+	)
 
 
 func _open_expedition_charter_for_map(exp_map_id: String) -> void:
@@ -1733,9 +1828,29 @@ func _input(event: InputEvent) -> void:
 			_refresh_node_visuals()
 			_show_announcement("Debug: Granted expedition map " + granted_map_id, true)
 
-		elif event.keycode == KEY_P and event.ctrl_pressed and event.shift_pressed:
-			if OS.is_debug_build():
-				_toggle_coop_staging_debug_panel()
+
+func _is_coop_staging_debug_panel_allowed() -> bool:
+	return OS.is_debug_build() or allow_coop_staging_debug_panel_in_release
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	## Ctrl+Shift+P: co-op staging / ENet tester. Uses unhandled so UI focus does not swallow it; physical_keycode helps non-US layouts.
+	if not (event is InputEventKey):
+		return
+	var ek: InputEventKey = event as InputEventKey
+	if not ek.pressed or ek.echo:
+		return
+	var is_p: bool = (ek.keycode == KEY_P) or (ek.physical_keycode == KEY_P)
+	if not (is_p and ek.ctrl_pressed and ek.shift_pressed):
+		return
+	if _is_coop_staging_debug_panel_allowed():
+		_toggle_coop_staging_debug_panel()
+	else:
+		_show_announcement(
+			"Co-op staging (Ctrl+Shift+P): open Scenes/UI/WorldMap.tscn, select root WorldMap, enable “Allow Coop Staging Debug Panel In Release” (group: Co-op staging debug), or export/run a debug build.",
+			true,
+		)
+	get_viewport().set_input_as_handled()
 
 
 func _on_coop_staging_debug_session_changed() -> void:
@@ -1810,6 +1925,8 @@ func _toggle_coop_staging_debug_panel() -> void:
 		_coop_staging_debug_layer.queue_free()
 		_coop_staging_debug_layer = null
 		_coop_staging_debug_status_label = null
+		_coop_enet_port_field = null
+		_coop_enet_join_field = null
 		return
 	var layer := CanvasLayer.new()
 	layer.layer = 120
@@ -1821,7 +1938,7 @@ func _toggle_coop_staging_debug_panel() -> void:
 	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel.offset_left = 16.0
 	panel.offset_top = 64.0
-	panel.custom_minimum_size = Vector2(500, 540)
+	panel.custom_minimum_size = Vector2(500, 680)
 	layer.add_child(panel)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 10)
@@ -1833,12 +1950,37 @@ func _toggle_coop_staging_debug_panel() -> void:
 	vbox.add_theme_constant_override("separation", 8)
 	margin.add_child(vbox)
 	var hint := Label.new()
-	hint.text = "Co-op staging tester (debug). Ctrl+Shift+P closes. Host + mock guest = same process."
+	hint.text = "Co-op staging tester (debug). Ctrl+Shift+P closes. Loopback = same process; ENet = two instances (LAN)."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size = Vector2(460, 0)
 	vbox.add_child(hint)
 	_coop_staging_debug_status_label = Label.new()
 	_coop_staging_debug_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_coop_staging_debug_status_label.custom_minimum_size = Vector2(460, 150)
 	vbox.add_child(_coop_staging_debug_status_label)
+	var enet_hint := Label.new()
+	enet_hint.text = "ENet: port below = host listen port. Join field = host:port (e.g. 127.0.0.1:7779 or LAN IP)."
+	enet_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	enet_hint.custom_minimum_size = Vector2(460, 0)
+	vbox.add_child(enet_hint)
+	_coop_enet_port_field = LineEdit.new()
+	_coop_enet_port_field.text = "7779"
+	_coop_enet_port_field.placeholder_text = "host listen port"
+	_coop_enet_port_field.custom_minimum_size = Vector2(200, 28)
+	vbox.add_child(_coop_enet_port_field)
+	_coop_enet_join_field = LineEdit.new()
+	_coop_enet_join_field.text = "127.0.0.1:7779"
+	_coop_enet_join_field.placeholder_text = "host:port"
+	_coop_enet_join_field.custom_minimum_size = Vector2(320, 28)
+	vbox.add_child(_coop_enet_join_field)
+	var enet_grid := GridContainer.new()
+	enet_grid.columns = 2
+	enet_grid.add_theme_constant_override("h_separation", 8)
+	enet_grid.add_theme_constant_override("v_separation", 6)
+	vbox.add_child(enet_grid)
+	_coop_staging_debug_add_action_btn(enet_grid, "ENet: bind + host", Callable(self, "_coop_debug_enet_bind_and_host"))
+	_coop_staging_debug_add_action_btn(enet_grid, "ENet: bind + join", Callable(self, "_coop_debug_enet_bind_and_join"))
+	_coop_staging_debug_add_action_btn(enet_grid, "Restore loopback transport", Callable(self, "_coop_debug_restore_loopback_transport"))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 8)
@@ -1952,3 +2094,44 @@ func _coop_debug_action_leave() -> void:
 	CampaignManager.clear_pending_mock_coop_battle_handoff()
 	_coop_staging_debug_last_finalize = {}
 	_coop_staging_debug_last_handoff = {}
+
+
+func _coop_debug_enet_bind_and_host() -> void:
+	if _coop_enet_port_field == null:
+		return
+	CoopExpeditionSessionManager.leave_session()
+	var tr := ENetCoopTransport.new()
+	var p: int = int(str(_coop_enet_port_field.text).strip_edges())
+	if p <= 0:
+		p = ENetCoopTransport.DEFAULT_PORT
+	tr.configure_listen_port(p)
+	CoopExpeditionSessionManager.set_transport(tr)
+	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
+	_show_announcement("ENet bind+host: %s" % str(r), true)
+
+
+func _coop_debug_enet_bind_and_join() -> void:
+	if _coop_enet_join_field == null:
+		return
+	var jp: String = str(_coop_enet_join_field.text).strip_edges()
+	if jp == "":
+		_show_announcement("ENet join: enter host:port", true)
+		return
+	CoopExpeditionSessionManager.leave_session()
+	var tr := ENetCoopTransport.new()
+	if jp.contains(":"):
+		var parts: PackedStringArray = jp.split(":")
+		if parts.size() >= 2:
+			var pt: int = int(str(parts[parts.size() - 1]).strip_edges())
+			if pt > 0:
+				tr.configure_listen_port(pt)
+	CoopExpeditionSessionManager.set_transport(tr)
+	var r: Dictionary = CoopExpeditionSessionManager.join_session(jp)
+	_show_announcement("ENet bind+join: %s" % str(r), true)
+
+
+func _coop_debug_restore_loopback_transport() -> void:
+	CoopExpeditionSessionManager.leave_session()
+	var lb := LocalLoopbackCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(lb)
+	_show_announcement("Co-op transport restored to loopback.", true)

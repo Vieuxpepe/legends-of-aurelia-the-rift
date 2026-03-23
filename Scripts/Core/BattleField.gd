@@ -25,6 +25,8 @@ class_name BattleField
 signal forecast_resolved(action: String, use_ability: bool)
 signal dialogue_advanced
 signal promotion_chosen(chosen_class_res: Resource)
+## ENet mock co-op: guest finished applying host-resolved combat for the guest's own attacker (see [method coop_enet_guest_delegate_player_combat_to_host]).
+signal coop_guest_host_combat_resolved
 
 
 # =============================================================================
@@ -35,6 +37,8 @@ enum Objective { ROUT_ENEMY, SURVIVE_TURNS, DEFEND_TARGET }
 enum UISfx { MOVE_OK, TARGET_OK, INVALID }
 
 const CELL_SIZE = Vector2i(64, 64)
+## Co-op: wire schema for [method coop_net_build_authoritative_combat_snapshot] / peer apply (no second combat sim).
+const COOP_AUTH_BATTLE_SNAPSHOT_VER: int = 1
 
 const LEVELUP_HOLD_TIME_NORMAL := 4.2
 const LEVELUP_HOLD_TIME_PERFECT := 6.0
@@ -579,6 +583,850 @@ func try_allow_local_player_select_unit_for_command(unit: Node2D) -> bool:
 	return true
 
 
+var _coop_enet_remote_sync_queue: Array = []
+var _coop_enet_remote_sync_busy: bool = false
+## ENet co-op: shared global RNG for combat (host publishes base seed; each attack re-seeds with a unique combat id).
+var _coop_net_have_battle_seed: bool = false
+var _coop_net_stored_battle_seed: int = 0
+var _coop_net_local_combat_seq: int = 0
+## Guest only: host-ordered enemy/AI combat packets (applied when local AI reaches the same strike).
+var _coop_net_incoming_enemy_combat_fifo: Array = []
+## Guest: relationship id of attacker while waiting for host [code]player_combat[/code] / [code]player_post_combat[/code] after [method coop_enet_guest_delegate_player_combat_to_host].
+var _coop_guest_awaiting_combat_aid: String = ""
+
+func _exit_tree() -> void:
+	_coop_net_reset_battle_rng_sync()
+	CoopExpeditionSessionManager.unregister_enet_coop_battle_sync_battlefield(self)
+
+
+func _coop_net_reset_battle_rng_sync() -> void:
+	_coop_net_have_battle_seed = false
+	_coop_net_stored_battle_seed = 0
+	_coop_net_local_combat_seq = 0
+	_coop_net_incoming_enemy_combat_fifo.clear()
+	_coop_qte_event_seq = 0
+	_coop_qte_mirror_active = false
+	_coop_qte_mirror_dict.clear()
+	_coop_qte_capture_active = false
+	_coop_qte_capture_dict.clear()
+	_coop_guest_awaiting_combat_aid = ""
+
+
+## Called on host + guest when the session locks RNG for this battle ([method CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed]).
+func apply_coop_battle_net_rng_seed(s: int) -> void:
+	_coop_net_stored_battle_seed = s
+	_coop_net_have_battle_seed = true
+	_coop_net_local_combat_seq = 0
+	seed(s)
+	if OS.is_debug_build():
+		print("[CoopBattleRNG] Global seed locked (base=%d)." % s)
+
+
+func coop_net_rng_sync_ready() -> bool:
+	return _coop_net_have_battle_seed
+
+
+func _coop_net_seed_global_for_packed_combat_id(packed_id: int) -> void:
+	if not _coop_net_have_battle_seed:
+		return
+	seed(hash(str(_coop_net_stored_battle_seed) + "#" + str(packed_id)))
+
+
+## Call immediately before [method execute_combat] on the attacker’s machine. Returns packed id for the wire (guest vs host ranges avoid collisions).
+func coop_enet_begin_synchronized_combat_round() -> int:
+	if not _coop_net_have_battle_seed:
+		return -1
+	if not is_mock_coop_unit_ownership_active():
+		return -1
+	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+		return -1
+	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
+		return -1
+	_coop_net_local_combat_seq += 1
+	var hi: int = 1 if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST else 0
+	var packed: int = hi * 1_000_000_000 + _coop_net_local_combat_seq
+	_coop_net_seed_global_for_packed_combat_id(packed)
+	return packed
+
+
+func coop_enet_apply_remote_combat_packed_id(packed: int) -> void:
+	if packed < 0:
+		return
+	_coop_net_seed_global_for_packed_combat_id(packed)
+
+
+## Monotonic minigame ids for one [method execute_combat] (must match peer call order). Partner mirrors snapshot; no interactive QTE on guest.
+var _coop_qte_event_seq: int = 0
+var _coop_qte_mirror_active: bool = false
+var _coop_qte_mirror_dict: Dictionary = {}
+var _coop_qte_capture_active: bool = false
+var _coop_qte_capture_dict: Dictionary = {}
+
+
+func _coop_qte_tick_reset_for_execute_combat() -> void:
+	_coop_qte_event_seq = 0
+
+
+func coop_net_begin_local_combat_qte_capture() -> void:
+	_coop_qte_capture_dict.clear()
+	_coop_qte_capture_active = true
+
+
+func coop_net_end_local_combat_qte_capture() -> Dictionary:
+	if not _coop_qte_capture_active:
+		return {}
+	_coop_qte_capture_active = false
+	return _coop_qte_capture_dict.duplicate(true)
+
+
+func coop_net_apply_remote_combat_qte_snapshot(snap: Variant) -> void:
+	_coop_qte_mirror_active = true
+	_coop_qte_mirror_dict.clear()
+	if snap is Dictionary:
+		for k in snap.keys():
+			_coop_qte_mirror_dict[str(k)] = snap[k]
+
+
+func coop_net_clear_remote_combat_qte_snapshot() -> void:
+	_coop_qte_mirror_active = false
+	_coop_qte_mirror_dict.clear()
+
+
+func _coop_qte_alloc_event_id() -> String:
+	var k := str(_coop_qte_event_seq)
+	_coop_qte_event_seq += 1
+	return k
+
+
+func _coop_qte_mirror_read_int(event_id: String, default_v: int) -> int:
+	if not _coop_qte_mirror_dict.has(event_id):
+		return default_v
+	return int(_coop_qte_mirror_dict[event_id])
+
+
+func _coop_qte_mirror_read_bool(event_id: String, default_v: bool) -> bool:
+	if not _coop_qte_mirror_dict.has(event_id):
+		return default_v
+	var v: Variant = _coop_qte_mirror_dict[event_id]
+	if v is bool:
+		return v
+	return int(v) != 0
+
+
+func _coop_qte_capture_write(event_id: String, value: Variant) -> void:
+	if _coop_qte_capture_active:
+		_coop_qte_capture_dict[event_id] = value
+
+
+## Capture alive unit relationship ids (support / Avatar name) before combat for removed-id diffing.
+func coop_net_snapshot_alive_unit_ids() -> Dictionary:
+	var d: Dictionary = {}
+	for cont in [player_container, ally_container, enemy_container]:
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			if not c is Node2D:
+				continue
+			var u: Node2D = c as Node2D
+			if not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			var rid: String = get_relationship_id(u).strip_edges()
+			if rid == "":
+				continue
+			d[rid] = true
+	return d
+
+
+func _coop_clear_unit_grid_solidity(u: Node2D) -> void:
+	if u == null or not is_instance_valid(u):
+		return
+	if u.has_method("get_occupied_tiles"):
+		for t in u.get_occupied_tiles(self):
+			astar.set_point_solid(t, false)
+	else:
+		astar.set_point_solid(get_grid_pos(u), false)
+
+
+func _coop_set_unit_grid_solidity(u: Node2D, solid: bool) -> void:
+	if u == null or not is_instance_valid(u):
+		return
+	if u.has_method("get_occupied_tiles"):
+		for t in u.get_occupied_tiles(self):
+			astar.set_point_solid(t, solid)
+	else:
+		astar.set_point_solid(get_grid_pos(u), solid)
+
+
+## Build after local [method execute_combat] completes; peer applies with [method _coop_apply_authoritative_combat_snapshot] (skips re-simulation).
+func coop_net_build_authoritative_combat_snapshot(pre_alive_ids: Dictionary) -> Dictionary:
+	var post_alive: Dictionary = {}
+	var units_arr: Array = []
+	for cont in [player_container, ally_container, enemy_container]:
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			if not c is Node2D:
+				continue
+			var u: Node2D = c as Node2D
+			if not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			if int(u.get("current_hp")) <= 0:
+				continue
+			var rid: String = get_relationship_id(u).strip_edges()
+			if rid == "":
+				continue
+			post_alive[rid] = true
+			var gp: Vector2i = get_grid_pos(u)
+			var e: Dictionary = {
+				"id": rid,
+				"hp": int(u.current_hp),
+				"mhp": int(u.max_hp),
+				"gx": gp.x,
+				"gy": gp.y,
+			}
+			if u.get("strength") != null:
+				e["str"] = int(u.strength)
+			if u.get("magic") != null:
+				e["mag"] = int(u.magic)
+			if u.get("speed") != null:
+				e["spd"] = int(u.speed)
+			if u.get("agility") != null:
+				e["agi"] = int(u.agility)
+			if u.get("defense") != null:
+				e["def"] = int(u.defense)
+			if u.get("resistance") != null:
+				e["res"] = int(u.resistance)
+			var wpn = u.equipped_weapon
+			if wpn != null and wpn.get("current_durability") != null:
+				e["wpn_dur"] = int(wpn.current_durability)
+			if u.has_meta("ability_cooldown"):
+				e["abil_cd"] = int(u.get_meta("ability_cooldown"))
+			if u.has_meta("current_poise"):
+				e["poise"] = int(u.get_meta("current_poise"))
+			if u.has_meta("is_staggered_this_combat"):
+				e["stagger"] = bool(u.get_meta("is_staggered_this_combat"))
+			if u.get("is_defending") != null:
+				e["defending"] = bool(u.is_defending)
+			units_arr.append(e)
+	var removed: Array = []
+	for k in pre_alive_ids.keys():
+		if not post_alive.has(k):
+			removed.append(str(k))
+	return {
+		"v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
+		"units": units_arr,
+		"removed_ids": removed,
+		"gold": int(player_gold),
+		"ek": int(enemy_kills_count),
+		"pd": int(player_deaths_count),
+		"ad": int(ally_deaths_count),
+		"atc": int(ability_triggers_count),
+	}
+
+
+func _coop_remove_unit_coop_peer_mirror_by_id(rid: String) -> void:
+	var r: String = str(rid).strip_edges()
+	if r == "":
+		return
+	var u: Node2D = _coop_find_unit_by_relationship_id_any_side(r)
+	if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
+		return
+	_coop_clear_unit_grid_solidity(u)
+	u.queue_free()
+
+
+func _coop_apply_authoritative_combat_snapshot(snap: Dictionary) -> void:
+	if int(snap.get("v", 0)) != COOP_AUTH_BATTLE_SNAPSHOT_VER:
+		if OS.is_debug_build():
+			push_warning("Coop: reject authoritative combat snapshot (bad v).")
+		return
+	enemy_kills_count = int(snap.get("ek", enemy_kills_count))
+	player_deaths_count = int(snap.get("pd", player_deaths_count))
+	ally_deaths_count = int(snap.get("ad", ally_deaths_count))
+	ability_triggers_count = int(snap.get("atc", ability_triggers_count))
+	player_gold = int(snap.get("gold", player_gold))
+
+	var removed: Array = snap.get("removed_ids", []) as Array
+	for rid_v in removed:
+		var rs: String = str(rid_v).strip_edges()
+		if rs == "":
+			continue
+		_coop_remove_unit_coop_peer_mirror_by_id(rs)
+
+	for udat in snap.get("units", []):
+		if not udat is Dictionary:
+			continue
+		var entry: Dictionary = udat
+		var rid2: String = str(entry.get("id", "")).strip_edges()
+		if rid2 == "":
+			continue
+		var u2: Node2D = _coop_find_unit_by_relationship_id_any_side(rid2)
+		if u2 == null or not is_instance_valid(u2) or u2.is_queued_for_deletion():
+			continue
+		var gx: int = int(entry.get("gx", get_grid_pos(u2).x))
+		var gy: int = int(entry.get("gy", get_grid_pos(u2).y))
+		var old_gp: Vector2i = get_grid_pos(u2)
+		var new_gp := Vector2i(gx, gy)
+		if old_gp != new_gp:
+			_coop_clear_unit_grid_solidity(u2)
+			u2.position = Vector2(gx * CELL_SIZE.x, gy * CELL_SIZE.y)
+			_coop_set_unit_grid_solidity(u2, true)
+		if entry.has("hp"):
+			u2.current_hp = int(entry["hp"])
+		if entry.has("mhp"):
+			u2.max_hp = int(entry["mhp"])
+		if entry.has("str") and u2.get("strength") != null:
+			u2.strength = int(entry["str"])
+		if entry.has("mag") and u2.get("magic") != null:
+			u2.magic = int(entry["mag"])
+		if entry.has("spd") and u2.get("speed") != null:
+			u2.speed = int(entry["spd"])
+		if entry.has("agi") and u2.get("agility") != null:
+			u2.agility = int(entry["agi"])
+		if entry.has("def") and u2.get("defense") != null:
+			u2.defense = int(entry["def"])
+		if entry.has("res") and u2.get("resistance") != null:
+			u2.resistance = int(entry["res"])
+		var wpn2 = u2.equipped_weapon
+		if wpn2 != null and entry.has("wpn_dur") and wpn2.get("current_durability") != null:
+			wpn2.current_durability = int(entry["wpn_dur"])
+		if entry.has("abil_cd"):
+			u2.set_meta("ability_cooldown", int(entry["abil_cd"]))
+		elif u2.has_meta("ability_cooldown"):
+			u2.remove_meta("ability_cooldown")
+		if entry.has("poise"):
+			u2.set_meta("current_poise", int(entry["poise"]))
+		if entry.has("stagger"):
+			u2.set_meta("is_staggered_this_combat", bool(entry["stagger"]))
+		if entry.has("defending") and u2.get("is_defending") != null:
+			u2.is_defending = bool(entry["defending"])
+		if u2.get("health_bar") != null:
+			u2.health_bar.value = u2.current_hp
+		if u2.has_method("update_poise_visuals"):
+			u2.update_poise_visuals()
+
+	rebuild_grid()
+	update_fog_of_war()
+	update_objective_ui()
+
+
+## ENet co-op: host allocates [method coop_enet_begin_synchronized_combat_round] + runs combat, then broadcasts; guest waits FIFO and mirrors (crit/miss match).
+func coop_enet_buffer_incoming_enemy_combat(body: Dictionary) -> void:
+	if body.is_empty():
+		return
+	_coop_net_incoming_enemy_combat_fifo.append(body.duplicate(true))
+
+
+func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_ability: bool = false) -> void:
+	if attacker == null or defender == null or not is_instance_valid(attacker) or not is_instance_valid(defender):
+		return
+	if not _coop_net_have_battle_seed or not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_enet_coop_transport():
+		await execute_combat(attacker, defender, used_ability)
+		return
+	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
+		await execute_combat(attacker, defender, used_ability)
+		return
+	var aid: String = get_relationship_id(attacker).strip_edges()
+	var did: String = get_relationship_id(defender).strip_edges()
+	if aid == "" or did == "":
+		await execute_combat(attacker, defender, used_ability)
+		return
+	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
+		var pre_enemy: Dictionary = coop_net_snapshot_alive_unit_ids()
+		var packed: int = coop_enet_begin_synchronized_combat_round()
+		await execute_combat(attacker, defender, used_ability)
+		var auth_enemy: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_enemy)
+		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+			"action": "enemy_combat",
+			"attacker_id": aid,
+			"defender_id": did,
+			"used_ability": used_ability,
+			"rng_packed": packed,
+			"auth_snapshot": auth_enemy,
+			"auth_v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
+		})
+		return
+	## Guest: wait for host-ordered strike packet, then mirror RNG + combat.
+	while is_inside_tree():
+		if not is_instance_valid(attacker) or not is_instance_valid(defender):
+			return
+		if not _coop_net_incoming_enemy_combat_fifo.is_empty():
+			var head = _coop_net_incoming_enemy_combat_fifo[0]
+			var h_aid: String = str(head.get("attacker_id", "")).strip_edges()
+			var h_did: String = str(head.get("defender_id", "")).strip_edges()
+			if h_aid == aid and h_did == did:
+				_coop_net_incoming_enemy_combat_fifo.pop_front()
+				var av: int = int(head.get("auth_v", 0))
+				var ar: Variant = head.get("auth_snapshot", {})
+				if ar is Dictionary and av == COOP_AUTH_BATTLE_SNAPSHOT_VER:
+					var ad: Dictionary = ar as Dictionary
+					if ad.size() > 0:
+						_coop_apply_authoritative_combat_snapshot(ad)
+						return
+				var rp: int = int(head.get("rng_packed", -1))
+				if rp >= 0:
+					coop_enet_apply_remote_combat_packed_id(rp)
+				await execute_combat(attacker, defender, bool(head.get("used_ability", used_ability)))
+				return
+			if OS.is_debug_build():
+				push_warning("Coop enemy combat FIFO mismatch: expected %s→%s, got %s→%s" % [aid, did, h_aid, h_did])
+			_coop_net_incoming_enemy_combat_fifo.pop_front()
+			continue
+		await get_tree().process_frame
+
+
+## True when this peer is the ENet guest with battle RNG locked — player-initiated combat must be simulated on the host only.
+func coop_enet_should_delegate_player_combat_to_host() -> bool:
+	return coop_net_rng_sync_ready() and is_mock_coop_unit_ownership_active() and CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+
+
+func coop_enet_get_player_side_unit_by_rel_id(rel_id: String) -> Node2D:
+	return _coop_find_player_side_unit_by_relationship_id(str(rel_id).strip_edges())
+
+
+func _coop_emit_guest_host_combat_resolved_if_waiting(aid: String) -> void:
+	var a: String = str(aid).strip_edges()
+	if _coop_guest_awaiting_combat_aid == "" or _coop_guest_awaiting_combat_aid != a:
+		return
+	_coop_guest_awaiting_combat_aid = ""
+	coop_guest_host_combat_resolved.emit()
+
+
+## Guest: send combat intent to host, then await authoritative apply + post-combat sync.
+func coop_enet_guest_delegate_player_combat_to_host(attacker_id: String, defender_id: String, used_ability: bool) -> void:
+	if not coop_enet_should_delegate_player_combat_to_host():
+		return
+	var aid: String = str(attacker_id).strip_edges()
+	var did: String = str(defender_id).strip_edges()
+	if aid == "" or did == "":
+		return
+	_coop_guest_awaiting_combat_aid = aid
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "player_combat_request",
+		"attacker_id": aid,
+		"defender_id": did,
+		"used_ability": used_ability,
+	})
+	while _coop_guest_awaiting_combat_aid != "" and is_inside_tree():
+		await coop_guest_host_combat_resolved
+
+
+func coop_enet_guest_receive_combat_request_nack(body: Dictionary) -> void:
+	var aid: String = str(body.get("attacker_id", "")).strip_edges()
+	if _coop_guest_awaiting_combat_aid == "":
+		return
+	if aid != "" and aid != _coop_guest_awaiting_combat_aid:
+		return
+	_coop_guest_awaiting_combat_aid = ""
+	if OS.is_debug_build():
+		push_warning("Coop: host rejected player_combat_request (attacker_id=%s)." % aid)
+	coop_guest_host_combat_resolved.emit()
+
+
+func coop_enet_host_handle_player_combat_request(body: Dictionary) -> void:
+	call_deferred("_coop_host_start_player_combat_request", body.duplicate(true))
+
+
+func _coop_host_start_player_combat_request(body: Dictionary) -> void:
+	await _coop_host_resolve_player_combat_request_async(body)
+
+
+func _coop_host_send_player_combat_request_nack(attacker_id: String) -> void:
+	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+		return
+	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+		"action": "player_combat_request_nack",
+		"attacker_id": str(attacker_id).strip_edges(),
+	})
+
+
+func _coop_host_resolve_player_combat_request_async(body: Dictionary) -> void:
+	if not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_enet_coop_transport():
+		return
+	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
+		return
+	var aid: String = str(body.get("attacker_id", "")).strip_edges()
+	var did: String = str(body.get("defender_id", "")).strip_edges()
+	var used_ab: bool = bool(body.get("used_ability", false))
+	if aid == "" or did == "":
+		_coop_host_send_player_combat_request_nack(aid if aid != "" else "?")
+		return
+	var att: Node2D = _coop_find_unit_by_relationship_id_any_side(aid)
+	var defu: Node2D = _coop_find_unit_by_relationship_id_any_side(did)
+	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
+		_coop_host_send_player_combat_request_nack(aid)
+		return
+	if get_mock_coop_unit_owner_for_unit(att) != MOCK_COOP_OWNER_REMOTE:
+		if OS.is_debug_build():
+			push_warning("Coop: player_combat_request ignored — attacker is not guest's unit (%s)." % aid)
+		_coop_host_send_player_combat_request_nack(aid)
+		return
+	var pre_alive: Dictionary = coop_net_snapshot_alive_unit_ids()
+	var packed: int = coop_enet_begin_synchronized_combat_round()
+	await execute_combat(att, defu, used_ab)
+	while is_inside_tree() and get_tree().paused:
+		await get_tree().process_frame
+	var auth: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_alive)
+	var att_after: Node2D = _coop_find_player_side_unit_by_relationship_id(aid)
+	var entered_canto: bool = false
+	var canto_budget: float = 0.0
+	if att_after != null and is_instance_valid(att_after) and int(att_after.current_hp) > 0:
+		var used_f: float = float(att_after.move_points_used_this_turn)
+		var rem: float = float(att_after.move_range) - used_f
+		if unit_supports_canto(att_after) and rem > 0.001:
+			entered_canto = true
+			canto_budget = rem
+			att_after.has_moved = true
+			att_after.in_canto_phase = true
+			att_after.canto_move_budget = rem
+			if battle_log != null and battle_log.visible:
+				add_combat_log(att_after.unit_name + " — Canto (" + str(snappedf(rem, 0.1)) + " move left).", "cyan")
+			rebuild_grid()
+			calculate_ranges(att_after)
+	var alive_after: Node2D = null
+	if att_after != null and is_instance_valid(att_after) and int(att_after.current_hp) > 0:
+		alive_after = att_after
+	coop_enet_sync_local_combat_done(aid, did, used_ab, alive_after, entered_canto, canto_budget, packed, {}, auth, true)
+	if alive_after != null and is_instance_valid(alive_after) and int(alive_after.current_hp) > 0 and not entered_canto and alive_after.has_method("finish_turn"):
+		alive_after.finish_turn()
+
+
+func _coop_enet_sync_eligible_command_unit(unit: Node2D) -> bool:
+	if unit == null or not is_instance_valid(unit):
+		return false
+	if not is_mock_coop_unit_ownership_active():
+		return false
+	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+		return false
+	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
+		return false
+	if is_local_player_command_blocked_for_mock_coop_unit(unit):
+		return false
+	return true
+
+
+func coop_enet_sync_after_local_player_move(unit: Node2D, path: Array, _path_cost: float, finish_after_move: bool = false) -> void:
+	if not _coop_enet_sync_eligible_command_unit(unit):
+		return
+	var uid: String = get_relationship_id(unit).strip_edges()
+	if uid == "":
+		return
+	var serial: Array = []
+	for p in path:
+		var v: Vector2i = Vector2i.ZERO
+		if p is Vector2i:
+			v = p as Vector2i
+		elif typeof(p) == TYPE_VECTOR2I:
+			v = p as Vector2i
+		else:
+			continue
+		serial.append([v.x, v.y])
+	if serial.size() < 2:
+		return
+	var payload: Dictionary = {"action": "player_move", "unit_id": uid, "path": serial}
+	if finish_after_move:
+		payload["finish_after_move"] = true
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(payload)
+
+
+func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
+	if not _coop_enet_sync_eligible_command_unit(unit):
+		return
+	var uid: String = get_relationship_id(unit).strip_edges()
+	if uid == "":
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_defend", "unit_id": uid})
+
+
+## IDs captured before [method execute_combat] so we still notify peer if the attacker dies. Post-combat packet only if [param attacker_after] is still alive.
+func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false) -> void:
+	if not is_mock_coop_unit_ownership_active():
+		return
+	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+		return
+	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
+		return
+	var aid: String = str(attacker_id).strip_edges()
+	var did: String = str(defender_id).strip_edges()
+	if aid == "" or did == "":
+		return
+	var has_followup: bool = attacker_after != null and is_instance_valid(attacker_after) and int(attacker_after.current_hp) > 0
+	var combat_body: Dictionary = {
+		"action": "player_combat",
+		"attacker_id": aid,
+		"defender_id": did,
+		"used_ability": used_ability,
+		"has_post_combat_followup": has_followup,
+	}
+	if combat_packed_rng_id >= 0:
+		combat_body["rng_packed"] = combat_packed_rng_id
+	if qte_snapshot.size() > 0:
+		combat_body["qte_snapshot"] = qte_snapshot.duplicate(true)
+	if auth_snapshot.size() > 0:
+		combat_body["auth_snapshot"] = auth_snapshot.duplicate(true)
+		combat_body["auth_v"] = COOP_AUTH_BATTLE_SNAPSHOT_VER
+	if combat_host_authority:
+		combat_body["host_authority"] = true
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(combat_body)
+	if attacker_after == null or not is_instance_valid(attacker_after) or int(attacker_after.current_hp) <= 0:
+		return
+	var follow: String = "canto" if entered_canto else "finish"
+	var post: Dictionary = {
+		"action": "player_post_combat",
+		"attacker_id": aid,
+		"follow": follow,
+		"canto_budget": float(canto_budget),
+	}
+	if combat_host_authority:
+		post["host_authority"] = true
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(post)
+
+
+func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
+	if not _coop_enet_sync_eligible_command_unit(unit):
+		return
+	var uid: String = get_relationship_id(unit).strip_edges()
+	if uid == "":
+		return
+	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_finish_turn", "unit_id": uid})
+
+
+func apply_remote_coop_enet_sync(body: Dictionary) -> void:
+	if not is_mock_coop_unit_ownership_active():
+		return
+	_coop_enet_remote_sync_queue.append(body.duplicate(true))
+	_coop_enet_pump_remote_sync_queue()
+
+
+func _coop_enet_pump_remote_sync_queue() -> void:
+	if _coop_enet_remote_sync_busy:
+		return
+	if _coop_enet_remote_sync_queue.is_empty():
+		return
+	_coop_enet_remote_sync_busy = true
+	var next_body: Dictionary = _coop_enet_remote_sync_queue.pop_front() as Dictionary
+	var tr := get_tree().create_timer(0.0, true, true, true)
+	tr.timeout.connect(func(): _coop_run_one_remote_sync_async(next_body), CONNECT_ONE_SHOT)
+
+
+func _coop_find_player_side_unit_by_relationship_id(rid: String) -> Node2D:
+	var r: String = str(rid).strip_edges()
+	if r == "":
+		return null
+	for cont in [player_container, ally_container]:
+		if cont == null:
+			continue
+		for u in cont.get_children():
+			if not is_instance_valid(u):
+				continue
+			if get_relationship_id(u) == r:
+				return u as Node2D
+	return null
+
+
+func _coop_find_unit_by_relationship_id_any_side(rid: String) -> Node2D:
+	var u: Node2D = _coop_find_player_side_unit_by_relationship_id(rid)
+	if u != null:
+		return u
+	var r: String = str(rid).strip_edges()
+	if r == "" or enemy_container == null:
+		return null
+	for e in enemy_container.get_children():
+		if not is_instance_valid(e):
+			continue
+		if get_relationship_id(e) == r:
+			return e as Node2D
+	return null
+
+
+func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
+	var action: String = str(body.get("action", "")).strip_edges()
+	match action:
+		"player_move":
+			await _coop_remote_sync_player_move(body)
+		"player_defend":
+			await _coop_remote_sync_player_defend(body)
+		"player_combat":
+			await _coop_remote_sync_player_combat(body)
+		"player_post_combat":
+			await _coop_remote_sync_player_post_combat(body)
+		"player_finish_turn":
+			await _coop_remote_sync_player_finish_turn(body)
+		_:
+			if OS.is_debug_build():
+				push_warning("Coop battle sync: unknown action '%s'" % action)
+	_coop_enet_remote_sync_busy = false
+	_coop_enet_pump_remote_sync_queue()
+
+
+func _coop_remote_sync_player_move(body: Dictionary) -> void:
+	var uid: String = str(body.get("unit_id", "")).strip_edges()
+	var path_raw: Variant = body.get("path", [])
+	var path_typed: Array[Vector2i] = []
+	if path_raw is Array:
+		for item in path_raw as Array:
+			if item is Array:
+				var a: Array = item as Array
+				if a.size() >= 2:
+					path_typed.append(Vector2i(int(a[0]), int(a[1])))
+			elif item is Dictionary:
+				var d: Dictionary = item as Dictionary
+				path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
+	if path_typed.size() < 2:
+		return
+	var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
+	if unit == null or not is_instance_valid(unit):
+		if OS.is_debug_build():
+			push_warning("Coop battle sync: no unit for id '%s'" % uid)
+		return
+	if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
+		if OS.is_debug_build():
+			push_warning("Coop battle sync: refuse mirror move for non-partner unit '%s'" % uid)
+		return
+	var path_cost: float = get_path_move_cost(path_typed, unit)
+	await unit.move_along_path(path_typed)
+	if not is_instance_valid(unit) or not is_instance_valid(self):
+		return
+	unit.move_points_used_this_turn += path_cost
+	var unm: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else uid
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: %s moved (partner)." % unm, "gray")
+	if bool(body.get("finish_after_move", false)) and unit.has_method("finish_turn"):
+		unit.finish_turn()
+	update_fog_of_war()
+	rebuild_grid()
+	if current_state == player_state and player_state != null:
+		var au: Node2D = player_state.active_unit
+		if au != null and au == unit:
+			player_state.clear_active_unit()
+
+
+func _coop_remote_sync_player_defend(body: Dictionary) -> void:
+	var uid: String = str(body.get("unit_id", "")).strip_edges()
+	var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
+	if unit == null or not is_instance_valid(unit):
+		return
+	if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
+		return
+	if defend_sound != null and defend_sound.stream != null:
+		defend_sound.pitch_scale = randf_range(0.9, 1.1)
+		defend_sound.play()
+	unit.trigger_defend()
+	animate_shield_drop(unit)
+	if battle_log != null and battle_log.visible:
+		var unm: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else uid
+		add_combat_log("Co-op: %s defended (partner)." % unm, "gray")
+	rebuild_grid()
+	if current_state == player_state and player_state != null:
+		var au: Node2D = player_state.active_unit
+		if au != null and au == unit:
+			player_state.clear_active_unit()
+
+
+func _coop_remote_sync_player_combat(body: Dictionary) -> void:
+	var aid: String = str(body.get("attacker_id", "")).strip_edges()
+	var did: String = str(body.get("defender_id", "")).strip_edges()
+	var att: Node2D = _coop_find_unit_by_relationship_id_any_side(aid)
+	var defu: Node2D = _coop_find_unit_by_relationship_id_any_side(did)
+	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
+		if OS.is_debug_build():
+			push_warning("Coop battle sync: combat resolve failed ids att=%s def=%s" % [aid, did])
+		return
+	var owner_att: String = get_mock_coop_unit_owner_for_unit(att)
+	var host_auth: bool = bool(body.get("host_authority", false))
+	var i_am_guest: bool = CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+	var partner_mirror: bool = (owner_att == MOCK_COOP_OWNER_REMOTE)
+	var guest_own_host_auth: bool = (host_auth and i_am_guest and owner_att == MOCK_COOP_OWNER_LOCAL)
+	if not partner_mirror and not guest_own_host_auth:
+		if OS.is_debug_build():
+			push_warning("Coop battle sync: refuse combat mirror — attacker ownership mismatch (aid=%s)" % aid)
+		return
+	var auth_v: int = int(body.get("auth_v", 0))
+	var auth_raw: Variant = body.get("auth_snapshot", {})
+	var has_auth: bool = auth_raw is Dictionary and auth_v == COOP_AUTH_BATTLE_SNAPSHOT_VER and (auth_raw as Dictionary).size() > 0
+	if guest_own_host_auth:
+		if not has_auth:
+			if OS.is_debug_build():
+				push_warning("Coop battle sync: host-authority guest combat requires auth_snapshot")
+			return
+		_coop_apply_authoritative_combat_snapshot(auth_raw as Dictionary)
+		coop_net_clear_remote_combat_qte_snapshot()
+		if battle_log != null and battle_log.visible:
+			add_combat_log("Co-op: your combat applied (host state).", "gray")
+		if not bool(body.get("has_post_combat_followup", true)):
+			_coop_emit_guest_host_combat_resolved_if_waiting(aid)
+		return
+	if has_auth:
+		var auth_d: Dictionary = auth_raw as Dictionary
+		_coop_apply_authoritative_combat_snapshot(auth_d)
+		coop_net_clear_remote_combat_qte_snapshot()
+		if battle_log != null and battle_log.visible:
+			add_combat_log("Co-op: partner combat applied (host state).", "gray")
+		if not bool(body.get("has_post_combat_followup", true)):
+			_coop_emit_guest_host_combat_resolved_if_waiting(aid)
+		return
+	coop_net_apply_remote_combat_qte_snapshot(body.get("qte_snapshot", {}))
+	var rp: int = int(body.get("rng_packed", -1))
+	if rp >= 0:
+		coop_enet_apply_remote_combat_packed_id(rp)
+	await execute_combat(att, defu, bool(body.get("used_ability", false)))
+	coop_net_clear_remote_combat_qte_snapshot()
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: partner combat resolved (%s)." % aid, "gray")
+
+
+func _coop_remote_sync_player_post_combat(body: Dictionary) -> void:
+	var aid: String = str(body.get("attacker_id", "")).strip_edges()
+	var att: Node2D = _coop_find_player_side_unit_by_relationship_id(aid)
+	if att == null or not is_instance_valid(att):
+		return
+	var owner_att: String = get_mock_coop_unit_owner_for_unit(att)
+	var host_auth: bool = bool(body.get("host_authority", false))
+	var i_am_guest: bool = CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+	var allow: bool = (owner_att == MOCK_COOP_OWNER_REMOTE) or (host_auth and i_am_guest and owner_att == MOCK_COOP_OWNER_LOCAL)
+	if not allow:
+		return
+	var follow: String = str(body.get("follow", "finish")).strip_edges()
+	if follow == "canto":
+		var rem: float = float(body.get("canto_budget", 0.0))
+		att.has_moved = true
+		att.in_canto_phase = true
+		att.canto_move_budget = rem
+		if battle_log != null and battle_log.visible:
+			var who: String = "co-op partner" if owner_att == MOCK_COOP_OWNER_REMOTE else "host"
+			add_combat_log(att.unit_name + " — Canto (" + who + ", " + str(snappedf(rem, 0.1)) + " move left).", "cyan")
+		calculate_ranges(att)
+	elif att.has_method("finish_turn"):
+		att.finish_turn()
+	rebuild_grid()
+	## Do not clear selection during canto — guest may still be commanding this unit after host-authority combat.
+	if follow != "canto" and current_state == player_state and player_state != null and player_state.active_unit == att:
+		player_state.clear_active_unit()
+	if host_auth and i_am_guest:
+		_coop_emit_guest_host_combat_resolved_if_waiting(aid)
+
+
+func _coop_remote_sync_player_finish_turn(body: Dictionary) -> void:
+	var uid: String = str(body.get("unit_id", "")).strip_edges()
+	var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
+	if unit == null or not is_instance_valid(unit):
+		return
+	if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
+		return
+	if unit.has_method("finish_turn"):
+		unit.finish_turn()
+	if battle_log != null and battle_log.visible:
+		var unm: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else uid
+		add_combat_log("Co-op: %s waited / ended turn (partner)." % unm, "gray")
+	rebuild_grid()
+	if current_state == player_state and player_state != null:
+		var au: Node2D = player_state.active_unit
+		if au != null and au == unit:
+			player_state.clear_active_unit()
+
+
 ## Drops selection if active_unit somehow points at a partner-owned unit (mock co-op only). Skips while forecasting to avoid tearing an in-flight forecast await.
 func _sanitize_player_phase_active_unit_for_mock_coop_ownership() -> void:
 	if current_state != player_state or player_state == null:
@@ -1013,6 +1861,9 @@ func _ready() -> void:
 		print("[MockCoopHandoff] battle start keys=%s" % str(_consumed_mock_coop_battle_handoff.keys()))
 		_present_mock_coop_joint_expedition_charter()
 		_assign_mock_coop_unit_ownership_from_context()
+		if is_mock_coop_unit_ownership_active() and CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE:
+			CoopExpeditionSessionManager.register_enet_coop_battle_sync_battlefield(self)
+			CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed()
 	
 	# --- INITIALIZE FOG OF WAR ---
 	if use_fog_of_war:
@@ -1041,8 +1892,9 @@ func _ready() -> void:
 		fow_texture = ImageTexture.create_from_image(fow_image)
 
 	# 8. --- SKIRMISH LOGIC ---
-	# Checks if we are grinding (Undead) or playing Story
-	if CampaignManager.is_skirmish_mode:
+	# is_skirmish_mode is also set for expedition runs (world-map return routing). Those use story scenes
+	# with pre-placed enemies — do NOT run random undead spawn (requires enemy_scene in inspector).
+	if CampaignManager.is_skirmish_mode and not CampaignManager.is_expedition_run:
 		setup_skirmish_battle()
 		_reset_rookie_battle_tracking()
 
@@ -3168,6 +4020,8 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 		push_warning("execute_combat aborted: attacker has no equipped weapon.")
 		return
 
+	_coop_qte_tick_reset_for_execute_combat()
+
 	var is_staff: bool = wpn != null and (
 		wpn.get("is_healing_staff") == true
 		or wpn.get("is_buff_staff") == true
@@ -3503,7 +4357,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				
 				var heal_trigger_chance: int = get_ability_trigger_chance(attacker)
 				if _attacker_has_attack_skill(attacker, "Healing Light") and randi() % 100 < heal_trigger_chance:
-					var result: int = await QTEManager.run_healing_light_minigame(self, attacker)
+					var _cqe := _coop_qte_alloc_event_id()
+					var result: int
+					if _coop_qte_mirror_active:
+						result = _coop_qte_mirror_read_int(_cqe, 0)
+					else:
+						result = await QTEManager.run_healing_light_minigame(self, attacker)
+						_coop_qte_capture_write(_cqe, result)
 					if result == 1:
 						ability_triggers_count += 1
 						heal_amount = int(round(float(heal_amount) * 1.5))
@@ -3600,8 +4460,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 		
 		if attacker.get_parent() == player_container and defender.get_parent() == enemy_container:
 			# FOCUSED STRIKE
-			if _attacker_has_attack_skill(attacker, "Focused Strike") and randi() % 100 < atk_trigger_chance: 
-				var focus_result: int = await _run_focused_strike_minigame(attacker)
+			if _attacker_has_attack_skill(attacker, "Focused Strike") and randi() % 100 < atk_trigger_chance:
+				var _cqe := _coop_qte_alloc_event_id()
+				var focus_result: int
+				if _coop_qte_mirror_active:
+					focus_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					focus_result = await _run_focused_strike_minigame(attacker)
+					_coop_qte_capture_write(_cqe, focus_result)
 				if focus_result > 0:
 					ability_triggers_count += 1
 					defense_stat = 0 # Completely ignore enemy armor
@@ -3617,8 +4483,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					focused_failed = true
 					
 			# BLOODTHIRSTER
-			elif _attacker_has_attack_skill(attacker, "Bloodthirster") and randi() % 100 < atk_trigger_chance: 
-				var hits_landed: int = await _run_bloodthirster_minigame(attacker)
+			elif _attacker_has_attack_skill(attacker, "Bloodthirster") and randi() % 100 < atk_trigger_chance:
+				var _cqe := _coop_qte_alloc_event_id()
+				var hits_landed: int
+				if _coop_qte_mirror_active:
+					hits_landed = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					hits_landed = await _run_bloodthirster_minigame(attacker)
+					_coop_qte_capture_write(_cqe, hits_landed)
 				if hits_landed > 0:
 					ability_triggers_count += 1
 					lifesteal_percent = float(hits_landed) * 0.25 
@@ -3630,7 +4502,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# HUNDRED POINT STRIKE
 			elif _attacker_has_attack_skill(attacker, "Hundred Point Strike") and randi() % 100 < atk_trigger_chance:
-				combo_hits = await _run_hundred_point_strike_minigame(attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					combo_hits = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					combo_hits = await _run_hundred_point_strike_minigame(attacker)
+					_coop_qte_capture_write(_cqe, combo_hits)
 				if combo_hits > 0:
 					ability_triggers_count += 1
 					force_hit = true 
@@ -3641,7 +4518,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# --- ARCHER: DEADEYE SHOT ---
 			elif _attacker_has_attack_skill(attacker, "Deadeye Shot") and randi() % 100 < atk_trigger_chance:
-				var deadeye_result: int = await QTEManager.run_deadeye_shot_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var deadeye_result: int
+				if _coop_qte_mirror_active:
+					deadeye_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					deadeye_result = await QTEManager.run_deadeye_shot_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, deadeye_result)
 				if deadeye_result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3659,7 +4542,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 			
 			# --- ARCHER: VOLLEY (perfect: second follow-up veers to a foe adjacent to the target) ---
 			elif _attacker_has_attack_skill(attacker, "Volley") and randi() % 100 < atk_trigger_chance:
-				var volley_result: int = await QTEManager.run_volley_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var volley_result: int
+				if _coop_qte_mirror_active:
+					volley_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					volley_result = await QTEManager.run_volley_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, volley_result)
 				volley_spread_target = null
 				if volley_result > 0:
 					ability_triggers_count += 1
@@ -3682,7 +4571,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 			
 			# --- ARCHER: RAIN OF ARROWS ---
 			elif _attacker_has_attack_skill(attacker, "Rain of Arrows") and randi() % 100 < atk_trigger_chance:
-				var rain_result: int = await QTEManager.run_rain_of_arrows_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var rain_result: int
+				if _coop_qte_mirror_active:
+					rain_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					rain_result = await QTEManager.run_rain_of_arrows_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, rain_result)
 				if rain_result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3726,7 +4621,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- KNIGHT: CHARGE (pin vs rear foe — extra crush when someone stands behind the target) ---
 			elif _attacker_has_attack_skill(attacker, "Charge") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_charge_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_charge_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result == 2:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3755,7 +4656,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MAGE: FIREBALL ---
 			elif _attacker_has_attack_skill(attacker, "Fireball") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_fireball_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_fireball_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3797,7 +4704,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MAGE: METEOR STORM ---
 			elif _attacker_has_attack_skill(attacker, "Meteor Storm") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_meteor_storm_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_meteor_storm_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3840,7 +4753,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MERCENARY: FLURRY STRIKE ---
 			elif _attacker_has_attack_skill(attacker, "Flurry Strike") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_flurry_strike_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_flurry_strike_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3860,7 +4779,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MERCENARY: BATTLE CRY ---
 			elif _attacker_has_attack_skill(attacker, "Battle Cry") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_battle_cry_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_battle_cry_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					var ally_count: int = 0
@@ -3899,7 +4824,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MERCENARY: BLADE TEMPEST ---
 			elif _attacker_has_attack_skill(attacker, "Blade Tempest") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_blade_tempest_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_blade_tempest_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3927,7 +4858,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MONK: CHAKRA ---
 			elif _attacker_has_attack_skill(attacker, "Chakra") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_chakra_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_chakra_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					var heal_amount: int = 0
@@ -3953,7 +4890,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MONK: CHI BURST ---
 			elif _attacker_has_attack_skill(attacker, "Chi Burst") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_chi_burst_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_chi_burst_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -3980,7 +4923,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MONSTER: ROAR ---
 			elif _attacker_has_attack_skill(attacker, "Roar") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_roar_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_roar_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					var attacker_is_friendly: bool = (attacker.get_parent() == player_container or attacker.get_parent() == ally_container)
@@ -4027,7 +4976,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MONSTER: FRENZY ---
 			elif _attacker_has_attack_skill(attacker, "Frenzy") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_frenzy_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_frenzy_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					_frenzy_hit_count = result
@@ -4052,7 +5007,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MONSTER: RENDING CLAW ---
 			elif _attacker_has_attack_skill(attacker, "Rending Claw") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_rending_claw_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_rending_claw_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4068,7 +5029,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# --- PALADIN: SMITE ---
 			elif _attacker_has_attack_skill(attacker, "Smite") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_smite_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_smite_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				smite_splash_targets.clear()
 				smite_splash_damage = 0
 				if result > 0:
@@ -4098,7 +5065,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# --- PALADIN: SACRED JUDGMENT ---
 			elif _attacker_has_attack_skill(attacker, "Sacred Judgment") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_sacred_judgment_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_sacred_judgment_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4126,7 +5099,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- SPELLBLADE: FLAME BLADE ---
 			elif _attacker_has_attack_skill(attacker, "Flame Blade") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_flame_blade_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_flame_blade_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4144,7 +5123,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- SPELLBLADE: ELEMENTAL CONVERGENCE ---
 			elif _attacker_has_attack_skill(attacker, "Elemental Convergence") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_elemental_convergence_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_elemental_convergence_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4173,7 +5158,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# --- THIEF: SHADOW STRIKE ---
 			elif _attacker_has_attack_skill(attacker, "Shadow Strike") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_shadow_strike_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_shadow_strike_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4190,7 +5181,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# --- THIEF: ASSASSINATE ---
 			elif _attacker_has_attack_skill(attacker, "Assassinate") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_assassinate_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_assassinate_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4205,7 +5202,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 			# --- THIEF: ULTIMATE SHADOW STEP ---
 			elif _attacker_has_attack_skill(attacker, "Ultimate Shadow Step") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_ultimate_shadow_step_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_ultimate_shadow_step_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4221,7 +5224,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- WARRIOR: POWER STRIKE ---
 			elif _attacker_has_attack_skill(attacker, "Power Strike") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_power_strike_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_power_strike_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4237,7 +5246,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- WARRIOR: ADRENALINE RUSH ---
 			elif _attacker_has_attack_skill(attacker, "Adrenaline Rush") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_adrenaline_rush_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_adrenaline_rush_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					var buff_amt: int = 0
@@ -4256,7 +5271,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- WARRIOR: EARTHSHATTER ---
 			elif _attacker_has_attack_skill(attacker, "Earthshatter") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_earthshatter_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_earthshatter_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4284,7 +5305,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 			
 			# --- PROMOTED ASSASSIN: SHADOW PIN ---
 			elif _attacker_has_attack_skill(attacker, "Shadow Pin") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_shadow_pin_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_shadow_pin_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4302,7 +5329,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED BERSERKER: SAVAGE TOSS ---
 			elif _attacker_has_attack_skill(attacker, "Savage Toss") and randi() % 100 < atk_trigger_chance:
-				savage_toss_distance = await QTEManager.run_savage_toss_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					savage_toss_distance = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					savage_toss_distance = await QTEManager.run_savage_toss_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, savage_toss_distance)
 				if savage_toss_distance > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4318,7 +5350,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED HERO: VANGUARD'S RALLY ---
 			elif _attacker_has_attack_skill(attacker, "Vanguard's Rally") and randi() % 100 < atk_trigger_chance:
-				var combos: int = await QTEManager.run_vanguards_rally_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var combos: int
+				if _coop_qte_mirror_active:
+					combos = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					combos = await QTEManager.run_vanguards_rally_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, combos)
 				if combos > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4335,7 +5373,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED BLADE MASTER: SEVERING STRIKE ---
 			elif _attacker_has_attack_skill(attacker, "Severing Strike") and randi() % 100 < atk_trigger_chance:
-				severing_strike_hits = await QTEManager.run_severing_strike_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					severing_strike_hits = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					severing_strike_hits = await QTEManager.run_severing_strike_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, severing_strike_hits)
 				if severing_strike_hits > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4352,7 +5395,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED BLADE WEAVER: AETHER BIND ---
 			elif _attacker_has_attack_skill(attacker, "Aether Bind") and randi() % 100 < atk_trigger_chance:
-				aether_bind_sparks = await QTEManager.run_aether_bind_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					aether_bind_sparks = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					aether_bind_sparks = await QTEManager.run_aether_bind_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, aether_bind_sparks)
 				if aether_bind_sparks > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4372,7 +5420,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED BOW KNIGHT: PARTING SHOT ---
 			elif _attacker_has_attack_skill(attacker, "Parting Shot") and randi() % 100 < atk_trigger_chance:
-				parting_shot_result = await QTEManager.run_parting_shot_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					parting_shot_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					parting_shot_result = await QTEManager.run_parting_shot_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, parting_shot_result)
 				if parting_shot_result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4390,7 +5443,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED DEATH KNIGHT: SOUL HARVEST ---
 			elif _attacker_has_attack_skill(attacker, "Soul Harvest") and randi() % 100 < atk_trigger_chance:
-				soul_harvest_result = await QTEManager.run_soul_harvest_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					soul_harvest_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					soul_harvest_result = await QTEManager.run_soul_harvest_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, soul_harvest_result)
 				if soul_harvest_result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4414,7 +5472,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED FIRE SAGE: HELLFIRE ---
 			elif _attacker_has_attack_skill(attacker, "Hellfire") and randi() % 100 < atk_trigger_chance:
-				hellfire_result = await QTEManager.run_hellfire_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					hellfire_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					hellfire_result = await QTEManager.run_hellfire_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, hellfire_result)
 				if hellfire_result == 2:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4426,7 +5489,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- CANNONEER / SIEGE: BALLISTA SHOT (overpenetration — foe behind primary target in line) ---
 			elif _attacker_has_attack_skill(attacker, "Ballista Shot") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_ballista_shot_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_ballista_shot_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4454,7 +5523,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED HIGH PALADIN: AEGIS STRIKE ---
 			elif _attacker_has_attack_skill(attacker, "Aegis Strike") and randi() % 100 < atk_trigger_chance:
-				var result: int = await QTEManager.run_aegis_strike_minigame(self, attacker)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_aegis_strike_minigame(self, attacker)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					force_hit = true
@@ -4615,7 +5690,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED GENERAL: WEAPON SHATTER ---
 			if defender.get("ability") == "Weapon Shatter" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_weapon_shatter_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_weapon_shatter_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result == 2:
 					ability_triggers_count += 1
 					_weapon_shatter_triggered = true
@@ -4631,7 +5712,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED DIVINE SAGE: CELESTIAL CHOIR (Map-Wide Heal) ---
 			elif defender.get("ability") == "Celestial Choir" and randi() % 100 < def_trigger_chance:
-				celestial_choir_hits = await QTEManager.run_celestial_choir_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				if _coop_qte_mirror_active:
+					celestial_choir_hits = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					celestial_choir_hits = await QTEManager.run_celestial_choir_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, celestial_choir_hits)
 				if celestial_choir_hits > 0:
 					ability_triggers_count += 1
 					
@@ -4653,7 +5739,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PROMOTED GREAT KNIGHT: PHALANX (Map-Wide Defense) ---
 			elif defender.get("ability") == "Phalanx" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_phalanx_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_phalanx_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result == 2:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4674,7 +5766,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 			
 			# --- CLERIC: DIVINE PROTECTION ---
 			if defender.get("ability") == "Divine Protection" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_divine_protection_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_divine_protection_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result == 2:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4697,7 +5795,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MAGE: ARCANE SHIFT ---
 			elif defender.get("ability") == "Arcane Shift" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_arcane_shift_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_arcane_shift_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4718,7 +5822,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- KNIGHT: SHIELD BASH ---
 			elif defender.get("ability") == "Shield Bash" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_shield_bash_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_shield_bash_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4752,7 +5862,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- KNIGHT: UNBREAKABLE BASTION ---
 			elif defender.get("ability") == "Unbreakable Bastion" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_unbreakable_bastion_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_unbreakable_bastion_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result == 2:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4768,7 +5884,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- MONK: INNER PEACE ---
 			elif defender.get("ability") == "Inner Peace" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_inner_peace_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_inner_peace_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4805,7 +5927,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- PALADIN: HOLY WARD ---
 			elif defender.get("ability") == "Holy Ward" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_holy_ward_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_holy_ward_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					var is_magic_atk: bool = (wpn != null and wpn.get("damage_type") != null and wpn.damage_type == WeaponData.DamageType.MAGIC)
@@ -4825,7 +5953,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 
 			# --- SPELLBLADE: BLINK STEP ---
 			elif defender.get("ability") == "Blink Step" and randi() % 100 < def_trigger_chance:
-				var result: int = await QTEManager.run_blink_step_minigame(self, defender)
+				var _cqe := _coop_qte_alloc_event_id()
+				var result: int
+				if _coop_qte_mirror_active:
+					result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					result = await QTEManager.run_blink_step_minigame(self, defender)
+					_coop_qte_capture_write(_cqe, result)
 				if result > 0:
 					ability_triggers_count += 1
 					
@@ -4841,8 +5975,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Blink Step was too slow. Struck fully.", "gray")
 
 			# --- OLD SHIELD CLASH ---
-			elif defender.get("ability") == "Shield Clash" and randi() % 100 < def_trigger_chance: 
-				var clash_result = await _run_shield_clash_minigame(defender, attacker)
+			elif defender.get("ability") == "Shield Clash" and randi() % 100 < def_trigger_chance:
+				var _cqe := _coop_qte_alloc_event_id()
+				var clash_result: int
+				if _coop_qte_mirror_active:
+					clash_result = _coop_qte_mirror_read_int(_cqe, 0)
+				else:
+					clash_result = await _run_shield_clash_minigame(defender, attacker)
+					_coop_qte_capture_write(_cqe, clash_result)
 				
 				if clash_result > 0:
 					ability_triggers_count += 1
@@ -4869,8 +6009,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					add_combat_log("Shield Clash Failed! Guard broken!", "red")			
 			
 			# --- UNIVERSAL PARRY ---
-			elif randi() % 100 < parry_chance: 
-				var won_parry = await _run_parry_minigame(defender)
+			elif randi() % 100 < parry_chance:
+				var _cqe := _coop_qte_alloc_event_id()
+				var won_parry: bool
+				if _coop_qte_mirror_active:
+					won_parry = _coop_qte_mirror_read_bool(_cqe, false)
+				else:
+					won_parry = await _run_parry_minigame(defender)
+					_coop_qte_capture_write(_cqe, won_parry)
 				if won_parry:
 					ability_triggers_count += 1
 					defense_resolved_and_won = true
@@ -4945,7 +6091,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 					# --- CLERIC: MIRACLE ---
 					if is_lethal and defender.get("ability") == "Miracle" and (defender.get_parent() == player_container or defender.get_parent() == ally_container):
-						var result: int = await QTEManager.run_miracle_minigame(self, defender)
+						var _cqe := _coop_qte_alloc_event_id()
+						var result: int
+						if _coop_qte_mirror_active:
+							result = _coop_qte_mirror_read_int(_cqe, 0)
+						else:
+							result = await QTEManager.run_miracle_minigame(self, defender)
+							_coop_qte_capture_write(_cqe, result)
 						if result > 0:
 							death_defied = true
 							ability_triggers_count += 1
@@ -4964,7 +6116,12 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					
 					# --- THE LAST STAND (Lethal Blow Protection) ---
 					if not death_defied and is_lethal and defender.get("is_custom_avatar") == true:
-						death_defied = await _run_last_stand_minigame(defender)
+						var _cqe_ls := _coop_qte_alloc_event_id()
+						if _coop_qte_mirror_active:
+							death_defied = _coop_qte_mirror_read_bool(_cqe_ls, false)
+						else:
+							death_defied = await _run_last_stand_minigame(defender)
+							_coop_qte_capture_write(_cqe_ls, death_defied)
 						if death_defied:
 							final_dmg = 0
 							is_crit = false
@@ -5387,7 +6544,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 			var abil: String = _resolve_tactical_ability_name(attacker)
 
 			if abil == "Fire Trap":
-				var is_perfect_ft: bool = await _run_tactical_action_minigame(attacker, abil)
+				var _cqe_ft := _coop_qte_alloc_event_id()
+				var is_perfect_ft: bool
+				if _coop_qte_mirror_active:
+					is_perfect_ft = _coop_qte_mirror_read_bool(_cqe_ft, false)
+				else:
+					is_perfect_ft = await _run_tactical_action_minigame(attacker, abil)
+					_coop_qte_capture_write(_cqe_ft, is_perfect_ft)
 				var trap_cell: Vector2i = get_grid_pos(defender)
 				var mag: int = int(attacker.get("magic")) if attacker.get("magic") != null else 0
 				var ft_dmg: int = default_fire_tile_damage + mag / 3
@@ -5399,7 +6562,13 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				add_combat_log(attacker.unit_name + " sears the ground under " + defender.unit_name + "!", "orange")
 				spawn_loot_text("FIRE TRAP!", Color(1.0, 0.35, 0.12), defender.global_position + Vector2(32, -32))
 			elif abil == "Shove" or abil == "Grapple Hook":
-				var is_perfect: bool = await _run_tactical_action_minigame(attacker, abil)
+				var _cqe_tac := _coop_qte_alloc_event_id()
+				var is_perfect: bool
+				if _coop_qte_mirror_active:
+					is_perfect = _coop_qte_mirror_read_bool(_cqe_tac, false)
+				else:
+					is_perfect = await _run_tactical_action_minigame(attacker, abil)
+					_coop_qte_capture_write(_cqe_tac, is_perfect)
 				var max_distance: int = 2 if is_perfect else 1
 
 				var a_pos: Vector2i = get_grid_pos(attacker)

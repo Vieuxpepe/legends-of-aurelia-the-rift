@@ -298,22 +298,31 @@ func _path_steps_limited(battlefield: Node2D, start: Vector2i, goal: Vector2i, m
 # Acting based on plan type
 # -------------------------
 
+func _ai_execute_combat(bf: Node2D, attacker: Node2D, defender: Node2D, used_ability: bool = false) -> void:
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_ai_execute_combat"):
+		await bf.coop_enet_ai_execute_combat(attacker, defender, used_ability)
+	else:
+		await bf.execute_combat(attacker, defender, used_ability)
+
+
 func _execute_plan_action(unit: Node2D, battlefield: Node2D, target: Node2D, target_type: String) -> void:
 	match target_type:
 		TYPE_HOSTILE:
 			unit.look_at_pos(battlefield.get_grid_pos(target))
-			await battlefield.execute_combat(unit, target)
+			await _ai_execute_combat(battlefield, unit, target, false)
 			_focus_target = target
 		TYPE_CRATE:
 			unit.look_at_pos(battlefield.get_grid_pos(target))
-			await battlefield.execute_combat(unit, target)
+			await _ai_execute_combat(battlefield, unit, target, false)
 		TYPE_ALLY_HEAL:
 			if int(target.current_hp) < int(target.max_hp):
 				unit.look_at_pos(battlefield.get_grid_pos(target))
-				await battlefield.execute_combat(unit, target)
+				await _ai_execute_combat(battlefield, unit, target, false)
 		TYPE_ALLY_BUFF:
 			unit.look_at_pos(battlefield.get_grid_pos(target))
-			await battlefield.execute_combat(unit, target)
+			await _ai_execute_combat(battlefield, unit, target, false)
 		TYPE_ALLY_FOLLOW:
 			# no action
 			pass

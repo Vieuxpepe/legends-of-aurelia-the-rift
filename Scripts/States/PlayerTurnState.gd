@@ -128,6 +128,8 @@ func handle_input(event: InputEvent) -> void:
 		battlefield.clear_ranges()
 		await active_unit.move_along_path(path)
 		if in_canto_move:
+			if battlefield.has_method("coop_enet_sync_after_local_player_move"):
+				battlefield.coop_enet_sync_after_local_player_move(active_unit, path, path_cost, true)
 			active_unit.in_canto_phase = false
 			active_unit.canto_move_budget = 0
 			active_unit.finish_turn()
@@ -137,6 +139,8 @@ func handle_input(event: InputEvent) -> void:
 		battlefield.update_fog_of_war()
 		battlefield.rebuild_grid()
 		battlefield.calculate_ranges(active_unit)
+		if battlefield.has_method("coop_enet_sync_after_local_player_move"):
+			battlefield.coop_enet_sync_after_local_player_move(active_unit, path, path_cost, false)
 	else:
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 		if battlefield.battle_log and battlefield.battle_log.visible:
@@ -179,6 +183,8 @@ func _handle_defend_click() -> void:
 		battlefield.defend_sound.play()
 	active_unit.trigger_defend()
 	battlefield.animate_shield_drop(active_unit)
+	if battlefield.has_method("coop_enet_sync_after_local_defend"):
+		battlefield.coop_enet_sync_after_local_defend(active_unit)
 	clear_active_unit()
 
 
@@ -260,13 +266,56 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 	if action != "confirm":
 		return true
 
+	var coop_aid: String = battlefield.get_relationship_id(active_unit).strip_edges()
+	var coop_did: String = battlefield.get_relationship_id(target_node).strip_edges()
+	var delegate_host: bool = false
+	if battlefield.has_method("coop_enet_should_delegate_player_combat_to_host"):
+		delegate_host = battlefield.coop_enet_should_delegate_player_combat_to_host()
+	if delegate_host and battlefield.has_method("coop_enet_guest_delegate_player_combat_to_host"):
+		await battlefield.coop_enet_guest_delegate_player_combat_to_host(coop_aid, coop_did, used_ability)
+		if is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:
+			while is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:
+				await battlefield.get_tree().process_frame
+		var au: Node2D = null
+		if battlefield.has_method("coop_enet_get_player_side_unit_by_rel_id"):
+			au = battlefield.coop_enet_get_player_side_unit_by_rel_id(coop_aid)
+		if au == null or not is_instance_valid(au) or int(au.current_hp) <= 0:
+			clear_active_unit()
+			return true
+		if au.in_canto_phase:
+			active_unit = au
+			au.set_selected_glow(true)
+			au.set_selected(true)
+			battlefield.rebuild_grid()
+			battlefield.calculate_ranges(au)
+			return true
+		clear_active_unit()
+		return true
+
+	var coop_packed: int = -1
+	var coop_pre_alive: Dictionary = {}
+	if battlefield.has_method("coop_enet_begin_synchronized_combat_round"):
+		coop_packed = battlefield.coop_enet_begin_synchronized_combat_round()
+	if coop_packed >= 0 and battlefield.has_method("coop_net_snapshot_alive_unit_ids"):
+		coop_pre_alive = battlefield.coop_net_snapshot_alive_unit_ids()
+	if coop_packed >= 0 and battlefield.has_method("coop_net_begin_local_combat_qte_capture"):
+		battlefield.coop_net_begin_local_combat_qte_capture()
 	await battlefield.execute_combat(active_unit, target_node, used_ability)
+	var coop_qte_snap: Dictionary = {}
+	if battlefield.has_method("coop_net_end_local_combat_qte_capture"):
+		coop_qte_snap = battlefield.coop_net_end_local_combat_qte_capture()
 
 	if is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:
 		while is_instance_valid(battlefield) and battlefield.get_tree().paused:
 			await battlefield.get_tree().process_frame
 
+	var coop_auth_snap: Dictionary = {}
+	if coop_packed >= 0 and battlefield.has_method("coop_net_build_authoritative_combat_snapshot"):
+		coop_auth_snap = battlefield.coop_net_build_authoritative_combat_snapshot(coop_pre_alive)
+
 	if not is_instance_valid(active_unit) or active_unit.current_hp <= 0:
+		if battlefield.has_method("coop_enet_sync_local_combat_done"):
+			battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, null, false, 0.0, coop_packed, coop_qte_snap, coop_auth_snap)
 		clear_active_unit()
 		return true
 
@@ -280,8 +329,12 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 			battlefield.add_combat_log(active_unit.unit_name + " — Canto (" + str(snappedf(rem, 0.1)) + " move left).", "cyan")
 		battlefield.rebuild_grid()
 		battlefield.calculate_ranges(active_unit)
+		if battlefield.has_method("coop_enet_sync_local_combat_done"):
+			battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, active_unit, true, rem, coop_packed, coop_qte_snap, coop_auth_snap)
 		return true
 
+	if battlefield.has_method("coop_enet_sync_local_combat_done"):
+		battlefield.coop_enet_sync_local_combat_done(coop_aid, coop_did, used_ability, active_unit, false, 0.0, coop_packed, coop_qte_snap, coop_auth_snap)
 	active_unit.finish_turn()
 	clear_active_unit()
 	return true
