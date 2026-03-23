@@ -15,7 +15,7 @@ extends Node2D
 #     active_base_level_index, base_under_attack, base_resource_storage,
 #     base_last_harvest_report, base_yield_table, establish_new_base(),
 #     abandon_base(), collect_base_resources(), save_current_progress(),
-#     _process_base_economy(), enter_level_from_map()
+#     _process_base_economy(), enter_level_from_map(), launch_expedition_from_map()
 # - EncounterDatabase.map_encounters
 # - SceneTransition singleton
 # - LevelNode buttons under $MapNodes
@@ -26,6 +26,7 @@ extends Node2D
 # PREFLOADS (avoids on-demand load in hot path)
 # ==============================================================================
 const MapEncounterUIScene: PackedScene = preload("res://Scenes/MapEncounterUI.tscn")
+const ExpeditionCharterStagingUIScene: PackedScene = preload("res://Scenes/UI/ExpeditionCharterStagingUI.tscn")
 #
 # ==============================================================================
 # NOTES
@@ -85,7 +86,8 @@ var base_marker_visual: Panel = null
 	$MapNodes/LevelNode0,
 	$MapNodes/LevelNode1,
 	$MapNodes/LevelNode2,
-	$MapNodes/LevelNode3
+	$MapNodes/LevelNode3,
+	$MapNodes/ExpeditionNodeShatteredSanctum
 ]
 
 var target_node_index: int = 0
@@ -100,6 +102,15 @@ var _player_arrival_tween: Tween
 var _music_fade_tween: Tween
 var _announcement_tween: Tween
 var _logged_expedition_unlocks: Dictionary = {}
+
+## Solo vs co-op charter prompt when tapping a co-op-enabled expedition node.
+var _expedition_mode_chooser_layer: CanvasLayer = null
+
+## Debug-only co-op staging tester (Ctrl+Shift+P on world map). See _toggle_coop_staging_debug_panel.
+var _coop_staging_debug_layer: CanvasLayer = null
+var _coop_staging_debug_status_label: Label = null
+var _coop_staging_debug_last_finalize: Dictionary = {}
+var _coop_staging_debug_last_handoff: Dictionary = {}
 
 # --- BASE FEEDBACK RUNTIME STATE ---
 var fanfare_player: AudioStreamPlayer = null
@@ -341,11 +352,18 @@ func _refresh_node_visuals() -> void:
 		if node == null:
 			continue
 
-		var progression_locked := i > CampaignManager.max_unlocked_index
+		var required_map_id: String = _get_required_expedition_map_id(i)
+		var has_expedition_requirement: bool = required_map_id != ""
+		var progression_locked: bool = (not has_expedition_requirement) and i > CampaignManager.max_unlocked_index
 		var expedition_locked := _is_expedition_locked_for_index(i)
 		var is_locked := progression_locked or expedition_locked
 		var is_current := i == CampaignManager.current_level_index
 		var is_completed := i < CampaignManager.max_unlocked_index
+
+		if has_expedition_requirement:
+			node.visible = not expedition_locked
+		else:
+			node.visible = true
 
 		if node is BaseButton:
 			node.disabled = is_locked
@@ -360,6 +378,9 @@ func _refresh_node_visuals() -> void:
 			node.modulate = Color(0.92, 0.90, 0.84, 0.95)
 		else:
 			node.modulate = Color(0.95, 0.95, 0.95, 1.0)
+
+		if has_expedition_requirement and not expedition_locked and CampaignManager.has_completed_expedition(required_map_id):
+			node.modulate *= Color(0.94, 1.02, 0.96, 1.0)
 
 		_log_expedition_unlock_once(i)
 		node.scale = _get_base_scale(node)
@@ -466,6 +487,16 @@ func _on_node_mouse_entered(index: int) -> void:
 		return
 
 	_tween_scale(node, _get_base_scale(node) * node_hover_scale, 0.10)
+	var exp_map_id: String = _get_required_expedition_map_id(index)
+	if exp_map_id != "":
+		var exp_entry: Dictionary = ExpeditionMapDatabase.get_map_by_id(exp_map_id)
+		if not exp_entry.is_empty():
+			var hover_msg: String = ExpeditionMapDatabase.build_world_map_hover_announcement(exp_entry)
+			hover_msg += ExpeditionMapDatabase.append_completion_hover_suffix(exp_entry, CampaignManager.has_completed_expedition(exp_map_id))
+			hover_msg += ExpeditionMapDatabase.append_outcome_annotation_hover_suffix(CampaignManager.get_expedition_outcome_note(exp_map_id))
+			hover_msg += ExpeditionMapDatabase.append_expedition_modifier_hover_suffix(exp_entry)
+			_show_announcement_debounced(hover_msg, false)
+			return
 	_show_announcement_debounced("Destination: " + _get_node_display_name(index), false)
 
 
@@ -522,6 +553,17 @@ func _on_node_pressed(index: int) -> void:
 		return
 	if _is_expedition_locked_for_index(index):
 		_show_announcement(_get_expedition_lock_message(index), true)
+		return
+	if _get_required_expedition_map_id(index) != "":
+		if not _validate_expedition_launch_ready(index):
+			return
+		_close_node_context_menu()
+		var exp_map_id: String = _get_required_expedition_map_id(index)
+		var exp_entry: Dictionary = ExpeditionMapDatabase.get_map_by_id(exp_map_id)
+		if bool(exp_entry.get("coop_enabled", false)):
+			_show_expedition_solo_or_charter_choice(exp_map_id)
+		else:
+			_launch_expedition_solo_from_world_map(exp_map_id)
 		return
 	if index > CampaignManager.max_unlocked_index:
 		return
@@ -699,6 +741,11 @@ func _get_node_display_name_impl(index: int) -> String:
 	if node == null:
 		return "Unknown"
 
+	if node.has_meta("expedition_short_title"):
+		var exp_title: String = str(node.get_meta("expedition_short_title")).strip_edges()
+		if exp_title != "":
+			return exp_title
+
 	if node is Button:
 		var txt := String(node.text).strip_edges()
 		if txt != "":
@@ -725,6 +772,16 @@ func _apply_expedition_node_requirements() -> void:
 			continue
 
 		map_node.set_meta("required_expedition_map_id", map_id)
+		var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(map_id)
+		if not map_data.is_empty():
+			var tip: String = ExpeditionMapDatabase.build_world_map_tooltip_text(map_data)
+			tip += ExpeditionMapDatabase.append_completion_tooltip_line(map_data, CampaignManager.has_completed_expedition(map_id))
+			tip += ExpeditionMapDatabase.append_outcome_annotation_tooltip_line(CampaignManager.get_expedition_outcome_note(map_id))
+			if tip != "" and map_node is Control:
+				(map_node as Control).tooltip_text = tip
+			var short_title: String = ExpeditionMapDatabase.build_world_map_short_title(map_data)
+			if short_title != "":
+				map_node.set_meta("expedition_short_title", short_title)
 
 func _get_required_expedition_map_id(index: int) -> String:
 	if index < 0 or index >= level_nodes.size():
@@ -754,6 +811,124 @@ func _get_expedition_lock_message(index: int) -> String:
 		return "That route requires an expedition map."
 
 	return "Locked: Requires %s from the Grand Tavern Cartographer." % str(map_data.get("display_name", required_map_id))
+
+func _validate_expedition_launch_ready(node_index: int) -> bool:
+	var map_id: String = _get_required_expedition_map_id(node_index)
+	if map_id == "":
+		_show_announcement("Expedition: missing map binding on this node.", true)
+		return false
+	var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(map_id)
+	if map_data.is_empty():
+		_show_announcement("Expedition: unknown map id " + map_id + ".", true)
+		return false
+	var battle_path: String = str(map_data.get("battle_scene_path", "")).strip_edges()
+	if battle_path == "":
+		_show_announcement("Expedition: no battle scene configured for this map.", true)
+		return false
+	if not ResourceLoader.exists(battle_path):
+		_show_announcement("Expedition: scene missing: " + battle_path, true)
+		return false
+	var launch_index: int = CampaignManager.campaign_levels.find(battle_path)
+	if launch_index < 0:
+		_show_announcement("Expedition: scene not registered in campaign_levels: " + battle_path, true)
+		return false
+	return true
+
+
+func _close_expedition_mode_chooser() -> void:
+	if _expedition_mode_chooser_layer != null and is_instance_valid(_expedition_mode_chooser_layer):
+		_expedition_mode_chooser_layer.queue_free()
+	_expedition_mode_chooser_layer = null
+
+
+func _show_expedition_solo_or_charter_choice(exp_map_id: String) -> void:
+	_close_expedition_mode_chooser()
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	_expedition_mode_chooser_layer = layer
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0, 0, 0, 0.62)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(440, 200)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_bottom", 14)
+	panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	margin.add_child(vbox)
+
+	var prompt := Label.new()
+	prompt.text = "This contract supports co-op staging. How do you want to begin?"
+	prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(prompt)
+
+	var solo_btn := Button.new()
+	solo_btn.text = "Solo expedition"
+	solo_btn.pressed.connect(func():
+		_close_expedition_mode_chooser()
+		_launch_expedition_solo_from_world_map(exp_map_id)
+	)
+	vbox.add_child(solo_btn)
+
+	var charter_btn := Button.new()
+	charter_btn.text = "Expedition Charter (co-op staging)"
+	charter_btn.pressed.connect(func():
+		_close_expedition_mode_chooser()
+		_open_expedition_charter_for_map(exp_map_id)
+	)
+	vbox.add_child(charter_btn)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.pressed.connect(_close_expedition_mode_chooser)
+	vbox.add_child(cancel_btn)
+
+	add_child(layer)
+
+
+func _launch_expedition_solo_from_world_map(exp_map_id: String) -> void:
+	if not CampaignManager.launch_expedition_from_map(exp_map_id):
+		var exp_fail: Dictionary = ExpeditionMapDatabase.get_map_by_id(exp_map_id)
+		if CampaignManager.has_completed_expedition(exp_map_id) and not ExpeditionMapDatabase.is_entry_repeatable(exp_fail):
+			_show_announcement("Expedition: this contract is already fulfilled.", true)
+		else:
+			_show_announcement("Expedition: launch failed. Check expedition data and campaign registration.", true)
+
+
+func _open_expedition_charter_for_map(exp_map_id: String) -> void:
+	var node: Node = ExpeditionCharterStagingUIScene.instantiate()
+	if node == null:
+		_show_announcement("Expedition Charter UI failed to load.", true)
+		return
+	add_child(node)
+	if node.has_signal("closed"):
+		node.closed.connect(_on_expedition_charter_closed)
+	if node.has_method("open_for_expedition"):
+		node.open_for_expedition(exp_map_id)
+	else:
+		_show_announcement("Expedition Charter UI script mismatch.", true)
+		node.queue_free()
+
+
+func _on_expedition_charter_closed() -> void:
+	pass
+
 
 func _log_expedition_unlock_once(index: int) -> void:
 	if not DEBUG_EXPEDITION_NODE_LOGS:
@@ -1557,3 +1732,223 @@ func _input(event: InputEvent) -> void:
 				return
 			_refresh_node_visuals()
 			_show_announcement("Debug: Granted expedition map " + granted_map_id, true)
+
+		elif event.keycode == KEY_P and event.ctrl_pressed and event.shift_pressed:
+			if OS.is_debug_build():
+				_toggle_coop_staging_debug_panel()
+
+
+func _on_coop_staging_debug_session_changed() -> void:
+	_refresh_coop_staging_debug_status()
+
+
+func _coop_staging_debug_pick_test_map_id() -> String:
+	var coop_ids: Array[String] = CampaignManager.get_coop_eligible_expedition_map_ids()
+	if not coop_ids.is_empty():
+		return coop_ids[0]
+	for entry in ExpeditionMapDatabase.get_all_maps():
+		var mid: String = str(entry.get("id", "")).strip_edges()
+		if mid == "":
+			continue
+		if bool(entry.get("coop_enabled", false)):
+			return mid
+	return ""
+
+
+func _coop_staging_debug_add_action_btn(parent: Control, label_text: String, on_press: Callable) -> void:
+	var b := Button.new()
+	b.text = label_text
+	b.custom_minimum_size = Vector2(220, 28)
+	b.pressed.connect(func():
+		on_press.call()
+		_refresh_coop_staging_debug_status()
+	)
+	parent.add_child(b)
+
+
+func _refresh_coop_staging_debug_status() -> void:
+	if _coop_staging_debug_status_label == null or not is_instance_valid(_coop_staging_debug_status_label):
+		return
+	var mgr := CoopExpeditionSessionManager
+	var lines: Array[String] = []
+	lines.append("Staging: %s" % mgr.get_coop_staging_state_name())
+	lines.append("phase=%d session_id=%s" % [mgr.phase, mgr.session_id])
+	lines.append("selected_map=%s" % mgr.selected_expedition_map_id)
+	lines.append("local_ready=%s remote_ready=%s" % [str(mgr.local_ready), str(mgr.remote_ready)])
+	var blk: PackedStringArray = mgr.get_coop_launch_blockers()
+	if blk.is_empty():
+		lines.append("Blockers: (none)")
+	else:
+		var btxt: String = ""
+		for i in range(blk.size()):
+			btxt += "- %s\n" % str(blk[i])
+		lines.append("Blockers:\n" + btxt.strip_edges())
+	if not _coop_staging_debug_last_finalize.is_empty():
+		lines.append("Last finalize ok=%s errors=%s" % [
+			str(_coop_staging_debug_last_finalize.get("ok", "?")),
+			str(_coop_staging_debug_last_finalize.get("errors", []))
+		])
+		var pl: Variant = _coop_staging_debug_last_finalize.get("payload", {})
+		if pl is Dictionary and not (pl as Dictionary).is_empty():
+			lines.append("Last payload keys: %s" % str((pl as Dictionary).keys()))
+	if not _coop_staging_debug_last_handoff.is_empty():
+		lines.append("Last handoff ok=%s errors=%s" % [
+			str(_coop_staging_debug_last_handoff.get("ok", "?")),
+			str(_coop_staging_debug_last_handoff.get("errors", [])),
+		])
+		var hh: Variant = _coop_staging_debug_last_handoff.get("handoff", {})
+		if hh is Dictionary and not (hh as Dictionary).is_empty():
+			lines.append("Last handoff keys: %s" % str((hh as Dictionary).keys()))
+	lines.append("pending_handoff_stored=%s" % str(CampaignManager.has_pending_mock_coop_battle_handoff()))
+	_coop_staging_debug_status_label.text = "\n".join(lines)
+
+
+func _toggle_coop_staging_debug_panel() -> void:
+	if _coop_staging_debug_layer != null and is_instance_valid(_coop_staging_debug_layer):
+		if CoopExpeditionSessionManager.session_state_changed.is_connected(_on_coop_staging_debug_session_changed):
+			CoopExpeditionSessionManager.session_state_changed.disconnect(_on_coop_staging_debug_session_changed)
+		_coop_staging_debug_layer.queue_free()
+		_coop_staging_debug_layer = null
+		_coop_staging_debug_status_label = null
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 120
+	layer.name = "CoopStagingDebugLayer"
+	add_child(layer)
+	_coop_staging_debug_layer = layer
+	CoopExpeditionSessionManager.session_state_changed.connect(_on_coop_staging_debug_session_changed)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.offset_left = 16.0
+	panel.offset_top = 64.0
+	panel.custom_minimum_size = Vector2(500, 540)
+	layer.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	margin.add_child(vbox)
+	var hint := Label.new()
+	hint.text = "Co-op staging tester (debug). Ctrl+Shift+P closes. Host + mock guest = same process."
+	vbox.add_child(hint)
+	_coop_staging_debug_status_label = Label.new()
+	_coop_staging_debug_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_coop_staging_debug_status_label.custom_minimum_size = Vector2(460, 150)
+	vbox.add_child(_coop_staging_debug_status_label)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 6)
+	vbox.add_child(grid)
+	_coop_staging_debug_add_action_btn(grid, "1 Host: create session", Callable(self, "_coop_debug_action_host"))
+	_coop_staging_debug_add_action_btn(grid, "2 Mock guest payload", Callable(self, "_coop_debug_action_mock_guest"))
+	_coop_staging_debug_add_action_btn(grid, "3 Select coop map", Callable(self, "_coop_debug_action_select_map"))
+	_coop_staging_debug_add_action_btn(grid, "4 Toggle local ready", Callable(self, "_coop_debug_action_toggle_local_ready"))
+	_coop_staging_debug_add_action_btn(grid, "5 Toggle remote ready", Callable(self, "_coop_debug_action_toggle_remote_ready"))
+	_coop_staging_debug_add_action_btn(grid, "6 Finalize launch", Callable(self, "_coop_debug_action_finalize"))
+	_coop_staging_debug_add_action_btn(grid, "7 Build battle handoff", Callable(self, "_coop_debug_action_battle_handoff"))
+	_coop_staging_debug_add_action_btn(grid, "8 Store pending handoff", Callable(self, "_coop_debug_action_store_handoff"))
+	_coop_staging_debug_add_action_btn(grid, "9 Launch battle (pending)", Callable(self, "_coop_debug_action_launch_pending_handoff"))
+	_coop_staging_debug_add_action_btn(grid, "Guest: join (clears host)", Callable(self, "_coop_debug_action_guest_join"))
+	_coop_staging_debug_add_action_btn(grid, "Mock host (guest side)", Callable(self, "_coop_debug_action_mock_host"))
+	_coop_staging_debug_add_action_btn(grid, "Leave session", Callable(self, "_coop_debug_action_leave"))
+	_refresh_coop_staging_debug_status()
+
+
+func _coop_debug_action_host() -> void:
+	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
+	_show_announcement("Co-op debug host: %s" % str(r), true)
+
+
+func _coop_debug_action_mock_guest() -> void:
+	var mid: String = _coop_staging_debug_pick_test_map_id()
+	if mid == "":
+		_show_announcement("Co-op debug: grant a coop map (Ctrl+Shift+M) or add DB entry.", true)
+		return
+	var r: Dictionary = CoopExpeditionSessionManager.debug_apply_mock_guest_payload_for_staging([mid], false)
+	_show_announcement("Co-op debug mock guest: %s" % str(r), true)
+
+
+func _coop_debug_action_select_map() -> void:
+	var mid: String = _coop_staging_debug_pick_test_map_id()
+	if mid == "":
+		_show_announcement("Co-op debug: no map id to select.", true)
+		return
+	if CoopExpeditionSessionManager.set_selected_expedition_map(mid):
+		_show_announcement("Co-op debug: selected %s" % mid, true)
+	else:
+		_show_announcement("Co-op debug: select failed for %s" % mid, true)
+
+
+func _coop_debug_action_toggle_local_ready() -> void:
+	CoopExpeditionSessionManager.set_local_ready(not CoopExpeditionSessionManager.local_ready)
+
+
+func _coop_debug_action_toggle_remote_ready() -> void:
+	CoopExpeditionSessionManager.set_remote_ready(not CoopExpeditionSessionManager.remote_ready)
+
+
+func _coop_debug_action_finalize() -> void:
+	_coop_staging_debug_last_finalize = CoopExpeditionSessionManager.finalize_coop_expedition_launch()
+	_show_announcement("Co-op debug finalize: ok=%s" % str(_coop_staging_debug_last_finalize.get("ok", false)), true)
+
+
+func _coop_debug_action_battle_handoff() -> void:
+	_coop_staging_debug_last_finalize = CoopExpeditionSessionManager.finalize_coop_expedition_launch()
+	_coop_staging_debug_last_handoff = CoopExpeditionBattleHandoff.prepare_from_finalize_result(_coop_staging_debug_last_finalize)
+	var ok: bool = bool(_coop_staging_debug_last_handoff.get("ok", false))
+	var msg: String = "Co-op handoff ok=%s" % str(ok)
+	if not ok:
+		msg += " errors=%s" % str(_coop_staging_debug_last_handoff.get("errors", []))
+		var fe: Variant = _coop_staging_debug_last_handoff.get("finalize_errors", [])
+		if fe is Array and not (fe as Array).is_empty():
+			msg += " finalize_errors=%s" % str(fe)
+	_show_announcement(msg, true)
+
+
+func _coop_debug_action_store_handoff() -> void:
+	if not bool(_coop_staging_debug_last_handoff.get("ok", false)):
+		_show_announcement("Co-op debug store: build handoff (7) with ok=true first.", true)
+		return
+	var hh: Variant = _coop_staging_debug_last_handoff.get("handoff", {})
+	if typeof(hh) != TYPE_DICTIONARY or (hh as Dictionary).is_empty():
+		_show_announcement("Co-op debug store: no handoff dict on last result.", true)
+		return
+	var res: Dictionary = CampaignManager.store_pending_mock_coop_battle_handoff(hh as Dictionary)
+	_show_announcement("Co-op debug store pending: ok=%s %s" % [str(res.get("ok", false)), str(res.get("errors", []))], true)
+
+
+func _coop_debug_action_launch_pending_handoff() -> void:
+	var res: Dictionary = CampaignManager.launch_expedition_with_pending_mock_coop_handoff()
+	if not bool(res.get("ok", false)):
+		_show_announcement("Co-op debug launch failed: %s" % str(res.get("errors", [])), true)
+	else:
+		_show_announcement("Co-op debug: launching battle with pending handoff…", true)
+
+
+func _coop_debug_action_guest_join() -> void:
+	var sid: String = CoopExpeditionSessionManager.session_id
+	if sid == "":
+		sid = "local_join_debug"
+	var r: Dictionary = CoopExpeditionSessionManager.join_session(sid)
+	_show_announcement("Co-op debug join: %s" % str(r), true)
+
+
+func _coop_debug_action_mock_host() -> void:
+	var mid: String = _coop_staging_debug_pick_test_map_id()
+	if mid == "":
+		_show_announcement("Co-op debug: no map id for mock host.", true)
+		return
+	var r: Dictionary = CoopExpeditionSessionManager.debug_apply_mock_host_payload_for_staging([mid], false)
+	_show_announcement("Co-op debug mock host: %s" % str(r), true)
+
+
+func _coop_debug_action_leave() -> void:
+	CoopExpeditionSessionManager.leave_session()
+	CampaignManager.clear_pending_mock_coop_battle_handoff()
+	_coop_staging_debug_last_finalize = {}
+	_coop_staging_debug_last_handoff = {}

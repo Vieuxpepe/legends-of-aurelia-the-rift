@@ -151,11 +151,27 @@ var camp_discount_item: Resource = null
 var camp_has_haggled: bool = false
 var blacksmith_unlocked: bool = false
 var owned_expedition_maps: Array[String] = []
+## Expedition map ids cleared at least once via expedition victory (load_next_level expedition branch). Persisted; see save_game/load_game/reset.
+var completed_expedition_map_ids: Array[String] = []
+## map_id -> cartographer survey line; set once on first clear from ExpeditionMapDatabase outcome pool. Persisted.
+var expedition_outcome_notes: Dictionary = {}
+## Last max_unlocked_index used to build expedition_cartographer_visible_map_ids; refresh when it changes. Persisted.
+var expedition_cartographer_offer_stamp: int = -999
+## Map ids currently on the Cartographer counter (subset of DB + progression). Persisted.
+var expedition_cartographer_visible_map_ids: Array[String] = []
 
 # --- WORLD MAP & PROGRESSION ---
 var current_level_index: int = 0
 var max_unlocked_index: int = 0
 var is_skirmish_mode: bool = false
+## True while the current battle was started from an expedition world-map node (not inferred from progression).
+var is_expedition_run: bool = false
+## DB id for the expedition map that started the current run (empty when not expedition-driven).
+var active_expedition_map_id: String = ""
+## expedition_modifier_id from DB for the active expedition run only (session; not saved).
+var active_expedition_modifier_id: String = ""
+## Mock co-op battle handoff (validated); consumed once by BattleField. Session-only, not saved.
+var _pending_mock_coop_battle_handoff: Dictionary = {}
 
 # --- ENCOUNTER MEMORY (chained events / remembered consequences) ---
 # Persistent flags set/cleared by world-map encounters; used for selection and option/result variants.
@@ -446,6 +462,9 @@ func reset_campaign_data() -> void:
 	current_level_index = 0
 	max_unlocked_index = 0
 	is_skirmish_mode = false
+	is_expedition_run = false
+	active_expedition_map_id = ""
+	active_expedition_modifier_id = ""
 	encounter_flags.clear()
 	battle_resonance_flags.clear()
 	claimed_scavenger_scores.clear()
@@ -482,6 +501,11 @@ func reset_campaign_data() -> void:
 	claimed_rank_rewards.clear()
 	blacksmith_unlocked = false
 	owned_expedition_maps.clear()
+	completed_expedition_map_ids.clear()
+	expedition_outcome_notes.clear()
+	expedition_cartographer_offer_stamp = -999
+	expedition_cartographer_visible_map_ids.clear()
+	clear_pending_mock_coop_battle_handoff()
 	has_recipe_book = false
 	has_smelter = false
 	unlocked_recipes.clear()
@@ -856,6 +880,10 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"camp_has_haggled": camp_has_haggled,
 		"blacksmith_unlocked": blacksmith_unlocked,
 		"owned_expedition_maps": owned_expedition_maps.duplicate(),
+		"completed_expedition_map_ids": completed_expedition_map_ids.duplicate(),
+		"expedition_outcome_notes": expedition_outcome_notes.duplicate(),
+		"expedition_cartographer_offer_stamp": int(expedition_cartographer_offer_stamp),
+		"expedition_cartographer_visible_map_ids": expedition_cartographer_visible_map_ids.duplicate(),
 		"has_recipe_book": has_recipe_book,
 		"has_smelter": has_smelter,
 		"unlocked_music_paths": unlocked_music_paths,
@@ -918,6 +946,7 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	if typeof(save_data) != TYPE_DICTIONARY:
 		return false
 
+	clear_pending_mock_coop_battle_handoff()
 	global_gold = save_data.get("global_gold", 0)
 	global_fame = save_data.get("global_fame", 0)
 	merchant_reputation = save_data.get("merchant_reputation", 0)
@@ -1078,6 +1107,10 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		
 	blacksmith_unlocked = save_data.get("blacksmith_unlocked", false)
 	owned_expedition_maps = _sanitize_owned_expedition_maps(save_data.get("owned_expedition_maps", []))
+	completed_expedition_map_ids = _sanitize_owned_expedition_maps(save_data.get("completed_expedition_map_ids", []))
+	expedition_outcome_notes = _sanitize_expedition_outcome_notes(save_data.get("expedition_outcome_notes", {}))
+	expedition_cartographer_offer_stamp = int(save_data.get("expedition_cartographer_offer_stamp", -999))
+	expedition_cartographer_visible_map_ids = _sanitize_owned_expedition_maps(save_data.get("expedition_cartographer_visible_map_ids", []))
 	has_smelter = save_data.get("has_smelter", false)
 	
 	player_structures.clear()
@@ -1739,7 +1772,22 @@ func load_next_level() -> void:
 	if active_save_slot != -1:
 		save_game(active_save_slot, true)
 
+	if is_expedition_run:
+		var completed_id: String = str(active_expedition_map_id).strip_edges()
+		if completed_id != "":
+			mark_expedition_completed(completed_id)
+		if active_save_slot != -1:
+			save_game(active_save_slot, true)
+		is_expedition_run = false
+		active_expedition_map_id = ""
+		active_expedition_modifier_id = ""
+		SceneTransition.change_scene_to_file("res://Scenes/UI/WorldMap.tscn")
+		return
+
 	if is_skirmish_mode:
+		is_expedition_run = false
+		active_expedition_map_id = ""
+		active_expedition_modifier_id = ""
 		SceneTransition.change_scene_to_file("res://Scenes/UI/WorldMap.tscn")
 		return
 
@@ -1757,7 +1805,11 @@ func load_next_level() -> void:
 	SceneTransition.change_scene_to_file(next_scene)
 						
 func enter_level_from_map(selected_level_idx: int) -> void:
+	clear_pending_mock_coop_battle_handoff()
 	reset_camp_shop()
+	is_expedition_run = false
+	active_expedition_map_id = ""
+	active_expedition_modifier_id = ""
 	current_level_index = selected_level_idx
 	
 	if selected_level_idx < max_unlocked_index:
@@ -1770,6 +1822,104 @@ func enter_level_from_map(selected_level_idx: int) -> void:
 			SceneTransition.change_scene_to_file(pre_battle_transitions[selected_level_idx])
 		elif selected_level_idx < campaign_levels.size():
 			SceneTransition.change_scene_to_file(campaign_levels[selected_level_idx])
+
+## Loads the expedition's battle scene directly (no story pre-battle transition). Sets skirmish-style battle flags explicitly; does not use progression-based skirmish inference.
+func launch_expedition_from_map(map_id: String) -> bool:
+	var key: String = str(map_id).strip_edges()
+	if key == "":
+		return false
+	if not has_expedition_map(key):
+		return false
+	var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(key)
+	if map_data.is_empty():
+		return false
+	if not ExpeditionMapDatabase.is_entry_repeatable(map_data) and has_completed_expedition(key):
+		return false
+	var battle_path: String = str(map_data.get("battle_scene_path", "")).strip_edges()
+	if battle_path == "" or not ResourceLoader.exists(battle_path):
+		return false
+	var campaign_idx: int = campaign_levels.find(battle_path)
+	if campaign_idx < 0:
+		return false
+
+	clear_pending_mock_coop_battle_handoff()
+	reset_camp_shop()
+	is_expedition_run = true
+	active_expedition_map_id = key
+	active_expedition_modifier_id = ExpeditionMapDatabase.get_expedition_modifier_id(map_data)
+	is_skirmish_mode = true
+	current_level_index = campaign_idx
+	SceneTransition.change_scene_to_file(battle_path)
+	return true
+
+func clear_pending_mock_coop_battle_handoff() -> void:
+	_pending_mock_coop_battle_handoff.clear()
+
+func has_pending_mock_coop_battle_handoff() -> bool:
+	return not _pending_mock_coop_battle_handoff.is_empty()
+
+## Validates and stores a prepared handoff dict (from CoopExpeditionBattleHandoff.prepare_from_finalize_result handoff key).
+func store_pending_mock_coop_battle_handoff(handoff: Dictionary) -> Dictionary:
+	if typeof(handoff) != TYPE_DICTIONARY or handoff.is_empty():
+		return {"ok": false, "errors": ["handoff_empty"]}
+	var val_errs: PackedStringArray = CoopExpeditionBattleHandoff.validate_handoff(handoff)
+	if not val_errs.is_empty():
+		return {"ok": false, "errors": Array(val_errs)}
+	_pending_mock_coop_battle_handoff = handoff.duplicate(true)
+	return {"ok": true, "errors": []}
+
+## Single consume at battle start; returns empty if none pending.
+func consume_pending_mock_coop_battle_handoff() -> Dictionary:
+	if _pending_mock_coop_battle_handoff.is_empty():
+		return {}
+	var copy: Dictionary = _pending_mock_coop_battle_handoff.duplicate(true)
+	_pending_mock_coop_battle_handoff.clear()
+	return copy
+
+## Debug/mock: launch expedition battle using stored handoff (must pass expedition ownership + repeatability like normal launch).
+func launch_expedition_with_pending_mock_coop_handoff() -> Dictionary:
+	if _pending_mock_coop_battle_handoff.is_empty():
+		return {"ok": false, "errors": ["no_pending_handoff"]}
+	var h: Dictionary = _pending_mock_coop_battle_handoff.duplicate(true)
+	var val_errs: PackedStringArray = CoopExpeditionBattleHandoff.validate_handoff(h)
+	if not val_errs.is_empty():
+		return {"ok": false, "errors": Array(val_errs)}
+	var eid: String = str(h.get("expedition_map_id", "")).strip_edges()
+	var bpath: String = str(h.get("battle_scene_path", "")).strip_edges()
+	if eid == "" or bpath == "":
+		return {"ok": false, "errors": ["handoff_missing_ids_or_path"]}
+	if not has_expedition_map(eid):
+		return {"ok": false, "errors": ["local_does_not_own_expedition_map"]}
+	var map_data: Dictionary = ExpeditionMapDatabase.get_map_by_id(eid)
+	if map_data.is_empty():
+		return {"ok": false, "errors": ["expedition_not_in_database"]}
+	if not ExpeditionMapDatabase.is_entry_repeatable(map_data) and has_completed_expedition(eid):
+		return {"ok": false, "errors": ["non_repeatable_expedition_already_completed"]}
+	if not ResourceLoader.exists(bpath):
+		return {"ok": false, "errors": ["battle_scene_missing"]}
+	var campaign_idx: int = campaign_levels.find(bpath)
+	if campaign_idx < 0:
+		return {"ok": false, "errors": ["battle_not_registered_in_campaign_levels"]}
+	reset_camp_shop()
+	is_expedition_run = true
+	active_expedition_map_id = eid
+	active_expedition_modifier_id = ExpeditionMapDatabase.get_expedition_modifier_id(map_data)
+	is_skirmish_mode = true
+	current_level_index = campaign_idx
+	SceneTransition.change_scene_to_file(bpath)
+	return {"ok": true, "errors": []}
+
+func get_active_expedition_modifier_id() -> String:
+	if not is_expedition_run:
+		return ""
+	return str(active_expedition_modifier_id).strip_edges()
+
+## Full UI line for the active expedition (empty when not on an expedition run).
+func get_active_expedition_modifier_display_line() -> String:
+	if not is_expedition_run:
+		return ""
+	var entry: Dictionary = ExpeditionMapDatabase.get_map_by_id(active_expedition_map_id)
+	return ExpeditionMapDatabase.build_expedition_modifier_ui_line(entry)
 
 # --- FIX 3: SAFE PROGRESS SAVING ---
 func save_current_progress(slot: int = -1) -> void:
@@ -1815,6 +1965,119 @@ func add_expedition_map(map_id: String) -> bool:
 func get_owned_expedition_maps() -> Array[String]:
 	return owned_expedition_maps.duplicate()
 
+func has_completed_expedition(map_id: String) -> bool:
+	var key: String = str(map_id).strip_edges()
+	if key == "":
+		return false
+	return completed_expedition_map_ids.has(key)
+
+func mark_expedition_completed(map_id: String) -> void:
+	var key: String = str(map_id).strip_edges()
+	if key == "":
+		return
+	if completed_expedition_map_ids.has(key):
+		return
+	completed_expedition_map_ids.append(key)
+	_roll_expedition_outcome_note_for_map(key)
+
+func get_completed_expeditions() -> Array[String]:
+	return completed_expedition_map_ids.duplicate()
+
+func _sanitize_expedition_outcome_notes(raw: Variant) -> Dictionary:
+	var out: Dictionary = {}
+	if raw == null or typeof(raw) != TYPE_DICTIONARY:
+		return out
+	for k in raw.keys():
+		var ks: String = str(k).strip_edges()
+		if ks == "":
+			continue
+		out[ks] = str(raw[k]).strip_edges()
+	return out
+
+func _roll_expedition_outcome_note_for_map(map_id: String) -> void:
+	var key: String = str(map_id).strip_edges()
+	if key == "":
+		return
+	if expedition_outcome_notes.has(key):
+		return
+	var entry: Dictionary = ExpeditionMapDatabase.get_map_by_id(key)
+	var pool: PackedStringArray = ExpeditionMapDatabase.get_outcome_annotation_pool(entry)
+	if pool.is_empty():
+		return
+	expedition_outcome_notes[key] = pool[randi_range(0, pool.size() - 1)]
+
+func get_expedition_outcome_note(map_id: String) -> String:
+	var key: String = str(map_id).strip_edges()
+	if key == "" or not has_completed_expedition(key):
+		return ""
+	return str(expedition_outcome_notes.get(key, "")).strip_edges()
+
+## Cartographer sale pool: progression-eligible maps minus owned one-time contracts (repeatable may still appear as "Already Owned").
+func _filter_cartographer_sale_candidates(progression_eligible: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry in progression_eligible:
+		var mid: String = str(entry.get("id", "")).strip_edges()
+		if mid == "":
+			continue
+		if has_expedition_map(mid) and not ExpeditionMapDatabase.is_entry_repeatable(entry):
+			continue
+		out.append(entry)
+	return out
+
+func _rebuild_expedition_cartographer_visible_map_ids(eligible: Array[Dictionary]) -> void:
+	expedition_cartographer_visible_map_ids.clear()
+	if eligible.is_empty():
+		return
+	var sorted_eligible: Array[Dictionary] = eligible.duplicate(true)
+	sorted_eligible.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return str(a.get("id", "")) < str(b.get("id", ""))
+	)
+	var max_vis: int = ExpeditionMapDatabase.get_cartographer_max_visible_offers()
+	var n: int = sorted_eligible.size()
+	var k: int = mini(max_vis, n)
+	var start: int = (int(max_unlocked_index) % n + n) % n
+	for i in range(k):
+		var idx: int = (start + i) % n
+		var mid: String = str(sorted_eligible[idx].get("id", "")).strip_edges()
+		if mid != "":
+			expedition_cartographer_visible_map_ids.append(mid)
+
+func _sync_expedition_cartographer_visible_offers() -> void:
+	var raw_eligible: Array[Dictionary] = ExpeditionMapDatabase.get_cartographer_eligible_maps(max_unlocked_index)
+	var eligible: Array[Dictionary] = _filter_cartographer_sale_candidates(raw_eligible)
+	var eligible_ids: Dictionary = {}
+	for e in eligible:
+		var mid: String = str(e.get("id", "")).strip_edges()
+		if mid != "":
+			eligible_ids[mid] = true
+	var need_rebuild: bool = false
+	if expedition_cartographer_offer_stamp != max_unlocked_index:
+		need_rebuild = true
+	elif expedition_cartographer_visible_map_ids.is_empty() and not eligible.is_empty():
+		need_rebuild = true
+	else:
+		for vid in expedition_cartographer_visible_map_ids:
+			var ks: String = str(vid).strip_edges()
+			if ks == "" or not eligible_ids.has(ks):
+				need_rebuild = true
+				break
+	if not need_rebuild:
+		return
+	_rebuild_expedition_cartographer_visible_map_ids(eligible)
+	expedition_cartographer_offer_stamp = max_unlocked_index
+	if active_save_slot != -1:
+		save_game(active_save_slot, true)
+
+## Cartographer-facing stock: progression-eligible maps, then a stable rotating subset keyed to max_unlocked_index.
+func get_expedition_cartographer_shop_entries() -> Array[Dictionary]:
+	_sync_expedition_cartographer_visible_offers()
+	var out: Array[Dictionary] = []
+	for map_id in expedition_cartographer_visible_map_ids:
+		var d: Dictionary = ExpeditionMapDatabase.get_map_by_id(map_id)
+		if not d.is_empty():
+			out.append(d)
+	return out
+
 func get_coop_eligible_expedition_map_ids() -> Array[String]:
 	var eligible: Array[String] = []
 	for map_id in owned_expedition_maps:
@@ -1841,6 +2104,15 @@ func both_players_have_same_map(map_id: String, remote_owned_maps: Array[String]
 		if str(remote_map_id).strip_edges() == str(map_id).strip_edges():
 			return true
 	return false
+
+## Co-op foundation: same chart on both sides (remote list from session/transport payload).
+func can_start_coop_expedition_with_remote(map_id: String, remote_owned_map_ids: Array) -> bool:
+	var cleaned: Array[String] = []
+	for x in remote_owned_map_ids:
+		var s: String = str(x).strip_edges()
+		if s != "":
+			cleaned.append(s)
+	return both_players_have_same_map(str(map_id).strip_edges(), cleaned)
 
 func grant_debug_expedition_map(map_id: String) -> bool:
 	var added: bool = add_expedition_map(map_id)

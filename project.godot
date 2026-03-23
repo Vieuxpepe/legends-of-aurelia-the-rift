@@ -28,6 +28,7 @@ RecipeDatabase="*uid://ftec3t1wl11t"
 DialogueDatabase="*uid://xxc4kh1tx0q1"
 ItemDatabase="*uid://borft2uumnmjj"
 ScavengerManager="*uid://b3lf5jw2mhkfh"
+CoopExpeditionSessionManager="*res://Scripts/Coop/CoopExpeditionSessionManager.gd"
 
 [display]
 

@@ -242,14 +242,40 @@ func _ready() -> void:
 	if equipped_weapon != null and inventory.is_empty():
 		inventory.append(equipped_weapon)
 
-	if team_glow != null and get_parent() != null:
-		var parent_name: String = get_parent().name
-		if parent_name == "PlayerUnits":
-			team_glow.color = Color(0.2, 0.5, 1.0, 0.3)
-		elif parent_name == "EnemyUnits":
-			team_glow.color = Color(1.0, 0.2, 0.2, 0.3)
-		else:
-			team_glow.color = Color(1.0, 1.0, 1.0, 0.0)
+	refresh_standard_team_glow()
+
+
+## Default under-tile ring color from parent container (PlayerUnits / EnemyUnits / other).
+func refresh_standard_team_glow() -> void:
+	if team_glow == null or get_parent() == null:
+		return
+	var parent_name: String = get_parent().name
+	if parent_name == "PlayerUnits":
+		team_glow.color = Color(0.2, 0.5, 1.0, 0.3)
+	elif parent_name == "EnemyUnits":
+		team_glow.color = Color(1.0, 0.2, 0.2, 0.3)
+	else:
+		team_glow.color = Color(1.0, 1.0, 1.0, 0.0)
+
+
+## Mock co-op only: tint TeamGlow so local vs partner-owned units read at a glance (BattleField applies when ownership is active).
+func apply_mock_coop_owner_visual(owner_key: String) -> void:
+	if team_glow == null:
+		return
+	var parent_name: String = get_parent().name if get_parent() != null else ""
+	if owner_key == "remote":
+		team_glow.color = Color(0.98, 0.52, 0.12, 0.4)
+		return
+	if owner_key != "local":
+		refresh_standard_team_glow()
+		return
+	if parent_name == "PlayerUnits":
+		team_glow.color = Color(0.12, 0.48, 1.0, 0.36)
+	elif parent_name == "AllyUnits":
+		team_glow.color = Color(0.18, 0.78, 0.52, 0.36)
+	else:
+		refresh_standard_team_glow()
+
 
 func gain_exp(amount: int) -> void:
 	experience += amount

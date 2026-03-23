@@ -1,0 +1,262 @@
+[gd_scene load_steps=6 format=3 uid="uid://expedition_charter_staging_ui"]
+
+[ext_resource type="Script" path="res://Scripts/UI/ExpeditionCharterStagingUI.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_main"]
+bg_color = Color(0.14, 0.11, 0.09, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.42, 0.22, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 6
+shadow_offset = Vector2(2, 3)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.2, 0.16, 0.12, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.35, 0.22, 0.85)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10
+content_margin_top = 8
+content_margin_right = 10
+content_margin_bottom = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_status_warn"]
+bg_color = Color(0.18, 0.12, 0.1, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.65, 0.4, 0.18, 0.95)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12
+content_margin_top = 10
+content_margin_right = 12
+content_margin_bottom = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_launch_btn"]
+bg_color = Color(0.22, 0.32, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.72, 0.38, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_launch_btn_disabled"]
+bg_color = Color(0.15, 0.14, 0.13, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.28, 0.25, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="ExpeditionCharterStagingUI" type="CanvasLayer"]
+layer = 55
+script = ExtResource("1_script")
+
+[node name="BackgroundDim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.02, 0.04, 0.78)
+
+[node name="MainPanel" type="Panel" parent="."]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -438.0
+offset_top = -352.0
+offset_right = 438.0
+offset_bottom = 352.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_main")
+
+[node name="Margin" type="MarginContainer" parent="MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="MainPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderVBox" type="VBoxContainer" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TitleLabel" type="Label" parent="MainPanel/Margin/VBox/HeaderVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.88, 0.62, 1)
+theme_override_font_sizes/font_size = 28
+text = "Expedition Charter"
+horizontal_alignment = 1
+
+[node name="CharterTaglineLabel" type="Label" parent="MainPanel/Margin/VBox/HeaderVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.65, 0.52, 1)
+theme_override_font_sizes/font_size = 14
+text = "Joint expedition contract · war-table staging"
+horizontal_alignment = 1
+
+[node name="ExpeditionTitleLabel" type="Label" parent="MainPanel/Margin/VBox/HeaderVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.88, 0.96, 1)
+theme_override_font_sizes/font_size = 19
+text = "—"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SepHeader" type="HSeparator" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="ParticipantsRow" type="HBoxContainer" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="LocalCard" type="PanelContainer" parent="MainPanel/Margin/VBox/ParticipantsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="LocalParticipantRichText" type="RichTextLabel" parent="MainPanel/Margin/VBox/ParticipantsRow/LocalCard"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(180, 88)
+bbcode_enabled = true
+fit_content = false
+scroll_active = false
+theme_override_colors/default_color = Color(0.88, 0.84, 0.76, 1)
+theme_override_font_sizes/normal_font_size = 15
+
+[node name="PartnerCard" type="PanelContainer" parent="MainPanel/Margin/VBox/ParticipantsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="PartnerParticipantRichText" type="RichTextLabel" parent="MainPanel/Margin/VBox/ParticipantsRow/PartnerCard"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(180, 88)
+bbcode_enabled = true
+fit_content = false
+scroll_active = false
+theme_override_colors/default_color = Color(0.88, 0.84, 0.76, 1)
+theme_override_font_sizes/normal_font_size = 15
+
+[node name="SepContract" type="HSeparator" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="BodyRichText" type="RichTextLabel" parent="MainPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 160)
+bbcode_enabled = true
+fit_content = false
+scroll_active = true
+theme_override_colors/default_color = Color(0.8, 0.76, 0.68, 1)
+theme_override_font_sizes/normal_font_size = 15
+
+[node name="LaunchStatusPanel" type="PanelContainer" parent="MainPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_status_warn")
+
+[node name="BlockersRichText" type="RichTextLabel" parent="MainPanel/Margin/VBox/LaunchStatusPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+bbcode_enabled = true
+fit_content = false
+scroll_active = true
+theme_override_colors/default_color = Color(0.92, 0.86, 0.78, 1)
+theme_override_font_sizes/normal_font_size = 14
+
+[node name="ButtonRow1" type="HBoxContainer" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="StagePartnerButton" type="Button" parent="MainPanel/Margin/VBox/ButtonRow1"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Seat test partner"
+
+[node name="LocalReadyButton" type="Button" parent="MainPanel/Margin/VBox/ButtonRow1"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Your readiness"
+
+[node name="PartnerReadyButton" type="Button" parent="MainPanel/Margin/VBox/ButtonRow1"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Partner readiness"
+
+[node name="ButtonRow2" type="HBoxContainer" parent="MainPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="LaunchButton" type="Button" parent="MainPanel/Margin/VBox/ButtonRow2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 44)
+theme_override_colors/font_color = Color(0.98, 0.96, 0.9, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 0.95, 1)
+theme_override_colors/font_pressed_color = Color(0.9, 0.88, 0.82, 1)
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxFlat_launch_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_launch_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_launch_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_launch_btn_disabled")
+text = "Sign charter & deploy"
+
+[node name="BackButton" type="Button" parent="MainPanel/Margin/VBox/ButtonRow2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 40)
+text = "Withdraw"

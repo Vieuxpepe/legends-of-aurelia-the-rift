@@ -36,6 +36,9 @@ func handle_input(event: InputEvent) -> void:
 		battlefield.toggle_danger_zone()
 		return
 
+	if battlefield.has_method("is_mock_partner_placeholder_active") and battlefield.is_mock_partner_placeholder_active():
+		return
+
 	# --- Undo / deselect (Right-click or Escape) ---
 	if event.is_action_pressed("ui_cancel") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed):
 		if is_forecasting:
@@ -146,6 +149,8 @@ func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 	var enemy: Node2D = battlefield.get_enemy_at(cursor_pos)
 
 	if unit != null and not unit.is_exhausted:
+		if not battlefield.try_allow_local_player_select_unit_for_command(unit):
+			return
 		active_unit = unit
 		original_pos = battlefield.get_grid_pos(active_unit)
 		active_unit.set_selected_glow(true)
@@ -195,6 +200,9 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 		if targets_allies:
 			pass
 		elif battlefield.get_distance(active_unit, target_node) == 1:
+			if battlefield.is_local_player_command_blocked_for_mock_coop_unit(target_node):
+				battlefield.notify_mock_coop_remote_command_blocked(target_node)
+				return true
 			battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
 			trade_target_ally = target_node
 			battlefield.show_trade_popup(target_node)

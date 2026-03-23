@@ -508,6 +508,389 @@ var enemy_kills_count: int = 0
 var player_deaths_count: int = 0
 var ally_deaths_count: int = 0
 
+## Filled when this battle consumed CampaignManager.consume_pending_mock_coop_battle_handoff() (mock co-op bridge only).
+var _consumed_mock_coop_battle_handoff: Dictionary = {}
+## Interpretation of consumed handoff; null when no mock handoff was consumed this battle.
+var _mock_coop_battle_context: MockCoopBattleContext = null
+## Mock co-op only: per-unit ownership after assignment (empty when inactive or context invalid).
+var _mock_coop_ownership_assignments: Array[Dictionary] = []
+var _mock_coop_skip_button_glow_active: bool = false
+var _skip_button_base_modulate: Color = Color.WHITE
+var _skip_button_base_modulate_captured: bool = false
+var _mock_partner_placeholder_combat_log_done: bool = false
+
+const MOCK_COOP_BATTLE_OWNER_META: String = "mock_coop_battle_owner"
+const MOCK_COOP_OWNER_LOCAL: String = "local"
+const MOCK_COOP_OWNER_REMOTE: String = "remote"
+
+func get_consumed_mock_coop_battle_handoff_snapshot() -> Dictionary:
+	return _consumed_mock_coop_battle_handoff.duplicate(true)
+
+
+func get_mock_coop_battle_context_snapshot() -> Dictionary:
+	if _mock_coop_battle_context == null:
+		return {"active": false, "context_valid": false}
+	return _mock_coop_battle_context.get_snapshot()
+
+
+func get_mock_coop_unit_ownership_snapshot() -> Dictionary:
+	if _mock_coop_ownership_assignments.is_empty():
+		return {"active": false}
+	return {
+		"active": true,
+		"rule": "first_half_local_ceil",
+		"assignments": _mock_coop_ownership_assignments.duplicate(true),
+	}
+
+
+## Returns MOCK_COOP_OWNER_LOCAL / MOCK_COOP_OWNER_REMOTE, or "" if unset / not mock co-op.
+func get_mock_coop_unit_owner_for_unit(unit: Node) -> String:
+	if unit == null or not is_instance_valid(unit) or not unit.has_meta(MOCK_COOP_BATTLE_OWNER_META):
+		return ""
+	return str(unit.get_meta(MOCK_COOP_BATTLE_OWNER_META))
+
+
+func is_mock_coop_unit_ownership_active() -> bool:
+	return not _mock_coop_ownership_assignments.is_empty()
+
+
+## True when mock co-op ownership is on and this unit is assigned to the remote partner (not locally commandable).
+func is_local_player_command_blocked_for_mock_coop_unit(unit: Node) -> bool:
+	if unit == null or not is_instance_valid(unit) or _mock_coop_ownership_assignments.is_empty():
+		return false
+	return get_mock_coop_unit_owner_for_unit(unit) == MOCK_COOP_OWNER_REMOTE
+
+
+func notify_mock_coop_remote_command_blocked(unit: Node2D) -> void:
+	if unit == null or not is_instance_valid(unit):
+		return
+	play_ui_sfx(UISfx.INVALID)
+	var uname: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else str(unit.name)
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: %s answers to your partner — you cannot command this unit here." % uname, "orange")
+	if unit is CanvasItem and (unit as CanvasItem).visible:
+		spawn_loot_text("Partner's unit", Color(1.0, 0.55, 0.2), unit.global_position + Vector2(32, -32))
+
+
+func try_allow_local_player_select_unit_for_command(unit: Node2D) -> bool:
+	if is_local_player_command_blocked_for_mock_coop_unit(unit):
+		notify_mock_coop_remote_command_blocked(unit)
+		return false
+	return true
+
+
+## Drops selection if active_unit somehow points at a partner-owned unit (mock co-op only). Skips while forecasting to avoid tearing an in-flight forecast await.
+func _sanitize_player_phase_active_unit_for_mock_coop_ownership() -> void:
+	if current_state != player_state or player_state == null:
+		return
+	if player_state.is_forecasting:
+		return
+	var au: Node2D = player_state.active_unit
+	if au == null or not is_instance_valid(au):
+		return
+	if not is_local_player_command_blocked_for_mock_coop_unit(au):
+		return
+	player_state.clear_active_unit()
+
+
+## One-line BBCode for unit stats panel when mock co-op ownership applies; empty otherwise.
+func _mock_coop_unit_ownership_bbcode_line_for_panel(unit: Node2D) -> String:
+	if unit == null or not is_instance_valid(unit):
+		return ""
+	if not is_mock_coop_unit_ownership_active():
+		return ""
+	if not _is_friendly_unit_on_field(unit):
+		return ""
+	var o: String = get_mock_coop_unit_owner_for_unit(unit)
+	if o == MOCK_COOP_OWNER_REMOTE:
+		return "[color=orange][b]Partner Unit[/b][/color] (co-op)\n"
+	if o == MOCK_COOP_OWNER_LOCAL:
+		return "[color=cyan][b]Your Unit[/b][/color] (co-op)\n"
+	return ""
+
+
+## Mock co-op + player phase: fielded local/partner counts (valid=false otherwise).
+func _get_mock_coop_player_phase_detachment_counts() -> Dictionary:
+	var out: Dictionary = {"valid": false, "local_total": 0, "local_ready": 0, "partner_fielded": 0}
+	if not is_mock_coop_unit_ownership_active() or current_state != player_state:
+		return out
+	out["valid"] = true
+	var total: int = 0
+	var ready: int = 0
+	var partner_fielded: int = 0
+	for cont in [player_container, ally_container]:
+		if cont == null:
+			continue
+		for u in cont.get_children():
+			if not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			if u.get("current_hp") == null or int(u.current_hp) <= 0:
+				continue
+			if not _is_mock_coop_deployed_player_side_unit(u):
+				continue
+			var own: String = get_mock_coop_unit_owner_for_unit(u)
+			if own == MOCK_COOP_OWNER_LOCAL:
+				total += 1
+				if u.get("is_exhausted") == false:
+					ready += 1
+			elif own == MOCK_COOP_OWNER_REMOTE:
+				partner_fielded += 1
+	out["local_total"] = total
+	out["local_ready"] = ready
+	out["partner_fielded"] = partner_fielded
+	return out
+
+
+## True when mock co-op player phase: all local fielded units have acted, partner fielded units remain (placeholder partner-turn gate).
+func is_mock_partner_placeholder_active() -> bool:
+	if not is_mock_coop_unit_ownership_active() or current_state != player_state:
+		return false
+	var c: Dictionary = _get_mock_coop_player_phase_detachment_counts()
+	if not bool(c.get("valid", false)):
+		return false
+	var lt: int = int(c.get("local_total", 0))
+	var lr: int = int(c.get("local_ready", 0))
+	var pf: int = int(c.get("partner_fielded", 0))
+	return lt > 0 and lr == 0 and pf > 0
+
+
+func _process_mock_partner_placeholder_frame() -> void:
+	if not is_mock_partner_placeholder_active():
+		_mock_partner_placeholder_combat_log_done = false
+		return
+	if player_state != null and player_state.is_forecasting:
+		player_state.is_forecasting = false
+		player_state.targeted_enemy = null
+		_on_forecast_cancel()
+	if player_state != null and player_state.active_unit != null:
+		player_state.clear_active_unit()
+	if _mock_partner_placeholder_combat_log_done:
+		return
+	_mock_partner_placeholder_combat_log_done = true
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Mock co-op: awaiting ally orders (placeholder). Use End / Skip phase to continue.", "gold")
+
+
+## Player phase only: BBCode for objective panel — local-owned, fielded, alive units; ready = not is_exhausted.
+func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
+	var c: Dictionary = _get_mock_coop_player_phase_detachment_counts()
+	if not bool(c.get("valid", false)):
+		return ""
+	var total: int = int(c.get("local_total", 0))
+	var ready: int = int(c.get("local_ready", 0))
+	var partner_fielded: int = int(c.get("partner_fielded", 0))
+	if total <= 0:
+		return ""
+	var s: String = "\n[color=cyan][b]Co-op — Your units ready: %d / %d[/b][/color]" % [ready, total]
+	if ready == 0:
+		s += "\n[color=gray][font_size=16]All your fielded units have acted this phase.[/font_size][/color]"
+		if partner_fielded > 0:
+			s += "\n[color=orange][font_size=16]Partner detachment still on the field — not under your command. End or Skip phase when you are ready.[/font_size][/color]"
+			s += "\n[color=gold][b]Awaiting ally orders[/b][/color] [color=gray](mock co-op placeholder)[/color]\n"
+	return s + "\n"
+
+
+func _update_mock_coop_skip_button_highlight() -> void:
+	var btn: Button = get_node_or_null("UI/SkipButton") as Button
+	if btn == null:
+		return
+	if not _skip_button_base_modulate_captured:
+		_skip_button_base_modulate = btn.modulate
+		_skip_button_base_modulate_captured = true
+	var want: bool = is_mock_partner_placeholder_active()
+	if want == _mock_coop_skip_button_glow_active:
+		return
+	_mock_coop_skip_button_glow_active = want
+	if want:
+		btn.modulate = _skip_button_base_modulate * Color(1.14, 1.12, 0.96, 1.0)
+	else:
+		btn.modulate = _skip_button_base_modulate
+
+
+func _is_mock_coop_deployed_player_side_unit(unit: Node) -> bool:
+	if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+		return false
+	if unit is CanvasItem and not (unit as CanvasItem).visible:
+		return false
+	if unit.process_mode == Node.PROCESS_MODE_DISABLED:
+		return false
+	return true
+
+
+func _get_mock_coop_deployed_player_side_unit_nodes() -> Array:
+	var out: Array = []
+	if player_container != null:
+		for u in player_container.get_children():
+			if _is_mock_coop_deployed_player_side_unit(u):
+				out.append(u)
+	if ally_container != null:
+		for u in ally_container.get_children():
+			if _is_mock_coop_deployed_player_side_unit(u):
+				out.append(u)
+	return out
+
+
+## All player-side units in tree order (player_container then ally_container), including benched/hidden — for locked mock co-op meta.
+func _iter_all_player_side_unit_nodes_for_mock_coop() -> Array:
+	var out: Array = []
+	for cont in [player_container, ally_container]:
+		if cont == null:
+			continue
+		for u in cont.get_children():
+			if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			out.append(u)
+	return out
+
+
+func _strip_mock_coop_ownership_meta_from_player_side() -> void:
+	for cont in [player_container, ally_container]:
+		if cont == null:
+			continue
+		for u in cont.get_children():
+			if is_instance_valid(u) and u.has_meta(MOCK_COOP_BATTLE_OWNER_META):
+				u.remove_meta(MOCK_COOP_BATTLE_OWNER_META)
+				if u.has_method("refresh_standard_team_glow"):
+					u.refresh_standard_team_glow()
+
+
+func _apply_mock_coop_ownership_visuals() -> void:
+	if _mock_coop_ownership_assignments.is_empty():
+		return
+	for cont in [player_container, ally_container]:
+		if cont == null:
+			continue
+		for u in cont.get_children():
+			if not is_instance_valid(u):
+				continue
+			var own: String = get_mock_coop_unit_owner_for_unit(u)
+			if own == "":
+				continue
+			if u.has_method("apply_mock_coop_owner_visual"):
+				u.apply_mock_coop_owner_visual(own)
+
+
+## Applies charter-locked detachment from handoff when valid; otherwise explicit deprecated fallback (visible fielded order only).
+func _assign_mock_coop_unit_ownership_from_context() -> void:
+	_strip_mock_coop_ownership_meta_from_player_side()
+	_mock_coop_ownership_assignments.clear()
+	if _mock_coop_battle_context == null or not _mock_coop_battle_context.context_valid:
+		if _mock_coop_battle_context != null and _mock_coop_battle_context.active:
+			print("[MockCoopOwnership] skipped (mock context not valid — no unit ownership assigned)")
+		return
+	var assign_raw: Variant = _consumed_mock_coop_battle_handoff.get("mock_detachment_assignment", {})
+	if typeof(assign_raw) == TYPE_DICTIONARY and not (assign_raw as Dictionary).is_empty() and _mock_coop_battle_context.has_locked_mock_detachment_assignment():
+		_apply_mock_coop_locked_detachment_assignment(assign_raw as Dictionary)
+		return
+	push_warning("[MockCoopOwnership] mock_detachment_assignment missing or not locked — using DEPRECATED fielded visible-unit order fallback.")
+	_assign_mock_coop_unit_ownership_fielded_order_fallback_deprecated()
+
+
+func _apply_mock_coop_locked_detachment_assignment(assign: Dictionary) -> void:
+	var loc_a: Variant = assign.get("local_command_unit_ids", [])
+	var par_a: Variant = assign.get("partner_command_unit_ids", [])
+	var local_set: Dictionary = {}
+	var partner_set: Dictionary = {}
+	if typeof(loc_a) == TYPE_ARRAY:
+		for x in loc_a as Array:
+			local_set[str(x).strip_edges()] = true
+	if typeof(par_a) == TYPE_ARRAY:
+		for x in par_a as Array:
+			partner_set[str(x).strip_edges()] = true
+	var units: Array = _iter_all_player_side_unit_nodes_for_mock_coop()
+	if units.is_empty():
+		print("[MockCoopOwnership] locked assignment: no player-side unit nodes")
+		return
+	var deploy_index: int = 0
+	for u in units:
+		var rid: String = get_relationship_id(u)
+		var owner_s: String
+		if local_set.has(rid):
+			owner_s = MOCK_COOP_OWNER_LOCAL
+		elif partner_set.has(rid):
+			owner_s = MOCK_COOP_OWNER_REMOTE
+		else:
+			owner_s = MOCK_COOP_OWNER_REMOTE
+			print("[MockCoopOwnership] unlisted id '%s' — PARTNER command (not in charter lock)" % rid)
+		u.set_meta(MOCK_COOP_BATTLE_OWNER_META, owner_s)
+		var uname: String = str(u.get("unit_name")) if u.get("unit_name") != null else str(u.name)
+		var src: String = "player" if u.get_parent() == player_container else "ally"
+		_mock_coop_ownership_assignments.append({
+			"unit_path": str(u.get_path()),
+			"unit_name": uname,
+			"container": src,
+			"owner": owner_s,
+			"deploy_order_index": deploy_index,
+		})
+		deploy_index += 1
+	_apply_mock_coop_ownership_visuals()
+	var local_names: PackedStringArray = PackedStringArray()
+	var remote_names: PackedStringArray = PackedStringArray()
+	for a in _mock_coop_ownership_assignments:
+		if str(a.get("owner", "")) == MOCK_COOP_OWNER_LOCAL:
+			local_names.append(str(a.get("unit_name", "?")))
+		else:
+			remote_names.append(str(a.get("unit_name", "?")))
+	add_combat_log("Mock co-op command (local): %s" % ", ".join(local_names), "cyan")
+	add_combat_log("Mock co-op command (remote partner): %s" % ", ".join(remote_names), "gold")
+	print("[MockCoopOwnership] rule=charter_locked_detachment units=%d %s" % [units.size(), str(_mock_coop_ownership_assignments)])
+
+
+## Deprecated: visible fielded units only, first ceil(n/2) local — used only when handoff lacks a valid locked assignment.
+func _assign_mock_coop_unit_ownership_fielded_order_fallback_deprecated() -> void:
+	var units: Array = _get_mock_coop_deployed_player_side_unit_nodes()
+	var n: int = units.size()
+	if n == 0:
+		print("[MockCoopOwnership] no deployed player-side units to assign (fallback)")
+		return
+	var local_n: int = (n + 1) / 2
+	for i in range(n):
+		var u: Node = units[i]
+		var owner_s: String = MOCK_COOP_OWNER_LOCAL if i < local_n else MOCK_COOP_OWNER_REMOTE
+		u.set_meta(MOCK_COOP_BATTLE_OWNER_META, owner_s)
+		var uname: String = str(u.get("unit_name")) if u.get("unit_name") != null else str(u.name)
+		var src: String = "player" if u.get_parent() == player_container else "ally"
+		_mock_coop_ownership_assignments.append({
+			"unit_path": str(u.get_path()),
+			"unit_name": uname,
+			"container": src,
+			"owner": owner_s,
+			"deploy_order_index": i,
+		})
+	_apply_mock_coop_ownership_visuals()
+	var local_names: PackedStringArray = PackedStringArray()
+	var remote_names: PackedStringArray = PackedStringArray()
+	for a in _mock_coop_ownership_assignments:
+		if str(a.get("owner", "")) == MOCK_COOP_OWNER_LOCAL:
+			local_names.append(str(a.get("unit_name", "?")))
+		else:
+			remote_names.append(str(a.get("unit_name", "?")))
+	add_combat_log("Mock co-op command (local): %s" % ", ".join(local_names), "cyan")
+	add_combat_log("Mock co-op command (remote partner): %s" % ", ".join(remote_names), "gold")
+	print("[MockCoopOwnership] DEPRECATED_FALLBACK rule=first_half_local_ceil_fielded total=%d local_slots=%d %s" % [n, local_n, str(_mock_coop_ownership_assignments)])
+
+
+## Visible battle-start UX for mock co-op only (combat log charter). No-op if no active context.
+func _present_mock_coop_joint_expedition_charter() -> void:
+	if _mock_coop_battle_context == null or not _mock_coop_battle_context.active:
+		return
+	var ctx: MockCoopBattleContext = _mock_coop_battle_context
+	var exp_title: String = ctx.get_expedition_display_title()
+	var loc: String = ctx.get_local_participant_label()
+	var rem: String = ctx.get_remote_participant_label()
+	var role_cap: String = ctx.local_role.capitalize()
+	if ctx.context_valid:
+		add_combat_log("──────── Joint Expedition Charter (Mock Co-op) ────────", "gold")
+		add_combat_log("Expedition: %s" % exp_title, "cyan")
+		add_combat_log("Commanders: %s  ·  %s" % [loc, rem], "cyan")
+		add_combat_log("Your role: %s" % role_cap, "cyan")
+		add_combat_log("Shared contract — this sortie is fought together.", "gray")
+	else:
+		add_combat_log("──────── Joint Expedition Charter (incomplete data) ────────", "orange")
+		add_combat_log("Expedition: %s — verify session before relying on co-op data." % exp_title, "yellow")
+		add_combat_log("Commanders: %s  ·  %s  |  Your role: %s" % [loc, rem, role_cap], "yellow")
+		add_combat_log("Issues: %s" % str(ctx.validation_errors), "orange")
+
 var _ui_sfx_block_until_msec := 0
 
 func _ready() -> void:
@@ -618,6 +1001,18 @@ func _ready() -> void:
 			
 	load_campaign_data()
 	apply_campaign_settings()
+
+	_mock_coop_battle_context = null
+	_mock_coop_ownership_assignments.clear()
+	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
+	if not _consumed_mock_coop_battle_handoff.is_empty():
+		_mock_coop_battle_context = MockCoopBattleContext.from_consumed_handoff(_consumed_mock_coop_battle_handoff)
+		if _mock_coop_battle_context != null:
+			var ctx_line: String = _mock_coop_battle_context.get_debug_summary_line()
+			print("[MockCoopBattleContext] %s snapshot=%s" % [ctx_line, str(_mock_coop_battle_context.get_snapshot())])
+		print("[MockCoopHandoff] battle start keys=%s" % str(_consumed_mock_coop_battle_handoff.keys()))
+		_present_mock_coop_joint_expedition_charter()
+		_assign_mock_coop_unit_ownership_from_context()
 	
 	# --- INITIALIZE FOG OF WAR ---
 	if use_fog_of_war:
@@ -650,6 +1045,11 @@ func _ready() -> void:
 	if CampaignManager.is_skirmish_mode:
 		setup_skirmish_battle()
 		_reset_rookie_battle_tracking()
+
+	if CampaignManager.is_expedition_run:
+		var exp_mod_line: String = CampaignManager.get_active_expedition_modifier_display_line()
+		if exp_mod_line != "":
+			add_combat_log(exp_mod_line, "cyan")
 
 	# --- ARENA LOGIC ---
 	if ArenaManager.current_opponent_data.size() > 0:
@@ -824,6 +1224,11 @@ func _process(delta: float) -> void:
 	update_cursor_pos()
 	update_cursor_color()
 	update_unit_info_panel()
+	_sanitize_player_phase_active_unit_for_mock_coop_ownership()
+	if is_mock_coop_unit_ownership_active() and current_state == player_state:
+		update_objective_ui(true)
+	_process_mock_partner_placeholder_frame()
+	_update_mock_coop_skip_button_highlight()
 	_handle_camera_panning(delta)
 	
 	# === ADD THIS LINE ===
@@ -952,6 +1357,8 @@ func _on_skip_button_pressed() -> void:
 			for u in player_container.get_children():
 				# If they are alive and haven't finished their turn yet...
 				if is_instance_valid(u) and not u.is_queued_for_deletion() and u.current_hp > 0:
+					if is_local_player_command_blocked_for_mock_coop_unit(u):
+						continue
 					if u.get("is_exhausted") == false:
 						u.set("is_defending", true)
 						
@@ -2200,6 +2607,9 @@ func update_unit_info_panel() -> void:
 		var s = "[center]"
 		if current_state == player_state and player_state.active_unit == target_unit:
 			s += "[color=cyan][b]Selected unit[/b][/color]\n"
+		var coop_own_line: String = _mock_coop_unit_ownership_bbcode_line_for_panel(target_unit)
+		if coop_own_line != "":
+			s += coop_own_line
 		s += "[color=gray]Class:[/color] %s [color=gray]|[/color] [color=gray]Move:[/color] %d\n" % [u_class, u_move]
 		s += "[color=gray]------------------------------------[/color]\n"
 		s += "[color=coral]STR:[/color] %d  [color=orchid]MAG:[/color] %d  [color=skyblue]SPD:[/color] %d\n" % [u_str, u_mag, u_spd]
@@ -2230,6 +2640,9 @@ func update_unit_info_panel() -> void:
 			s += "[color=gold][b]Under cursor[/b][/color]: [color=white]%s[/color]  HP %d/%d\n" % [
 				hover_unit.unit_name, hover_unit.current_hp, hover_unit.max_hp
 			]
+			var coop_hover_line: String = _mock_coop_unit_ownership_bbcode_line_for_panel(hover_unit)
+			if coop_hover_line != "":
+				s += coop_hover_line
 			if hover_unit.get_parent() == enemy_container and hover_unit.data.get("is_recruitable") == true:
 				s += "[color=chartreuse]Recruitable — use Talk in combat preview when available.[/color]\n"
 
@@ -2443,6 +2856,9 @@ func _reset_rookie_battle_tracking() -> void:
 
 func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	if attacker == null or defender == null:
+		return []
+
+	if is_local_player_command_blocked_for_mock_coop_unit(attacker):
 		return []
 
 	if attacker.get("equipped_weapon") == null:
@@ -9354,6 +9770,7 @@ func update_objective_ui(skip_animation: bool = false) -> void:
 		else:
 			txt += "[color=gray]" + target_item + ": " + str(current_amt) + " / " + str(target_amt) + "[/color]"
 
+	txt += _build_mock_coop_player_phase_readiness_bbcode_suffix()
 	txt += "\n[color=gray][font_size=15]Shift: enemy threat · Side panel: goals[/font_size][/color]\n[/center]"
 	
 	# Dynamically resize the panel based on whether a quest is active

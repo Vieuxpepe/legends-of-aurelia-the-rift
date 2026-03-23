@@ -17,10 +17,24 @@ func interact() -> void:
 	if parent_ui == null:
 		return
 
-	stock = ExpeditionMapDatabase.get_cartographer_stock(CampaignManager.max_unlocked_index)
+	stock = CampaignManager.get_expedition_cartographer_shop_entries()
 	current_index = 0
 	interaction_active = true
 	_show_offer()
+
+func _build_expedition_ledger_section() -> String:
+	var header: String = "Expedition ledger (your charts)"
+	var owned: Array[String] = CampaignManager.get_owned_expedition_maps()
+	if owned.is_empty():
+		return "%s\nNo expedition charts in your satchel yet." % header
+	var lines: PackedStringArray = PackedStringArray([header])
+	for map_id in owned:
+		var done: bool = CampaignManager.has_completed_expedition(map_id)
+		lines.append(ExpeditionMapDatabase.build_cartographer_ledger_entry(map_id, done, CampaignManager.get_expedition_outcome_note(map_id)))
+	return "\n".join(lines)
+
+func _ledger_separator() -> String:
+	return "\n\n—\n\n"
 
 func _show_offer() -> void:
 	if parent_ui == null:
@@ -35,7 +49,8 @@ func _show_offer() -> void:
 	if stock.is_empty():
 		if parent_ui.has_node("DialoguePanel/SpeakerName"):
 			parent_ui.speaker_name.text = cartographer_name
-		parent_ui.dialogue_text.text = "No expedition maps are in stock tonight. Come back after the roads change."
+		var ledger_empty: String = _build_expedition_ledger_section()
+		parent_ui.dialogue_text.text = ledger_empty + _ledger_separator() + "No expedition maps are in stock tonight. Come back after the roads change."
 		_bind_button(parent_ui.choice_btn_1, "Leave", _close_interaction)
 		_hide_button(parent_ui.choice_btn_2)
 		_hide_button(parent_ui.choice_btn_3)
@@ -57,16 +72,40 @@ func _show_offer() -> void:
 		parent_ui.speaker_name.text = cartographer_name
 
 	var status_line: String = "Owned" if owned else "Unowned"
-	parent_ui.dialogue_text.text = "%s\n%s\nRarity: %s | Recommended Lv.%d | Price: %dG | %s\nStock %d/%d" % [
+	var completed: bool = CampaignManager.has_completed_expedition(map_id)
+	var repeatable: bool = ExpeditionMapDatabase.is_entry_repeatable(map_data)
+	var run_line: String = "Run: %s | Contract: %s" % [
+		("Completed" if completed else "Not completed"),
+		("Repeatable" if repeatable else "One-time")
+	]
+	var hazard_pitch: String = str(map_data.get("world_map_hazard_pitch", "")).strip_edges()
+	var hazard_line: String = ("%s\n" % hazard_pitch) if hazard_pitch != "" else ""
+
+	var mod_line: String = ExpeditionMapDatabase.build_expedition_modifier_ui_line(map_data)
+	var modifier_block: String = ("%s\n" % mod_line) if mod_line != "" else ""
+
+	var survey_line: String = ""
+	if completed:
+		var sn: String = CampaignManager.get_expedition_outcome_note(map_id)
+		if sn != "":
+			survey_line = "Survey: %s\n" % sn
+
+	var ledger: String = _build_expedition_ledger_section()
+	var offer_body: String = "%s%s%s%s\n%s\nRarity: %s | Recommended Lv.%d | Price: %dG | %s\n%s\nStock %d/%d" % [
+		hazard_line,
+		modifier_block,
+		survey_line,
 		display_name,
 		description,
 		rarity,
 		recommended_level,
 		price,
 		status_line,
+		run_line,
 		current_index + 1,
 		stock.size()
 	]
+	parent_ui.dialogue_text.text = ledger + _ledger_separator() + offer_body
 
 	var buy_text: String = "Already Owned" if owned and not bool(map_data.get("consumable", false)) else "Buy (%dG)" % price
 	_bind_button(parent_ui.choice_btn_1, buy_text, _attempt_purchase.bind(map_data))

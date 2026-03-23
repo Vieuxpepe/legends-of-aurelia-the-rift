@@ -177,13 +177,22 @@ func _refresh_ui_list() -> void:
 	for u in battlefield.player_container.get_children():
 		candidate_ids.append(battlefield.get_relationship_id(u))
 
+	var mock_coop_roster_tags: bool = battlefield.is_mock_coop_unit_ownership_active()
+
 	var deployed_count := 0
 	for u in battlefield.player_container.get_children():
 		var is_deployed: bool = u.visible
 		if is_deployed:
 			deployed_count += 1
 		var u_name = u.get("unit_name")
-		var text := ("[Deployed] " if is_deployed else "[Benched] ") + (str(u_name) if u_name != null else "?")
+		var text := ("[Deployed] " if is_deployed else "[Benched] ")
+		if mock_coop_roster_tags:
+			var own_key: String = battlefield.get_mock_coop_unit_owner_for_unit(u)
+			if own_key == "remote":
+				text += "[PARTNER] "
+			elif own_key == "local":
+				text += "[YOURS] "
+		text += (str(u_name) if u_name != null else "?")
 		if u.get("is_custom_avatar") == true:
 			text += " (Leader)"
 		var icon = null
@@ -201,6 +210,12 @@ func _refresh_ui_list() -> void:
 				others.append(id)
 		var entries: Array = CampaignManager.get_top_relationship_entries_for_unit(unit_id, others, 5)
 		var tooltip_lines: Array = []
+		if mock_coop_roster_tags:
+			var own_tip: String = battlefield.get_mock_coop_unit_owner_for_unit(u)
+			if own_tip == "remote":
+				tooltip_lines.append("Mock co-op: Partner detachment (locked)")
+			elif own_tip == "local":
+				tooltip_lines.append("Mock co-op: Your detachment (locked)")
 		for e in entries:
 			tooltip_lines.append(CampaignManager.format_relationship_tooltip(e))
 		roster_list.set_item_tooltip(idx, "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else "No bonds with current roster.")
@@ -334,6 +349,9 @@ func _on_list_item_selected(index: int) -> void:
 	var unit = meta.get("data")
 	if unit == null:
 		return
+	if battlefield.is_local_player_command_blocked_for_mock_coop_unit(unit):
+		battlefield.notify_mock_coop_remote_command_blocked(unit)
+		return
 	_roster_selected_unit = unit
 	if unit.get("is_custom_avatar") == true and unit.visible:
 		battlefield.play_ui_sfx(battlefield.UISfx.INVALID)
@@ -400,16 +418,27 @@ func handle_input(event: InputEvent) -> void:
 			var clicked_unit = battlefield.get_unit_at(pos)
 			if selected_unit == null:
 				if clicked_unit != null:
+					if not battlefield.try_allow_local_player_select_unit_for_command(clicked_unit):
+						return
 					selected_unit = clicked_unit
 					selected_unit.set_selected_glow(true)
 					battlefield.play_ui_sfx(battlefield.UISfx.MOVE_OK)
 			else:
 				if clicked_unit != null and clicked_unit != selected_unit:
+					if battlefield.is_local_player_command_blocked_for_mock_coop_unit(clicked_unit):
+						battlefield.notify_mock_coop_remote_command_blocked(clicked_unit)
+						return
+					if battlefield.is_local_player_command_blocked_for_mock_coop_unit(selected_unit):
+						battlefield.notify_mock_coop_remote_command_blocked(selected_unit)
+						return
 					var tmp = selected_unit.global_position
 					selected_unit.global_position = clicked_unit.global_position
 					clicked_unit.global_position = tmp
 					battlefield.play_ui_sfx(battlefield.UISfx.TARGET_OK)
 				elif clicked_unit == null and _get_barricade(pos) == null:
+					if battlefield.is_local_player_command_blocked_for_mock_coop_unit(selected_unit):
+						battlefield.notify_mock_coop_remote_command_blocked(selected_unit)
+						return
 					selected_unit.global_position = _grid_to_world(pos)
 					battlefield.play_ui_sfx(battlefield.UISfx.TARGET_OK)
 				_deselect()
