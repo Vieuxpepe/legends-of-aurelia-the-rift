@@ -3,17 +3,17 @@ extends CoopSessionTransport
 
 signal room_directory_updated
 
-const SWUtils = preload("res://addons/silent_wolf/utils/SWUtils.gd")
 const DIRECTORY_PLAYER_NAME: String = "cor_dir_v1"
+const SilentWolfScoresRelayBackendType = preload("res://Scripts/Coop/SilentWolfScoresRelayBackend.gd")
 const ROOM_SCHEMA_VERSION: int = 1
 const MAILBOX_SCHEMA_VERSION: int = 1
 const STORAGE_BLOB_KEY: String = "blob"
 const ROOM_CODE_CHARS: String = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const ROOM_CODE_LENGTH: int = 6
-const DIRECTORY_POLL_UNPAIRED_MSEC: int = 1400
+const DIRECTORY_POLL_UNPAIRED_MSEC: int = 1500
 const DIRECTORY_POLL_LINKED_MSEC: int = 4500
-const MAILBOX_POLL_STAGING_MSEC: int = 260
-const MAILBOX_POLL_RUNTIME_MSEC: int = 110
+const MAILBOX_POLL_STAGING_MSEC: int = 900
+const MAILBOX_POLL_RUNTIME_MSEC: int = 600
 const MAX_MAILBOX_MESSAGES: int = 128
 const ROOM_TTL_SECONDS: int = 7200
 
@@ -50,14 +50,12 @@ var _mailbox_save_seq_highwater: int = -1
 var _next_directory_poll_at_msec: int = 0
 var _next_mailbox_poll_at_msec: int = 0
 
-var _active_request: HTTPRequest = null
-var _active_request_weakref: WeakRef = null
-var _active_request_tag: String = ""
-var _active_request_kind: String = ""
+var _relay_backend: CoopRelayDocumentBackend = null
 
 
 func bind_manager(manager: Node) -> void:
 	_manager = manager
+	_ensure_relay_backend()
 
 
 func transport_mode_id() -> String:
@@ -100,7 +98,8 @@ func refresh_room_directory_listing() -> bool:
 		_set_error("SilentWolf backend is unavailable in this build.")
 		room_directory_updated.emit()
 		return false
-	if _active_request != null:
+	_ensure_relay_backend()
+	if _relay_backend == null or _relay_backend.is_request_active():
 		return false
 	_request_directory_snapshot("directory_browse")
 	return true
@@ -181,7 +180,8 @@ func poll_transport() -> void:
 		if _last_error == "":
 			_set_error("SilentWolf backend is unavailable in this build.")
 		return
-	if _active_request != null:
+	_ensure_relay_backend()
+	if _relay_backend == null or _relay_backend.is_request_active():
 		return
 	var now: int = Time.get_ticks_msec()
 	if _local_mailbox_dirty:
@@ -218,10 +218,8 @@ func _reset_state() -> void:
 	_mailbox_save_seq_highwater = -1
 	_next_directory_poll_at_msec = 0
 	_next_mailbox_poll_at_msec = 0
-	_active_request = null
-	_active_request_weakref = null
-	_active_request_tag = ""
-	_active_request_kind = ""
+	if _relay_backend != null:
+		_relay_backend.reset_backend_state()
 
 
 func _resolve_local_display_name() -> String:
@@ -272,13 +270,21 @@ func _touch_mailbox_poll_now() -> void:
 func _request_directory_snapshot(tag: String) -> void:
 	_directory_request_pending = true
 	_directory_request_tag = tag
-	_start_get_player_data(DIRECTORY_PLAYER_NAME, tag)
+	_ensure_relay_backend()
+	if _relay_backend == null or not _relay_backend.fetch_document(DIRECTORY_PLAYER_NAME, tag):
+		_directory_request_pending = false
+		_directory_request_tag = ""
+		_set_error("Online relay backend could not start a directory read.")
 
 
 func _request_save_directory(directory_payload: Dictionary, tag: String) -> void:
 	_directory_request_pending = true
 	_directory_request_tag = tag
-	_start_save_player_data(DIRECTORY_PLAYER_NAME, _wrap_storage_payload(directory_payload), tag)
+	_ensure_relay_backend()
+	if _relay_backend == null or not _relay_backend.save_document(DIRECTORY_PLAYER_NAME, _wrap_storage_payload(directory_payload), tag):
+		_directory_request_pending = false
+		_directory_request_tag = ""
+		_set_error("Online relay backend could not start a directory write.")
 
 
 func _request_save_mailbox(tag: String) -> void:
@@ -287,7 +293,11 @@ func _request_save_mailbox(tag: String) -> void:
 	_mailbox_request_pending = true
 	_mailbox_request_tag = tag
 	_mailbox_save_seq_highwater = _next_local_seq
-	_start_save_player_data(_local_mailbox_player_name(), _wrap_storage_payload(_build_local_mailbox_payload()), tag)
+	_ensure_relay_backend()
+	if _relay_backend == null or not _relay_backend.save_document(_local_mailbox_player_name(), _wrap_storage_payload(_build_local_mailbox_payload()), tag):
+		_mailbox_request_pending = false
+		_mailbox_request_tag = ""
+		_set_error("Online relay backend could not start a mailbox write.")
 
 
 func _request_peer_mailbox(tag: String) -> void:
@@ -295,122 +305,46 @@ func _request_peer_mailbox(tag: String) -> void:
 		return
 	_mailbox_request_pending = true
 	_mailbox_request_tag = tag
-	_start_get_player_data(_remote_mailbox_player_name(), tag)
+	_ensure_relay_backend()
+	if _relay_backend == null or not _relay_backend.fetch_document(_remote_mailbox_player_name(), tag):
+		_mailbox_request_pending = false
+		_mailbox_request_tag = ""
+		_set_error("Online relay backend could not start a mailbox read.")
 
 
-func _start_get_player_data(player_name: String, tag: String) -> void:
-	if player_name.strip_edges() == "":
+func set_relay_backend(backend: CoopRelayDocumentBackend) -> void:
+	if _relay_backend != null:
+		var existing_callable := Callable(self, "_on_relay_backend_request_completed")
+		if _relay_backend.request_completed.is_connected(existing_callable):
+			_relay_backend.request_completed.disconnect(existing_callable)
+		_relay_backend.reset_backend_state()
+	_relay_backend = backend
+	if _relay_backend == null:
 		return
-	var prepared: Dictionary = SilentWolf.prepare_http_request()
-	_active_request = prepared.get("request", null) as HTTPRequest
-	_active_request_weakref = prepared.get("weakref", null)
-	_active_request_tag = tag
-	_active_request_kind = "get_player_data"
-	if _active_request == null:
-		_set_error("Online transport could not allocate an HTTP request.")
-		return
-	_active_request.request_completed.connect(_on_active_request_completed, CONNECT_ONE_SHOT)
-	var request_url: String = "https://api.silentwolf.com/get_player_data/%s/%s" % [
-		str(SilentWolf.config.game_id).strip_edges(),
-		player_name.uri_encode(),
-	]
-	_send_transport_get_request_without_auth(_active_request, request_url)
+	_relay_backend.bind_transport(self)
+	_relay_backend.request_completed.connect(_on_relay_backend_request_completed)
 
 
-func _start_save_player_data(player_name: String, player_data: Dictionary, tag: String) -> void:
-	if player_name.strip_edges() == "":
+func _ensure_relay_backend() -> void:
+	if _relay_backend != null:
 		return
-	var prepared: Dictionary = SilentWolf.prepare_http_request()
-	_active_request = prepared.get("request", null) as HTTPRequest
-	_active_request_weakref = prepared.get("weakref", null)
-	_active_request_tag = tag
-	_active_request_kind = "save_player_data"
-	if _active_request == null:
-		_set_error("Online transport could not allocate an HTTP request.")
-		return
-	_active_request.request_completed.connect(_on_active_request_completed, CONNECT_ONE_SHOT)
-	var payload: Dictionary = {
-		"game_id": str(SilentWolf.config.game_id).strip_edges(),
-		"player_name": player_name,
-		"player_data": player_data.duplicate(true),
-		"overwrite": true,
+	set_relay_backend(SilentWolfScoresRelayBackendType.new())
+
+
+func _on_relay_backend_request_completed(operation: String, tag: String, result: Dictionary) -> void:
+	var parse: Dictionary = {
+		"ok": bool(result.get("ok", false)),
+		"player_data": result.get("payload", {}),
+		"body": result.get("body", {}),
+		"error": str(result.get("error", "")).strip_edges(),
 	}
-	_send_transport_post_request_without_auth(_active_request, "https://api.silentwolf.com/push_player_data", payload)
-
-
-func _send_transport_get_request_without_auth(http_node: HTTPRequest, request_url: String) -> void:
-	var token_state: Dictionary = _suspend_silent_wolf_auth_headers()
-	SilentWolf.send_get_request(http_node, request_url)
-	_restore_silent_wolf_auth_headers(token_state)
-
-
-func _send_transport_post_request_without_auth(http_node: HTTPRequest, request_url: String, payload: Dictionary) -> void:
-	var token_state: Dictionary = _suspend_silent_wolf_auth_headers()
-	SilentWolf.send_post_request(http_node, request_url, payload)
-	_restore_silent_wolf_auth_headers(token_state)
-
-
-func _suspend_silent_wolf_auth_headers() -> Dictionary:
-	var out: Dictionary = {"auth_node": null, "id_token": null, "access_token": null}
-	if SilentWolf == null:
-		return out
-	var auth_node: Variant = SilentWolf.get("Auth")
-	if auth_node == null:
-		return out
-	out["auth_node"] = auth_node
-	out["id_token"] = auth_node.get("sw_id_token")
-	out["access_token"] = auth_node.get("sw_access_token")
-	auth_node.set("sw_id_token", null)
-	auth_node.set("sw_access_token", null)
-	return out
-
-
-func _restore_silent_wolf_auth_headers(token_state: Dictionary) -> void:
-	var auth_node: Variant = token_state.get("auth_node", null)
-	if auth_node == null:
-		return
-	auth_node.set("sw_id_token", token_state.get("id_token", null))
-	auth_node.set("sw_access_token", token_state.get("access_token", null))
-
-
-func _on_active_request_completed(_result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
-	var request_tag: String = _active_request_tag
-	var request_kind: String = _active_request_kind
-	var req: HTTPRequest = _active_request
-	var wr: WeakRef = _active_request_weakref
-	_active_request = null
-	_active_request_weakref = null
-	_active_request_tag = ""
-	_active_request_kind = ""
-	if req != null and is_instance_valid(req):
-		SilentWolf.free_request(wr, req)
-	var parse: Dictionary = _parse_silent_wolf_response(response_code, headers, body)
-	match request_kind:
-		"get_player_data":
-			_handle_get_player_data_result(request_tag, parse)
-		"save_player_data":
-			_handle_save_player_data_result(request_tag, parse)
+	match operation:
+		"get_document":
+			_handle_get_player_data_result(tag, parse)
+		"save_document":
+			_handle_save_player_data_result(tag, parse)
 		_:
 			pass
-
-
-func _parse_silent_wolf_response(response_code: int, headers: PackedStringArray, body: PackedByteArray) -> Dictionary:
-	var ok_http: bool = SWUtils.check_http_response(response_code, headers, body)
-	if not ok_http:
-		return {"ok": false, "error": "http_unavailable", "player_data": {}, "body": {}}
-	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return {"ok": false, "error": "json_invalid", "player_data": {}, "body": {}}
-	var json_body: Dictionary = parsed as Dictionary
-	if bool(json_body.get("success", false)):
-		var player_data: Variant = json_body.get("player_data", {})
-		if player_data is Dictionary:
-			return {"ok": true, "player_data": (player_data as Dictionary).duplicate(true), "body": json_body}
-		return {"ok": true, "player_data": {}, "body": json_body}
-	var error_text: String = str(json_body.get("error", "silentwolf_error")).strip_edges()
-	if error_text == "":
-		error_text = "silentwolf_error"
-	return {"ok": false, "error": error_text, "player_data": {}, "body": json_body}
 
 
 func _handle_get_player_data_result(tag: String, parse: Dictionary) -> void:
@@ -444,13 +378,15 @@ func _handle_save_player_data_result(tag: String, parse: Dictionary) -> void:
 		_directory_request_tag = ""
 		_pending_create_room = false
 		_pending_join_room = false
-		_next_directory_poll_at_msec = Time.get_ticks_msec() + _current_directory_poll_msec()
+		## Confirm room-pairing writes immediately; otherwise host/guest can sit for a full idle poll window
+		## before they discover the room is linked and start exchanging staging payloads.
+		_next_directory_poll_at_msec = 0
 	elif tag == "save_local_mailbox":
 		_mailbox_request_pending = false
 		_mailbox_request_tag = ""
 		if _next_local_seq <= _mailbox_save_seq_highwater:
 			_local_mailbox_dirty = false
-			_next_mailbox_poll_at_msec = Time.get_ticks_msec() + _current_mailbox_poll_msec()
+			_next_mailbox_poll_at_msec = 0
 		else:
 			_local_mailbox_dirty = true
 			_next_mailbox_poll_at_msec = 0
@@ -464,6 +400,9 @@ func _handle_directory_snapshot(parse: Dictionary) -> void:
 	else:
 		var err: String = str(parse.get("error", "")).strip_edges()
 		var can_bootstrap_empty_directory: bool = _pending_create_room
+		if err == "rate_limited":
+			_next_directory_poll_at_msec = Time.get_ticks_msec() + max(_current_directory_poll_msec(), 2500)
+			return
 		if err == "" or err == "player_not_found" or err.to_lower().contains("not found") or can_bootstrap_empty_directory:
 			directory_payload = _coerce_directory_payload({})
 		else:
@@ -472,6 +411,16 @@ func _handle_directory_snapshot(parse: Dictionary) -> void:
 			return
 	_prune_stale_rooms(directory_payload)
 	_cache_room_directory(directory_payload)
+	if OS.is_debug_build():
+		var rooms_dict: Dictionary = directory_payload.get("rooms", {}) as Dictionary
+		print("[OnlineCoop] directory_sync code=%s host=%s pending_create=%s pending_join=%s wired=%s rooms=%s" % [
+			_session_code,
+			str(_is_host),
+			str(_pending_create_room),
+			str(_pending_join_room),
+			str(_session_wired),
+			str(rooms_dict.keys()),
+		])
 	var changed: bool = false
 	if _pending_create_room:
 		changed = _apply_local_host_create(directory_payload)
@@ -498,6 +447,9 @@ func _handle_directory_browse_snapshot(parse: Dictionary) -> void:
 		directory_payload = _coerce_directory_payload(parse.get("player_data", {}))
 	else:
 		var err: String = str(parse.get("error", "")).strip_edges()
+		if err == "rate_limited":
+			room_directory_updated.emit()
+			return
 		if err == "" or err == "player_not_found" or err.to_lower().contains("not found"):
 			directory_payload = _coerce_directory_payload({})
 		else:
@@ -506,17 +458,26 @@ func _handle_directory_browse_snapshot(parse: Dictionary) -> void:
 			return
 	_prune_stale_rooms(directory_payload)
 	_cache_room_directory(directory_payload)
+	if OS.is_debug_build():
+		print("[OnlineCoop] directory_browse rooms=%s" % str(_room_directory_cache))
 	room_directory_updated.emit()
 
 
 func _handle_peer_mailbox_snapshot(parse: Dictionary) -> void:
 	_next_mailbox_poll_at_msec = Time.get_ticks_msec() + _current_mailbox_poll_msec()
 	if not bool(parse.get("ok", false)):
+		if str(parse.get("error", "")).strip_edges() == "rate_limited":
+			_next_mailbox_poll_at_msec = Time.get_ticks_msec() + max(_current_mailbox_poll_msec(), 1500)
+			return
+		if OS.is_debug_build():
+			print("[OnlineCoop] mailbox_read code=%s host=%s ok=false err=%s" % [_session_code, str(_is_host), str(parse.get("error", ""))])
 		return
 	var mailbox: Dictionary = _coerce_mailbox_payload(parse.get("player_data", {}))
 	var messages: Variant = mailbox.get("messages", [])
 	if typeof(messages) != TYPE_ARRAY:
 		return
+	if OS.is_debug_build():
+		print("[OnlineCoop] mailbox_read code=%s host=%s messages=%d last_remote_seq=%d" % [_session_code, str(_is_host), (messages as Array).size(), _last_remote_seq])
 	for raw in messages as Array:
 		if not (raw is Dictionary):
 			continue
@@ -692,6 +653,15 @@ func _apply_room_state_from_directory(directory_payload: Dictionary) -> void:
 		_remote_display_name = str(room.get("host_display_name", "")).strip_edges()
 	var prev_wired: bool = _session_wired
 	_session_wired = _remote_actor_id != ""
+	if OS.is_debug_build():
+		print("[OnlineCoop] room_state code=%s host=%s remote_actor=%s remote_name=%s prev_wired=%s wired=%s" % [
+			_session_code,
+			str(_is_host),
+			_remote_actor_id,
+			_remote_display_name,
+			str(prev_wired),
+			str(_session_wired),
+		])
 	if _session_wired:
 		if _is_host:
 			_status_line = "Online room %s linked to %s. Live relay sync is active." % [_session_code, _remote_display_name if _remote_display_name != "" else "guest"]

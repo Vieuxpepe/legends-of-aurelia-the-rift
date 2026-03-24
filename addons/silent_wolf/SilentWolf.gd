@@ -144,8 +144,11 @@ func send_get_request(http_node: HTTPRequest, request_url: String):
 	]
 	headers = add_jwt_token_headers(headers)
 	print("GET headers: " + str(headers))
-	while not http_node.is_inside_tree():
+	while is_instance_valid(http_node) and not http_node.is_inside_tree():
 		await get_tree().process_frame
+	if not is_instance_valid(http_node):
+		SWLogger.debug("Skipping GET request because HTTPRequest was freed before entering the scene tree.")
+		return
 	SWLogger.debug("Method: GET")
 	SWLogger.debug("request_url: " + str(request_url))
 	SWLogger.debug("headers: " + str(headers))
@@ -188,8 +191,11 @@ func send_post_request(http_node, request_url, payload):
 			headers.append("x-sw-act-dig: " + hashed)
 			break
 	var use_ssl = true
-	while not http_node.is_inside_tree():
+	while is_instance_valid(http_node) and not http_node.is_inside_tree():
 		await get_tree().process_frame
+	if not is_instance_valid(http_node):
+		SWLogger.debug("Skipping POST request because HTTPRequest was freed before entering the scene tree.")
+		return
 	var query = JSON.stringify(payload)
 	SWLogger.debug("Method: POST")
 	SWLogger.debug("request_url: " + str(request_url))

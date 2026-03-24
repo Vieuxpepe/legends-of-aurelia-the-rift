@@ -439,10 +439,10 @@ func release_enet_host_launch_pipeline() -> void:
 ## Guest session: rotate ordered to partner||local, then rebuild local/partner as first k / rest of the new order (same k = ceil(n/2)).
 func _coop_mock_detachment_dict_remapped_for_guest_session(m: Dictionary) -> Dictionary:
 	var md: Dictionary = m.duplicate(true)
-	var ord: Variant = md.get("ordered_command_unit_ids", [])
-	if typeof(ord) != TYPE_ARRAY:
+	var ordered_ids_value: Variant = md.get("ordered_command_unit_ids", [])
+	if typeof(ordered_ids_value) != TYPE_ARRAY:
 		return md
-	var ord_a: Array = ord as Array
+	var ord_a: Array = ordered_ids_value as Array
 	var n: int = ord_a.size()
 	if n <= 0:
 		return md
@@ -515,13 +515,13 @@ func _coop_handoff_slim_player_dict_for_enet_wire(p: Variant) -> Dictionary:
 	var cav: Variant = src.get("custom_avatar_snapshot", {})
 	if cav is Dictionary:
 		var cav_d: Dictionary = cav as Dictionary
-		var mini: Dictionary = {}
+		var compact_avatar: Dictionary = {}
 		if cav_d.has("unit_name"):
-			mini["unit_name"] = str(cav_d.get("unit_name", ""))
+			compact_avatar["unit_name"] = str(cav_d.get("unit_name", ""))
 		if cav_d.has("class_data_path"):
-			mini["class_data_path"] = str(cav_d.get("class_data_path", ""))
-		if not mini.is_empty():
-			out["custom_avatar_snapshot"] = mini
+			compact_avatar["class_data_path"] = str(cav_d.get("class_data_path", ""))
+		if not compact_avatar.is_empty():
+			out["custom_avatar_snapshot"] = compact_avatar
 	return out
 
 
@@ -810,6 +810,11 @@ func _enet_guest_on_transport_disconnected() -> void:
 
 
 func _online_transport_on_room_linked() -> void:
+	if phase == Phase.HOST:
+		refresh_local_player_payload_from_campaign()
+		_enet_broadcast_session_snapshot()
+		session_state_changed.emit()
+		return
 	if phase != Phase.GUEST:
 		session_state_changed.emit()
 		return

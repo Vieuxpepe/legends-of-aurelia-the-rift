@@ -999,14 +999,14 @@ func _open_expedition_lan_join_dialog(exp_map_id: String) -> void:
 			_show_announcement("Enter host:port (example: 192.168.1.5:7779).", true)
 			return
 		CoopExpeditionSessionManager.leave_session()
-		var tr := ENetCoopTransport.new()
+		var enet_transport := ENetCoopTransport.new()
 		if jp.contains(":"):
 			var parts: PackedStringArray = jp.split(":")
 			if parts.size() >= 2:
 				var pt: int = int(str(parts[parts.size() - 1]).strip_edges())
 				if pt > 0:
-					tr.configure_listen_port(pt)
-		CoopExpeditionSessionManager.set_transport(tr)
+					enet_transport.configure_listen_port(pt)
+		CoopExpeditionSessionManager.set_transport(enet_transport)
 		var r: Dictionary = CoopExpeditionSessionManager.join_session(jp)
 		if not bool(r.get("ok", false)):
 			_show_announcement("Join failed: %s" % str(r.get("error", r)), true)
@@ -2110,12 +2110,12 @@ func _coop_debug_enet_bind_and_host() -> void:
 	if _coop_enet_port_field == null:
 		return
 	CoopExpeditionSessionManager.leave_session()
-	var tr := ENetCoopTransport.new()
+	var enet_transport := ENetCoopTransport.new()
 	var p: int = int(str(_coop_enet_port_field.text).strip_edges())
 	if p <= 0:
 		p = ENetCoopTransport.DEFAULT_PORT
-	tr.configure_listen_port(p)
-	CoopExpeditionSessionManager.set_transport(tr)
+	enet_transport.configure_listen_port(p)
+	CoopExpeditionSessionManager.set_transport(enet_transport)
 	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
 	_show_announcement("ENet bind+host: %s" % str(r), true)
 
@@ -2128,14 +2128,14 @@ func _coop_debug_enet_bind_and_join() -> void:
 		_show_announcement("ENet join: enter host:port", true)
 		return
 	CoopExpeditionSessionManager.leave_session()
-	var tr := ENetCoopTransport.new()
+	var enet_transport := ENetCoopTransport.new()
 	if jp.contains(":"):
 		var parts: PackedStringArray = jp.split(":")
 		if parts.size() >= 2:
 			var pt: int = int(str(parts[parts.size() - 1]).strip_edges())
 			if pt > 0:
-				tr.configure_listen_port(pt)
-	CoopExpeditionSessionManager.set_transport(tr)
+				enet_transport.configure_listen_port(pt)
+	CoopExpeditionSessionManager.set_transport(enet_transport)
 	var r: Dictionary = CoopExpeditionSessionManager.join_session(jp)
 	_show_announcement("ENet bind+join: %s" % str(r), true)
 

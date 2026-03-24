@@ -71,6 +71,11 @@ func _ready() -> void:
 	hide()
 
 
+func _process(_delta: float) -> void:
+	if _online_browser_transport != null:
+		_online_browser_transport.poll_transport()
+
+
 func _cache_launch_status_styles() -> void:
 	var base: StyleBoxFlat = _launch_status_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	if base == null:
@@ -193,7 +198,7 @@ func _charter_deployment_display_names_ordered() -> PackedStringArray:
 		out.append(MockCoopDetachmentAssignment.display_label_for_command_unit_id(ids[i]))
 	return out
 
-
+@warning_ignore("unreachable_code")
 func _format_detachment_command_preview_bbcode(ordered_names: PackedStringArray) -> String:
 	var lines: PackedStringArray = PackedStringArray()
 	lines.append("[font_size=16][color=#d8c8a8][b]Command preview[/b][/color][/font_size]")
@@ -553,9 +558,9 @@ func _refresh_online_status_line() -> void:
 				browse_suffix = "\nRoom list: %s" % browser_err
 		_online_status_label.text = "Online room codes use the SilentWolf service as a lightweight relay for staging and live battle sync. LAN/direct play remains available below for the fastest local link." + browse_suffix
 		return
-	var tr: CoopSessionTransport = mgr.get_transport()
-	if tr is SilentWolfOnlineCoopTransport:
-		var online: SilentWolfOnlineCoopTransport = tr as SilentWolfOnlineCoopTransport
+	var transport_instance: CoopSessionTransport = mgr.get_transport()
+	if transport_instance is SilentWolfOnlineCoopTransport:
+		var online: SilentWolfOnlineCoopTransport = transport_instance as SilentWolfOnlineCoopTransport
 		var msg: String = online.get_status_line()
 		var err: String = online.get_last_error()
 		if err != "":
@@ -656,9 +661,9 @@ func _refresh_lan_status_line() -> void:
 		bits.append("Mode: same-PC rehearsal")
 	elif mgr.uses_enet_coop_transport():
 		bits.append("Mode: LAN")
-		var tr: CoopSessionTransport = mgr.get_transport()
-		if tr is ENetCoopTransport:
-			var en: ENetCoopTransport = tr as ENetCoopTransport
+		var transport_instance: CoopSessionTransport = mgr.get_transport()
+		if transport_instance is ENetCoopTransport:
+			var en: ENetCoopTransport = transport_instance as ENetCoopTransport
 			bits.append("port %d" % en.get_listen_port())
 			bits.append("link: %s" % ("ok" if en.is_session_wired() else "connecting…"))
 	else:
@@ -687,9 +692,9 @@ func _on_lan_host_pressed() -> void:
 	if p <= 0:
 		p = ENetCoopTransport.DEFAULT_PORT
 	CoopExpeditionSessionManager.leave_session()
-	var tr := ENetCoopTransport.new()
-	tr.configure_listen_port(p)
-	CoopExpeditionSessionManager.set_transport(tr)
+	var enet_transport := ENetCoopTransport.new()
+	enet_transport.configure_listen_port(p)
+	CoopExpeditionSessionManager.set_transport(enet_transport)
 	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
 	if not bool(r.get("ok", false)):
 		_last_launch_error = "LAN host: " + str(r.get("error", str(r)))
@@ -705,14 +710,14 @@ func _on_lan_join_pressed() -> void:
 		_refresh_ui()
 		return
 	CoopExpeditionSessionManager.leave_session()
-	var tr := ENetCoopTransport.new()
+	var enet_transport := ENetCoopTransport.new()
 	if jp.contains(":"):
 		var parts: PackedStringArray = jp.split(":")
 		if parts.size() >= 2:
 			var pt: int = int(str(parts[parts.size() - 1]).strip_edges())
 			if pt > 0:
-				tr.configure_listen_port(pt)
-	CoopExpeditionSessionManager.set_transport(tr)
+				enet_transport.configure_listen_port(pt)
+	CoopExpeditionSessionManager.set_transport(enet_transport)
 	var r: Dictionary = CoopExpeditionSessionManager.join_session(jp)
 	if not bool(r.get("ok", false)):
 		_last_launch_error = "LAN join: " + str(r.get("error", str(r)))
@@ -735,8 +740,8 @@ func _on_lan_loopback_pressed() -> void:
 
 func _on_online_host_pressed() -> void:
 	CoopExpeditionSessionManager.leave_session()
-	var tr := SilentWolfOnlineCoopTransport.new()
-	CoopExpeditionSessionManager.set_transport(tr)
+	var online_transport := SilentWolfOnlineCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(online_transport)
 	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
 	if not bool(r.get("ok", false)):
 		_last_launch_error = "Online host: " + str(r.get("error", str(r)))
@@ -752,8 +757,8 @@ func _on_online_join_pressed() -> void:
 		_refresh_ui()
 		return
 	CoopExpeditionSessionManager.leave_session()
-	var tr := SilentWolfOnlineCoopTransport.new()
-	CoopExpeditionSessionManager.set_transport(tr)
+	var online_transport := SilentWolfOnlineCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(online_transport)
 	var r: Dictionary = CoopExpeditionSessionManager.join_session(code)
 	if not bool(r.get("ok", false)):
 		_last_launch_error = "Online join: " + str(r.get("error", str(r)))

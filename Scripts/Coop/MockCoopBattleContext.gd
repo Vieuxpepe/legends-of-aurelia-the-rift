@@ -34,7 +34,7 @@ var partner_command_unit_ids: PackedStringArray = PackedStringArray()
 ## Matches BattleField locked split + legacy field-order fallback: indices [0 .. ceil(n/2)-1] → local commander.
 static func mock_coop_local_command_slot_count(deployed_player_side_unit_count: int) -> int:
 	var n: int = maxi(0, deployed_player_side_unit_count)
-	return (n + 1) / 2
+	return ceili(float(n) / 2.0)
 
 
 static func from_consumed_handoff(handoff: Dictionary) -> MockCoopBattleContext:

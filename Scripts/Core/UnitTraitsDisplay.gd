@@ -137,9 +137,9 @@ static func _grant_base_class_legacy(unit: Node2D, old_job: String) -> void:
 	var line: String = str(BASE_LEGACY_TRAIT_LINES.get(old_job, "")).strip_edges()
 	if line.is_empty():
 		line = "Legacy — %s: Training in this role still shapes your instincts in battle." % old_job
-	var tr: Array = unit.traits
-	if not tr.has(line):
-		tr.append(line)
+	var traits_list: Array = unit.traits
+	if not traits_list.has(line):
+		traits_list.append(line)
 
 
 static func _grant_promoted_class_legacy(unit: Node2D, old_job: String) -> void:
@@ -154,9 +154,9 @@ static func _grant_promoted_class_legacy(unit: Node2D, old_job: String) -> void:
 	var line: String = str(PROMOTED_LEGACY_TRAIT_LINES.get(old_job, "")).strip_edges()
 	if line.is_empty():
 		return
-	var tr: Array = unit.traits
-	if not tr.has(line):
-		tr.append(line)
+	var traits_list: Array = unit.traits
+	if not traits_list.has(line):
+		traits_list.append(line)
 
 
 static func grant_rookie_legacy_on_promotion(unit: Node2D, old_class_name: String) -> void:
@@ -178,9 +178,9 @@ static func grant_rookie_legacy_on_promotion(unit: Node2D, old_class_name: Strin
 	var line: String = str(ROOKIE_LEGACY_TRAIT_LINES.get(j, "")).strip_edges()
 	if line.is_empty():
 		return
-	var tr: Array = unit.traits
-	if not tr.has(line):
-		tr.append(line)
+	var traits_list: Array = unit.traits
+	if not traits_list.has(line):
+		traits_list.append(line)
 
 
 static func trait_lines_from_unit(u: Node2D) -> PackedStringArray:

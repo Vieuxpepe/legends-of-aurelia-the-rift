@@ -1,7 +1,5 @@
 extends Node
 
-const CoopOnlineServiceConfig = preload("res://Scripts/Coop/CoopOnlineServiceConfig.gd")
-
 # ArenaManager.gd – Version 2.0 (Juiced Up!)
 var current_opponent_data: Dictionary = {}
 var local_arena_team: Array = []
