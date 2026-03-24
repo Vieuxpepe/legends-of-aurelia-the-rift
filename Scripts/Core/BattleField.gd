@@ -726,9 +726,9 @@ func _coop_focus_camera_on_action(attacker: Node2D, target: Node2D, duration: fl
 func _mock_coop_battle_sync_active() -> bool:
 	return (
 			is_mock_coop_unit_ownership_active()
-			and CoopExpeditionSessionManager.uses_enet_coop_transport()
+			and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
 			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-	)
+		)
 
 
 func _mock_coop_prebattle_ready_sync_active() -> bool:
@@ -849,7 +849,7 @@ var _coop_remote_enemy_turn_completed: bool = false
 
 func _exit_tree() -> void:
 	_coop_net_reset_battle_rng_sync()
-	CoopExpeditionSessionManager.unregister_enet_coop_battle_sync_battlefield(self)
+	CoopExpeditionSessionManager.unregister_runtime_coop_battle_sync_target(self)
 
 
 func _coop_net_reset_battle_rng_sync() -> void:
@@ -878,7 +878,7 @@ func _coop_net_reset_battle_rng_sync() -> void:
 func coop_enet_enemy_turn_host_authority_active() -> bool:
 	return (
 		is_mock_coop_unit_ownership_active()
-		and CoopExpeditionSessionManager.uses_enet_coop_transport()
+		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
 		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
 	)
 
@@ -909,7 +909,7 @@ func coop_enet_escort_turn_host_authority_active() -> bool:
 		map_objective == Objective.DEFEND_TARGET
 		and is_instance_valid(vip_target)
 		and vip_target.has_method("process_escort_turn")
-		and CoopExpeditionSessionManager.uses_enet_coop_transport()
+		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
 		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
 	)
 
@@ -959,7 +959,7 @@ func _coop_send_host_authoritative_battle_result(result: String) -> void:
 	if _coop_host_battle_result_broadcast == normalized:
 		return
 	_coop_host_battle_result_broadcast = normalized
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "battle_result",
 		"result": normalized,
 	})
@@ -1448,7 +1448,7 @@ func coop_enet_sync_after_host_authority_enemy_move(unit: Node2D, path: Array, p
 		serial.append([v.x, v.y])
 	if serial.size() < 2:
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "enemy_turn_move",
 		"unit_id": uid,
 		"path": serial,
@@ -1464,7 +1464,7 @@ func coop_enet_sync_after_host_authority_enemy_finish_turn(unit: Node2D) -> void
 	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "enemy_turn_finish",
 		"unit_id": uid,
 	})
@@ -1478,7 +1478,7 @@ func coop_enet_sync_after_host_authority_enemy_escape(unit: Node2D) -> void:
 	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "enemy_turn_escape",
 		"unit_id": uid,
 	})
@@ -1493,7 +1493,7 @@ func coop_enet_sync_after_host_authority_enemy_chest_open(opener: Node2D, chest:
 	var chest_id: String = _get_mock_coop_command_id(chest)
 	if opener_id == "" or chest_id == "":
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "enemy_turn_chest_open",
 		"opener_id": opener_id,
 		"chest_id": chest_id,
@@ -1504,14 +1504,14 @@ func coop_enet_sync_after_host_authority_enemy_chest_open(opener: Node2D, chest:
 func coop_enet_sync_after_host_authority_enemy_turn_end() -> void:
 	if not coop_enet_is_host_authority_enemy_turn_host():
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "enemy_turn_end"})
+	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "enemy_turn_end"})
 
 
 func coop_enet_sync_after_host_authority_enemy_phase_setup() -> void:
 	if not coop_enet_is_host_authority_enemy_turn_host():
 		return
 	var snap: Dictionary = _coop_build_enemy_phase_setup_snapshot()
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "enemy_phase_setup",
 		"setup": snap,
 	})
@@ -1546,7 +1546,7 @@ func coop_enet_sync_after_host_authority_escort_turn(convoy: Node2D) -> void:
 		"is_exhausted": bool(convoy.get("is_exhausted")),
 		"reached_destination": bool(convoy.get("last_turn_reached_destination")),
 	}
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(payload)
+	CoopExpeditionSessionManager.send_runtime_coop_action(payload)
 
 
 ## Called on host + guest when the session locks RNG for this battle ([method CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed]).
@@ -1575,7 +1575,7 @@ func coop_enet_begin_synchronized_combat_round() -> int:
 		return -1
 	if not is_mock_coop_unit_ownership_active():
 		return -1
-	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		return -1
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
 		return -1
@@ -1924,7 +1924,7 @@ func coop_enet_buffer_incoming_enemy_combat(body: Dictionary) -> void:
 func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_ability: bool = false) -> void:
 	if attacker == null or defender == null or not is_instance_valid(attacker) or not is_instance_valid(defender):
 		return
-	if not _coop_net_have_battle_seed or not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if not _coop_net_have_battle_seed or not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		await execute_combat(attacker, defender, used_ability)
 		return
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
@@ -1984,7 +1984,7 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 		if not spoils.is_empty():
 			body["destructible_spoils"] = spoils
 			body["destructible_name"] = defender_name_before
-		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(body)
+		CoopExpeditionSessionManager.send_runtime_coop_action(body)
 		return
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
 		var pre_enemy: Dictionary = coop_net_snapshot_alive_unit_ids()
@@ -2008,7 +2008,7 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 		}
 		if not loot_events_enemy.is_empty():
 			enemy_body["loot_events"] = loot_events_enemy.duplicate(true)
-		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(enemy_body)
+		CoopExpeditionSessionManager.send_runtime_coop_action(enemy_body)
 		return
 	## Guest: wait for host-ordered strike packet, then mirror RNG + combat.
 	while is_inside_tree():
@@ -2040,7 +2040,7 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 
 ## True when this peer is the ENet guest with battle RNG locked — player-initiated combat must be simulated on the host only.
 func coop_enet_should_delegate_player_combat_to_host() -> bool:
-	return coop_net_rng_sync_ready() and is_mock_coop_unit_ownership_active() and CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+	return coop_net_rng_sync_ready() and is_mock_coop_unit_ownership_active() and CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
 
 
 func coop_enet_get_player_side_unit_by_rel_id(rel_id: String) -> Node2D:
@@ -2064,7 +2064,7 @@ func coop_enet_guest_delegate_player_combat_to_host(attacker_id: String, defende
 	if aid == "" or did == "":
 		return
 	_coop_guest_awaiting_combat_aid = aid
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "player_combat_request",
 		"attacker_id": aid,
 		"defender_id": did,
@@ -2095,18 +2095,18 @@ func _coop_host_start_player_combat_request(body: Dictionary) -> void:
 
 
 func _coop_host_send_player_combat_request_nack(attacker_id: String) -> void:
-	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		return
 	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "player_combat_request_nack",
 		"attacker_id": str(attacker_id).strip_edges(),
 	})
 
 
 func _coop_host_resolve_player_combat_request_async(body: Dictionary) -> void:
-	if not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		return
 	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
 		return
@@ -2164,7 +2164,7 @@ func _coop_enet_sync_eligible_command_unit(unit: Node2D) -> bool:
 		return false
 	if not is_mock_coop_unit_ownership_active():
 		return false
-	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		return false
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
 		return false
@@ -2206,7 +2206,7 @@ func coop_enet_sync_after_local_prebattle_layout_change() -> void:
 	var units: Array[Dictionary] = _build_local_mock_coop_prebattle_layout_snapshot()
 	if units.is_empty():
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({
+	CoopExpeditionSessionManager.send_runtime_coop_action({
 		"action": "prebattle_layout",
 		"units": units,
 	})
@@ -2233,7 +2233,7 @@ func coop_enet_sync_after_local_player_move(unit: Node2D, path: Array, _path_cos
 	var payload: Dictionary = {"action": "player_move", "unit_id": uid, "path": serial}
 	if finish_after_move:
 		payload["finish_after_move"] = true
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(payload)
+	CoopExpeditionSessionManager.send_runtime_coop_action(payload)
 
 
 func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
@@ -2242,14 +2242,14 @@ func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
 	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_defend", "unit_id": uid})
+	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "player_defend", "unit_id": uid})
 
 
 ## IDs captured before [method execute_combat] so we still notify peer if the attacker dies. Post-combat packet only if [param attacker_after] is still alive.
 func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false, loot_events: Array = []) -> void:
 	if not is_mock_coop_unit_ownership_active():
 		return
-	if not CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		return
 	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
 		return
@@ -2276,7 +2276,7 @@ func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, 
 		combat_body["host_authority"] = true
 	if not loot_events.is_empty():
 		combat_body["loot_events"] = loot_events.duplicate(true)
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(combat_body)
+	CoopExpeditionSessionManager.send_runtime_coop_action(combat_body)
 	if attacker_after == null or not is_instance_valid(attacker_after) or int(attacker_after.current_hp) <= 0:
 		return
 	var follow: String = "canto" if entered_canto else "finish"
@@ -2288,7 +2288,7 @@ func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, 
 	}
 	if combat_host_authority:
 		post["host_authority"] = true
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action(post)
+	CoopExpeditionSessionManager.send_runtime_coop_action(post)
 
 
 func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
@@ -2297,7 +2297,7 @@ func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
 	var uid: String = _get_mock_coop_command_id(unit)
 	if uid == "":
 		return
-	CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_finish_turn", "unit_id": uid})
+	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "player_finish_turn", "unit_id": uid})
 
 
 func apply_remote_coop_enet_sync(body: Dictionary) -> void:
@@ -2931,7 +2931,7 @@ func _mock_coop_set_local_prebattle_ready(send_sync: bool = true) -> void:
 		return
 	_mock_coop_local_prebattle_ready = true
 	if send_sync:
-		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "prebattle_ready", "ready": true})
+		CoopExpeditionSessionManager.send_runtime_coop_action({"action": "prebattle_ready", "ready": true})
 	if battle_log != null and battle_log.visible:
 		if _mock_coop_remote_prebattle_ready:
 			add_combat_log("Co-op: your commander is ready. Starting the battle.", "gold")
@@ -2949,7 +2949,7 @@ func _mock_coop_clear_local_prebattle_ready(send_sync: bool = true) -> void:
 	_mock_coop_local_prebattle_ready = false
 	_mock_coop_prebattle_transition_pending = false
 	if send_sync:
-		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "prebattle_ready", "ready": false})
+		CoopExpeditionSessionManager.send_runtime_coop_action({"action": "prebattle_ready", "ready": false})
 	if battle_log != null and battle_log.visible:
 		add_combat_log("Co-op: deployment changed. Press Start again when you are ready.", "gold")
 	_update_mock_coop_start_battle_button_state()
@@ -2958,7 +2958,7 @@ func _mock_coop_clear_local_prebattle_ready(send_sync: bool = true) -> void:
 func _mock_coop_player_phase_ready_sync_active() -> bool:
 	return (
 			is_mock_coop_unit_ownership_active()
-			and CoopExpeditionSessionManager.uses_enet_coop_transport()
+			and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
 			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
 	)
 
@@ -2993,7 +2993,7 @@ func _mock_coop_set_local_player_phase_ready(send_sync: bool = true) -> void:
 		return
 	_mock_coop_local_player_phase_ready = true
 	if send_sync:
-		CoopExpeditionSessionManager.enet_send_coop_battle_sync_action({"action": "player_phase_ready", "ready": true})
+		CoopExpeditionSessionManager.send_runtime_coop_action({"action": "player_phase_ready", "ready": true})
 	if battle_log != null and battle_log.visible and not _mock_coop_remote_player_phase_ready:
 		add_combat_log("Co-op: your detachment is ready. Waiting for your partner to end phase.", "gold")
 	update_objective_ui(true)
@@ -3367,12 +3367,12 @@ func _ready() -> void:
 	_mock_coop_ownership_assignments.clear()
 	_reset_mock_coop_prebattle_ready_state()
 	_reset_mock_coop_player_phase_ready_state()
-	var has_live_enet_coop_phase: bool = (
-			CoopExpeditionSessionManager.uses_enet_coop_transport()
+	var has_live_runtime_coop_phase: bool = (
+			CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
 			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
 	)
-	if has_live_enet_coop_phase:
-		CoopExpeditionSessionManager.register_enet_coop_battle_sync_battlefield(self)
+	if has_live_runtime_coop_phase:
+		CoopExpeditionSessionManager.register_runtime_coop_battle_sync_target(self)
 	if not _consumed_mock_coop_battle_handoff.is_empty():
 		_mock_coop_battle_context = MockCoopBattleContext.from_consumed_handoff(_consumed_mock_coop_battle_handoff)
 		if _mock_coop_battle_context != null:
@@ -3381,12 +3381,12 @@ func _ready() -> void:
 		print("[MockCoopHandoff] battle start keys=%s" % str(_consumed_mock_coop_battle_handoff.keys()))
 		_present_mock_coop_joint_expedition_charter()
 		_assign_mock_coop_unit_ownership_from_context()
-		if is_mock_coop_unit_ownership_active() and has_live_enet_coop_phase:
-			CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed()
-	elif has_live_enet_coop_phase and OS.is_debug_build():
-		push_warning("BattleField: ENet co-op battle loaded without a pending mock handoff; battle sync is registered, but ownership is inactive.")
-	if has_live_enet_coop_phase and not is_mock_coop_unit_ownership_active() and OS.is_debug_build():
-		push_warning("BattleField: ENet co-op battle has no active mock ownership assignment; local player moves will not mirror until the handoff/ownership path is valid.")
+		if is_mock_coop_unit_ownership_active() and has_live_runtime_coop_phase:
+			CoopExpeditionSessionManager.try_publish_runtime_coop_battle_rng_seed()
+	elif has_live_runtime_coop_phase and OS.is_debug_build():
+		push_warning("BattleField: network co-op battle loaded without a pending mock handoff; battle sync is registered, but ownership is inactive.")
+	if has_live_runtime_coop_phase and not is_mock_coop_unit_ownership_active() and OS.is_debug_build():
+		push_warning("BattleField: network co-op battle has no active mock ownership assignment; local player moves will not mirror until the handoff/ownership path is valid.")
 	
 	# --- INITIALIZE FOG OF WAR ---
 	if use_fog_of_war:
@@ -4302,16 +4302,27 @@ func trigger_game_over(result: String) -> void:
 	# ==========================================
 	
 	result_label.text = normalized_result
+	var coop_defeat_return_to_charter: bool = (
+		normalized_result != "VICTORY"
+		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
+		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	)
 	if normalized_result == "VICTORY":
 		result_label.modulate = Color(0.2, 0.8, 0.2)
 		continue_button.visible = true
 		restart_button.visible = false
-		if is_arena_match: continue_button.text = "Return to City"
+		if is_arena_match:
+			continue_button.text = "Return to City"
+		else:
+			continue_button.text = "Continue"
 	else:
 		result_label.modulate = Color(0.8, 0.2, 0.2)
-		continue_button.visible = false
-		restart_button.visible = true
-		if is_arena_match: restart_button.text = "Leave Arena"
+		continue_button.visible = coop_defeat_return_to_charter
+		restart_button.visible = not coop_defeat_return_to_charter
+		if coop_defeat_return_to_charter:
+			continue_button.text = "Return to Charter"
+		elif is_arena_match:
+			restart_button.text = "Leave Arena"
 		
 	# ==========================================
 	# --- FAME & SCORE CALCULATION ---
@@ -4381,6 +4392,10 @@ func trigger_game_over(result: String) -> void:
 	game_over_panel.visible = true
 	
 func _on_restart_button_pressed() -> void:
+	if CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE:
+		if battle_log != null and battle_log.visible:
+			add_combat_log("Co-op: restart is disabled after defeat. Return to the charter to regroup.", "gold")
+		return
 	get_tree().paused = false # <--- ADD THIS
 	
 	# --- NEW: ARENA DEFEAT LOGIC ---
@@ -9280,6 +9295,9 @@ func _process_loot(loot_list: Array[Resource]) -> void:
 
 func _on_continue_button_pressed() -> void:
 	get_tree().paused = false
+	if result_label != null and result_label.text == "DEFEAT" and CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE:
+		SceneTransition.change_scene_to_file("res://Scenes/UI/ExpeditionCharterStagingUI.tscn")
+		return
 	
 	# --- NEW: ARENA VICTORY LOGIC ---
 	if is_arena_match:

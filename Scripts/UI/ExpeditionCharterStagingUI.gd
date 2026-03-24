@@ -25,6 +25,13 @@ signal closed
 @onready var _lan_join_button: Button = %LanJoinButton
 @onready var _lan_loopback_button: Button = %LanLoopbackButton
 @onready var _lan_status_label: Label = %LanStatusLabel
+@onready var _online_section: VBoxContainer = %OnlineSectionVBox
+@onready var _online_room_code_field: LineEdit = %OnlineRoomCodeField
+@onready var _online_host_button: Button = %OnlineHostButton
+@onready var _online_join_button: Button = %OnlineJoinButton
+@onready var _online_refresh_button: Button = %OnlineRefreshButton
+@onready var _online_room_list: ItemList = %OnlineRoomList
+@onready var _online_status_label: Label = %OnlineStatusLabel
 @onready var _local_companion_option: OptionButton = %LocalCompanionOption
 @onready var _partner_companion_value: Label = %PartnerCompanionValue
 
@@ -33,6 +40,8 @@ var _last_launch_error: String = ""
 var _style_launch_status_warn: StyleBoxFlat
 var _style_launch_status_ok: StyleBoxFlat
 var _local_companion_option_ids: PackedStringArray = PackedStringArray()
+var _online_browser_transport: SilentWolfOnlineCoopTransport = null
+var _online_room_list_initialized: bool = false
 
 
 func _ready() -> void:
@@ -46,7 +55,13 @@ func _ready() -> void:
 	_lan_host_button.pressed.connect(_on_lan_host_pressed)
 	_lan_join_button.pressed.connect(_on_lan_join_pressed)
 	_lan_loopback_button.pressed.connect(_on_lan_loopback_pressed)
+	_online_host_button.pressed.connect(_on_online_host_pressed)
+	_online_join_button.pressed.connect(_on_online_join_pressed)
+	_online_refresh_button.pressed.connect(_on_online_refresh_pressed)
+	_online_room_list.item_selected.connect(_on_online_room_selected)
+	_online_room_list.item_activated.connect(_on_online_room_activated)
 	_local_companion_option.item_selected.connect(_on_local_companion_selected)
+	_ensure_online_browser_transport()
 	if not CoopExpeditionSessionManager.session_state_changed.is_connected(_on_session_state_changed):
 		CoopExpeditionSessionManager.session_state_changed.connect(_on_session_state_changed)
 	if not CoopExpeditionSessionManager.enet_battle_launch_committed.is_connected(_on_enet_battle_launch_committed):
@@ -101,17 +116,17 @@ func _ensure_host_session_for_map(map_key: String) -> void:
 		return
 	var mgr = CoopExpeditionSessionManager
 	var phase: int = mgr.phase
-	## Already connected as ENet guest (e.g. world map "Join friend's LAN"): only sync map + payload.
-	if mgr.uses_enet_coop_transport() and phase == mgr.Phase.GUEST:
+	## Already connected as a network guest (e.g. LAN join / online room): only sync map + payload.
+	if (mgr.uses_enet_coop_transport() or mgr.uses_online_coop_transport()) and phase == mgr.Phase.GUEST:
 		mgr.set_selected_expedition_map(map_key)
 		mgr.refresh_local_player_payload_from_campaign()
 		return
 	if phase == mgr.Phase.NONE:
-		## Skip auto-host when transport is ENet but disconnected (user must tap Host / Join LAN).
-		if not mgr.uses_enet_coop_transport():
+		## Skip auto-host when the transport expects an explicit network bootstrap (LAN or online room).
+		if not mgr.uses_enet_coop_transport() and not mgr.uses_online_coop_transport():
 			mgr.begin_host_session()
 	elif phase != mgr.Phase.HOST:
-		if mgr.uses_enet_coop_transport() and phase == mgr.Phase.GUEST:
+		if (mgr.uses_enet_coop_transport() or mgr.uses_online_coop_transport()) and phase == mgr.Phase.GUEST:
 			pass
 		else:
 			mgr.leave_session()
@@ -151,6 +166,8 @@ func _format_partner_participant_card(coop_ok: bool) -> String:
 		s += "[color=#e8c8a0][b]Seat open[/b][/color]\n"
 		if CoopExpeditionSessionManager.uses_enet_coop_transport():
 			s += "[font_size=13][color=#a89888]Use [b]Host LAN game[/b] / [b]Join LAN game[/b] above. On another PC, your partner must enter your [b]LAN IP[/b] and port (not 127.0.0.1). For one machine, use [b]Same-PC rehearsal[/b] or [b]127.0.0.1:port[/b].[/color][/font_size]"
+		elif CoopExpeditionSessionManager.uses_online_coop_transport():
+			s += "[font_size=13][color=#a89888]Use the [b]Online room[/b] controls above and share the room code with your partner. This path relays staging and live battle sync through the online room service, so expect a little more latency than LAN/direct play.[/color][/font_size]"
 		else:
 			s += "[font_size=13][color=#a89888]No co-commander on this charter yet. Use [b]Host LAN game[/b] / [b]Join LAN game[/b] above, or [b]Same-PC rehearsal[/b] then [b]Seat test partner[/b].[/color][/font_size]"
 		return s
@@ -360,6 +377,8 @@ func _refresh_ui() -> void:
 	_body.scroll_to_line(0)
 
 	if not coop_ok:
+		if _online_section != null:
+			_online_section.visible = false
 		if _lan_section != null:
 			_lan_section.visible = false
 		_blockers_label.text = "[b][color=#f0c090]Marshal's desk — hold[/color][/b]\nCo-op staging is [b]not available[/b] for this chart from your current save."
@@ -375,29 +394,35 @@ func _refresh_ui() -> void:
 		_partner_ready_button.text = "Partner readiness"
 		return
 
+	if _online_section != null:
+		_online_section.visible = true
+		if not _online_room_list_initialized:
+			_refresh_online_room_listing()
+			_online_room_list_initialized = true
+	_refresh_online_status_line()
 	if _lan_section != null:
 		_lan_section.visible = true
 	_refresh_lan_status_line()
 
-	var guest_enet_pending: bool = (
+	var guest_network_pending: bool = (
 			CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
-			and CoopExpeditionSessionManager.uses_enet_coop_transport()
-			and CoopExpeditionSessionManager.is_enet_guest_finalize_request_pending()
+			and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
+			and CoopExpeditionSessionManager.is_runtime_finalize_request_pending()
 	)
 
 	var blockers: PackedStringArray = CoopExpeditionSessionManager.get_coop_launch_blockers()
 	## Do not treat guest "waiting on host" as a marshal blocker — it wrongly shows orange requirements while staging is valid.
-	if _last_launch_error.strip_edges() != "" and not guest_enet_pending:
+	if _last_launch_error.strip_edges() != "" and not guest_network_pending:
 		var extra: PackedStringArray = blockers.duplicate()
 		extra.append("last_launch: " + _last_launch_error)
 		blockers = extra
 
 	var all_clear: bool = blockers.is_empty()
-	if guest_enet_pending and all_clear:
+	if guest_network_pending and all_clear:
 		_blockers_label.text = (
 				"[b][color=#a8e090]Marshal's desk — co-op finalize sent[/color][/b]\n"
 				+ "[b]Request is with the host.[/b] Keep this window open; when the host finishes finalize, both games should load the battle.\n"
-				+ "[font_size=12][color=#a0a0b8][i]Tip: leave the [b]host[/b] instance running in the foreground — if the OS or Godot pauses unfocused games, ENet may not process until you switch back.[/i][/color][/font_size]"
+				+ ("[font_size=12][color=#a0a0b8][i]Tip: online room relay can take a moment to flush the handoff. LAN/direct is faster, online is friendlier to join.[/i][/color][/font_size]" if CoopExpeditionSessionManager.uses_online_coop_transport() else "[font_size=12][color=#a0a0b8][i]Tip: leave the [b]host[/b] instance running in the foreground — if the OS or Godot pauses unfocused games, direct sync may not process until you switch back.[/i][/color][/font_size]")
 		)
 		_apply_launch_status_panel_style(true)
 	elif all_clear:
@@ -415,7 +440,7 @@ func _refresh_ui() -> void:
 	_blockers_label.scroll_to_line(0)
 
 	var launchable: bool = CoopExpeditionSessionManager.is_session_launchable() and coop_ok
-	_launch_button.disabled = not launchable or guest_enet_pending
+	_launch_button.disabled = not launchable or guest_network_pending
 
 	var is_host: bool = CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST
 	var loopback: bool = CoopExpeditionSessionManager.uses_loopback_coop_transport()
@@ -452,9 +477,9 @@ func _on_toggle_partner_ready_pressed() -> void:
 
 func _on_launch_pressed() -> void:
 	_last_launch_error = ""
-	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST and CoopExpeditionSessionManager.uses_enet_coop_transport():
+	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST and CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
 		_last_launch_error = ""
-		CoopExpeditionSessionManager.enet_guest_request_finalize_launch()
+		CoopExpeditionSessionManager.request_runtime_finalize_launch()
 		_refresh_ui()
 		return
 	var fin: Dictionary = CoopExpeditionSessionManager.finalize_coop_expedition_launch()
@@ -475,25 +500,25 @@ func _on_launch_pressed() -> void:
 		_refresh_ui()
 		return
 
-	if CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
-		if not CoopExpeditionSessionManager.try_begin_enet_host_launch_pipeline():
+	if CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
+		if not CoopExpeditionSessionManager.try_begin_runtime_launch_pipeline():
 			_last_launch_error = "Launch already in progress (network)."
 			_refresh_ui()
 			return
 
-	if CoopExpeditionSessionManager.should_enet_mirror_launch_handoff_to_guest():
-		CoopExpeditionSessionManager.enet_host_send_launch_handoff(hh as Dictionary)
+	if CoopExpeditionSessionManager.runtime_host_can_mirror_launch_handoff():
+		CoopExpeditionSessionManager.host_send_runtime_launch_handoff(hh as Dictionary)
 
-	if CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
-		## Let launch_handoff / stack flush reach the guest before this instance loads the battle (same issue as finalize_result).
-		await get_tree().create_timer(0.18, true, true, true).timeout
-		var exec_res: Dictionary = CoopExpeditionSessionManager.enet_execute_pending_handoff_launch(hh as Dictionary, false)
+	if CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
+		## Let launch_handoff flush through the active transport before this instance loads the battle too.
+		await get_tree().create_timer(CoopExpeditionSessionManager.runtime_launch_flush_delay_seconds(), true, true, true).timeout
+		var exec_res: Dictionary = CoopExpeditionSessionManager.execute_pending_runtime_handoff_launch(hh as Dictionary, false)
 		if not bool(exec_res.get("ok", false)):
-			CoopExpeditionSessionManager.release_enet_host_launch_pipeline()
+			CoopExpeditionSessionManager.release_runtime_launch_pipeline()
 			_last_launch_error = str(exec_res.get("errors", []))
 			_refresh_ui()
 			return
-		CoopExpeditionSessionManager.release_enet_host_launch_pipeline()
+		CoopExpeditionSessionManager.release_runtime_launch_pipeline()
 		hide()
 		closed.emit()
 		queue_free()
@@ -514,6 +539,112 @@ func _on_launch_pressed() -> void:
 	hide()
 	closed.emit()
 	queue_free()
+
+
+func _refresh_online_status_line() -> void:
+	if _online_status_label == null:
+		return
+	var mgr = CoopExpeditionSessionManager
+	if not mgr.uses_online_coop_transport():
+		var browse_suffix: String = ""
+		if _online_browser_transport != null:
+			var browser_err: String = _online_browser_transport.get_last_error()
+			if browser_err != "":
+				browse_suffix = "\nRoom list: %s" % browser_err
+		_online_status_label.text = "Online room codes use the SilentWolf service as a lightweight relay for staging and live battle sync. LAN/direct play remains available below for the fastest local link." + browse_suffix
+		return
+	var tr: CoopSessionTransport = mgr.get_transport()
+	if tr is SilentWolfOnlineCoopTransport:
+		var online: SilentWolfOnlineCoopTransport = tr as SilentWolfOnlineCoopTransport
+		var msg: String = online.get_status_line()
+		var err: String = online.get_last_error()
+		if err != "":
+			msg += "\nLast error: %s" % err
+		_online_status_label.text = msg
+		return
+	_online_status_label.text = "Online transport selected."
+
+
+func _ensure_online_browser_transport() -> void:
+	if _online_browser_transport != null:
+		return
+	_online_browser_transport = SilentWolfOnlineCoopTransport.new()
+	if not _online_browser_transport.room_directory_updated.is_connected(_on_online_room_directory_updated):
+		_online_browser_transport.room_directory_updated.connect(_on_online_room_directory_updated)
+
+
+func _refresh_online_room_listing() -> void:
+	_ensure_online_browser_transport()
+	if _online_room_list == null:
+		return
+	var ok: bool = _online_browser_transport.refresh_room_directory_listing()
+	if not ok:
+		_rebuild_online_room_list(_online_browser_transport.get_room_directory_listing())
+		_refresh_online_status_line()
+
+
+func _rebuild_online_room_list(entries: Array[Dictionary]) -> void:
+	if _online_room_list == null:
+		return
+	_online_room_list.clear()
+	if entries.is_empty():
+		_online_room_list.add_item("No open online rooms found. Host one or refresh again.")
+		_online_room_list.set_item_disabled(0, true)
+		return
+	for room in entries:
+		var joinable: bool = bool(room.get("joinable", false))
+		if not joinable:
+			continue
+		var code: String = str(room.get("code", "")).strip_edges().to_upper()
+		if code == "":
+			continue
+		var host_name: String = str(room.get("host_display_name", "")).strip_edges()
+		if host_name == "":
+			host_name = "Host"
+		var status: String = "OPEN"
+		var label: String = "[%s] %s  -  %s" % [status, code, host_name]
+		var idx: int = _online_room_list.get_item_count()
+		_online_room_list.add_item(label)
+		_online_room_list.set_item_metadata(idx, room.duplicate(true))
+	if _online_room_list.get_item_count() == 0:
+		_online_room_list.add_item("No open online rooms found. Host one or refresh again.")
+		_online_room_list.set_item_disabled(0, true)
+
+
+func _on_online_room_directory_updated() -> void:
+	if _online_browser_transport == null:
+		return
+	_rebuild_online_room_list(_online_browser_transport.get_room_directory_listing())
+	_refresh_online_status_line()
+
+
+func _on_online_refresh_pressed() -> void:
+	_refresh_online_room_listing()
+
+
+func _on_online_room_selected(index: int) -> void:
+	if _online_room_list == null or _online_room_code_field == null:
+		return
+	if index < 0 or index >= _online_room_list.get_item_count():
+		return
+	if _online_room_list.is_item_disabled(index):
+		return
+	var meta: Variant = _online_room_list.get_item_metadata(index)
+	if not (meta is Dictionary):
+		return
+	var room: Dictionary = meta as Dictionary
+	var code: String = str(room.get("code", "")).strip_edges().to_upper()
+	if code == "":
+		return
+	_online_room_code_field.text = code
+	_last_launch_error = ""
+	_refresh_ui()
+
+
+func _on_online_room_activated(index: int) -> void:
+	_on_online_room_selected(index)
+	if _online_room_code_field != null and str(_online_room_code_field.text).strip_edges() != "":
+		_on_online_join_pressed()
 
 
 func _refresh_lan_status_line() -> void:
@@ -544,7 +675,7 @@ func _refresh_lan_status_line() -> void:
 	_lan_status_label.text = " · ".join(bits)
 
 
-func _lan_apply_session_after_transport_change() -> void:
+func _apply_session_after_transport_change() -> void:
 	CoopExpeditionSessionManager.set_selected_expedition_map(_map_id)
 	CoopExpeditionSessionManager.refresh_local_player_payload_from_campaign()
 	_last_launch_error = ""
@@ -564,7 +695,7 @@ func _on_lan_host_pressed() -> void:
 		_last_launch_error = "LAN host: " + str(r.get("error", str(r)))
 		_refresh_ui()
 		return
-	_lan_apply_session_after_transport_change()
+	_apply_session_after_transport_change()
 
 
 func _on_lan_join_pressed() -> void:
@@ -587,7 +718,7 @@ func _on_lan_join_pressed() -> void:
 		_last_launch_error = "LAN join: " + str(r.get("error", str(r)))
 		_refresh_ui()
 		return
-	_lan_apply_session_after_transport_change()
+	_apply_session_after_transport_change()
 
 
 func _on_lan_loopback_pressed() -> void:
@@ -599,13 +730,42 @@ func _on_lan_loopback_pressed() -> void:
 		_last_launch_error = "Offline rehearsal: " + str(r.get("error", str(r)))
 		_refresh_ui()
 		return
-	_lan_apply_session_after_transport_change()
+	_apply_session_after_transport_change()
+
+
+func _on_online_host_pressed() -> void:
+	CoopExpeditionSessionManager.leave_session()
+	var tr := SilentWolfOnlineCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(tr)
+	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
+	if not bool(r.get("ok", false)):
+		_last_launch_error = "Online host: " + str(r.get("error", str(r)))
+		_refresh_ui()
+		return
+	_apply_session_after_transport_change()
+
+
+func _on_online_join_pressed() -> void:
+	var code: String = str(_online_room_code_field.text).strip_edges()
+	if code == "":
+		_last_launch_error = "Enter an online room code."
+		_refresh_ui()
+		return
+	CoopExpeditionSessionManager.leave_session()
+	var tr := SilentWolfOnlineCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(tr)
+	var r: Dictionary = CoopExpeditionSessionManager.join_session(code)
+	if not bool(r.get("ok", false)):
+		_last_launch_error = "Online join: " + str(r.get("error", str(r)))
+		_refresh_ui()
+		return
+	_apply_session_after_transport_change()
 
 
 func _on_back_pressed() -> void:
 	_last_launch_error = ""
-	if CoopExpeditionSessionManager.uses_enet_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST:
-		CoopExpeditionSessionManager.clear_enet_guest_finalize_pending()
+	if CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST:
+		CoopExpeditionSessionManager.clear_runtime_finalize_pending()
 	hide()
 	closed.emit()
 	queue_free()

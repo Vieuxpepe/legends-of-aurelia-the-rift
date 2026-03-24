@@ -1,5 +1,7 @@
 extends Node
 
+const CoopOnlineServiceConfig = preload("res://Scripts/Coop/CoopOnlineServiceConfig.gd")
+
 # ArenaManager.gd – Version 2.0 (Juiced Up!)
 var current_opponent_data: Dictionary = {}
 var local_arena_team: Array = []
@@ -36,9 +38,7 @@ func get_rank_icon(mmr: int) -> Texture2D:
 		return null
 		
 func _ready() -> void:
-	var my_api_key: String = "9nUCdzXpftaLyust60GNQ62GDKSzbzqM1xQtJHgn"
-	var my_game_id: String = "tacticalrpgmultiplayer"
-	SilentWolf.configure({"api_key": my_api_key, "game_id": my_game_id, "log_level": 0})
+	CoopOnlineServiceConfig.ensure_silent_wolf_ready()
 
 # ==========================================
 # --- RANK & MMR SYSTEM ---

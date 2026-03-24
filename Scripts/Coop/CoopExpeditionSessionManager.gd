@@ -46,16 +46,16 @@ func _ready() -> void:
 	## Keep polling ENet while other UI pauses the tree or a window loses focus (two-instance LAN testing).
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_transport = LocalLoopbackCoopTransport.new()
-	(_transport as LocalLoopbackCoopTransport).bind_manager(self)
+	_transport.bind_manager(self)
 	clear_session()
 
 func _process(_delta: float) -> void:
-	if _transport is ENetCoopTransport:
-		var tr: ENetCoopTransport = _transport as ENetCoopTransport
-		tr.poll_and_dispatch()
-		## While awaiting finalize_result, poll twice per frame so a just-flushed host packet is less likely to sit one frame behind a heavy scene change on the other instance.
-		if _enet_guest_finalize_pending:
-			tr.poll_and_dispatch()
+	if _transport == null:
+		return
+	_transport.poll_transport()
+	## While awaiting finalize_result, poll twice per frame so a just-flushed host packet is less likely to sit one frame behind a heavy scene change on the other instance.
+	if _enet_guest_finalize_pending:
+		_transport.poll_transport()
 
 func get_transport() -> CoopSessionTransport:
 	return _transport
@@ -67,10 +67,7 @@ func set_transport(transport: CoopSessionTransport) -> void:
 	if _transport != null and _transport != transport:
 		_transport.leave_session()
 	_transport = transport
-	if transport is LocalLoopbackCoopTransport:
-		(transport as LocalLoopbackCoopTransport).bind_manager(self)
-	elif transport is ENetCoopTransport:
-		(transport as ENetCoopTransport).bind_manager(self)
+	transport.bind_manager(self)
 
 func clear_session() -> void:
 	session_id = ""
@@ -100,7 +97,7 @@ func _enet_reset_enet_staging_guards() -> void:
 func register_enet_coop_battle_sync_battlefield(battlefield: Node) -> void:
 	if battlefield == null:
 		return
-	if not uses_enet_coop_transport():
+	if not uses_runtime_network_coop_transport():
 		return
 	if phase == Phase.NONE:
 		return
@@ -116,10 +113,9 @@ func enet_try_publish_coop_battle_rng_seed() -> void:
 		return
 	if phase != Phase.HOST:
 		return
-	if not uses_enet_coop_transport():
+	if not uses_runtime_network_coop_transport():
 		return
-	var tr: ENetCoopTransport = _transport as ENetCoopTransport
-	if not tr.is_session_wired():
+	if not is_runtime_coop_session_wired():
 		return
 	if _enet_battle_sync_battlefield == null or not is_instance_valid(_enet_battle_sync_battlefield):
 		return
@@ -128,29 +124,28 @@ func enet_try_publish_coop_battle_rng_seed() -> void:
 	var s: int = picker.randi()
 	_coop_battle_rng_seed_sent = true
 	var body: Dictionary = {"action": "battle_rng_seed", "seed": s, "v": 1, "from_host": true}
-	tr.host_broadcast_coop_message("coop_battle_sync", body)
+	broadcast_transport_message("coop_battle_sync", body)
 	if _enet_battle_sync_battlefield.has_method("apply_coop_battle_net_rng_seed"):
 		_enet_battle_sync_battlefield.call("apply_coop_battle_net_rng_seed", s)
 
 ## Mock co-op battle replication (move, defend, combat, …). Adds schema + from_host from session phase.
 func enet_send_coop_battle_sync_action(payload: Dictionary) -> void:
-	if not uses_enet_coop_transport():
+	if not uses_runtime_network_coop_transport():
 		return
 	if _enet_battle_sync_battlefield == null or not is_instance_valid(_enet_battle_sync_battlefield):
 		if OS.is_debug_build():
 			var act_missing_bf: String = str(payload.get("action", "")).strip_edges()
 			push_warning("CoopExpeditionSessionManager: drop local coop_battle_sync '%s' (no registered battlefield)" % act_missing_bf)
 		return
-	var tr: ENetCoopTransport = _transport as ENetCoopTransport
-	if not tr.is_session_wired():
+	if not is_runtime_coop_session_wired():
 		return
 	var body: Dictionary = payload.duplicate(true)
 	body["v"] = 1
 	body["from_host"] = (phase == Phase.HOST)
 	if phase == Phase.HOST:
-		tr.host_broadcast_coop_message("coop_battle_sync", body)
+		broadcast_transport_message("coop_battle_sync", body)
 	elif phase == Phase.GUEST:
-		tr.send_coop_message("coop_battle_sync", body)
+		send_transport_message("coop_battle_sync", body)
 
 func _enet_apply_incoming_coop_battle_sync(body: Dictionary) -> void:
 	var bf: Node = _enet_battle_sync_battlefield
@@ -262,9 +257,9 @@ func set_local_selected_companion_unit_id(unit_id: String) -> bool:
 	if before == after and requested == after:
 		return true
 	session_state_changed.emit()
-	if _transport is ENetCoopTransport and phase == Phase.GUEST:
+	if uses_network_coop_staging_transport() and phase == Phase.GUEST:
 		_enet_guest_push_participant()
-	elif _transport is ENetCoopTransport and phase == Phase.HOST:
+	elif uses_network_coop_staging_transport() and phase == Phase.HOST:
 		_enet_broadcast_session_snapshot()
 	return true
 
@@ -272,9 +267,9 @@ func set_local_ready(value: bool) -> void:
 	local_ready = value
 	local_player_payload["ready"] = local_ready
 	session_state_changed.emit()
-	if _transport is ENetCoopTransport and phase == Phase.GUEST:
+	if uses_network_coop_staging_transport() and phase == Phase.GUEST:
 		_enet_guest_push_participant()
-	elif _transport is ENetCoopTransport and phase == Phase.HOST:
+	elif uses_network_coop_staging_transport() and phase == Phase.HOST:
 		_enet_broadcast_session_snapshot()
 
 func set_remote_ready(value: bool) -> void:
@@ -290,10 +285,10 @@ func set_selected_expedition_map(map_id: String) -> bool:
 		return false
 	selected_expedition_map_id = key
 	session_state_changed.emit()
-	if _transport is ENetCoopTransport and phase == Phase.GUEST:
-		(_transport as ENetCoopTransport).send_coop_message("selected_map_intent", {"map_id": key})
+	if uses_network_coop_staging_transport() and phase == Phase.GUEST:
+		send_transport_message("selected_map_intent", {"map_id": key})
 		_enet_guest_push_participant()
-	elif _transport is ENetCoopTransport and phase == Phase.HOST:
+	elif uses_network_coop_staging_transport() and phase == Phase.HOST:
 		_enet_broadcast_session_snapshot()
 	return true
 
@@ -303,28 +298,124 @@ func uses_loopback_coop_transport() -> bool:
 func uses_enet_coop_transport() -> bool:
 	return _transport is ENetCoopTransport
 
-func should_enet_mirror_launch_handoff_to_guest() -> bool:
-	if not uses_enet_coop_transport() or phase != Phase.HOST:
+func uses_online_coop_transport() -> bool:
+	return _transport is SilentWolfOnlineCoopTransport
+
+
+func get_transport_mode_id() -> String:
+	if _transport == null:
+		return "none"
+	return _transport.transport_mode_id()
+
+
+func uses_network_coop_staging_transport() -> bool:
+	return _transport != null and _transport.supports_staging_coop_sync()
+
+
+func uses_runtime_network_coop_transport() -> bool:
+	return _transport != null and _transport.supports_runtime_coop_sync()
+
+
+func is_runtime_coop_session_wired() -> bool:
+	return _transport != null and _transport.is_session_wired()
+
+
+func send_transport_message(kind: String, body: Dictionary) -> bool:
+	if _transport == null:
 		return false
-	return (_transport as ENetCoopTransport).is_session_wired()
+	return _transport.send_transport_message(str(kind), body.duplicate(true))
+
+
+func broadcast_transport_message(kind: String, body: Dictionary) -> bool:
+	if _transport == null:
+		return false
+	return _transport.broadcast_transport_message(str(kind), body.duplicate(true))
+
+
+func register_runtime_coop_battle_sync_target(battlefield: Node) -> void:
+	register_enet_coop_battle_sync_battlefield(battlefield)
+
+
+func unregister_runtime_coop_battle_sync_target(battlefield: Node) -> void:
+	unregister_enet_coop_battle_sync_battlefield(battlefield)
+
+
+func runtime_coop_battle_sync_active() -> bool:
+	return (
+			uses_runtime_network_coop_transport()
+			and phase != Phase.NONE
+			and _enet_battle_sync_battlefield != null
+			and is_instance_valid(_enet_battle_sync_battlefield)
+	)
+
+
+func send_runtime_coop_action(payload: Dictionary) -> void:
+	enet_send_coop_battle_sync_action(payload)
+
+
+func try_publish_runtime_coop_battle_rng_seed() -> void:
+	enet_try_publish_coop_battle_rng_seed()
+
+
+func runtime_host_can_mirror_launch_handoff() -> bool:
+	return should_enet_mirror_launch_handoff_to_guest()
+
+
+func host_send_runtime_launch_handoff(handoff: Dictionary) -> void:
+	enet_host_send_launch_handoff(handoff)
+
+
+func request_runtime_finalize_launch() -> void:
+	enet_guest_request_finalize_launch()
+
+
+func is_runtime_finalize_request_pending() -> bool:
+	return is_enet_guest_finalize_request_pending()
+
+
+func clear_runtime_finalize_pending() -> void:
+	clear_enet_guest_finalize_pending()
+
+
+func try_begin_runtime_launch_pipeline() -> bool:
+	return try_begin_enet_host_launch_pipeline()
+
+
+func release_runtime_launch_pipeline() -> void:
+	release_enet_host_launch_pipeline()
+
+
+func execute_pending_runtime_handoff_launch(handoff: Dictionary, emit_committed: bool = true) -> Dictionary:
+	return enet_execute_pending_handoff_launch(handoff, emit_committed)
+
+
+func runtime_launch_flush_delay_seconds() -> float:
+	if _transport == null:
+		return 0.18
+	return max(0.0, _transport.recommended_runtime_launch_flush_delay_seconds())
+
+
+func should_enet_mirror_launch_handoff_to_guest() -> bool:
+	if not uses_runtime_network_coop_transport() or phase != Phase.HOST:
+		return false
+	return is_runtime_coop_session_wired()
 
 func enet_host_send_launch_handoff(handoff: Dictionary) -> void:
 	if not should_enet_mirror_launch_handoff_to_guest():
 		return
 	var wire: Dictionary = _coop_handoff_clone_without_launch_snapshot_for_enet(handoff as Dictionary)
-	(_transport as ENetCoopTransport).host_broadcast_coop_message("launch_handoff", {"handoff": wire})
+	broadcast_transport_message("launch_handoff", {"handoff": wire})
 
 func enet_guest_request_finalize_launch() -> void:
-	if not uses_enet_coop_transport() or phase != Phase.GUEST:
+	if not uses_runtime_network_coop_transport() or phase != Phase.GUEST:
 		return
-	var tr: ENetCoopTransport = _transport as ENetCoopTransport
-	if not tr.is_session_wired():
+	if not is_runtime_coop_session_wired():
 		return
 	if _enet_guest_finalize_pending:
 		return
 	_enet_guest_finalize_pending = true
 	session_state_changed.emit()
-	tr.send_coop_message("finalize_request", {})
+	send_transport_message("finalize_request", {})
 
 func clear_enet_guest_finalize_pending() -> void:
 	if not _enet_guest_finalize_pending:
@@ -677,6 +768,24 @@ func _enet_transport_begin_guest_connect(host: String, port: int) -> Dictionary:
 	session_state_changed.emit()
 	return {"ok": true, "session_id": session_id}
 
+
+func _online_transport_after_host_create(room_code: String) -> Dictionary:
+	clear_session()
+	session_id = "online:%s" % str(room_code).strip_edges().to_upper()
+	phase = Phase.HOST
+	refresh_local_player_payload_from_campaign()
+	session_state_changed.emit()
+	return {"ok": true, "session_id": session_id}
+
+
+func _online_transport_after_guest_join(room_code: String) -> Dictionary:
+	clear_session()
+	session_id = "online:%s" % str(room_code).strip_edges().to_upper()
+	phase = Phase.GUEST
+	refresh_local_player_payload_from_campaign()
+	session_state_changed.emit()
+	return {"ok": true, "session_id": session_id}
+
 func _enet_host_on_client_joined(_peer_id: int) -> void:
 	session_state_changed.emit()
 	_enet_broadcast_session_snapshot()
@@ -699,6 +808,17 @@ func _enet_guest_on_transport_disconnected() -> void:
 	remote_ready = false
 	session_state_changed.emit()
 
+
+func _online_transport_on_room_linked() -> void:
+	if phase != Phase.GUEST:
+		session_state_changed.emit()
+		return
+	refresh_local_player_payload_from_campaign()
+	if selected_expedition_map_id.strip_edges() != "":
+		send_transport_message("selected_map_intent", {"map_id": selected_expedition_map_id})
+	_enet_guest_push_participant()
+	session_state_changed.emit()
+
 func _enet_host_confirm_map_from_transport(map_id: String) -> Dictionary:
 	var key: String = str(map_id).strip_edges()
 	if key == "":
@@ -708,13 +828,12 @@ func _enet_host_confirm_map_from_transport(map_id: String) -> Dictionary:
 	return {"ok": true, "session_id": session_id}
 
 func _enet_guest_push_participant() -> void:
-	if not uses_enet_coop_transport() or phase != Phase.GUEST:
+	if not uses_network_coop_staging_transport() or phase != Phase.GUEST:
 		return
-	var tr: ENetCoopTransport = _transport as ENetCoopTransport
-	if not tr.is_session_wired():
+	if not is_runtime_coop_session_wired():
 		return
 	refresh_local_player_payload_from_campaign()
-	tr.send_session_payload("guest_staging_join", local_player_payload.duplicate(true))
+	_transport.send_session_payload("guest_staging_join", local_player_payload.duplicate(true))
 
 func _enet_build_session_snapshot() -> Dictionary:
 	return {
@@ -727,12 +846,11 @@ func _enet_build_session_snapshot() -> Dictionary:
 	}
 
 func _enet_broadcast_session_snapshot() -> void:
-	if not uses_enet_coop_transport() or phase != Phase.HOST:
+	if not uses_network_coop_staging_transport() or phase != Phase.HOST:
 		return
-	var tr: ENetCoopTransport = _transport as ENetCoopTransport
-	if not tr.is_session_wired():
+	if not is_runtime_coop_session_wired():
 		return
-	tr.host_broadcast_coop_message("session_snapshot", _enet_build_session_snapshot())
+	broadcast_transport_message("session_snapshot", _enet_build_session_snapshot())
 
 func _enet_apply_session_snapshot(body: Dictionary) -> void:
 	if phase != Phase.GUEST:
@@ -752,8 +870,8 @@ func _enet_apply_session_snapshot(body: Dictionary) -> void:
 			local_player_payload["ready"] = local_ready
 	session_state_changed.emit()
 
-func _enet_receive_coop_message(from_peer_id: int, kind: String, body: Dictionary) -> void:
-	if not uses_enet_coop_transport():
+func _transport_receive_coop_message(from_peer_id: int, kind: String, body: Dictionary) -> void:
+	if not uses_network_coop_staging_transport():
 		return
 	if phase == Phase.NONE:
 		return
@@ -788,6 +906,10 @@ func _enet_receive_coop_message(from_peer_id: int, kind: String, body: Dictionar
 			_:
 				pass
 
+
+func _enet_receive_coop_message(from_peer_id: int, kind: String, body: Dictionary) -> void:
+	_transport_receive_coop_message(from_peer_id, kind, body)
+
 func _enet_host_handle_participant_update(body: Dictionary) -> void:
 	if body.is_empty():
 		return
@@ -816,18 +938,17 @@ func _enet_host_apply_guest_map_intent(map_id: String) -> void:
 	_enet_broadcast_session_snapshot()
 
 func _enet_host_handle_finalize_request() -> void:
-	var tr: ENetCoopTransport = _transport as ENetCoopTransport
-	if not tr.is_session_wired():
+	if not is_runtime_coop_session_wired():
 		return
 	if _enet_host_finalize_busy:
-		tr.host_broadcast_coop_message("finalize_result", {
+		broadcast_transport_message("finalize_result", {
 			"ok": false,
 			"errors": ["host_finalize_busy"],
 			"finalize": {"ok": false, "errors": ["host_finalize_busy"], "payload": {}},
 		})
 		return
 	if not try_begin_enet_host_launch_pipeline():
-		tr.host_broadcast_coop_message("finalize_result", {
+		broadcast_transport_message("finalize_result", {
 			"ok": false,
 			"errors": ["host_launch_pipeline_locked"],
 			"finalize": {"ok": false, "errors": ["host_launch_pipeline_locked"], "payload": {}},
@@ -838,13 +959,13 @@ func _enet_host_handle_finalize_request() -> void:
 	if not bool(fin.get("ok", false)):
 		release_enet_host_launch_pipeline()
 		_enet_host_finalize_busy = false
-		tr.host_broadcast_coop_message("finalize_result", {"ok": false, "finalize": fin})
+		broadcast_transport_message("finalize_result", {"ok": false, "finalize": fin})
 		return
 	var hand_res: Dictionary = CoopExpeditionBattleHandoff.prepare_from_finalize_result(fin)
 	if not bool(hand_res.get("ok", false)):
 		release_enet_host_launch_pipeline()
 		_enet_host_finalize_busy = false
-		tr.host_broadcast_coop_message("finalize_result", {
+		broadcast_transport_message("finalize_result", {
 			"ok": false,
 			"finalize": fin,
 			"errors": hand_res.get("errors", []),
@@ -854,12 +975,12 @@ func _enet_host_handle_finalize_request() -> void:
 	if typeof(hh) != TYPE_DICTIONARY:
 		release_enet_host_launch_pipeline()
 		_enet_host_finalize_busy = false
-		tr.host_broadcast_coop_message("finalize_result", {"ok": false, "finalize": fin, "errors": ["handoff_missing"]})
+		broadcast_transport_message("finalize_result", {"ok": false, "finalize": fin, "errors": ["handoff_missing"]})
 		return
 	var hh_d: Dictionary = hh as Dictionary
 	## Slim wire payload: full finalize + launch_snapshot often exceeds ENet reliable packet size — guest then never receives OK.
 	var wire_handoff: Dictionary = _coop_handoff_clone_without_launch_snapshot_for_enet(hh_d)
-	var sent_ok: bool = tr.host_broadcast_coop_message("finalize_result", {"ok": true, "handoff": wire_handoff})
+	var sent_ok: bool = broadcast_transport_message("finalize_result", {"ok": true, "handoff": wire_handoff})
 	if not sent_ok:
 		release_enet_host_launch_pipeline()
 		_enet_host_finalize_busy = false
@@ -874,7 +995,7 @@ func _enet_schedule_host_finalize_launch_after_packet_flush() -> void:
 	if tree == null:
 		call_deferred("_enet_host_complete_finalize_launch_after_network")
 		return
-	var t: SceneTreeTimer = tree.create_timer(0.18, true, true, true)
+	var t: SceneTreeTimer = tree.create_timer(runtime_launch_flush_delay_seconds(), true, true, true)
 	t.timeout.connect(_enet_host_complete_finalize_launch_after_network, CONNECT_ONE_SHOT)
 
 func _enet_host_complete_finalize_launch_after_network() -> void:

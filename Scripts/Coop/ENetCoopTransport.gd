@@ -26,12 +26,21 @@ func get_listen_port() -> int:
 func is_host() -> bool:
 	return _is_host
 
+func transport_mode_id() -> String:
+	return "direct_enet"
+
+func supports_staging_coop_sync() -> bool:
+	return true
+
 func is_session_wired() -> bool:
 	if _peer == null:
 		return false
 	if _is_host:
 		return _host_remote_peer_id != 0
 	return _peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+
+func supports_runtime_coop_sync() -> bool:
+	return true
 
 func create_session() -> Dictionary:
 	_close_peer()
@@ -79,12 +88,12 @@ func send_session_payload(_kind: String, payload: Dictionary) -> void:
 	send_coop_message("participant_update", payload)
 
 ## Structured messages (finalize, map intent, snapshots, etc.)
-func send_coop_message(kind: String, body: Dictionary) -> void:
+func send_coop_message(kind: String, body: Dictionary) -> bool:
 	if _peer == null:
-		return
+		return false
 	var target: int = _target_peer_for_send()
 	if target == 0:
-		return
+		return false
 	_peer.set_transfer_mode(MultiplayerPeer.TRANSFER_MODE_RELIABLE)
 	_peer.set_target_peer(target)
 	var env: Dictionary = {"kind": str(kind), "body": body}
@@ -93,9 +102,10 @@ func send_coop_message(kind: String, body: Dictionary) -> void:
 	var err: Error = _peer.put_packet(pkt)
 	if err != OK:
 		push_warning("ENetCoopTransport: send_coop_message put_packet failed kind=%s err=%d size=%d" % [str(kind), int(err), pkt.size()])
-		return
+		return false
 	## Outbound reliable packets may sit until poll(); flush so the peer instance can receive on localhost.
 	_peer.poll()
+	return true
 
 func host_broadcast_coop_message(kind: String, body: Dictionary) -> bool:
 	if not _is_host or _peer == null or _host_remote_peer_id == 0:
@@ -111,6 +121,14 @@ func host_broadcast_coop_message(kind: String, body: Dictionary) -> bool:
 		return false
 	_peer.poll()
 	return true
+
+
+func send_transport_message(kind: String, body: Dictionary) -> bool:
+	return send_coop_message(kind, body)
+
+
+func broadcast_transport_message(kind: String, body: Dictionary) -> bool:
+	return host_broadcast_coop_message(kind, body)
 
 func start_expedition_session(map_id: String) -> Dictionary:
 	## Loopback uses this for host-driven map pick; ENet uses selected_map_intent / snapshot instead.
@@ -148,8 +166,15 @@ func poll_and_dispatch() -> void:
 		var kind: String = str(data.get("kind", ""))
 		var body: Variant = data.get("body", {})
 		var body_dict: Dictionary = body if typeof(body) == TYPE_DICTIONARY else {}
-		if _manager != null and _manager.has_method("_enet_receive_coop_message"):
-			_manager._enet_receive_coop_message(from_id, kind, body_dict)
+		if _manager != null:
+			if _manager.has_method("_transport_receive_coop_message"):
+				_manager._transport_receive_coop_message(from_id, kind, body_dict)
+			elif _manager.has_method("_enet_receive_coop_message"):
+				_manager._enet_receive_coop_message(from_id, kind, body_dict)
+
+
+func poll_transport() -> void:
+	poll_and_dispatch()
 
 func _close_peer() -> void:
 	if _peer != null:

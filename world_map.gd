@@ -864,7 +864,7 @@ func _show_expedition_solo_or_charter_choice(exp_map_id: String) -> void:
 	layer.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(440, 260)
+	panel.custom_minimum_size = Vector2(440, 310)
 	center.add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -899,6 +899,16 @@ func _show_expedition_solo_or_charter_choice(exp_map_id: String) -> void:
 		_open_expedition_charter_for_map(exp_map_id)
 	)
 	vbox.add_child(charter_btn)
+
+	var online_btn := Button.new()
+	online_btn.text = "Online room code (co-op)"
+	online_btn.tooltip_text = "Open the charter, then use Host online room or Join online room."
+	online_btn.pressed.connect(func():
+		_close_expedition_mode_chooser()
+		_open_expedition_charter_for_map(exp_map_id)
+		_show_announcement("Online co-op: use Host online room / Join online room in the charter.", true)
+	)
+	vbox.add_child(online_btn)
 
 	var join_lan_btn := Button.new()
 	join_lan_btn.text = "Join friend's LAN (co-op)"

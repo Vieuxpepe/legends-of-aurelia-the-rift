@@ -5,6 +5,9 @@ extends RefCounted
 ## LocalLoopbackCoopTransport is the default implementation for editor/testing.
 ## Subclasses override; base returns explicit not-implemented failures.
 
+func bind_manager(_manager: Node) -> void:
+	pass
+
 func create_session() -> Dictionary:
 	return {"ok": false, "error": "create_session not implemented for this transport"}
 
@@ -20,3 +23,35 @@ func send_session_payload(_kind: String, _payload: Dictionary) -> void:
 ## Reserved for future sync of roster/ready across peers before battle load.
 func start_expedition_session(_map_id: String) -> Dictionary:
 	return {"ok": false, "error": "start_expedition_session not implemented for this transport"}
+
+
+func transport_mode_id() -> String:
+	return "unknown"
+
+
+func supports_staging_coop_sync() -> bool:
+	return false
+
+
+func is_session_wired() -> bool:
+	return false
+
+
+func supports_runtime_coop_sync() -> bool:
+	return false
+
+
+func recommended_runtime_launch_flush_delay_seconds() -> float:
+	return 0.18
+
+
+func send_transport_message(_kind: String, _body: Dictionary) -> bool:
+	return false
+
+
+func broadcast_transport_message(_kind: String, _body: Dictionary) -> bool:
+	return false
+
+
+func poll_transport() -> void:
+	pass

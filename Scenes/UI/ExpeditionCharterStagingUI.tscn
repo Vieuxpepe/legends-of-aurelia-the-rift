@@ -196,7 +196,7 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.78, 0.55, 1)
 theme_override_font_sizes/font_size = 15
-text = "Play together (internet / LAN)"
+text = "LAN / direct link"
 horizontal_alignment = 1
 
 [node name="LanHostRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/LanSectionVBox"]
@@ -258,6 +258,85 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.72, 0.78, 1)
 theme_override_font_sizes/font_size = 12
 text = ""
+autowrap_mode = 3
+
+[node name="OnlineSectionVBox" type="VBoxContainer" parent="MainPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OnlineSectionTitle" type="Label" parent="MainPanel/Margin/VBox/OnlineSectionVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.86, 0.96, 1)
+theme_override_font_sizes/font_size = 15
+text = "Online room code"
+horizontal_alignment = 1
+
+[node name="OnlineHostRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/OnlineSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OnlineHostButton" type="Button" parent="MainPanel/Margin/VBox/OnlineSectionVBox/OnlineHostRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Host online room"
+
+[node name="OnlineJoinRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/OnlineSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OnlineRoomCodeLabel" type="Label" parent="MainPanel/Margin/VBox/OnlineSectionVBox/OnlineJoinRow"]
+custom_minimum_size = Vector2(88, 0)
+layout_mode = 2
+text = "Room code"
+
+[node name="OnlineRoomCodeField" type="LineEdit" parent="MainPanel/Margin/VBox/OnlineSectionVBox/OnlineJoinRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(160, 28)
+theme_override_font_sizes/font_size = 14
+placeholder_text = "e.g. A7K2Q9"
+
+[node name="OnlineJoinButton" type="Button" parent="MainPanel/Margin/VBox/OnlineSectionVBox/OnlineJoinRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 32)
+layout_mode = 2
+text = "Join online room"
+
+[node name="OnlineBrowseRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/OnlineSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OnlineRefreshButton" type="Button" parent="MainPanel/Margin/VBox/OnlineSectionVBox/OnlineBrowseRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(170, 30)
+layout_mode = 2
+text = "Refresh hosted rooms"
+
+[node name="OnlineBrowseHint" type="Label" parent="MainPanel/Margin/VBox/OnlineSectionVBox/OnlineBrowseRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.66, 0.76, 0.86, 1)
+theme_override_font_sizes/font_size = 12
+text = "Select a room below to fill the code, or double-click to join."
+autowrap_mode = 3
+
+[node name="OnlineRoomList" type="ItemList" parent="MainPanel/Margin/VBox/OnlineSectionVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 110)
+layout_mode = 2
+size_flags_vertical = 1
+same_column_width = true
+
+[node name="OnlineStatusLabel" type="Label" parent="MainPanel/Margin/VBox/OnlineSectionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.78, 0.88, 1)
+theme_override_font_sizes/font_size = 12
+text = "Online room codes use the SilentWolf service as a lightweight relay for staging and live battle sync. LAN / direct play remains available above."
 autowrap_mode = 3
 
 [node name="SepLan" type="HSeparator" parent="MainPanel/Margin/VBox"]

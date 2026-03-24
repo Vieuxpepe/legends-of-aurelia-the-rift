@@ -28,3 +28,7 @@ func start_expedition_session(map_id: String) -> Dictionary:
 	if _manager != null and _manager.has_method("_local_transport_start_expedition"):
 		return _manager._local_transport_start_expedition(str(map_id))
 	return {"ok": false, "error": "coop_session_manager_missing"}
+
+
+func transport_mode_id() -> String:
+	return "loopback"
