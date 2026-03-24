@@ -4,7 +4,6 @@ extends CoopSessionTransport
 signal room_directory_updated
 
 const SWUtils = preload("res://addons/silent_wolf/utils/SWUtils.gd")
-
 const DIRECTORY_PLAYER_NAME: String = "cor_dir_v1"
 const ROOM_SCHEMA_VERSION: int = 1
 const MAILBOX_SCHEMA_VERSION: int = 1
@@ -315,7 +314,7 @@ func _start_get_player_data(player_name: String, tag: String) -> void:
 		str(SilentWolf.config.game_id).strip_edges(),
 		player_name.uri_encode(),
 	]
-	SilentWolf.send_get_request(_active_request, request_url)
+	_send_transport_get_request_without_auth(_active_request, request_url)
 
 
 func _start_save_player_data(player_name: String, player_data: Dictionary, tag: String) -> void:
@@ -336,7 +335,42 @@ func _start_save_player_data(player_name: String, player_data: Dictionary, tag: 
 		"player_data": player_data.duplicate(true),
 		"overwrite": true,
 	}
-	SilentWolf.send_post_request(_active_request, "https://api.silentwolf.com/push_player_data", payload)
+	_send_transport_post_request_without_auth(_active_request, "https://api.silentwolf.com/push_player_data", payload)
+
+
+func _send_transport_get_request_without_auth(http_node: HTTPRequest, request_url: String) -> void:
+	var token_state: Dictionary = _suspend_silent_wolf_auth_headers()
+	SilentWolf.send_get_request(http_node, request_url)
+	_restore_silent_wolf_auth_headers(token_state)
+
+
+func _send_transport_post_request_without_auth(http_node: HTTPRequest, request_url: String, payload: Dictionary) -> void:
+	var token_state: Dictionary = _suspend_silent_wolf_auth_headers()
+	SilentWolf.send_post_request(http_node, request_url, payload)
+	_restore_silent_wolf_auth_headers(token_state)
+
+
+func _suspend_silent_wolf_auth_headers() -> Dictionary:
+	var out: Dictionary = {"auth_node": null, "id_token": null, "access_token": null}
+	if SilentWolf == null:
+		return out
+	var auth_node: Variant = SilentWolf.get("Auth")
+	if auth_node == null:
+		return out
+	out["auth_node"] = auth_node
+	out["id_token"] = auth_node.get("sw_id_token")
+	out["access_token"] = auth_node.get("sw_access_token")
+	auth_node.set("sw_id_token", null)
+	auth_node.set("sw_access_token", null)
+	return out
+
+
+func _restore_silent_wolf_auth_headers(token_state: Dictionary) -> void:
+	var auth_node: Variant = token_state.get("auth_node", null)
+	if auth_node == null:
+		return
+	auth_node.set("sw_id_token", token_state.get("id_token", null))
+	auth_node.set("sw_access_token", token_state.get("access_token", null))
 
 
 func _on_active_request_completed(_result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
