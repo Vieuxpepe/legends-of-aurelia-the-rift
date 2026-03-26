@@ -11,7 +11,9 @@
 [resource]
 script = ExtResource("3_bxo82")
 display_name = "Branik"
-recruit_dialogue = Array[String]([])
+is_recruitable = true
+recruit_dialogue = Array[String](["Stand aside, bandit. The Vanguard are hunting us, and we don't have time for you.", "I don't care about the Vanguard. Hand over the merchant's gold, or I'll smash that cart myself.", "If you smash the cart, we all starve. Help us break through this forest, and the merchant will pay you double.", "...Fine. But if that merchant shortchanges me, I'm taking his donkey."])
+pre_battle_quote = Array[String](["I'm just here for the merchant's coin. I just wished you wouldn't stand in my path. Just walk away. This doesn't concern you."])
 death_quotes = Array[String](["It’s all right… just keep the fire going, and make sure everyone eats.", "Look after each other. That matters more than anything.", "If someone’s frightened, stay with them. No one should go through this alone.", "Ah… that’s enough from me. You keep the others warm."])
 level_up_quotes = Array[String](["That’s good. Means I can keep standing a bit longer.", "All right. One more reason not to let anyone through.", "If this helps somebody get home, it’s worth having."])
 support_personality = "warm"

@@ -70,6 +70,7 @@ func handle_input(event: InputEvent) -> void:
 			battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 			clear_active_unit()
 		else:
+			battlefield.inspected_unit = null
 			battlefield.clear_ranges()
 		return
 
@@ -159,10 +160,12 @@ func handle_input(event: InputEvent) -> void:
 func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 	var unit: Node2D = battlefield.get_unit_at(cursor_pos)
 	var enemy: Node2D = battlefield.get_enemy_at(cursor_pos)
+	var occupant: Node2D = battlefield.get_occupant_at(cursor_pos)
 
 	if unit != null and not unit.is_exhausted:
 		if not battlefield.try_allow_local_player_select_unit_for_command(unit):
 			return
+		battlefield.inspected_unit = null
 		active_unit = unit
 		original_pos = battlefield.get_grid_pos(active_unit)
 		active_unit.set_selected_glow(true)
@@ -171,10 +174,22 @@ func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 		if battlefield.select_sound != null and battlefield.select_sound.stream != null:
 			battlefield.select_sound.pitch_scale = randf_range(0.95, 1.05)
 			battlefield.select_sound.play()
-	elif enemy != null:
+	elif occupant != null and occupant.get("data") != null:
+		battlefield.inspected_unit = occupant
 		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
-		battlefield.calculate_enemy_threat_range(enemy)
+		if occupant == enemy and battlefield.can_preview_enemy_threat(enemy):
+			battlefield.calculate_enemy_threat_range(enemy)
+		else:
+			battlefield.clear_ranges()
+	elif enemy != null:
+		battlefield.inspected_unit = enemy
+		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
+		if battlefield.can_preview_enemy_threat(enemy):
+			battlefield.calculate_enemy_threat_range(enemy)
+		else:
+			battlefield.clear_ranges()
 	else:
+		battlefield.inspected_unit = null
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 		battlefield.clear_ranges()
 

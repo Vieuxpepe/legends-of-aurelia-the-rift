@@ -232,7 +232,7 @@ func _distance_to_nearest_unit_from(pos: Vector2i, units: Array[Node2D], ignore:
 			continue
 		if not is_instance_valid(u) or _i(u, "current_hp") <= 0:
 			continue
-		best = min(best, _grid_dist(pos, battlefield.get_grid_pos(u)))
+		best = min(best, _grid_dist_to_target_tiles(pos, u))
 	return best
 
 func _count_units_within_distance(pos: Vector2i, units: Array[Node2D], max_dist: int, ignore: Node2D = null) -> int:
@@ -242,7 +242,7 @@ func _count_units_within_distance(pos: Vector2i, units: Array[Node2D], max_dist:
 			continue
 		if not is_instance_valid(u) or _i(u, "current_hp") <= 0:
 			continue
-		if _grid_dist(pos, battlefield.get_grid_pos(u)) <= max_dist:
+		if _grid_dist_to_target_tiles(pos, u) <= max_dist:
 			count += 1
 	return count
 
@@ -292,6 +292,37 @@ func _get_action_range_for(unit: Node2D, target_type: String) -> Dictionary:
 				"max": _i(wpn, "max_range", 1) if wpn != null else 1
 			}
 
+func _target_tiles(target: Node2D) -> Array[Vector2i]:
+	if battlefield == null or target == null or not is_instance_valid(target):
+		return []
+	if target.has_method("get_occupied_tiles"):
+		var tiles: Array[Vector2i] = []
+		for raw_tile in target.get_occupied_tiles(battlefield):
+			if raw_tile is Vector2i and not tiles.has(raw_tile):
+				tiles.append(raw_tile)
+		if not tiles.is_empty():
+			return tiles
+	return [battlefield.get_grid_pos(target)]
+
+func _grid_dist_to_target_tiles(pos: Vector2i, target: Node2D) -> int:
+	var best: int = 999999
+	for tile in _target_tiles(target):
+		best = min(best, _grid_dist(pos, tile))
+	return best
+
+func _best_target_tile_for_pathing(from_pos: Vector2i, target: Node2D) -> Vector2i:
+	var target_tiles: Array[Vector2i] = _target_tiles(target)
+	if target_tiles.is_empty():
+		return battlefield.get_grid_pos(target)
+	var best_tile: Vector2i = target_tiles[0]
+	var best_dist: int = _grid_dist(from_pos, best_tile)
+	for tile in target_tiles:
+		var dist: int = _grid_dist(from_pos, tile)
+		if dist < best_dist:
+			best_dist = dist
+			best_tile = tile
+	return best_tile
+
 func _can_act_from_tile(unit: Node2D, tile_pos: Vector2i, target: Node2D, target_type: String) -> bool:
 	if unit == null or target == null or not is_instance_valid(target):
 		return false
@@ -299,10 +330,22 @@ func _can_act_from_tile(unit: Node2D, tile_pos: Vector2i, target: Node2D, target
 	var action_range: Dictionary = _get_action_range_for(unit, target_type)
 	var min_r: int = int(action_range["min"])
 	var max_r: int = int(action_range["max"])
-	var target_pos: Vector2i = battlefield.get_grid_pos(target)
-	var dist: int = _grid_dist(tile_pos, target_pos)
-
-	if dist < min_r or dist > max_r:
+	var wpn: Resource = _weapon(unit)
+	var staff_like: bool = wpn != null and (
+		_b(wpn, "is_healing_staff") or _b(wpn, "is_buff_staff") or _b(wpn, "is_debuff_staff")
+	)
+	var any_target_tile_in_range: bool = false
+	for target_tile in _target_tiles(target):
+		var dist: int = _grid_dist(tile_pos, target_tile)
+		if dist < min_r or dist > max_r:
+			continue
+		if staff_like or target_type == TYPE_CHEST or target_type == TYPE_ESCAPE or target_type == TYPE_ALLY_FOLLOW:
+			any_target_tile_in_range = true
+			break
+		if battlefield._attack_has_clear_los(tile_pos, target_tile):
+			any_target_tile_in_range = true
+			break
+	if not any_target_tile_in_range:
 		return false
 
 	var occupier: Node2D = battlefield.get_occupant_at(tile_pos)
@@ -426,9 +469,11 @@ func _enemy_threatens_pos(enemy: Node2D, pos: Vector2i) -> bool:
 		min_r = _i(w, "min_range", 1)
 		max_r = _i(w, "max_range", 1)
 
-	var epos: Vector2i = battlefield.get_grid_pos(enemy)
-	var d: int = _grid_dist(epos, pos)
-	return d >= min_r and d <= max_r
+	for enemy_tile in _target_tiles(enemy):
+		var d: int = _grid_dist(enemy_tile, pos)
+		if d >= min_r and d <= max_r:
+			return true
+	return false
 
 func _incoming_damage_at(pos: Vector2i, unit: Node2D, enemies: Array[Node2D], ignored_enemy: Node2D = null) -> int:
 	var total: int = 0
@@ -502,9 +547,8 @@ func _ai_try_canto_move(unit: Node2D, remaining: float) -> void:
 	_sync_host_authority_enemy_move(unit, path, pc)
 	unit.in_canto_phase = false
 	unit.canto_move_budget = 0
-	if faction == "ally":
-		battlefield.update_fog_of_war()
 	battlefield.rebuild_grid()
+	battlefield.update_fog_of_war()
 
 
 # -----------------------------------------------------------------------------
@@ -696,7 +740,7 @@ func get_best_plan_for(unit: Node2D, exclude_plans: Array = [], allowed_types: A
 		var score: float = 0.0
 		var dist: int = int(battlefield.get_distance(unit, target))
 		var can_reach_this_turn: bool = _can_reach_target_this_turn(unit, target, t, reachable_tiles)
-		var target_pos: Vector2i = battlefield.get_grid_pos(target)
+		var target_pos: Vector2i = _best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target)
 		var squad_reasons: PackedStringArray = []
 		var dive_result: Dictionary = {"bonus": 0.0, "reasons": []}
 
@@ -1139,7 +1183,7 @@ func execute_ai_turn(my_container: Node) -> void:
 			var best_spot_score: float = -999999.0
 
 			for spot: Vector2i in valid_firing_spots:
-				var dist_to_target: int = abs(spot.x - target_pos.x) + abs(spot.y - target_pos.y)
+				var dist_to_target: int = _grid_dist_to_target_tiles(spot, target)
 				var score_spot: float = 0.0
 				var danger: int = _incoming_damage_at(spot, unit, enemies, ignore_retaliation_from)
 				var nearest_enemy_dist: int = _distance_to_nearest_unit_from(spot, enemies)
@@ -1304,7 +1348,7 @@ func execute_ai_turn(my_container: Node) -> void:
 
 					for i: int in range(1, max_steps + 1):
 						var step_pos: Vector2i = full_path[i] as Vector2i
-						var step_dist_to_target: int = _grid_dist(step_pos, target_pos)
+						var step_dist_to_target: int = _grid_dist_to_target_tiles(step_pos, target)
 						var step_danger: int = _incoming_damage_at(step_pos, unit, enemies, ignore_retaliation_from)
 						var step_nearest_enemy: int = _distance_to_nearest_unit_from(step_pos, enemies)
 						var step_nearby_friends: int = _count_units_within_distance(step_pos, friendlies, 2, unit)
@@ -1398,7 +1442,7 @@ func execute_ai_turn(my_container: Node) -> void:
 					plan = backup_plan
 					target = backup_target
 					target_type = String(backup_plan.get("type"))
-					target_pos = battlefield.get_grid_pos(target)
+					target_pos = _best_target_tile_for_pathing(start_pos, target)
 					action_range = _get_action_range_for(unit, target_type)
 					min_r = int(action_range["min"])
 					max_r = int(action_range["max"])
@@ -1421,7 +1465,7 @@ func execute_ai_turn(my_container: Node) -> void:
 						var best_spot: Vector2i = start_pos
 						var best_spot_score: float = -999999.0
 						for spot: Vector2i in valid_firing_spots:
-							var dist_to_target: int = abs(spot.x - target_pos.x) + abs(spot.y - target_pos.y)
+							var dist_to_target: int = _grid_dist_to_target_tiles(spot, target)
 							var score_spot: float = 0.0
 							var danger: int = _incoming_damage_at(spot, unit, enemies, ignore_retaliation_from)
 							var nearest_enemy_dist: int = _distance_to_nearest_unit_from(spot, enemies)
@@ -1551,7 +1595,7 @@ func execute_ai_turn(my_container: Node) -> void:
 							var progress_danger_weight: float = DANGER_WEIGHT_RANGED if is_ranged else DANGER_WEIGHT_MELEE
 							for i: int in range(1, max_steps + 1):
 								var step_pos: Vector2i = full_path[i] as Vector2i
-								var step_dist_to_target: int = _grid_dist(step_pos, target_pos)
+								var step_dist_to_target: int = _grid_dist_to_target_tiles(step_pos, target)
 								var step_danger: int = _incoming_damage_at(step_pos, unit, enemies, ignore_retaliation_from)
 								var step_nearest_enemy: int = _distance_to_nearest_unit_from(step_pos, enemies)
 								var step_nearby_friends: int = _count_units_within_distance(step_pos, friendlies, 2, unit)
@@ -1681,10 +1725,8 @@ func execute_ai_turn(my_container: Node) -> void:
 			if battlefield == null:
 				return
 
-			if faction == "ally":
-				battlefield.update_fog_of_war()
-
 			battlefield.rebuild_grid()
+			battlefield.update_fog_of_war()
 
 		# Post-move camera focus for the actual action
 		if targeted_crate != null:
@@ -1717,7 +1759,7 @@ func execute_ai_turn(my_container: Node) -> void:
 							var pre_stolen_count: int = 0
 							if unit.get("stolen_loot") != null:
 								pre_stolen_count = (unit.stolen_loot as Array).size()
-							unit.look_at_pos(battlefield.get_grid_pos(target))
+							unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
 							if battlefield.has_method("_on_chest_opened"):
 								battlefield._on_chest_opened(target, unit)
 							var stolen_items: Array = []
@@ -1728,24 +1770,24 @@ func execute_ai_turn(my_container: Node) -> void:
 							_sync_host_authority_enemy_chest_open(unit, target, stolen_items)
 
 					TYPE_HOSTILE:
-						unit.look_at_pos(battlefield.get_grid_pos(target))
+						unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
 						await _ai_execute_combat(battlefield, unit, target, false)
 						_focus_target = target
 						performed_attack_action = true
 
 					TYPE_CRATE:
-						unit.look_at_pos(battlefield.get_grid_pos(target))
+						unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
 						await _ai_execute_combat(battlefield, unit, target, false)
 						performed_attack_action = true
 
 					TYPE_ALLY_HEAL:
 						if _i(target, "current_hp") < _i(target, "max_hp"):
-							unit.look_at_pos(battlefield.get_grid_pos(target))
+							unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
 							await _ai_execute_combat(battlefield, unit, target, false)
 							performed_attack_action = true
 
 					TYPE_ALLY_BUFF:
-						unit.look_at_pos(battlefield.get_grid_pos(target))
+						unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
 						await _ai_execute_combat(battlefield, unit, target, false)
 						performed_attack_action = true
 

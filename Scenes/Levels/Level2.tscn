@@ -26,12 +26,12 @@
 [ext_resource type="Texture2D" uid="uid://cfig6wee7qtmg" path="res://Assets/UI/Bottom Bar UI.png" id="19_mypd1"]
 [ext_resource type="Texture2D" uid="uid://bw056fsyabudc" path="res://Assets/UI/Frame.png" id="20_s6uab"]
 [ext_resource type="Script" uid="uid://mr6ooohlfrkk" path="res://Scripts/Core/AmbushSpawner.gd" id="22_0tovn"]
+[ext_resource type="Resource" uid="uid://umon5tefcfnh" path="res://Resources/Units/PlayableRoster/03_Branik.tres" id="23_b7401"]
 [ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="24_ifigw"]
 [ext_resource type="AudioStream" uid="uid://c1l68wat5t453" path="res://SoundEffects/attacking_a_unit_in__#3-1771002816393.wav" id="25_pe0d0"]
 [ext_resource type="Script" uid="uid://ocphjgonaf7i" path="res://Scripts/Core/StorySpawner.gd" id="26_lsi8b"]
 [ext_resource type="PackedScene" uid="uid://e0u8l1nqatoe" path="res://Scenes/RiftTearSpawner.tscn" id="26_x7qph"]
 [ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="26_yf0ma"]
-[ext_resource type="Resource" uid="uid://bkt2omwfcsl28" path="res://Resources/Units/Branik.tres" id="27_6elfk"]
 [ext_resource type="PackedScene" uid="uid://cw1hvhq0anox3" path="res://Scenes/SpawnEffect.tscn" id="27_un8u6"]
 [ext_resource type="AudioStream" uid="uid://7tprk5jnxe44" path="res://SoundEffects/Epic_Level_up_sound.wav" id="27_vt7u7"]
 [ext_resource type="Texture2D" uid="uid://dc5tksv7qa76g" path="res://Assets/Backgrounds/Default Background.png" id="28_c1qal"]
@@ -65,6 +65,7 @@
 [ext_resource type="Texture2D" uid="uid://b0xt0nskj6lau" path="res://Assets/Tilesets/tiles/1 Shadow/3.png" id="58_s4s2h"]
 [ext_resource type="AudioStream" uid="uid://cx2nrdjtlm8r5" path="res://SoundEffects/Level Up, Clean, Simple, 16 Bit, Heroic.mp3" id="59_b7401"]
 [ext_resource type="Texture2D" uid="uid://bi4aw63ux4rqe" path="res://animations/Phase Banner Animation/20.png" id="59_soov1"]
+[ext_resource type="AudioStream" uid="uid://rrvy3o3cnmej" path="res://SoundEffects/CriticalHit.wav" id="60_b7401"]
 [ext_resource type="Texture2D" uid="uid://dofq0g15lcmo7" path="res://animations/Phase Banner Animation/21.png" id="60_qxh6s"]
 [ext_resource type="AudioStream" uid="uid://dvj8na3bctl7y" path="res://SoundEffects/Music/Emberwood BGM (1).mp3" id="61_08kon"]
 [ext_resource type="Texture2D" uid="uid://ccmatpngb33vg" path="res://animations/Phase Banner Animation/22.png" id="61_vf0so"]
@@ -73,7 +74,6 @@
 [ext_resource type="AudioStream" uid="uid://culcdsqmruen7" path="res://SoundEffects/DefenseMode.mp3" id="63_4hc4l"]
 [ext_resource type="Texture2D" uid="uid://d07qhv8g2nqrr" path="res://animations/Phase Banner Animation/24.png" id="63_ysa80"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="64_tr5do"]
-[ext_resource type="AudioStream" uid="uid://dcg0hr3gr8ufa" path="res://SoundEffects/critical-hit-1 (1).mp3" id="66_021pe"]
 [ext_resource type="Texture2D" uid="uid://dpnnbrrx57boa" path="res://Assets/Tilesets/Autumn/Autumn_Forest_Tiles.png" id="71_3ngww"]
 [ext_resource type="Texture2D" uid="uid://brfxs1cn0nwuh" path="res://Assets/Tilesets/Autumn/TX Tileset Grass.png" id="72_d7ssd"]
 [ext_resource type="Texture2D" uid="uid://d1frbaikpxan5" path="res://Assets/Tilesets/Autumn/unnamed__25_-removebg-preview.png" id="75_fnm5q"]
@@ -831,11 +831,22 @@ promotion_sound = ExtResource("3_yvg1k")
 dash_fx_scene = ExtResource("8_7gknd")
 slash_fx_scene = ExtResource("9_rd3ey")
 level_up_fx_scene = ExtResource("10_qmxd2")
+default_fire_tile_damage = null
+fire_tile_extinguish_shrink_sec = null
 GRID_SIZE = Vector2i(20, 30)
+zoom_step = null
+min_zoom = null
+max_zoom = null
+zoom_to_cursor = null
+camera_speed = null
+edge_margin = null
 use_fog_of_war = true
+default_vision_range = null
+vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_noleb")]([SubResource("Resource_8a6bc"), SubResource("Resource_yu4i8"), SubResource("Resource_qqdt2"), SubResource("Resource_hhqx0"), SubResource("Resource_lsi8b")])
 outro_dialogue = Array[ExtResource("6_noleb")]([SubResource("Resource_0tovn"), SubResource("Resource_08kon")])
 map_objective = 2
+custom_objective_text = null
 turn_limit = 20
 vip_target = NodePath("AllyUnits/DonkeyCart")
 
@@ -892,7 +903,7 @@ spawn_sound = ExtResource("29_ue7af")
 position = Vector2(384, 200)
 script = ExtResource("26_lsi8b")
 unit_scene = ExtResource("4_vv18r")
-character_data = ExtResource("27_6elfk")
+character_data = ExtResource("23_b7401")
 activation_distance = 6
 
 [node name="Chests" type="Node2D" parent="." unique_id=375350885]
@@ -2136,7 +2147,7 @@ anchor_mode = 0
 position_smoothing_enabled = true
 
 [node name="CritSound" type="AudioStreamPlayer" parent="." unique_id=342712717]
-stream = ExtResource("66_021pe")
+stream = ExtResource("60_b7401")
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1925426781]
 process_mode = 3

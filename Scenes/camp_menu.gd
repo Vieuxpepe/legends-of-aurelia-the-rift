@@ -1,6 +1,22 @@
 extends Control
 
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
+const CAMP_PANEL_BG := Color(0.13, 0.097, 0.068, 0.88)
+const CAMP_PANEL_BG_ALT := Color(0.17, 0.126, 0.083, 0.94)
+const CAMP_PANEL_BG_SOFT := Color(0.08, 0.061, 0.043, 0.82)
+const CAMP_BORDER := Color(0.82, 0.66, 0.24, 0.96)
+const CAMP_BORDER_SOFT := Color(0.47, 0.38, 0.17, 0.94)
+const CAMP_TEXT := Color(0.94, 0.91, 0.84, 1.0)
+const CAMP_MUTED := Color(0.73, 0.68, 0.60, 1.0)
+const CAMP_ACCENT_CYAN := Color(0.48, 0.87, 1.0, 1.0)
+const CAMP_ACCENT_GREEN := Color(0.40, 0.94, 0.54, 1.0)
+const CAMP_ACTION_PRIMARY := Color(0.76, 0.58, 0.19, 0.96)
+const CAMP_ACTION_SECONDARY := Color(0.28, 0.21, 0.13, 0.94)
+const CAMP_UNIT_INFO_STAT_BAR_CAP := 50.0
+const CAMP_UNIT_INFO_STAT_TIER_CYAN := Color(0.28, 0.88, 1.0, 1.0)
+const CAMP_UNIT_INFO_STAT_TIER_PURPLE := Color(0.76, 0.48, 1.0, 1.0)
+const CAMP_UNIT_INFO_STAT_TIER_ORANGE := Color(1.0, 0.64, 0.22, 1.0)
+const CAMP_UNIT_INFO_STAT_TIER_WHITE := Color(0.96, 0.96, 0.98, 1.0)
 
 # =============================================================================
 # camp_menu.gd – Camp / Hub Scene Controller
@@ -216,6 +232,7 @@ var selected_shop_meta: Dictionary = {}
 
 @onready var buy_button = $BuyButton
 @onready var shop_desc = $ShopDescriptionLabel
+@onready var sort_button = $SortButton
 
 @onready var merchant_portrait = $MerchantPortrait
 @onready var merchant_label = $MerchantDialogue
@@ -255,6 +272,12 @@ var discounted_item: Resource = null
 @onready var option1 = $TalkPanel/VBoxContainer/Option1
 @onready var option2 = $TalkPanel/VBoxContainer/Option2
 @onready var option3 = $TalkPanel/VBoxContainer/Option3
+@onready var roster_header_button: Button = get_node_or_null("Roster")
+@onready var inventory_header_button: Button = get_node_or_null("Button")
+@onready var merchant_header_button: Button = get_node_or_null("Button2")
+@onready var portrait_panel: Panel = get_node_or_null("PortraitRect2")
+@onready var merchant_frame: Sprite2D = get_node_or_null("EmptyFrame")
+@onready var background_texture: TextureRect = get_node_or_null("ColorRect")
 
 # World Map / Explore Camp
 @onready var world_map_button = get_node_or_null("%WorldMapButton")
@@ -262,6 +285,54 @@ var discounted_item: Resource = null
 
 var _task_log: TaskLog = null
 var _task_log_button: Button = null
+var _camp_cards_layer: Control = null
+var _camp_cards: Dictionary = {}
+var _inventory_desc_scroll: ScrollContainer = null
+var _shop_desc_scroll: ScrollContainer = null
+var _camp_unit_info_dimmer: ColorRect = null
+var _camp_unit_info_root: VBoxContainer = null
+var _camp_unit_info_portrait: TextureRect = null
+var _camp_unit_info_name: Label = null
+var _camp_unit_info_meta_label: Label = null
+var _camp_unit_info_summary_text: RichTextLabel = null
+var _camp_unit_info_weapon_badge: Label = null
+var _camp_unit_info_weapon_icon: TextureRect = null
+var _camp_unit_info_weapon_name: Label = null
+var _camp_unit_info_record_text: RichTextLabel = null
+var _camp_unit_info_relationships_root: VBoxContainer = null
+var _camp_unit_info_close_btn: Button = null
+var _camp_unit_info_primary_widgets: Dictionary = {}
+var _camp_unit_info_stat_widgets: Dictionary = {}
+var _camp_unit_info_growth_widgets: Dictionary = {}
+var _camp_unit_info_anim_tween: Tween = null
+var _camp_unit_info_left_scroll: ScrollContainer = null
+var _camp_unit_info_left_root: VBoxContainer = null
+var _camp_unit_info_right_scroll: ScrollContainer = null
+var _camp_unit_info_right_root: VBoxContainer = null
+var _camp_save_dimmer: ColorRect = null
+var _camp_save_root: VBoxContainer = null
+var _camp_save_title: Label = null
+var _camp_save_subtitle: Label = null
+var _camp_save_footer: Label = null
+var _camp_save_header_badge: Label = null
+var _camp_save_slots_root: VBoxContainer = null
+var _camp_jukebox_dimmer: ColorRect = null
+var _camp_jukebox_root: VBoxContainer = null
+var _camp_jukebox_library_panel: Panel = null
+var _camp_jukebox_control_panel: Panel = null
+var _camp_jukebox_control_scroll: ScrollContainer = null
+var _camp_jukebox_control_root: VBoxContainer = null
+var _camp_jukebox_mode_row: HBoxContainer = null
+var _camp_jukebox_playlist_row: HBoxContainer = null
+var _camp_jukebox_manage_row: GridContainer = null
+var _camp_jukebox_filter_row: HBoxContainer = null
+var _camp_jukebox_transport_row: HBoxContainer = null
+var _camp_jukebox_library_badge: Label = null
+var _camp_jukebox_deck_badge: Label = null
+var _camp_jukebox_volume_label: Label = null
+var _camp_jukebox_list_hint: Label = null
+var _camp_jukebox_title: Label = null
+var _camp_jukebox_subtitle: Label = null
 
 var current_talk_state: String = "idle"
 
@@ -318,6 +389,2082 @@ func _on_task_log_pressed() -> void:
 	_ensure_task_log()
 	if _task_log != null:
 		_task_log.open_and_refresh()
+
+func _camp_make_panel_style(
+	bg: Color = CAMP_PANEL_BG,
+	border: Color = CAMP_BORDER,
+	radius: int = 24,
+	shadow_size: int = 12
+) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_color = border
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	style.shadow_color = Color(0, 0, 0, 0.38)
+	style.shadow_size = shadow_size
+	style.shadow_offset = Vector2(0, 6)
+	return style
+
+func _camp_make_button_style(
+	fill: Color,
+	border: Color,
+	radius: int = 18,
+	shadow_size: int = 6
+) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	style.shadow_color = Color(0, 0, 0, 0.28)
+	style.shadow_size = shadow_size
+	style.shadow_offset = Vector2(0, 4)
+	return style
+
+func _camp_set_rect(control: Control, pos: Vector2, size: Vector2) -> void:
+	if control == null:
+		return
+	control.layout_mode = 0
+	control.anchor_left = 0.0
+	control.anchor_top = 0.0
+	control.anchor_right = 0.0
+	control.anchor_bottom = 0.0
+	control.offset_left = pos.x
+	control.offset_top = pos.y
+	control.offset_right = pos.x + size.x
+	control.offset_bottom = pos.y + size.y
+
+func _camp_style_button(button: Button, primary: bool = false, font_size: int = 22, min_height: float = 52.0) -> void:
+	if button == null:
+		return
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.custom_minimum_size.y = min_height
+	button.add_theme_font_size_override("font_size", font_size)
+	var base_font_color := Color(0.12, 0.09, 0.04, 1.0) if primary else CAMP_TEXT
+	button.add_theme_color_override("font_color", base_font_color)
+	button.add_theme_color_override("font_hover_color", Color(0.08, 0.06, 0.03, 1.0) if primary else Color(1, 1, 1, 1))
+	button.add_theme_color_override("font_pressed_color", Color(0.08, 0.06, 0.03, 1.0) if primary else CAMP_TEXT)
+	button.add_theme_color_override("font_focus_color", base_font_color)
+	var base_fill := CAMP_ACTION_PRIMARY if primary else CAMP_ACTION_SECONDARY
+	var base_border := CAMP_ACCENT_CYAN if primary else CAMP_BORDER_SOFT
+	button.add_theme_stylebox_override("normal", _camp_make_button_style(base_fill, base_border))
+	button.add_theme_stylebox_override("hover", _camp_make_button_style(base_fill.lightened(0.08) if primary else base_fill.lightened(0.12), CAMP_BORDER))
+	button.add_theme_stylebox_override("pressed", _camp_make_button_style(base_fill.darkened(0.08), CAMP_ACCENT_CYAN if primary else CAMP_BORDER))
+	button.add_theme_stylebox_override("focus", _camp_make_button_style(base_fill, CAMP_ACCENT_CYAN))
+	button.add_theme_stylebox_override("disabled", _camp_make_button_style(base_fill.darkened(0.10), base_border.darkened(0.12), 18, 0))
+
+func _camp_style_section_badge(button: Button, text_value: String, font_color: Color = CAMP_BORDER) -> void:
+	if button == null:
+		return
+	button.text = text_value
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.add_theme_font_size_override("font_size", 20)
+	button.add_theme_color_override("font_color", font_color)
+	button.add_theme_color_override("font_hover_color", font_color)
+	button.add_theme_color_override("font_pressed_color", font_color)
+	button.add_theme_color_override("font_focus_color", font_color)
+	var clear_style := StyleBoxFlat.new()
+	clear_style.bg_color = Color(0, 0, 0, 0)
+	clear_style.border_width_left = 0
+	clear_style.border_width_top = 0
+	clear_style.border_width_right = 0
+	clear_style.border_width_bottom = 0
+	button.add_theme_stylebox_override("normal", clear_style)
+	button.add_theme_stylebox_override("hover", clear_style)
+	button.add_theme_stylebox_override("pressed", clear_style)
+	button.add_theme_stylebox_override("focus", clear_style)
+	button.add_theme_stylebox_override("disabled", clear_style)
+
+func _camp_style_rich_label(
+	label: RichTextLabel,
+	font_size: int = 18,
+	panel_bg: Color = CAMP_PANEL_BG_SOFT,
+	border: Color = CAMP_BORDER_SOFT,
+	scrollable: bool = false
+) -> void:
+	if label == null:
+		return
+	label.fit_content = false
+	label.scroll_active = scrollable
+	label.scroll_following = false
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_STOP if scrollable else Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("normal_font_size", font_size)
+	label.add_theme_color_override("default_color", CAMP_TEXT)
+	label.add_theme_stylebox_override("normal", _camp_make_panel_style(panel_bg, border, 18, 0))
+
+func _camp_style_scroll(scroll: ScrollContainer) -> void:
+	if scroll == null:
+		return
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var vbar := scroll.get_v_scroll_bar()
+	if vbar != null:
+		vbar.custom_minimum_size.x = 10.0
+		vbar.add_theme_stylebox_override("scroll", _camp_make_button_style(Color(0.09, 0.07, 0.05, 0.72), Color(0, 0, 0, 0), 8, 0))
+		vbar.add_theme_stylebox_override("grabber", _camp_make_button_style(CAMP_BORDER_SOFT, CAMP_BORDER_SOFT, 8, 0))
+		vbar.add_theme_stylebox_override("grabber_highlight", _camp_make_button_style(CAMP_BORDER, CAMP_BORDER, 8, 0))
+		vbar.add_theme_stylebox_override("grabber_pressed", _camp_make_button_style(CAMP_ACCENT_CYAN, CAMP_ACCENT_CYAN, 8, 0))
+
+func _camp_style_tabs(tab_bar: TabBar) -> void:
+	if tab_bar == null:
+		return
+	tab_bar.clip_tabs = true
+	tab_bar.add_theme_font_size_override("font_size", 18)
+	tab_bar.add_theme_stylebox_override("tab_selected", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 14, 0))
+	tab_bar.add_theme_stylebox_override("tab_hovered", _camp_make_button_style(Color(0.35, 0.27, 0.15, 0.98), CAMP_BORDER, 14, 0))
+	tab_bar.add_theme_stylebox_override("tab_unselected", _camp_make_button_style(Color(0.18, 0.13, 0.08, 0.92), CAMP_BORDER_SOFT, 14, 0))
+	tab_bar.add_theme_stylebox_override("tab_disabled", _camp_make_button_style(Color(0.12, 0.09, 0.06, 0.82), CAMP_BORDER_SOFT.darkened(0.15), 14, 0))
+
+func _camp_style_panel(panel: Panel, bg: Color = CAMP_PANEL_BG_SOFT, border: Color = CAMP_BORDER_SOFT, radius: int = 18, shadow_size: int = 8) -> void:
+	if panel == null:
+		return
+	panel.add_theme_stylebox_override("panel", _camp_make_panel_style(bg, border, radius, shadow_size))
+
+func _camp_style_label(label: Label, color: Color = CAMP_TEXT, font_size: int = 18, outline_size: int = 2) -> void:
+	if label == null:
+		return
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
+	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_font_size_override("font_size", font_size)
+
+func _camp_style_option_button(option: OptionButton, font_size: int = 16, min_height: float = 40.0) -> void:
+	if option == null:
+		return
+	option.focus_mode = Control.FOCUS_ALL
+	option.mouse_filter = Control.MOUSE_FILTER_STOP
+	option.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	option.custom_minimum_size.y = min_height
+	option.add_theme_font_size_override("font_size", font_size)
+	option.add_theme_color_override("font_color", CAMP_TEXT)
+	option.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	option.add_theme_color_override("font_pressed_color", CAMP_TEXT)
+	option.add_theme_color_override("font_focus_color", CAMP_TEXT)
+	var normal_style := _camp_make_button_style(Color(0.20, 0.15, 0.09, 0.96), CAMP_BORDER_SOFT, 14, 4)
+	var hover_style := _camp_make_button_style(Color(0.24, 0.18, 0.10, 0.98), CAMP_BORDER, 14, 4)
+	var pressed_style := _camp_make_button_style(Color(0.16, 0.12, 0.08, 0.98), CAMP_ACCENT_CYAN, 14, 4)
+	option.add_theme_stylebox_override("normal", normal_style)
+	option.add_theme_stylebox_override("hover", hover_style)
+	option.add_theme_stylebox_override("pressed", pressed_style)
+	option.add_theme_stylebox_override("focus", pressed_style)
+	option.add_theme_stylebox_override("disabled", normal_style)
+
+func _camp_style_check_button(check: BaseButton, font_size: int = 16) -> void:
+	if check == null:
+		return
+	check.focus_mode = Control.FOCUS_ALL
+	check.mouse_filter = Control.MOUSE_FILTER_STOP
+	check.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	check.add_theme_font_size_override("font_size", font_size)
+	check.add_theme_color_override("font_color", CAMP_TEXT)
+	check.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	check.add_theme_color_override("font_pressed_color", CAMP_TEXT)
+	check.add_theme_color_override("font_focus_color", CAMP_TEXT)
+
+func _camp_style_slider(slider: Range) -> void:
+	if slider == null:
+		return
+	slider.mouse_filter = Control.MOUSE_FILTER_STOP
+	var groove := _camp_make_button_style(Color(0.08, 0.06, 0.04, 0.94), Color(0, 0, 0, 0), 8, 0)
+	var grabber := _camp_make_button_style(CAMP_BORDER, CAMP_BORDER, 10, 2)
+	var grabber_highlight := _camp_make_button_style(CAMP_ACCENT_CYAN, CAMP_ACCENT_CYAN, 10, 2)
+	if slider is Slider:
+		var s := slider as Slider
+		s.add_theme_stylebox_override("slider", groove)
+		s.add_theme_stylebox_override("grabber_area", groove)
+		s.add_theme_stylebox_override("grabber_area_highlight", _camp_make_button_style(Color(0.15, 0.12, 0.08, 0.98), CAMP_BORDER_SOFT, 8, 0))
+		s.add_theme_stylebox_override("grabber", grabber)
+		s.add_theme_stylebox_override("grabber_highlight", grabber_highlight)
+
+func _camp_style_item_list(list: ItemList) -> void:
+	if list == null:
+		return
+	list.mouse_filter = Control.MOUSE_FILTER_STOP
+	list.focus_mode = Control.FOCUS_ALL
+	list.select_mode = ItemList.SELECT_SINGLE
+	list.add_theme_font_size_override("font_size", 18)
+	list.add_theme_color_override("font_color", CAMP_TEXT)
+	list.add_theme_color_override("font_selected_color", Color(0.10, 0.08, 0.04, 1.0))
+	list.add_theme_color_override("guide_color", CAMP_BORDER_SOFT)
+	list.add_theme_stylebox_override("panel", _camp_make_panel_style(Color(0.08, 0.06, 0.04, 0.94), CAMP_BORDER_SOFT, 16, 0))
+	list.add_theme_stylebox_override("cursor", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 12, 0))
+	list.add_theme_stylebox_override("cursor_unfocused", _camp_make_button_style(Color(0.22, 0.16, 0.09, 0.96), CAMP_BORDER, 12, 0))
+	list.add_theme_stylebox_override("selected", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_BORDER, 12, 0))
+	list.add_theme_stylebox_override("selected_focus", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 12, 0))
+
+func _close_jukebox() -> void:
+	if _camp_jukebox_dimmer != null:
+		_camp_jukebox_dimmer.visible = false
+	if jukebox_panel != null:
+		jukebox_panel.visible = false
+
+func _ensure_camp_jukebox_modal() -> void:
+	if jukebox_panel == null:
+		return
+	if _camp_jukebox_dimmer == null or not is_instance_valid(_camp_jukebox_dimmer):
+		_camp_jukebox_dimmer = ColorRect.new()
+		_camp_jukebox_dimmer.name = "CampJukeboxDimmer"
+		_camp_jukebox_dimmer.color = Color(0, 0, 0, 0.74)
+		_camp_jukebox_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_camp_jukebox_dimmer.visible = false
+		_camp_jukebox_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_camp_jukebox_dimmer)
+		move_child(_camp_jukebox_dimmer, max(0, jukebox_panel.get_index()))
+
+	jukebox_panel.visible = false
+	jukebox_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	jukebox_panel.z_index = 44
+	_camp_style_panel(jukebox_panel, CAMP_PANEL_BG_ALT, CAMP_BORDER, 22, 12)
+
+	var old_title := jukebox_panel.get_node_or_null("Label") as Label
+	if old_title != null:
+		old_title.visible = false
+
+	if _camp_jukebox_root == null or not is_instance_valid(_camp_jukebox_root):
+		_camp_jukebox_root = VBoxContainer.new()
+		_camp_jukebox_root.name = "CampJukeboxRoot"
+		_camp_jukebox_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 24)
+		_camp_jukebox_root.add_theme_constant_override("separation", 14)
+		jukebox_panel.add_child(_camp_jukebox_root)
+
+		var header_row := HBoxContainer.new()
+		header_row.name = "JukeboxHeaderRow"
+		header_row.add_theme_constant_override("separation", 16)
+		_camp_jukebox_root.add_child(header_row)
+
+		var header_left := VBoxContainer.new()
+		header_left.name = "HeaderLeft"
+		header_left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header_left.add_theme_constant_override("separation", 4)
+		header_row.add_child(header_left)
+
+		var badge := Label.new()
+		badge.name = "HeaderBadge"
+		header_left.add_child(badge)
+		_camp_jukebox_title = Label.new()
+		_camp_jukebox_title.name = "HeaderTitle"
+		header_left.add_child(_camp_jukebox_title)
+		_camp_jukebox_subtitle = Label.new()
+		_camp_jukebox_subtitle.name = "HeaderSubtitle"
+		_camp_jukebox_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		header_left.add_child(_camp_jukebox_subtitle)
+
+		if close_jukebox_btn != null and close_jukebox_btn.get_parent() != header_row:
+			if close_jukebox_btn.get_parent() != null:
+				close_jukebox_btn.get_parent().remove_child(close_jukebox_btn)
+			header_row.add_child(close_jukebox_btn)
+
+		var divider := Panel.new()
+		divider.name = "JukeboxDivider"
+		divider.custom_minimum_size = Vector2(0.0, 3.0)
+		divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		divider.add_theme_stylebox_override("panel", _camp_make_panel_style(Color(0.62, 0.48, 0.18, 0.92), Color(0, 0, 0, 0), 4, 0))
+		_camp_jukebox_root.add_child(divider)
+
+		var body := HBoxContainer.new()
+		body.name = "JukeboxBody"
+		body.add_theme_constant_override("separation", 16)
+		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_root.add_child(body)
+
+		_camp_jukebox_library_panel = Panel.new()
+		_camp_jukebox_library_panel.name = "LibraryPanel"
+		_camp_jukebox_library_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_library_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_library_panel.size_flags_stretch_ratio = 1.08
+		_camp_style_panel(_camp_jukebox_library_panel, Color(0.09, 0.07, 0.05, 0.92), CAMP_BORDER_SOFT, 16, 6)
+		body.add_child(_camp_jukebox_library_panel)
+
+		_camp_jukebox_control_panel = Panel.new()
+		_camp_jukebox_control_panel.name = "ControlPanel"
+		_camp_jukebox_control_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_control_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_control_panel.size_flags_stretch_ratio = 0.92
+		_camp_style_panel(_camp_jukebox_control_panel, Color(0.09, 0.07, 0.05, 0.92), CAMP_BORDER_SOFT, 16, 6)
+		body.add_child(_camp_jukebox_control_panel)
+
+		var library_root := VBoxContainer.new()
+		library_root.name = "LibraryRoot"
+		library_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 16)
+		library_root.add_theme_constant_override("separation", 10)
+		_camp_jukebox_library_panel.add_child(library_root)
+
+		_camp_jukebox_library_badge = Label.new()
+		_camp_jukebox_library_badge.name = "LibraryBadge"
+		library_root.add_child(_camp_jukebox_library_badge)
+
+		if jukebox_list != null and jukebox_list.get_parent() != library_root:
+			if jukebox_list.get_parent() != null:
+				jukebox_list.get_parent().remove_child(jukebox_list)
+			library_root.add_child(jukebox_list)
+
+		_camp_jukebox_list_hint = Label.new()
+		_camp_jukebox_list_hint.name = "ListHint"
+		_camp_jukebox_list_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		library_root.add_child(_camp_jukebox_list_hint)
+
+		_camp_jukebox_control_scroll = ScrollContainer.new()
+		_camp_jukebox_control_scroll.name = "ControlScroll"
+		_camp_jukebox_control_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 16)
+		_camp_jukebox_control_panel.add_child(_camp_jukebox_control_scroll)
+
+		_camp_jukebox_control_root = VBoxContainer.new()
+		_camp_jukebox_control_root.name = "ControlRoot"
+		_camp_jukebox_control_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_control_root.add_theme_constant_override("separation", 12)
+		_camp_jukebox_control_scroll.add_child(_camp_jukebox_control_root)
+
+		_camp_jukebox_deck_badge = Label.new()
+		_camp_jukebox_deck_badge.name = "DeckBadge"
+		_camp_jukebox_control_root.add_child(_camp_jukebox_deck_badge)
+
+		if jukebox_now_playing != null and jukebox_now_playing.get_parent() != _camp_jukebox_control_root:
+			if jukebox_now_playing.get_parent() != null:
+				jukebox_now_playing.get_parent().remove_child(jukebox_now_playing)
+			_camp_jukebox_control_root.add_child(jukebox_now_playing)
+
+		_camp_jukebox_mode_row = HBoxContainer.new()
+		_camp_jukebox_mode_row.name = "ModeRow"
+		_camp_jukebox_mode_row.add_theme_constant_override("separation", 10)
+		_camp_jukebox_control_root.add_child(_camp_jukebox_mode_row)
+
+		_camp_jukebox_playlist_row = HBoxContainer.new()
+		_camp_jukebox_playlist_row.name = "PlaylistRow"
+		_camp_jukebox_playlist_row.add_theme_constant_override("separation", 10)
+		_camp_jukebox_control_root.add_child(_camp_jukebox_playlist_row)
+
+		_camp_jukebox_manage_row = GridContainer.new()
+		_camp_jukebox_manage_row.name = "ManageRow"
+		_camp_jukebox_manage_row.columns = 2
+		_camp_jukebox_manage_row.add_theme_constant_override("h_separation", 10)
+		_camp_jukebox_manage_row.add_theme_constant_override("v_separation", 10)
+		_camp_jukebox_control_root.add_child(_camp_jukebox_manage_row)
+
+		_camp_jukebox_filter_row = HBoxContainer.new()
+		_camp_jukebox_filter_row.name = "FilterRow"
+		_camp_jukebox_filter_row.add_theme_constant_override("separation", 10)
+		_camp_jukebox_control_root.add_child(_camp_jukebox_filter_row)
+
+		_camp_jukebox_volume_label = Label.new()
+		_camp_jukebox_volume_label.name = "VolumeLabel"
+		_camp_jukebox_control_root.add_child(_camp_jukebox_volume_label)
+
+		if jukebox_volume_slider != null and jukebox_volume_slider.get_parent() != _camp_jukebox_control_root:
+			if jukebox_volume_slider.get_parent() != null:
+				jukebox_volume_slider.get_parent().remove_child(jukebox_volume_slider)
+			_camp_jukebox_control_root.add_child(jukebox_volume_slider)
+
+		_camp_jukebox_transport_row = HBoxContainer.new()
+		_camp_jukebox_transport_row.name = "TransportRow"
+		_camp_jukebox_transport_row.add_theme_constant_override("separation", 10)
+		_camp_jukebox_control_root.add_child(_camp_jukebox_transport_row)
+
+		if jukebox_skip_btn != null and jukebox_skip_btn.get_parent() != _camp_jukebox_transport_row:
+			if jukebox_skip_btn.get_parent() != null:
+				jukebox_skip_btn.get_parent().remove_child(jukebox_skip_btn)
+			_camp_jukebox_transport_row.add_child(jukebox_skip_btn)
+		if jukebox_stop_btn != null and jukebox_stop_btn.get_parent() != _camp_jukebox_transport_row:
+			if jukebox_stop_btn.get_parent() != null:
+				jukebox_stop_btn.get_parent().remove_child(jukebox_stop_btn)
+			_camp_jukebox_transport_row.add_child(jukebox_stop_btn)
+
+	if not _jukebox_playlist_ui_created:
+		_create_jukebox_playlist_ui()
+
+	_camp_style_label(_camp_jukebox_title, CAMP_BORDER, 32, 2)
+	_camp_style_label(_camp_jukebox_subtitle, CAMP_MUTED, 17, 1)
+	if _camp_jukebox_title != null:
+		_camp_jukebox_title.text = "CAMP JUKEBOX"
+	if _camp_jukebox_subtitle != null:
+		_camp_jukebox_subtitle.text = "Review unlocked camp tracks, curate playlists, and control the war-table ambiance without leaving camp."
+	var header_badge := _camp_jukebox_root.get_node_or_null("JukeboxHeaderRow/HeaderLeft/HeaderBadge") as Label
+	_camp_style_label(header_badge, CAMP_MUTED, 15, 1)
+	if header_badge != null:
+		header_badge.text = "AMBIANCE DOSSIER"
+	_camp_style_label(_camp_jukebox_library_badge, CAMP_ACCENT_GREEN, 20, 1)
+	_camp_style_label(_camp_jukebox_deck_badge, CAMP_BORDER, 20, 1)
+	if _camp_jukebox_library_badge != null:
+		_camp_jukebox_library_badge.text = "TRACK LIBRARY"
+	if _camp_jukebox_deck_badge != null:
+		_camp_jukebox_deck_badge.text = "CONTROL DECK"
+	_camp_style_label(_camp_jukebox_list_hint, CAMP_MUTED, 14, 1)
+	if _camp_jukebox_list_hint != null:
+		_camp_jukebox_list_hint.text = "Select ambience, playlists, or unlocked tracks to preview them here."
+	_camp_style_label(_camp_jukebox_volume_label, CAMP_MUTED, 15, 1)
+	if _camp_jukebox_volume_label != null:
+		_camp_jukebox_volume_label.text = "VOLUME"
+	if close_jukebox_btn != null:
+		close_jukebox_btn.text = "Close"
+		_camp_style_button(close_jukebox_btn, false, 18, 42.0)
+		close_jukebox_btn.custom_minimum_size = Vector2(144.0, 42.0)
+	if jukebox_now_playing != null:
+		_camp_style_rich_label(jukebox_now_playing, 18, Color(0.08, 0.06, 0.04, 0.94), CAMP_BORDER)
+		jukebox_now_playing.fit_content = false
+		jukebox_now_playing.custom_minimum_size = Vector2(0.0, 128.0)
+		jukebox_now_playing.bbcode_enabled = true
+	if jukebox_list != null:
+		_camp_style_item_list(jukebox_list)
+		jukebox_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		jukebox_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if jukebox_volume_slider != null:
+		_camp_style_slider(jukebox_volume_slider)
+		jukebox_volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if jukebox_skip_btn != null:
+		jukebox_skip_btn.text = "Skip Track"
+		_camp_style_button(jukebox_skip_btn, false, 16, 40.0)
+		jukebox_skip_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if jukebox_stop_btn != null:
+		jukebox_stop_btn.text = "Stop Music"
+		_camp_style_button(jukebox_stop_btn, false, 16, 40.0)
+		jukebox_stop_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_style_scroll(_camp_jukebox_control_scroll)
+
+func _layout_camp_jukebox_panel() -> void:
+	if jukebox_panel == null or _camp_jukebox_root == null:
+		return
+	var view_size := get_viewport_rect().size
+	if view_size.x < 100.0 or view_size.y < 100.0:
+		return
+	if _camp_jukebox_dimmer != null:
+		_camp_jukebox_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		move_child(_camp_jukebox_dimmer, max(0, jukebox_panel.get_index()))
+	move_child(jukebox_panel, get_child_count() - 1)
+	var panel_size := Vector2(minf(view_size.x * 0.82, 1280.0), minf(view_size.y * 0.82, 860.0))
+	var panel_pos := (view_size - panel_size) * 0.5
+	_camp_set_rect(jukebox_panel, panel_pos, panel_size)
+	_camp_jukebox_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 24)
+	if _camp_jukebox_control_root != null and _camp_jukebox_control_scroll != null:
+		_camp_jukebox_control_root.custom_minimum_size.x = maxf(0.0, _camp_jukebox_control_scroll.size.x - 18.0)
+
+func _format_camp_record_timestamp(unix_time: int) -> String:
+	if unix_time <= 0:
+		return "UPDATED: ARCHIVE DATE UNKNOWN"
+	var date_info: Dictionary = Time.get_datetime_dict_from_unix_time(unix_time)
+	return "UPDATED: %02d/%02d/%04d  %02d:%02d" % [
+		int(date_info.get("day", 1)),
+		int(date_info.get("month", 1)),
+		int(date_info.get("year", 2000)),
+		int(date_info.get("hour", 0)),
+		int(date_info.get("minute", 0))
+	]
+
+func _style_camp_save_slot_button(button: Button, slot_index: int) -> void:
+	if button == null:
+		return
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	button.clip_text = false
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(0.0, 138.0)
+	button.add_theme_font_size_override("font_size", 19)
+	button.add_theme_color_override("font_color", CAMP_TEXT)
+	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	button.add_theme_color_override("font_pressed_color", CAMP_TEXT)
+	button.add_theme_color_override("font_focus_color", CAMP_TEXT)
+	var normal_style := _camp_make_button_style(Color(0.16, 0.12, 0.08, 0.96), CAMP_BORDER_SOFT, 20, 8)
+	normal_style.border_width_left = 6
+	normal_style.content_margin_left = 24.0
+	normal_style.content_margin_right = 20.0
+	normal_style.content_margin_top = 18.0
+	normal_style.content_margin_bottom = 18.0
+	var hover_style := _camp_make_button_style(Color(0.20, 0.15, 0.09, 0.98), CAMP_BORDER, 20, 8)
+	hover_style.border_width_left = 6
+	hover_style.content_margin_left = 24.0
+	hover_style.content_margin_right = 20.0
+	hover_style.content_margin_top = 18.0
+	hover_style.content_margin_bottom = 18.0
+	var pressed_style := _camp_make_button_style(Color(0.14, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 20, 8)
+	pressed_style.border_width_left = 6
+	pressed_style.content_margin_left = 24.0
+	pressed_style.content_margin_right = 20.0
+	pressed_style.content_margin_top = 18.0
+	pressed_style.content_margin_bottom = 18.0
+	var focus_style := _camp_make_button_style(Color(0.18, 0.13, 0.08, 0.98), CAMP_ACCENT_CYAN, 20, 8)
+	focus_style.border_width_left = 6
+	focus_style.content_margin_left = 24.0
+	focus_style.content_margin_right = 20.0
+	focus_style.content_margin_top = 18.0
+	focus_style.content_margin_bottom = 18.0
+	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("hover", hover_style)
+	button.add_theme_stylebox_override("pressed", pressed_style)
+	button.add_theme_stylebox_override("focus", focus_style)
+	button.add_theme_stylebox_override("disabled", normal_style)
+	button.text = ""
+	_camp_apply_save_slot_preview(button, _get_camp_slot_preview_data(slot_index))
+
+func _camp_ensure_save_slot_visuals(button: Button) -> Dictionary:
+	var root := button.get_node_or_null("SlotCardContent") as VBoxContainer
+	if root == null:
+		root = VBoxContainer.new()
+		root.name = "SlotCardContent"
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 18)
+		root.add_theme_constant_override("separation", 6)
+		button.add_child(root)
+
+	var badge_label := root.get_node_or_null("BadgeLabel") as Label
+	if badge_label == null:
+		badge_label = Label.new()
+		badge_label.name = "BadgeLabel"
+		badge_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		root.add_child(badge_label)
+
+	var content_row := root.get_node_or_null("ContentRow") as HBoxContainer
+	if content_row == null:
+		content_row = HBoxContainer.new()
+		content_row.name = "ContentRow"
+		content_row.add_theme_constant_override("separation", 12)
+		content_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		root.add_child(content_row)
+
+	var portrait_frame := content_row.get_node_or_null("PortraitFrame") as Panel
+	if portrait_frame == null:
+		portrait_frame = Panel.new()
+		portrait_frame.name = "PortraitFrame"
+		portrait_frame.custom_minimum_size = Vector2(72.0, 72.0)
+		portrait_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		content_row.add_child(portrait_frame)
+
+	var portrait_rect := portrait_frame.get_node_or_null("PortraitRect") as TextureRect
+	if portrait_rect == null:
+		portrait_rect = TextureRect.new()
+		portrait_rect.name = "PortraitRect"
+		portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		portrait_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 6)
+		portrait_frame.add_child(portrait_rect)
+
+	var text_root := content_row.get_node_or_null("TextRoot") as VBoxContainer
+	if text_root == null:
+		text_root = VBoxContainer.new()
+		text_root.name = "TextRoot"
+		text_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text_root.add_theme_constant_override("separation", 4)
+		content_row.add_child(text_root)
+
+	var title_label := text_root.get_node_or_null("TitleLabel") as Label
+	if title_label == null:
+		title_label = Label.new()
+		title_label.name = "TitleLabel"
+		title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text_root.add_child(title_label)
+
+	var meta_label := text_root.get_node_or_null("MetaLabel") as Label
+	if meta_label == null:
+		meta_label = Label.new()
+		meta_label.name = "MetaLabel"
+		meta_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text_root.add_child(meta_label)
+
+	var stamp_label := text_root.get_node_or_null("StampLabel") as Label
+	if stamp_label == null:
+		stamp_label = Label.new()
+		stamp_label.name = "StampLabel"
+		stamp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text_root.add_child(stamp_label)
+
+	_camp_style_label(badge_label, CAMP_ACCENT_CYAN.lerp(CAMP_MUTED, 0.35), 14, 1)
+	_camp_style_panel(portrait_frame, Color(0.11, 0.09, 0.06, 0.96), CAMP_BORDER_SOFT, 10, 4)
+	_camp_style_label(title_label, CAMP_BORDER, 21, 1)
+	_camp_style_label(meta_label, CAMP_TEXT, 16, 1)
+	_camp_style_label(stamp_label, CAMP_ACCENT_CYAN.lerp(CAMP_MUTED, 0.25), 14, 1)
+	title_label.add_theme_color_override("font_color", Color(0.98, 0.92, 0.76, 1.0))
+	meta_label.add_theme_color_override("font_color", CAMP_TEXT.lerp(CAMP_MUTED, 0.18))
+	stamp_label.add_theme_color_override("font_color", CAMP_ACCENT_CYAN.lerp(CAMP_TEXT, 0.45))
+	return {
+		"root": root,
+		"badge": badge_label,
+		"portrait_frame": portrait_frame,
+		"portrait": portrait_rect,
+		"title": title_label,
+		"meta": meta_label,
+		"stamp": stamp_label
+	}
+
+func _camp_apply_save_slot_preview(button: Button, preview: Dictionary) -> void:
+	if button == null:
+		return
+	var widgets := _camp_ensure_save_slot_visuals(button)
+	var badge_label: Label = widgets["badge"]
+	var portrait_frame: Panel = widgets["portrait_frame"]
+	var portrait_rect: TextureRect = widgets["portrait"]
+	var title_label: Label = widgets["title"]
+	var meta_label: Label = widgets["meta"]
+	var stamp_label: Label = widgets["stamp"]
+	if badge_label != null:
+		badge_label.text = str(preview.get("badge", ""))
+	var portrait_value: Variant = preview.get("portrait")
+	if portrait_rect != null:
+		if portrait_value is String and ResourceLoader.exists(str(portrait_value)):
+			portrait_rect.texture = load(str(portrait_value))
+		elif portrait_value is Texture2D:
+			portrait_rect.texture = portrait_value as Texture2D
+		else:
+			portrait_rect.texture = null
+	if portrait_frame != null:
+		portrait_frame.visible = portrait_rect != null and portrait_rect.texture != null
+	if title_label != null:
+		title_label.text = str(preview.get("title", ""))
+	if meta_label != null:
+		meta_label.text = str(preview.get("meta", ""))
+	if stamp_label != null:
+		stamp_label.text = str(preview.get("stamp", ""))
+
+func _get_camp_slot_preview_data(slot_num: int) -> Dictionary:
+	var path = CampaignManager.get_save_path(slot_num, false)
+	if not FileAccess.file_exists(path):
+		return {
+			"badge": "SLOT %d  //  EMPTY RECORD" % slot_num,
+			"title": "No manual field archive written yet.",
+			"meta": "Store the current campaign state here.",
+			"stamp": "READY FOR ARCHIVAL",
+			"portrait": null
+		}
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {
+			"badge": "SLOT %d  //  RECORD UNREADABLE" % slot_num,
+			"title": "Archive data could not be opened.",
+			"meta": "Try saving into this slot again.",
+			"stamp": "UPDATED: ARCHIVE DATE UNKNOWN",
+			"portrait": null
+		}
+	var save_data = file.get_var()
+	file.close()
+
+	var roster = save_data.get("player_roster", [])
+	var leader_name = "Unknown"
+	var leader_lvl = 1
+	var portrait_value: Variant = null
+	if roster.size() > 0:
+		leader_name = roster[0].get("unit_name", "Hero")
+		leader_lvl = roster[0].get("level", 1)
+		portrait_value = roster[0].get("portrait", null)
+	var gold = save_data.get("global_gold", 0)
+	var map_idx = save_data.get("current_level_index", 0) + 1
+	var modified_time := int(FileAccess.get_modified_time(path))
+	return {
+		"badge": "SLOT %d  //  MANUAL FIELD RECORD" % slot_num,
+		"title": "%s  LV %d" % [str(leader_name).to_upper(), int(leader_lvl)],
+		"meta": "FIELD RECORD: MAP %d  |  GOLD %d" % [int(map_idx), int(gold)],
+		"stamp": _format_camp_record_timestamp(modified_time),
+		"portrait": portrait_value
+	}
+
+func _ensure_camp_save_records_popup() -> void:
+	if save_popup == null:
+		return
+	if _camp_save_dimmer == null or not is_instance_valid(_camp_save_dimmer):
+		_camp_save_dimmer = ColorRect.new()
+		_camp_save_dimmer.name = "CampSaveDimmer"
+		_camp_save_dimmer.color = Color(0, 0, 0, 0.76)
+		_camp_save_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_camp_save_dimmer.visible = false
+		_camp_save_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_camp_save_dimmer)
+		move_child(_camp_save_dimmer, max(0, save_popup.get_index()))
+
+	save_popup.visible = false
+	save_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	save_popup.z_index = 42
+	_camp_style_panel(save_popup, CAMP_PANEL_BG_ALT, CAMP_BORDER, 22, 12)
+
+	if _camp_save_root == null or not is_instance_valid(_camp_save_root):
+		_camp_save_root = VBoxContainer.new()
+		_camp_save_root.name = "CampSaveRoot"
+		_camp_save_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 28)
+		_camp_save_root.add_theme_constant_override("separation", 14)
+		save_popup.add_child(_camp_save_root)
+
+	if _camp_save_header_badge == null or not is_instance_valid(_camp_save_header_badge):
+		_camp_save_header_badge = Label.new()
+		_camp_save_root.add_child(_camp_save_header_badge)
+
+	if _camp_save_title == null or not is_instance_valid(_camp_save_title):
+		_camp_save_title = Label.new()
+		_camp_save_root.add_child(_camp_save_title)
+
+	if _camp_save_subtitle == null or not is_instance_valid(_camp_save_subtitle):
+		_camp_save_subtitle = Label.new()
+		_camp_save_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_camp_save_root.add_child(_camp_save_subtitle)
+
+	var divider := save_popup.get_node_or_null("CampSaveDivider") as Panel
+	if divider == null:
+		divider = Panel.new()
+		divider.name = "CampSaveDivider"
+		_camp_save_root.add_child(divider)
+	divider.custom_minimum_size = Vector2(0.0, 3.0)
+	divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	divider.add_theme_stylebox_override("panel", _camp_make_panel_style(Color(0.62, 0.48, 0.18, 0.92), Color(0, 0, 0, 0), 4, 0))
+
+	var header_row := save_popup.get_node_or_null("CampSaveHeaderRow") as HBoxContainer
+	if header_row == null:
+		header_row = HBoxContainer.new()
+		header_row.name = "CampSaveHeaderRow"
+		header_row.add_theme_constant_override("separation", 14)
+		_camp_save_root.add_child(header_row)
+	elif header_row.get_parent() != _camp_save_root:
+		if header_row.get_parent() != null:
+			header_row.get_parent().remove_child(header_row)
+		_camp_save_root.add_child(header_row)
+
+	var spacer := header_row.get_node_or_null("HeaderSpacer") as Control
+	if spacer == null:
+		spacer = Control.new()
+		spacer.name = "HeaderSpacer"
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header_row.add_child(spacer)
+	if close_save_btn != null and close_save_btn.get_parent() != header_row:
+		if close_save_btn.get_parent() != null:
+			close_save_btn.get_parent().remove_child(close_save_btn)
+		header_row.add_child(close_save_btn)
+	if close_save_btn != null:
+		close_save_btn.layout_mode = 2
+		close_save_btn.text = "Close"
+		_camp_style_button(close_save_btn, false, 18, 42.0)
+		close_save_btn.custom_minimum_size = Vector2(150.0, 42.0)
+
+	if save_slot_vbox != null and save_slot_vbox.get_parent() != _camp_save_root:
+		if save_slot_vbox.get_parent() != null:
+			save_slot_vbox.get_parent().remove_child(save_slot_vbox)
+		_camp_save_root.add_child(save_slot_vbox)
+	_camp_save_slots_root = save_slot_vbox
+	if save_slot_vbox != null:
+		save_slot_vbox.layout_mode = 2
+		save_slot_vbox.mouse_filter = Control.MOUSE_FILTER_PASS
+		save_slot_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		save_slot_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		save_slot_vbox.add_theme_constant_override("separation", 16)
+		save_slot_vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+
+	for slot_info in [
+		{"button": save_slot_1, "index": 1},
+		{"button": save_slot_2, "index": 2},
+		{"button": save_slot_3, "index": 3}
+	]:
+		var slot_button: Button = slot_info["button"]
+		var slot_index: int = int(slot_info["index"])
+		if slot_button == null:
+			continue
+		if slot_button.get_parent() != save_slot_vbox:
+			if slot_button.get_parent() != null:
+				slot_button.get_parent().remove_child(slot_button)
+			save_slot_vbox.add_child(slot_button)
+		_style_camp_save_slot_button(slot_button, slot_index)
+
+	if _camp_save_footer == null or not is_instance_valid(_camp_save_footer):
+		_camp_save_footer = Label.new()
+		_camp_save_footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_camp_save_root.add_child(_camp_save_footer)
+
+	_camp_style_label(_camp_save_header_badge, CAMP_MUTED, 16, 1)
+	_camp_save_header_badge.text = "ARCHIVE DOSSIER"
+	_camp_style_label(_camp_save_title, CAMP_BORDER, 34, 2)
+	_camp_save_title.text = "SAVE RECORDS"
+	_camp_style_label(_camp_save_subtitle, CAMP_MUTED, 18, 1)
+	_camp_save_subtitle.text = "Store the current war-camp state in a manual field record. Existing records can be inspected and overwritten after confirmation."
+	_camp_style_label(_camp_save_footer, CAMP_ACCENT_CYAN, 15, 1)
+	_camp_save_footer.text = "TIP: Manual records preserve your current roster, map progress, convoy, gold, and active camp state."
+
+func _layout_camp_save_records_popup() -> void:
+	if save_popup == null or _camp_save_root == null or not is_instance_valid(_camp_save_root):
+		return
+	var view_size := get_viewport_rect().size
+	if view_size.x < 100.0 or view_size.y < 100.0:
+		return
+	if _camp_save_dimmer != null:
+		_camp_save_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var popup_size := Vector2(minf(view_size.x * 0.58, 940.0), minf(view_size.y * 0.68, 720.0))
+	var popup_pos := (view_size - popup_size) * 0.5
+	if _camp_save_dimmer != null:
+		move_child(_camp_save_dimmer, max(0, save_popup.get_index()))
+	move_child(save_popup, get_child_count() - 1)
+	_camp_set_rect(save_popup, popup_pos, popup_size)
+	_camp_save_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 28)
+	if _camp_save_slots_root != null:
+		_camp_save_slots_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_save_slots_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+func _camp_style_dossier_richtext(label: RichTextLabel, font_size: int = 18) -> void:
+	if label == null:
+		return
+	label.bbcode_enabled = true
+	label.fit_content = false
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("normal_font_size", font_size)
+	label.add_theme_color_override("default_color", CAMP_TEXT)
+	label.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
+	label.add_theme_constant_override("outline_size", 1)
+	var clear_style := StyleBoxFlat.new()
+	clear_style.bg_color = Color(0, 0, 0, 0)
+	label.add_theme_stylebox_override("normal", clear_style)
+
+func _camp_unit_info_primary_bar_definitions() -> Array[Dictionary]:
+	return [
+		{"key": "hp", "label": "HP"},
+		{"key": "poise", "label": "POISE"},
+		{"key": "xp", "label": "XP"},
+	]
+
+func _camp_unit_info_stat_definitions() -> Array[Dictionary]:
+	return [
+		{"key": "strength"},
+		{"key": "magic"},
+		{"key": "defense"},
+		{"key": "resistance"},
+		{"key": "speed"},
+		{"key": "agility"},
+	]
+
+func _camp_unit_info_primary_fill_color(bar_key: String, current_value: int, max_value: int) -> Color:
+	match bar_key:
+		"hp":
+			if max_value <= 0:
+				return CAMP_MUTED
+			var ratio := clampf(float(current_value) / float(max_value), 0.0, 1.0)
+			if ratio >= 0.67:
+				return Color(0.30, 0.88, 0.52, 1.0)
+			if ratio >= 0.34:
+				return Color(0.92, 0.78, 0.28, 1.0)
+			return Color(0.92, 0.38, 0.30, 1.0)
+		"poise":
+			if max_value <= 0:
+				return CAMP_MUTED
+			var poise_ratio := clampf(float(current_value) / float(max_value), 0.0, 1.0)
+			if poise_ratio >= 0.67:
+				return Color(0.48, 0.90, 1.0, 1.0)
+			if poise_ratio >= 0.34:
+				return Color(0.88, 0.78, 0.30, 1.0)
+			return Color(0.93, 0.42, 0.30, 1.0)
+		"xp":
+			return Color(0.98, 0.84, 0.36, 1.0)
+		_:
+			return CAMP_BORDER
+
+func _camp_style_unit_info_primary_bar(bar: ProgressBar, fill: Color, bar_key: String = "") -> void:
+	if bar == null:
+		return
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.clip_contents = true
+	var radius := 5
+	var border := Color(0.38, 0.33, 0.22, 0.92)
+	match bar_key:
+		"hp":
+			radius = 7
+			border = Color(0.54, 0.28, 0.22, 0.94)
+		"poise":
+			radius = 3
+			border = Color(0.22, 0.46, 0.56, 0.94)
+		"xp":
+			radius = 2
+			border = Color(0.56, 0.46, 0.18, 0.94)
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.06, 0.06, 0.05, 0.98)
+	bg_style.border_color = border
+	bg_style.set_border_width_all(1)
+	bg_style.set_corner_radius_all(radius)
+	bg_style.shadow_color = Color(0.0, 0.0, 0.0, 0.24)
+	bg_style.shadow_size = 2
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = fill
+	fill_style.border_color = fill.lightened(0.18)
+	fill_style.set_border_width_all(1)
+	fill_style.set_corner_radius_all(radius)
+	bar.add_theme_stylebox_override("background", bg_style)
+	bar.add_theme_stylebox_override("fill", fill_style)
+
+func _camp_unit_info_stat_fill_color(stat_key: String, stat_value: int) -> Color:
+	if stat_value >= 200:
+		return CAMP_UNIT_INFO_STAT_TIER_WHITE
+	if stat_value >= 150:
+		return CAMP_UNIT_INFO_STAT_TIER_ORANGE
+	if stat_value >= 100:
+		return CAMP_UNIT_INFO_STAT_TIER_PURPLE
+	if stat_value >= 50:
+		return CAMP_UNIT_INFO_STAT_TIER_CYAN
+	match stat_key:
+		"strength":
+			return Color(0.94, 0.48, 0.36, 1.0)
+		"magic":
+			return Color(0.78, 0.48, 0.96, 1.0)
+		"defense":
+			return Color(0.50, 0.88, 0.50, 1.0)
+		"resistance":
+			return Color(0.38, 0.90, 0.82, 1.0)
+		"speed":
+			return Color(0.46, 0.76, 1.0, 1.0)
+		"agility":
+			return Color(0.96, 0.82, 0.44, 1.0)
+		_:
+			return CAMP_BORDER
+
+func _camp_style_unit_info_stat_bar(bar: ProgressBar, fill: Color, overcap: bool) -> void:
+	if bar == null:
+		return
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.clip_contents = true
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.06, 0.06, 0.05, 0.98)
+	bg_style.border_color = fill if overcap else Color(0.24, 0.22, 0.18, 1.0)
+	bg_style.set_border_width_all(1)
+	bg_style.set_corner_radius_all(5)
+	bg_style.shadow_color = Color(0.0, 0.0, 0.0, 0.22)
+	bg_style.shadow_size = 2
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = fill
+	fill_style.border_color = fill.lightened(0.18)
+	fill_style.set_border_width_all(1)
+	fill_style.set_corner_radius_all(5)
+	bar.add_theme_stylebox_override("background", bg_style)
+	bar.add_theme_stylebox_override("fill", fill_style)
+
+func _camp_unit_info_stat_display_value(raw_value: int) -> float:
+	if raw_value <= 0:
+		return 0.0
+	var cap_int := int(CAMP_UNIT_INFO_STAT_BAR_CAP)
+	if raw_value < cap_int:
+		return float(raw_value)
+	var wrapped := raw_value % cap_int
+	if wrapped == 0:
+		return CAMP_UNIT_INFO_STAT_BAR_CAP
+	return float(wrapped)
+
+func _camp_weapon_type_name_safe(w_type: int) -> String:
+	match int(w_type):
+		0: return "Sword"
+		1: return "Lance"
+		2: return "Axe"
+		3: return "Bow"
+		4: return "Tome"
+		5: return "None"
+		6: return "Knife"
+		7: return "Firearm"
+		8: return "Fist"
+		9: return "Instrument"
+		10: return "Dark Tome"
+		_: return "Unknown"
+
+func _camp_weapon_marker(item: Resource) -> String:
+	if item == null:
+		return "--"
+	if item.get("is_healing_staff") == true or item.get("is_buff_staff") == true or item.get("is_debuff_staff") == true:
+		return "STF"
+	if item.get("weapon_type") == null:
+		return "--"
+	match int(item.weapon_type):
+		0: return "SWD"
+		1: return "LNC"
+		2: return "AXE"
+		3: return "BOW"
+		4: return "TOM"
+		6: return "KNF"
+		7: return "GUN"
+		8: return "FST"
+		9: return "INS"
+		10: return "DRK"
+		_: return "--"
+
+func _camp_format_class_weapon_permissions(class_res: Resource) -> String:
+	if class_res == null:
+		return "Weapons: Unknown"
+	var parts: Array[String] = []
+	if class_res.get("allowed_weapon_types") != null:
+		for raw_type in class_res.allowed_weapon_types:
+			parts.append(_camp_weapon_type_name_safe(int(raw_type)))
+	if class_res.get("can_use_healing_staff") == true:
+		parts.append("Healing Staff")
+	if class_res.get("can_use_buff_staff") == true:
+		parts.append("Buff Staff")
+	if class_res.get("can_use_debuff_staff") == true:
+		parts.append("Debuff Staff")
+	return "Weapons: None" if parts.is_empty() else "Weapons: " + ", ".join(parts)
+
+func _camp_unit_info_primary_description(bar_key: String) -> String:
+	match bar_key:
+		"hp":
+			return "Life total. If HP reaches 0, the unit is defeated or forced out of the fight."
+		"poise":
+			return "Stagger resistance. Higher Poise helps resist breaks, shock, and forced openings. It is usually improved by sturdier classes, defensive bonuses, certain gear, dragon effects, or traits."
+		"xp":
+			return "Current experience toward the next level, where the unit can gain stronger stats and improve overall combat power."
+		_:
+			return ""
+
+func _camp_unit_info_stat_label(stat_key: String) -> String:
+	match stat_key:
+		"strength":
+			return "STRENGTH"
+		"magic":
+			return "MAGIC"
+		"defense":
+			return "DEFENSE"
+		"resistance":
+			return "RESISTANCE"
+		"speed":
+			return "SPEED"
+		"agility":
+			return "AGILITY"
+		_:
+			return stat_key.to_upper()
+
+func _camp_unit_info_stat_description(stat_key: String) -> String:
+	match stat_key:
+		"strength":
+			return "Raises damage with swords, lances, axes, bows, and many physical techniques."
+		"magic":
+			return "Raises damage with spells, magic weapons, and abilities that scale from magical power."
+		"defense":
+			return "Reduces damage taken from physical attacks like blades, arrows, claws, and blunt impacts."
+		"resistance":
+			return "Reduces damage taken from spells, elemental attacks, curses, and other magical effects."
+		"speed":
+			return "Helps this unit strike twice before slower enemies and avoid being struck twice by faster ones."
+		"agility":
+			return "Improves dodge and evasive reactions, and it is the main stat feeding base critical chance before weapon, skill, and battle bonuses."
+		_:
+			return ""
+
+func _camp_unit_info_stat_hint_specs(stat_key: String) -> Array[Dictionary]:
+	match stat_key:
+		"speed":
+			return [
+				{"text": "x2", "color": Color(0.45, 0.78, 1.0, 1.0)},
+				{"text": "TEMPO", "color": Color(0.58, 0.84, 1.0, 1.0)},
+			]
+		"agility":
+			return [
+				{"text": "CRIT", "color": Color(1.0, 0.78, 0.30, 1.0)},
+				{"text": "EVADE", "color": Color(0.60, 0.94, 0.76, 1.0)},
+			]
+		_:
+			return []
+
+func _camp_unit_info_growth_label(stat_key: String) -> String:
+	match stat_key:
+		"hp":
+			return "HEALTH GROWTH"
+		"strength":
+			return "STRENGTH GROWTH"
+		"magic":
+			return "MAGIC GROWTH"
+		"defense":
+			return "DEFENSE GROWTH"
+		"resistance":
+			return "RESISTANCE GROWTH"
+		"speed":
+			return "SPEED GROWTH"
+		"agility":
+			return "AGILITY GROWTH"
+		_:
+			return stat_key.replace("_", " ").to_upper()
+
+func _camp_collect_growth_totals(base_data: Resource, class_res: Resource) -> Dictionary:
+	var totals := {
+		"hp": 0,
+		"strength": 0,
+		"magic": 0,
+		"defense": 0,
+		"resistance": 0,
+		"speed": 0,
+		"agility": 0,
+	}
+	if base_data != null:
+		var raw_hp = base_data.get("hp_growth")
+		var raw_str = base_data.get("str_growth")
+		var raw_mag = base_data.get("mag_growth")
+		var raw_def = base_data.get("def_growth")
+		var raw_res = base_data.get("res_growth")
+		var raw_spd = base_data.get("spd_growth")
+		var raw_agi = base_data.get("agi_growth")
+		totals["hp"] = int(raw_hp) if raw_hp != null else 0
+		totals["strength"] = int(raw_str) if raw_str != null else 0
+		totals["magic"] = int(raw_mag) if raw_mag != null else 0
+		totals["defense"] = int(raw_def) if raw_def != null else 0
+		totals["resistance"] = int(raw_res) if raw_res != null else 0
+		totals["speed"] = int(raw_spd) if raw_spd != null else 0
+		totals["agility"] = int(raw_agi) if raw_agi != null else 0
+	if class_res != null:
+		var bonus_map := {
+			"hp": "hp_growth_bonus",
+			"strength": "str_growth_bonus",
+			"magic": "mag_growth_bonus",
+			"defense": "def_growth_bonus",
+			"resistance": "res_growth_bonus",
+			"speed": "spd_growth_bonus",
+			"agility": "agi_growth_bonus",
+		}
+		for key in bonus_map.keys():
+			var raw_bonus = class_res.get(bonus_map[key])
+			totals[key] = clampi(int(totals[key]) + (int(raw_bonus) if raw_bonus != null else 0), 0, 100)
+	else:
+		for key in totals.keys():
+			totals[key] = clampi(int(totals[key]), 0, 100)
+	return totals
+
+func _camp_resolve_poise_values(unit_data: Dictionary) -> Dictionary:
+	var max_hp: int = max(1, int(unit_data.get("max_hp", unit_data.get("current_hp", 1))))
+	var defense_value: int = int(unit_data.get("defense", 0))
+	var temp_def_bonus: int = int(unit_data.get("inner_peace_def_bonus_temp", 0))
+	var temp_def_penalty: int = int(unit_data.get("frenzy_def_penalty_temp", 0))
+	var defend_bonus: int = int(unit_data.get("defense_bonus", 0))
+	var is_defending: bool = bool(unit_data.get("is_defending", false))
+	var computed_defense: int = defense_value + temp_def_bonus - temp_def_penalty
+	if is_defending:
+		computed_defense += defend_bonus
+
+	var computed_max_poise: int = max_hp + (computed_defense * 2) + (25 if is_defending else 0)
+	var max_poise: int = max(1, int(unit_data.get("max_poise", computed_max_poise)))
+	var current_value: Variant = null
+	if unit_data.has("current_poise"):
+		current_value = unit_data.get("current_poise")
+	elif unit_data.has("poise"):
+		current_value = unit_data.get("poise")
+	var current_poise: int = max_poise if current_value == null else clampi(int(current_value), 0, max_poise)
+	return {
+		"current": current_poise,
+		"max": max_poise,
+	}
+
+func _camp_build_unit_info_summary_text(unit_data: Dictionary) -> String:
+	var lines: Array[String] = []
+	var ability: String = str(unit_data.get("ability", "None"))
+	if ability.is_empty():
+		ability = "None"
+	lines.append("[color=gold]Active Ability[/color]: [color=#%s]%s[/color]" % [CAMP_ACCENT_CYAN.to_html(false), ability.to_upper()])
+	var inventory: Array = unit_data.get("inventory", [])
+	lines.append("[color=gold]Carried Items[/color]: %d" % inventory.size())
+	var trait_lines: PackedStringArray = UnitTraitsDisplay.trait_lines_from_roster_dict(unit_data)
+	if trait_lines.size() > 0:
+		lines.append("[color=gold]Traits[/color]: %s" % ", ".join(trait_lines))
+	return "[font_size=18]" + "\n".join(lines) + "[/font_size]"
+
+func _camp_build_unit_info_record_text(unit_data: Dictionary, class_res: Resource) -> String:
+	var lines: Array[String] = []
+	lines.append("[color=gold]Field Doctrine[/color]")
+	lines.append("Class: [color=cyan]%s[/color]" % str(unit_data.get("unit_class", "Unknown")))
+	lines.append("Move: %d" % int(unit_data.get("move_range", 0)))
+	lines.append("")
+
+	if class_res != null:
+		lines.append("[color=gold]Weapon Permissions[/color]")
+		lines.append(_camp_format_class_weapon_permissions(class_res))
+		lines.append("")
+
+		lines.append("[color=gold]Class Bonuses[/color]")
+		var class_bonus_parts: Array[String] = []
+		for pair in [
+			["hp_bonus", "HP", ""],
+			["str_bonus", "STR", "coral"],
+			["mag_bonus", "MAG", "orchid"],
+			["def_bonus", "DEF", "palegreen"],
+			["res_bonus", "RES", "aquamarine"],
+			["spd_bonus", "SPD", "skyblue"],
+			["agi_bonus", "AGI", "wheat"],
+		]:
+			var key: String = String(pair[0])
+			var raw_val = class_res.get(key)
+			if raw_val == null or int(raw_val) == 0:
+				continue
+			var chunk := "%s %+d" % [String(pair[1]), int(raw_val)]
+			var tint: String = String(pair[2])
+			class_bonus_parts.append(chunk if tint == "" else "[color=%s]%s[/color]" % [tint, chunk])
+		lines.append("None" if class_bonus_parts.is_empty() else ", ".join(class_bonus_parts))
+		lines.append("")
+
+		lines.append("[color=gold]Promotion Bonuses[/color]")
+		var promo_parts: Array[String] = []
+		for pair in [
+			["promo_hp_bonus", "HP", ""],
+			["promo_str_bonus", "STR", "coral"],
+			["promo_mag_bonus", "MAG", "orchid"],
+			["promo_def_bonus", "DEF", "palegreen"],
+			["promo_res_bonus", "RES", "aquamarine"],
+			["promo_spd_bonus", "SPD", "skyblue"],
+			["promo_agi_bonus", "AGI", "wheat"],
+		]:
+			var key: String = String(pair[0])
+			var raw_val = class_res.get(key)
+			if raw_val == null or int(raw_val) == 0:
+				continue
+			var chunk := "%s %+d" % [String(pair[1]), int(raw_val)]
+			var tint: String = String(pair[2])
+			promo_parts.append(chunk if tint == "" else "[color=%s]%s[/color]" % [tint, chunk])
+		lines.append("None" if promo_parts.is_empty() else ", ".join(promo_parts))
+		lines.append("")
+
+	if unit_data.get("unlocked_abilities") != null and (unit_data.get("unlocked_abilities") as Array).size() > 0:
+		lines.append("[color=gold]Abilities[/color]")
+		lines.append(", ".join(unit_data.get("unlocked_abilities")))
+		lines.append("")
+	elif str(unit_data.get("ability", "")).strip_edges() != "":
+		lines.append("[color=gold]Ability[/color]")
+		lines.append(str(unit_data.get("ability")))
+		lines.append("")
+
+	lines.append("[color=gold]Inventory[/color]")
+	var inventory: Array = unit_data.get("inventory", [])
+	if inventory.is_empty():
+		lines.append("None")
+	else:
+		for item_raw in inventory:
+			var item_value: Variant = item_raw
+			var item: Resource = null
+			if item_value is String and ResourceLoader.exists(item_value):
+				item = load(item_value)
+			elif item_value is Resource:
+				item = item_value
+			if item == null:
+				continue
+			var item_name: String = str(item.get("weapon_name")) if item.get("weapon_name") != null else str(item.get("item_name"))
+			if item is WeaponData:
+				var w_type := _camp_weapon_type_name_safe(int(item.weapon_type))
+				lines.append("- %s (%s)" % [item_name, w_type])
+				lines.append("  Mt %d | Hit %+d | Rng %d-%d" % [int(item.might), int(item.hit_bonus), int(item.min_range), int(item.max_range)])
+			else:
+				lines.append("- " + item_name)
+
+	lines.append("")
+	lines.append("[color=gold]Notes[/color]")
+	lines.append("Growth outlook and bond cards are surfaced above.")
+	lines.append("Crit readiness is mainly explained through Agility and weapon effects.")
+
+	return "[font_size=20]" + "\n".join(lines) + "[/font_size]"
+
+func _camp_build_unit_info_relationship_cards(unit_data: Dictionary) -> void:
+	if _camp_unit_info_relationships_root == null:
+		return
+	for child in _camp_unit_info_relationships_root.get_children():
+		child.queue_free()
+
+	var unit_id: String = str(unit_data.get("unit_name", "Hero"))
+	var candidate_ids: Array = []
+	for ally_raw in CampaignManager.player_roster:
+		var ally: Dictionary = ally_raw as Dictionary
+		var other_name: String = str(ally.get("unit_name", ""))
+		if not other_name.is_empty() and other_name != unit_id:
+			candidate_ids.append(other_name)
+
+	var rel_entries: Array = CampaignManager.get_top_relationship_entries_for_unit(unit_id, candidate_ids, 6)
+	if rel_entries.is_empty():
+		var empty_label := Label.new()
+		_camp_style_label(empty_label, CAMP_MUTED, 16, 2)
+		empty_label.text = "No notable bonds in this deployment yet."
+		_camp_unit_info_relationships_root.add_child(empty_label)
+		return
+
+	for entry_raw in rel_entries:
+		var entry: Dictionary = entry_raw as Dictionary
+		var stat: String = str(entry.get("stat", ""))
+		var value: int = int(entry.get("value", 0))
+		var formed: bool = bool(entry.get("formed", false))
+		var partner_id: String = str(entry.get("partner_id", "?"))
+		var tint: Color = CampaignManager.get_relationship_type_color(stat)
+		var effect_hint: String = CampaignManager.get_relationship_effect_hint(stat, value)
+
+		var card := Panel.new()
+		card.custom_minimum_size = Vector2(0, 96)
+		_camp_style_panel(card, Color(0.11, 0.10, 0.08, 0.92), tint.lightened(0.08), 12, 7)
+		_camp_unit_info_relationships_root.add_child(card)
+
+		var box := VBoxContainer.new()
+		box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+		box.add_theme_constant_override("separation", 5)
+		card.add_child(box)
+
+		var top_row := HBoxContainer.new()
+		top_row.add_theme_constant_override("separation", 8)
+		box.add_child(top_row)
+
+		var partner_label := Label.new()
+		partner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_style_label(partner_label, CAMP_TEXT, 18, 2)
+		partner_label.text = partner_id
+		top_row.add_child(partner_label)
+
+		var state_chip := Panel.new()
+		state_chip.custom_minimum_size = Vector2(150, 28)
+		_camp_style_panel(state_chip, Color(0.10, 0.09, 0.07, 0.96), tint, 8, 5)
+		top_row.add_child(state_chip)
+
+		var state_label := Label.new()
+		state_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+		_camp_style_label(state_label, CAMP_TEXT, 15, 2)
+		state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		state_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		state_label.text = ("%s FORMED" % CampaignManager.get_relationship_type_display_name(stat).to_upper()) if formed else ("%s %d" % [CampaignManager.get_relationship_type_display_name(stat).to_upper(), value])
+		state_chip.add_child(state_label)
+
+		var hint_label := Label.new()
+		_camp_style_label(hint_label, tint.lightened(0.18), 16, 2)
+		hint_label.text = effect_hint
+		box.add_child(hint_label)
+
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 14)
+		bar.max_value = 100.0
+		bar.value = clampf(float(value), 0.0, 100.0)
+		_camp_style_unit_info_stat_bar(bar, tint, formed)
+		box.add_child(bar)
+		var sheen := _attach_unit_info_bar_sheen(bar)
+		_animate_unit_info_bar_sheen(sheen, bar, 0.02)
+
+func _ensure_camp_detailed_unit_info_panel() -> void:
+	if unit_info_panel == null:
+		return
+	if _camp_unit_info_root != null and is_instance_valid(_camp_unit_info_root):
+		return
+
+	for child in unit_info_panel.get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).visible = false
+		if child is Control:
+			(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	if _camp_unit_info_dimmer == null or not is_instance_valid(_camp_unit_info_dimmer):
+		_camp_unit_info_dimmer = ColorRect.new()
+		_camp_unit_info_dimmer.name = "CampUnitInfoDimmer"
+		_camp_unit_info_dimmer.color = Color(0, 0, 0, 0.78)
+		_camp_unit_info_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_camp_unit_info_dimmer.visible = false
+		_camp_unit_info_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_camp_unit_info_dimmer)
+		move_child(_camp_unit_info_dimmer, get_child_count() - 1)
+
+	unit_info_panel.visible = false
+	unit_info_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	unit_info_panel.z_index = 40
+	_camp_style_panel(unit_info_panel, CAMP_PANEL_BG_ALT, CAMP_BORDER, 20, 12)
+
+	_camp_unit_info_root = VBoxContainer.new()
+	_camp_unit_info_root.name = "CampDossierRoot"
+	_camp_unit_info_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 22)
+	_camp_unit_info_root.add_theme_constant_override("separation", 16)
+	unit_info_panel.add_child(_camp_unit_info_root)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 18)
+	_camp_unit_info_root.add_child(header)
+
+	var portrait_frame := Panel.new()
+	portrait_frame.custom_minimum_size = Vector2(210, 210)
+	_camp_style_panel(portrait_frame, Color(0.08, 0.06, 0.04, 0.92), CAMP_BORDER_SOFT, 16, 8)
+	header.add_child(portrait_frame)
+
+	_camp_unit_info_portrait = TextureRect.new()
+	_camp_unit_info_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_camp_unit_info_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_camp_unit_info_portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+	portrait_frame.add_child(_camp_unit_info_portrait)
+
+	var header_text := VBoxContainer.new()
+	header_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_text.add_theme_constant_override("separation", 8)
+	header.add_child(header_text)
+
+	_camp_unit_info_name = Label.new()
+	_camp_style_label(_camp_unit_info_name, CAMP_BORDER, 38, 3)
+	header_text.add_child(_camp_unit_info_name)
+
+	_camp_unit_info_meta_label = Label.new()
+	_camp_style_label(_camp_unit_info_meta_label, CAMP_MUTED, 22, 2)
+	header_text.add_child(_camp_unit_info_meta_label)
+
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(0, 3)
+	divider.color = Color(CAMP_BORDER.r, CAMP_BORDER.g, CAMP_BORDER.b, 0.55)
+	header_text.add_child(divider)
+
+	var weapon_row := HBoxContainer.new()
+	weapon_row.add_theme_constant_override("separation", 10)
+	header_text.add_child(weapon_row)
+
+	var weapon_pair_frame := Panel.new()
+	weapon_pair_frame.custom_minimum_size = Vector2(114, 48)
+	_camp_style_panel(weapon_pair_frame, Color(0.16, 0.13, 0.09, 0.94), CAMP_BORDER_SOFT, 10, 6)
+	weapon_row.add_child(weapon_pair_frame)
+
+	var weapon_pair_inner := HBoxContainer.new()
+	weapon_pair_inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 6)
+	weapon_pair_inner.add_theme_constant_override("separation", 6)
+	weapon_pair_frame.add_child(weapon_pair_inner)
+
+	var weapon_badge_panel := Panel.new()
+	weapon_badge_panel.custom_minimum_size = Vector2(50, 32)
+	_camp_style_panel(weapon_badge_panel, Color(0.24, 0.18, 0.10, 0.96), CAMP_BORDER, 8, 5)
+	weapon_pair_inner.add_child(weapon_badge_panel)
+
+	_camp_unit_info_weapon_badge = Label.new()
+	_camp_unit_info_weapon_badge.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+	_camp_style_label(_camp_unit_info_weapon_badge, CAMP_BORDER, 16, 2)
+	_camp_unit_info_weapon_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_camp_unit_info_weapon_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	weapon_badge_panel.add_child(_camp_unit_info_weapon_badge)
+
+	var weapon_icon_panel := Panel.new()
+	weapon_icon_panel.custom_minimum_size = Vector2(32, 32)
+	_camp_style_panel(weapon_icon_panel, Color(0.11, 0.10, 0.08, 0.96), CAMP_BORDER_SOFT, 8, 4)
+	weapon_pair_inner.add_child(weapon_icon_panel)
+
+	_camp_unit_info_weapon_icon = TextureRect.new()
+	_camp_unit_info_weapon_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_camp_unit_info_weapon_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_camp_unit_info_weapon_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 3)
+	weapon_icon_panel.add_child(_camp_unit_info_weapon_icon)
+
+	_camp_unit_info_weapon_name = Label.new()
+	_camp_unit_info_weapon_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_style_label(_camp_unit_info_weapon_name, CAMP_TEXT, 22, 2)
+	weapon_row.add_child(_camp_unit_info_weapon_name)
+
+	_camp_unit_info_summary_text = RichTextLabel.new()
+	_camp_unit_info_summary_text.custom_minimum_size = Vector2(0, 82)
+	_camp_style_dossier_richtext(_camp_unit_info_summary_text, 18)
+	header_text.add_child(_camp_unit_info_summary_text)
+
+	var close_box := VBoxContainer.new()
+	close_box.alignment = BoxContainer.ALIGNMENT_END
+	header.add_child(close_box)
+
+	_camp_unit_info_close_btn = Button.new()
+	_camp_unit_info_close_btn.custom_minimum_size = Vector2(190, 60)
+	_camp_style_button(_camp_unit_info_close_btn, false, 22, 60.0)
+	_camp_unit_info_close_btn.text = "Close"
+	if not _camp_unit_info_close_btn.pressed.is_connected(_hide_unit_info_panel):
+		_camp_unit_info_close_btn.pressed.connect(_hide_unit_info_panel)
+	close_box.add_child(_camp_unit_info_close_btn)
+
+	var body := HBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 22)
+	_camp_unit_info_root.add_child(body)
+
+	var left_panel := Panel.new()
+	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_panel.size_flags_stretch_ratio = 1.0
+	left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_camp_style_panel(left_panel, Color(0.09, 0.07, 0.05, 0.90), CAMP_BORDER_SOFT, 14, 6)
+	body.add_child(left_panel)
+
+	var right_panel := Panel.new()
+	right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_panel.size_flags_stretch_ratio = 1.0
+	right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_camp_style_panel(right_panel, Color(0.09, 0.07, 0.05, 0.90), CAMP_BORDER_SOFT, 14, 6)
+	body.add_child(right_panel)
+
+	var left_scroll := ScrollContainer.new()
+	left_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
+	left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	left_panel.add_child(left_scroll)
+	_camp_style_scroll(left_scroll)
+	_camp_unit_info_left_scroll = left_scroll
+
+	var left_root := VBoxContainer.new()
+	left_root.custom_minimum_size = Vector2(0, 760)
+	left_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_root.add_theme_constant_override("separation", 12)
+	left_scroll.add_child(left_root)
+	_camp_unit_info_left_root = left_root
+
+	var core_status := Label.new()
+	_camp_style_label(core_status, CAMP_BORDER, 22, 2)
+	core_status.text = "Core Status"
+	left_root.add_child(core_status)
+
+	var primary_root := VBoxContainer.new()
+	primary_root.add_theme_constant_override("separation", 10)
+	left_root.add_child(primary_root)
+	_camp_unit_info_primary_widgets.clear()
+	for bar_def in _camp_unit_info_primary_bar_definitions():
+		var bar_key: String = str(bar_def.get("key", ""))
+		var block := Panel.new()
+		block.custom_minimum_size = Vector2(0, 108)
+		block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_style_panel(block, Color(0.10, 0.09, 0.07, 0.90), CAMP_BORDER_SOFT, 10, 4)
+		primary_root.add_child(block)
+
+		var block_box := VBoxContainer.new()
+		block_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+		block_box.add_theme_constant_override("separation", 6)
+		block.add_child(block_box)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		block_box.add_child(row)
+
+		var name_label := Label.new()
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+
+		var value_chip := Panel.new()
+		value_chip.custom_minimum_size = Vector2(118, 32)
+		row.add_child(value_chip)
+
+		var value_label := Label.new()
+		value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+		value_chip.add_child(value_label)
+
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 20)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		block_box.add_child(bar)
+
+		var desc_label := Label.new()
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_label.custom_minimum_size = Vector2(0, 32)
+		block_box.add_child(desc_label)
+
+		var sheen := _attach_unit_info_bar_sheen(bar)
+		_camp_unit_info_primary_widgets[bar_key] = {
+			"panel": block,
+			"name": name_label,
+			"value_chip": value_chip,
+			"value": value_label,
+			"bar": bar,
+			"desc": desc_label,
+			"sheen": sheen,
+		}
+
+	var combat_profile := Label.new()
+	_camp_style_label(combat_profile, CAMP_BORDER, 22, 2)
+	combat_profile.text = "Combat Profile"
+	left_root.add_child(combat_profile)
+
+	var stat_root := GridContainer.new()
+	stat_root.columns = 1
+	stat_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stat_root.add_theme_constant_override("v_separation", 12)
+	left_root.add_child(stat_root)
+	_camp_unit_info_stat_widgets.clear()
+	for stat_def in _camp_unit_info_stat_definitions():
+		var stat_key: String = str(stat_def.get("key", ""))
+		var stat_block := Panel.new()
+		stat_block.custom_minimum_size = Vector2(0, 154)
+		stat_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_style_panel(stat_block, Color(0.10, 0.09, 0.07, 0.88), CAMP_BORDER_SOFT, 10, 4)
+		stat_root.add_child(stat_block)
+
+		var stat_box := VBoxContainer.new()
+		stat_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+		stat_box.add_theme_constant_override("separation", 10)
+		stat_block.add_child(stat_box)
+
+		var stat_row := HBoxContainer.new()
+		stat_row.add_theme_constant_override("separation", 12)
+		stat_box.add_child(stat_row)
+
+		var stat_name := Label.new()
+		stat_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_row.add_child(stat_name)
+
+		var stat_hints := HBoxContainer.new()
+		stat_hints.add_theme_constant_override("separation", 5)
+		stat_row.add_child(stat_hints)
+
+		var value_chip := Panel.new()
+		value_chip.custom_minimum_size = Vector2(118, 38)
+		stat_row.add_child(value_chip)
+
+		var value_label := Label.new()
+		value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+		value_chip.add_child(value_label)
+
+		var stat_bar := ProgressBar.new()
+		stat_bar.custom_minimum_size = Vector2(0, 20)
+		stat_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_box.add_child(stat_bar)
+
+		var stat_desc := Label.new()
+		stat_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		stat_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_desc.custom_minimum_size = Vector2(0, 54)
+		stat_box.add_child(stat_desc)
+
+		var sheen := _attach_unit_info_bar_sheen(stat_bar)
+		_camp_unit_info_stat_widgets[stat_key] = {
+			"panel": stat_block,
+			"name": stat_name,
+			"hints": stat_hints,
+			"value_chip": value_chip,
+			"value": value_label,
+			"bar": stat_bar,
+			"desc": stat_desc,
+			"sheen": sheen,
+		}
+
+	var right_scroll := ScrollContainer.new()
+	right_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
+	right_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	right_panel.add_child(right_scroll)
+	_camp_style_scroll(right_scroll)
+	_camp_unit_info_right_scroll = right_scroll
+
+	var right_root := VBoxContainer.new()
+	right_root.custom_minimum_size = Vector2(0, 760)
+	right_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_root.add_theme_constant_override("separation", 12)
+	right_scroll.add_child(right_root)
+	_camp_unit_info_right_root = right_root
+
+	var growth_title := Label.new()
+	_camp_style_label(growth_title, CAMP_BORDER, 22, 2)
+	growth_title.text = "Growth Outlook"
+	right_root.add_child(growth_title)
+
+	var growth_root := VBoxContainer.new()
+	growth_root.add_theme_constant_override("separation", 8)
+	right_root.add_child(growth_root)
+	_camp_unit_info_growth_widgets.clear()
+	for growth_key in ["hp", "strength", "magic", "defense", "resistance", "speed", "agility"]:
+		var panel := Panel.new()
+		panel.custom_minimum_size = Vector2(0, 60)
+		_camp_style_panel(panel, Color(0.10, 0.09, 0.07, 0.84), CAMP_BORDER_SOFT, 10, 4)
+		growth_root.add_child(panel)
+
+		var panel_box := VBoxContainer.new()
+		panel_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 6)
+		panel_box.add_theme_constant_override("separation", 5)
+		panel.add_child(panel_box)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		panel_box.add_child(row)
+
+		var name_label := Label.new()
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+
+		var value_chip := Panel.new()
+		value_chip.custom_minimum_size = Vector2(96, 24)
+		row.add_child(value_chip)
+
+		var value_label := Label.new()
+		value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+		value_chip.add_child(value_label)
+
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 14)
+		panel_box.add_child(bar)
+
+		var sheen := _attach_unit_info_bar_sheen(bar)
+		_camp_unit_info_growth_widgets[growth_key] = {
+			"panel": panel,
+			"name": name_label,
+			"value_chip": value_chip,
+			"value": value_label,
+			"bar": bar,
+			"sheen": sheen,
+		}
+
+	var bond_title := Label.new()
+	_camp_style_label(bond_title, CAMP_BORDER, 22, 2)
+	bond_title.text = "Bond Network"
+	right_root.add_child(bond_title)
+
+	_camp_unit_info_relationships_root = VBoxContainer.new()
+	_camp_unit_info_relationships_root.add_theme_constant_override("separation", 10)
+	right_root.add_child(_camp_unit_info_relationships_root)
+
+	var record_title := Label.new()
+	_camp_style_label(record_title, CAMP_BORDER, 22, 2)
+	record_title.text = "Field Record"
+	right_root.add_child(record_title)
+
+	_camp_unit_info_record_text = RichTextLabel.new()
+	_camp_unit_info_record_text.custom_minimum_size = Vector2(0, 320)
+	_camp_style_dossier_richtext(_camp_unit_info_record_text, 20)
+	right_root.add_child(_camp_unit_info_record_text)
+
+	_layout_camp_detailed_unit_info_panel()
+
+func _layout_camp_detailed_unit_info_panel() -> void:
+	if unit_info_panel == null:
+		return
+	var view_size := get_viewport_rect().size
+	if view_size.x < 100.0 or view_size.y < 100.0:
+		return
+	if _camp_unit_info_dimmer != null:
+		_camp_unit_info_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if _camp_unit_info_root == null or not is_instance_valid(_camp_unit_info_root):
+		return
+	var panel_size := Vector2(minf(view_size.x * 0.88, 1400.0), minf(view_size.y * 0.88, 940.0))
+	var panel_pos := (view_size - panel_size) * 0.5
+	_camp_set_rect(unit_info_panel, panel_pos, panel_size)
+	if _camp_unit_info_left_root != null and _camp_unit_info_left_scroll != null:
+		_camp_unit_info_left_root.custom_minimum_size.x = maxf(0.0, _camp_unit_info_left_scroll.size.x - 18.0)
+	if _camp_unit_info_right_root != null and _camp_unit_info_right_scroll != null:
+		_camp_unit_info_right_root.custom_minimum_size.x = maxf(0.0, _camp_unit_info_right_scroll.size.x - 18.0)
+
+func _refresh_camp_unit_info_growth_widgets(growth_totals: Dictionary, animate: bool, tween: Tween = null) -> void:
+	var index := 0
+	for stat_key in ["hp", "strength", "magic", "defense", "resistance", "speed", "agility"]:
+		if not _camp_unit_info_growth_widgets.has(stat_key):
+			continue
+		var widgets: Dictionary = _camp_unit_info_growth_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var sheen := widgets.get("sheen") as ColorRect
+		var growth_value: int = int(growth_totals.get(stat_key, 0))
+		var fill_color := _camp_unit_info_stat_fill_color(stat_key, growth_value)
+		if name_label != null:
+			name_label.text = _camp_unit_info_growth_label(stat_key)
+			_camp_style_label(name_label, fill_color, 15, 2)
+		if value_chip != null:
+			_camp_style_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color.lightened(0.10), 6, 3)
+		if value_label != null:
+			value_label.text = "%d%%" % growth_value
+			_camp_style_label(value_label, CAMP_TEXT, 14, 1)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if panel != null:
+			_camp_style_panel(panel, Color(0.10, 0.09, 0.07, 0.84), fill_color if growth_value > 0 else CAMP_BORDER_SOFT, 10, 4)
+		if bar != null:
+			bar.max_value = 100.0
+			_camp_style_unit_info_stat_bar(bar, fill_color, growth_value >= 50)
+			var target := clampf(float(growth_value), 0.0, 100.0)
+			if not animate or tween == null:
+				bar.value = target
+			else:
+				bar.value = 0.0
+				var delay := 0.08 + float(index) * 0.03
+				if panel != null:
+					panel.modulate = Color(1, 1, 1, 0)
+					tween.tween_property(panel, "modulate", Color.WHITE, 0.14).set_delay(delay)
+				tween.tween_property(bar, "value", target, 0.24).set_delay(delay)
+				if sheen != null:
+					_animate_unit_info_bar_sheen(sheen, bar, delay + 0.03)
+		index += 1
+
+func _ensure_camp_cards() -> void:
+	if _camp_cards_layer == null or not is_instance_valid(_camp_cards_layer):
+		_camp_cards_layer = Control.new()
+		_camp_cards_layer.name = "CampCardsLayer"
+		_camp_cards_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_camp_cards_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_camp_cards_layer)
+		if background_texture != null:
+			move_child(_camp_cards_layer, background_texture.get_index() + 1)
+	for card_name in ["roster", "commander", "inventory", "merchant", "shop", "nav"]:
+		if not _camp_cards.has(card_name) or not is_instance_valid(_camp_cards[card_name]):
+			var card := Panel.new()
+			card.name = "CampCard_%s" % card_name
+			card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_camp_cards_layer.add_child(card)
+			_camp_cards[card_name] = card
+
+func _ensure_camp_detail_scroll_wrappers() -> void:
+	if inventory_desc != null and (_inventory_desc_scroll == null or not is_instance_valid(_inventory_desc_scroll)):
+		_inventory_desc_scroll = ScrollContainer.new()
+		_inventory_desc_scroll.name = "InventoryDescScroll"
+		_inventory_desc_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_inventory_desc_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_inventory_desc_scroll)
+		if inventory_desc.get_parent() != null:
+			inventory_desc.get_parent().remove_child(inventory_desc)
+		_inventory_desc_scroll.add_child(inventory_desc)
+	if shop_desc != null and (_shop_desc_scroll == null or not is_instance_valid(_shop_desc_scroll)):
+		_shop_desc_scroll = ScrollContainer.new()
+		_shop_desc_scroll.name = "ShopDescScroll"
+		_shop_desc_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_shop_desc_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_shop_desc_scroll)
+		if shop_desc.get_parent() != null:
+			shop_desc.get_parent().remove_child(shop_desc)
+		_shop_desc_scroll.add_child(shop_desc)
+
+func _camp_apply_ui_overhaul() -> void:
+	_ensure_camp_cards()
+	_ensure_camp_detail_scroll_wrappers()
+	_ensure_camp_save_records_popup()
+	_ensure_camp_jukebox_modal()
+	var view_size := get_viewport_rect().size
+	if view_size.x < 100.0 or view_size.y < 100.0:
+		return
+
+	var margin := 38.0
+	var gap := 24.0
+	var left_w := clampf(view_size.x * 0.22, 360.0, 430.0)
+	var right_w := clampf(view_size.x * 0.23, 400.0, 460.0)
+	var center_w := view_size.x - margin * 2.0 - left_w - right_w - gap * 2.0
+	if center_w < 760.0:
+		var deficit := 760.0 - center_w
+		right_w = max(360.0, right_w - deficit * 0.45)
+		left_w = max(330.0, left_w - deficit * 0.30)
+		center_w = view_size.x - margin * 2.0 - left_w - right_w - gap * 2.0
+
+	var left_x := margin
+	var center_x := left_x + left_w + gap
+	var right_x := center_x + center_w + gap
+	var top_y := 34.0
+	var roster_h := clampf(view_size.y * 0.33, 320.0, 370.0)
+	var merchant_h := clampf(view_size.y * 0.34, 340.0, 390.0)
+	var nav_h := 148.0
+	var nav_y := view_size.y - nav_h - 30.0
+	var side_bottom_y := view_size.y - 34.0
+	var commander_y := top_y + roster_h + gap
+	var commander_h := nav_y - commander_y - gap
+	var inventory_h := nav_y - top_y - gap
+	var shop_y := top_y + merchant_h + gap
+	var shop_h := side_bottom_y - shop_y
+	var nav_w := minf(center_w, 840.0)
+	var nav_x := center_x + (center_w - nav_w) / 2.0
+
+	var card_styles := {
+		"roster": _camp_make_panel_style(CAMP_PANEL_BG, CAMP_BORDER),
+		"commander": _camp_make_panel_style(CAMP_PANEL_BG, CAMP_BORDER),
+		"inventory": _camp_make_panel_style(CAMP_PANEL_BG_ALT, CAMP_BORDER),
+		"merchant": _camp_make_panel_style(CAMP_PANEL_BG, CAMP_BORDER),
+		"shop": _camp_make_panel_style(CAMP_PANEL_BG_ALT, CAMP_BORDER_SOFT),
+		"nav": _camp_make_panel_style(CAMP_PANEL_BG_ALT, CAMP_BORDER)
+	}
+	var card_rects := {
+		"roster": Rect2(left_x, top_y, left_w, roster_h),
+		"commander": Rect2(left_x, commander_y, left_w, commander_h),
+		"inventory": Rect2(center_x, top_y, center_w, inventory_h),
+		"merchant": Rect2(right_x, top_y, right_w, merchant_h),
+		"shop": Rect2(right_x, shop_y, right_w, shop_h),
+		"nav": Rect2(nav_x, nav_y, nav_w, nav_h)
+	}
+	for card_name in card_rects.keys():
+		var card: Panel = _camp_cards[card_name]
+		card.add_theme_stylebox_override("panel", card_styles[card_name])
+		var rect: Rect2 = card_rects[card_name]
+		_camp_set_rect(card, rect.position, rect.size)
+
+	if background_texture != null:
+		background_texture.modulate = Color(1, 1, 1, 0.32)
+
+	_camp_style_section_badge(roster_header_button, "ROSTER DOSSIER", CAMP_ACCENT_GREEN)
+	_camp_style_section_badge(inventory_header_button, "QUARTERMASTER", CAMP_BORDER)
+	_camp_style_section_badge(merchant_header_button, "MERCHANT STOCK", CAMP_ACCENT_GREEN)
+
+	_camp_style_rich_label(stats_label, 20, Color(0.07, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT)
+	_camp_style_rich_label(inventory_desc, 17, Color(0.08, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT, false)
+	_camp_style_rich_label(shop_desc, 16, Color(0.08, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT, false)
+	_camp_style_rich_label(merchant_label, 18, Color(0.08, 0.06, 0.04, 0.90), CAMP_BORDER)
+
+	_camp_style_scroll(roster_scroll)
+	_camp_style_scroll(inv_scroll)
+	_camp_style_scroll(shop_scroll)
+	_camp_style_scroll(_inventory_desc_scroll)
+	_camp_style_scroll(_shop_desc_scroll)
+	_camp_style_tabs(category_tabs)
+
+	if portrait_panel != null:
+		portrait_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_panel.add_theme_stylebox_override("panel", _camp_make_panel_style(Color(0.08, 0.06, 0.04, 0.92), CAMP_BORDER_SOFT, 22, 0))
+	if merchant_frame != null:
+		merchant_frame.visible = false
+
+	if gold_label != null:
+		gold_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.32, 1.0))
+		gold_label.add_theme_font_size_override("font_size", 28)
+		gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+	if roster_header_button != null:
+		_camp_set_rect(roster_header_button, Vector2(left_x + 22.0, top_y + 16.0), Vector2(left_w - 44.0, 28.0))
+	if roster_scroll != null:
+		_camp_set_rect(roster_scroll, Vector2(left_x + 22.0, top_y + 54.0), Vector2(left_w - 44.0, roster_h - 126.0))
+	if roster_grid != null:
+		roster_grid.columns = 4
+
+	if open_ranch_btn != null:
+		open_ranch_btn.text = "Dragon Ranch"
+		_camp_style_button(open_ranch_btn, false, 18, 42.0)
+	if open_skills_btn != null:
+		open_skills_btn.text = "Skill Tree"
+		_camp_style_button(open_skills_btn, false, 18, 42.0)
+	var top_left_button_y := top_y + roster_h - 60.0
+	var top_left_button_w := (left_w - 56.0) / 2.0
+	_camp_set_rect(open_ranch_btn, Vector2(left_x + 22.0, top_left_button_y), Vector2(top_left_button_w, 42.0))
+	_camp_set_rect(open_skills_btn, Vector2(left_x + 34.0 + top_left_button_w, top_left_button_y), Vector2(top_left_button_w, 42.0))
+
+	if stats_label != null:
+		_camp_set_rect(stats_label, Vector2(left_x + 22.0, commander_y + 18.0), Vector2(left_w - 44.0, 118.0))
+	if swap_ability_btn != null:
+		swap_ability_btn.text = "Swap Ability"
+		_camp_style_button(swap_ability_btn, false, 17, 40.0)
+	if jukebox_btn != null:
+		jukebox_btn.text = "Jukebox"
+		_camp_style_button(jukebox_btn, false, 17, 40.0)
+	var commander_top_button_y := commander_y + 148.0
+	var commander_top_button_w := (left_w - 56.0) / 2.0
+	_camp_set_rect(swap_ability_btn, Vector2(left_x + 22.0, commander_top_button_y), Vector2(commander_top_button_w, 40.0))
+	_camp_set_rect(jukebox_btn, Vector2(left_x + 34.0 + commander_top_button_w, commander_top_button_y), Vector2(commander_top_button_w, 40.0))
+
+	var portrait_frame_y := commander_y + 200.0
+	var portrait_frame_h := maxf(190.0, commander_h - 284.0)
+	_camp_set_rect(portrait_panel, Vector2(left_x + 44.0, portrait_frame_y), Vector2(left_w - 88.0, portrait_frame_h))
+	_camp_set_rect(portrait_rect, Vector2(left_x + 62.0, portrait_frame_y + 16.0), Vector2(left_w - 124.0, portrait_frame_h - 32.0))
+
+	if inspect_unit_btn != null:
+		inspect_unit_btn.text = "Unit Dossier"
+		_camp_style_button(inspect_unit_btn, false, 18, 44.0)
+	if open_save_menu_btn != null:
+		open_save_menu_btn.text = "Save Records"
+		_camp_style_button(open_save_menu_btn, false, 18, 44.0)
+	var commander_bottom_y := commander_y + commander_h - 62.0
+	var commander_bottom_w := (left_w - 56.0) / 2.0
+	_camp_set_rect(inspect_unit_btn, Vector2(left_x + 22.0, commander_bottom_y), Vector2(commander_bottom_w, 44.0))
+	_camp_set_rect(open_save_menu_btn, Vector2(left_x + 34.0 + commander_bottom_w, commander_bottom_y), Vector2(commander_bottom_w, 44.0))
+
+	var inventory_detail_x := center_x + 22.0
+	var inventory_detail_w := 286.0
+	var inventory_grid_x := inventory_detail_x + inventory_detail_w + 24.0
+	var inventory_grid_w := center_w - (inventory_grid_x - center_x) - 22.0
+	if inventory_header_button != null:
+		_camp_set_rect(inventory_header_button, Vector2(center_x + 22.0, top_y + 16.0), Vector2(240.0, 28.0))
+	if sort_button != null:
+		sort_button.text = "Sort"
+		_camp_style_button(sort_button, false, 16, 36.0)
+		_camp_set_rect(sort_button, Vector2(inventory_grid_x, top_y + 16.0), Vector2(82.0, 36.0))
+	if category_tabs != null:
+		_camp_set_rect(category_tabs, Vector2(inventory_grid_x + 92.0, top_y + 16.0), Vector2(inventory_grid_w - 92.0, 38.0))
+	var inventory_desc_y := top_y + 72.0
+	var inventory_desc_h := 248.0
+	if _inventory_desc_scroll != null:
+		_camp_set_rect(_inventory_desc_scroll, Vector2(inventory_detail_x, inventory_desc_y), Vector2(inventory_detail_w, inventory_desc_h))
+	if inventory_desc != null and _inventory_desc_scroll != null:
+		_camp_set_rect(inventory_desc, Vector2.ZERO, Vector2(inventory_detail_w - 14.0, inventory_desc_h))
+		inventory_desc.fit_content = true
+		inventory_desc.custom_minimum_size = Vector2(inventory_detail_w - 14.0, 0.0)
+	if equip_button != null:
+		_camp_style_button(equip_button, false, 18, 44.0)
+	if unequip_button != null:
+		_camp_style_button(unequip_button, false, 18, 44.0)
+	if use_button != null:
+		_camp_style_button(use_button, false, 18, 44.0)
+	if sell_button != null:
+		_camp_style_button(sell_button, false, 18, 44.0)
+	var action_button_w := (inventory_detail_w - 12.0) / 2.0
+	var action_y1 := inventory_desc_y + inventory_desc_h + 18.0
+	var action_y2 := top_y + 336.0
+	action_y2 = action_y1 + 54.0
+	_camp_set_rect(equip_button, Vector2(inventory_detail_x, action_y1), Vector2(action_button_w, 44.0))
+	_camp_set_rect(unequip_button, Vector2(inventory_detail_x + action_button_w + 12.0, action_y1), Vector2(action_button_w, 44.0))
+	_camp_set_rect(use_button, Vector2(inventory_detail_x, action_y2), Vector2(action_button_w, 44.0))
+	_camp_set_rect(sell_button, Vector2(inventory_detail_x + action_button_w + 12.0, action_y2), Vector2(action_button_w, 44.0))
+	if gold_label != null:
+		_camp_set_rect(gold_label, Vector2(inventory_detail_x, top_y + inventory_h - 62.0), Vector2(inventory_detail_w, 36.0))
+	if inv_scroll != null:
+		_camp_set_rect(inv_scroll, Vector2(inventory_grid_x, top_y + 68.0), Vector2(inventory_grid_w, inventory_h - 92.0))
+	if unit_grid != null:
+		unit_grid.columns = 5
+	if convoy_grid != null:
+		convoy_grid.columns = 5
+
+	if open_blacksmith_btn != null:
+		open_blacksmith_btn.text = "Blacksmith"
+		_camp_style_button(open_blacksmith_btn, false, 17, 42.0)
+	if haggle_button != null:
+		haggle_button.text = "Haggle"
+		_camp_style_button(haggle_button, false, 17, 42.0)
+	if talk_button != null:
+		talk_button.text = "Talk"
+		_camp_style_button(talk_button, false, 17, 42.0)
+	var merchant_button_gap := 10.0
+	var merchant_button_w := (right_w - 48.0 - merchant_button_gap * 2.0) / 3.0
+	var merchant_buttons_y := top_y + 18.0
+	_camp_set_rect(open_blacksmith_btn, Vector2(right_x + 24.0, merchant_buttons_y), Vector2(merchant_button_w, 42.0))
+	_camp_set_rect(haggle_button, Vector2(right_x + 24.0 + merchant_button_w + merchant_button_gap, merchant_buttons_y), Vector2(merchant_button_w, 42.0))
+	_camp_set_rect(talk_button, Vector2(right_x + 24.0 + (merchant_button_w + merchant_button_gap) * 2.0, merchant_buttons_y), Vector2(merchant_button_w, 42.0))
+
+	_camp_set_rect(merchant_portrait, Vector2(right_x + 42.0, top_y + 78.0), Vector2(right_w - 84.0, 172.0))
+	_camp_set_rect(merchant_label, Vector2(right_x + 24.0, top_y + 266.0), Vector2(right_w - 48.0, merchant_h - 288.0))
+
+	if merchant_header_button != null:
+		_camp_set_rect(merchant_header_button, Vector2(right_x + 22.0, shop_y + 16.0), Vector2(220.0, 28.0))
+	var buy_button_h := 44.0
+	var buy_button_y := shop_y + shop_h - 54.0
+	var shop_desc_h := 166.0
+	var shop_desc_gap := 46.0
+	var shop_desc_y := buy_button_y - shop_desc_gap - shop_desc_h
+	var shop_scroll_top := shop_y + 54.0
+	var shop_scroll_h := maxf(120.0, shop_desc_y - shop_scroll_top - 12.0)
+	if shop_scroll != null:
+		_camp_set_rect(shop_scroll, Vector2(right_x + 24.0, shop_scroll_top), Vector2(right_w - 48.0, shop_scroll_h))
+	if shop_grid != null:
+		shop_grid.columns = 4
+	if _shop_desc_scroll != null:
+		_camp_set_rect(_shop_desc_scroll, Vector2(right_x + 24.0, shop_desc_y), Vector2(right_w - 48.0, shop_desc_h))
+	if shop_desc != null and _shop_desc_scroll != null:
+		_camp_set_rect(shop_desc, Vector2.ZERO, Vector2(right_w - 62.0, shop_desc_h))
+		shop_desc.fit_content = true
+		shop_desc.custom_minimum_size = Vector2(right_w - 62.0, 0.0)
+	if buy_button != null:
+		buy_button.top_level = false
+		buy_button.z_index = 1
+		buy_button.text = "Buy"
+		_camp_style_button(buy_button, true, 18, 44.0)
+		_camp_set_rect(buy_button, Vector2(right_x + 24.0, buy_button_y), Vector2(right_w - 48.0, buy_button_h))
+
+	if next_battle_button != null:
+		_camp_style_button(next_battle_button, true, 28, 58.0)
+		_camp_set_rect(next_battle_button, Vector2(nav_x + 24.0, nav_y + 18.0), Vector2(nav_w - 48.0, 58.0))
+	if world_map_button != null:
+		_camp_style_button(world_map_button, false, 20, 44.0)
+	if explore_camp_btn != null:
+		_camp_style_button(explore_camp_btn, false, 20, 44.0)
+	if _task_log_button != null:
+		_task_log_button.text = "Tasks"
+		_camp_style_button(_task_log_button, false, 20, 44.0)
+	if _camp_unit_info_root != null and is_instance_valid(_camp_unit_info_root):
+		_layout_camp_detailed_unit_info_panel()
+	_layout_camp_save_records_popup()
+	_layout_camp_jukebox_panel()
+
+	var nav_secondary: Array[Control] = []
+	if world_map_button != null and world_map_button.visible:
+		nav_secondary.append(world_map_button)
+	if explore_camp_btn != null and explore_camp_btn.visible:
+		nav_secondary.append(explore_camp_btn)
+	if _task_log_button != null:
+		nav_secondary.append(_task_log_button)
+	var secondary_gap := 14.0
+	var secondary_width := minf(220.0, (nav_w - 48.0 - secondary_gap * maxf(float(nav_secondary.size() - 1), 0.0)) / maxf(float(nav_secondary.size()), 1.0))
+	var total_secondary_width := secondary_width * nav_secondary.size() + secondary_gap * maxf(float(nav_secondary.size() - 1), 0.0)
+	var secondary_x := nav_x + (nav_w - total_secondary_width) / 2.0
+	for nav_button in nav_secondary:
+		_camp_set_rect(nav_button, Vector2(secondary_x, nav_y + 88.0), Vector2(secondary_width, 44.0))
+		secondary_x += secondary_width + secondary_gap
+
+func _on_camp_ui_resized() -> void:
+	call_deferred("_camp_apply_ui_overhaul")
 
 ## Initializes the camp UI: connects all buttons, populates shop/roster/inventory, starts music and ambient.
 ## Purpose: Single entry point for camp setup; gates (e.g. blacksmith, world map) use CampaignManager.max_unlocked_index.
@@ -408,7 +2555,7 @@ func _ready() -> void:
 	use_button.pressed.connect(_on_use_pressed)
 	# --- JUKEBOX CONNECTIONS ---
 	if jukebox_btn: jukebox_btn.pressed.connect(_open_jukebox)
-	if close_jukebox_btn: close_jukebox_btn.pressed.connect(func(): jukebox_panel.visible = false)
+	if close_jukebox_btn: close_jukebox_btn.pressed.connect(_close_jukebox)
 	if jukebox_list: jukebox_list.item_selected.connect(_on_jukebox_track_selected)
 	
 	if jukebox_volume_slider:
@@ -540,6 +2687,9 @@ func _ready() -> void:
 	# --- EXPLORE CAMP BUTTON ---
 	if explore_camp_btn:
 		explore_camp_btn.pressed.connect(_on_explore_camp_pressed)
+	if not resized.is_connected(_on_camp_ui_resized):
+		resized.connect(_on_camp_ui_resized)
+	call_deferred("_camp_apply_ui_overhaul")
 
 
 ## Opens the walkable Explore Camp scene. Does not save; returning restores camp menu.
@@ -1615,234 +3765,230 @@ func _on_inspect_unit_pressed() -> void:
 func _update_unit_info(unit_data: Dictionary) -> void:
 	if unit_info_panel == null:
 		return
+	_ensure_camp_detailed_unit_info_panel()
+	_layout_camp_detailed_unit_info_panel()
 
-	# --- Resolve panel controls (Unique Names or first-by-type fallback) ---
-	var portrait_ctl: TextureRect = get_node_or_null("%UnitInfoPortrait") as TextureRect
-	if portrait_ctl == null and unit_info_panel.get_child_count() > 0:
-		var first = unit_info_panel.get_child(0)
-		if first is TextureRect:
-			portrait_ctl = first
-	var name_ctl: Label = get_node_or_null("%UnitInfoName") as Label
-	if name_ctl == null:
-		for c in unit_info_panel.get_children():
-			if c is Label and name_ctl == null:
-				name_ctl = c
-				break
-	var stats_ctl: RichTextLabel = get_node_or_null("%UnitInfoStats") as RichTextLabel
-	if stats_ctl == null:
-		for c in unit_info_panel.get_children():
-			if c is RichTextLabel:
-				stats_ctl = c
-				break
-	var close_btn: Button = get_node_or_null("%UnitInfoCloseButton") as Button
-	if close_btn == null:
-		for c in unit_info_panel.get_children():
-			if c is Button:
-				close_btn = c
-				break
-
-	# --- Portrait ---
-	var tex: Texture2D = null
+	var base_data_value: Variant = unit_data.get("data")
+	var base_data: Resource = null
+	if base_data_value is String and ResourceLoader.exists(base_data_value):
+		base_data = load(base_data_value)
+		unit_data["data"] = base_data
+	elif base_data_value is Resource:
+		base_data = base_data_value
+	var class_res_value: Variant = unit_data.get("class_data")
+	var class_res: Resource = null
+	if class_res_value is String and ResourceLoader.exists(class_res_value):
+		class_res = load(class_res_value)
+		unit_data["class_data"] = class_res
+	elif class_res_value is Resource:
+		class_res = class_res_value
+	var weapon_value: Variant = unit_data.get("equipped_weapon")
+	var weapon: Resource = null
+	if weapon_value is String and ResourceLoader.exists(weapon_value):
+		weapon = load(weapon_value)
+		unit_data["equipped_weapon"] = weapon
+	elif weapon_value is Resource:
+		weapon = weapon_value
+	var portrait: Texture2D = null
 	var custom_portrait = unit_data.get("portrait")
 	if custom_portrait is String and ResourceLoader.exists(custom_portrait):
 		custom_portrait = load(custom_portrait)
+		unit_data["portrait"] = custom_portrait
 	if custom_portrait is Texture2D:
-		tex = custom_portrait
-	var base_data = unit_data.get("data")
-	if tex == null and base_data != null and base_data.get("portrait") != null:
-		tex = base_data.get("portrait")
-	if portrait_ctl != null:
-		portrait_ctl.texture = tex
-		portrait_ctl.visible = tex != null
+		portrait = custom_portrait
+	elif base_data != null and base_data.get("portrait") != null:
+		portrait = base_data.portrait
 
-	# --- Name ---
-	var unit_name: String = unit_data.get("unit_name", "Hero")
-	if name_ctl != null:
-		name_ctl.text = unit_name
+	var class_label: String = str(unit_data.get("unit_class", "Unknown Class"))
+	if class_res != null and class_res.get("job_name") != null:
+		class_label = class_res.job_name
+	elif base_data != null and base_data.get("character_class") != null and base_data.character_class != null and base_data.character_class.get("job_name") != null:
+		class_label = base_data.character_class.job_name
 
-	# --- Class and level ---
-	var display_class: String = unit_data.get("unit_class", "Unknown Class")
-	var class_res = unit_data.get("class_data")
-	if class_res is String and ResourceLoader.exists(class_res):
-		class_res = load(class_res)
-	if display_class == "Unknown Class" and base_data != null and base_data.get("character_class") != null:
-		display_class = base_data.character_class.job_name
-	elif class_res != null and class_res.get("job_name") != null:
-		display_class = class_res.job_name
-	var lv: int = unit_data.get("level", 1)
+	var level: int = int(unit_data.get("level", 1))
+	var move_range: int = int(unit_data.get("move_range", 0))
+	var current_hp: int = int(unit_data.get("current_hp", 0))
+	var max_hp: int = max(1, int(unit_data.get("max_hp", current_hp)))
+	var poise_values: Dictionary = _camp_resolve_poise_values(unit_data)
+	var current_poise: int = int(poise_values.get("current", 0))
+	var max_poise: int = int(poise_values.get("max", 1))
+	var xp_current: int = int(unit_data.get("experience", 0))
+	var xp_max: int = max(1, 200 + ((level - 1) * 200))
+	var growth_totals: Dictionary = _camp_collect_growth_totals(base_data, class_res)
 
-	# --- Combat stats (for Phase 1 bars and BBCode) ---
-	var hp: int = unit_data.get("current_hp", 0)
-	var max_hp: int = unit_data.get("max_hp", 0)
-	var str_val: int = unit_data.get("strength", 0)
-	var mag_val: int = unit_data.get("magic", 0)
-	var def_val: int = unit_data.get("defense", 0)
-	var res_val: int = unit_data.get("resistance", 0)
-	var spd_val: int = unit_data.get("speed", 0)
-	var agi_val: int = unit_data.get("agility", 0)
+	if _camp_unit_info_portrait != null:
+		_camp_unit_info_portrait.texture = portrait
+	if _camp_unit_info_name != null:
+		_camp_unit_info_name.text = str(unit_data.get("unit_name", "Hero")).to_upper()
+	if _camp_unit_info_meta_label != null:
+		_camp_unit_info_meta_label.text = "LV %d  |  MOVE %d  |  CLASS %s" % [level, move_range, class_label.to_upper()]
+	if _camp_unit_info_summary_text != null:
+		_camp_unit_info_summary_text.text = _camp_build_unit_info_summary_text(unit_data)
+	if _camp_unit_info_record_text != null:
+		_camp_unit_info_record_text.text = _camp_build_unit_info_record_text(unit_data, class_res)
 
-	# --- Growth rates: total = Personal (base_data) + Class Bonus (class_res); clamp 0–100 for display ---
-	var growth_hp: int = 0
-	var growth_str: int = 0
-	var growth_mag: int = 0
-	var growth_def: int = 0
-	var growth_res: int = 0
-	var growth_spd: int = 0
-	var growth_agi: int = 0
-	# Resource.get(property) takes one argument only; use null check for default.
-	if base_data is Resource:
-		var v
-		v = base_data.get("hp_growth"); growth_hp = int(v) if v != null else 0
-		v = base_data.get("str_growth"); growth_str = int(v) if v != null else 0
-		v = base_data.get("mag_growth"); growth_mag = int(v) if v != null else 0
-		v = base_data.get("def_growth"); growth_def = int(v) if v != null else 0
-		v = base_data.get("res_growth"); growth_res = int(v) if v != null else 0
-		v = base_data.get("spd_growth"); growth_spd = int(v) if v != null else 0
-		v = base_data.get("agi_growth"); growth_agi = int(v) if v != null else 0
-	if class_res != null:
-		# Add class bonus to personal growth; clamp total to 0–100 (Resource.get has no default arg)
-		var b
-		b = class_res.get("hp_growth_bonus"); growth_hp = clampi(growth_hp + (int(b) if b != null else 0), 0, 100)
-		b = class_res.get("str_growth_bonus"); growth_str = clampi(growth_str + (int(b) if b != null else 0), 0, 100)
-		b = class_res.get("mag_growth_bonus"); growth_mag = clampi(growth_mag + (int(b) if b != null else 0), 0, 100)
-		b = class_res.get("def_growth_bonus"); growth_def = clampi(growth_def + (int(b) if b != null else 0), 0, 100)
-		b = class_res.get("res_growth_bonus"); growth_res = clampi(growth_res + (int(b) if b != null else 0), 0, 100)
-		b = class_res.get("spd_growth_bonus"); growth_spd = clampi(growth_spd + (int(b) if b != null else 0), 0, 100)
-		b = class_res.get("agi_growth_bonus"); growth_agi = clampi(growth_agi + (int(b) if b != null else 0), 0, 100)
-	else:
-		# Personal only; still clamp for display
-		growth_hp = clampi(growth_hp, 0, 100)
-		growth_str = clampi(growth_str, 0, 100)
-		growth_mag = clampi(growth_mag, 0, 100)
-		growth_def = clampi(growth_def, 0, 100)
-		growth_res = clampi(growth_res, 0, 100)
-		growth_spd = clampi(growth_spd, 0, 100)
-		growth_agi = clampi(growth_agi, 0, 100)
+	if _camp_unit_info_weapon_badge != null and _camp_unit_info_weapon_name != null and _camp_unit_info_weapon_icon != null:
+		if weapon == null:
+			_camp_unit_info_weapon_badge.text = "--"
+			_camp_unit_info_weapon_name.text = "UNARMED"
+			_camp_unit_info_weapon_icon.texture = null
+		else:
+			_camp_unit_info_weapon_badge.text = _camp_weapon_marker(weapon)
+			var weapon_name_value: Variant = weapon.get("weapon_name")
+			if weapon_name_value == null:
+				weapon_name_value = weapon.get("item_name")
+			if weapon_name_value == null:
+				weapon_name_value = "UNARMED"
+			_camp_unit_info_weapon_name.text = str(weapon_name_value).to_upper()
+			_camp_unit_info_weapon_icon.texture = weapon.get("icon") if weapon.get("icon") != null else null
 
-	# --- Equipment and ability (loadout) ---
-	var wpn = unit_data.get("equipped_weapon")
-	if wpn is String and ResourceLoader.exists(wpn):
-		wpn = load(wpn)
-	var wpn_name: String = wpn.get("weapon_name") if wpn != null and wpn.get("weapon_name") != null else "Unarmed"
-	var active_ab: String = unit_data.get("ability", "None")
-	if active_ab == "":
-		active_ab = "None"
+	if _camp_unit_info_anim_tween != null:
+		_camp_unit_info_anim_tween.kill()
+		_camp_unit_info_anim_tween = null
 
-	# --- BBCode polish: headers and textual data for reference; focus remains on animating bars ---
-	var lines: Array[String] = []
-	lines.append("Class: [color=cyan]" + display_class + "[/color]   Level: " + str(lv))
-	lines.append("")
-	lines.append("[color=gold]-- COMBAT STATS --[/color]")
-	lines.append("HP: " + str(hp) + " / " + str(max_hp))
-	lines.append("[color=coral]STR:[/color] " + str(str_val) + "   [color=orchid]MAG:[/color] " + str(mag_val))
-	lines.append("[color=palegreen]DEF:[/color] " + str(def_val) + "   [color=aquamarine]RES:[/color] " + str(res_val))
-	lines.append("[color=skyblue]SPD:[/color] " + str(spd_val) + "   [color=wheat]AGI:[/color] " + str(agi_val))
-	lines.append("")
-	lines.append("[color=cyan]-- GROWTH POTENTIAL --[/color]")
-	lines.append("[color=coral]STR[/color] " + str(growth_str) + "%   [color=orchid]MAG[/color] " + str(growth_mag) + "%   [color=palegreen]DEF[/color] " + str(growth_def) + "%")
-	lines.append("[color=aquamarine]RES[/color] " + str(growth_res) + "%   [color=skyblue]SPD[/color] " + str(growth_spd) + "%   [color=wheat]AGI[/color] " + str(growth_agi) + "%   [color=lime]HP[/color] " + str(growth_hp) + "%")
-	lines.append("")
-	lines.append("[color=orange]-- LOADOUT --[/color]")
-	lines.append("Weapon: [color=yellow]" + str(wpn_name) + "[/color]")
-	lines.append("Ability: [color=orange]" + str(active_ab) + "[/color]")
-	lines.append("")
-	var trait_lines_camp: PackedStringArray = UnitTraitsDisplay.trait_lines_from_roster_dict(unit_data)
-	if trait_lines_camp.size() > 0:
-		lines.append("[color=plum]-- TRAITS --[/color]")
-		for _tl in trait_lines_camp:
-			lines.append("• [color=wheat]" + str(_tl) + "[/color]")
-		lines.append("")
-	lines.append("[color=gold]-- RELATIONSHIPS --[/color]")
-	var unit_id: String = unit_data.get("unit_name", "Hero")
-	var candidate_ids: Array = []
-	for u in CampaignManager.player_roster:
-		var other_name: String = u.get("unit_name", "")
-		if other_name != unit_id and not other_name.is_empty():
-			candidate_ids.append(other_name)
-	var rel_entries: Array = CampaignManager.get_top_relationship_entries_for_unit(unit_id, candidate_ids, 9)
-	if rel_entries.is_empty():
-		lines.append("No notable bonds yet.")
-	else:
-		for entry in rel_entries:
-			lines.append("• " + CampaignManager.format_relationship_row_bbcode(entry))
-	var stats_bb: String = "[font_size=20]\n".join(lines) + "[/font_size]"
-	if stats_ctl != null:
-		stats_ctl.bbcode_enabled = true
-		stats_ctl.text = stats_bb
+	if _camp_unit_info_dimmer != null:
+		_camp_unit_info_dimmer.visible = true
+		_camp_unit_info_dimmer.modulate = Color(1, 1, 1, 0)
+	if unit_info_panel != null:
+		unit_info_panel.visible = true
+		unit_info_panel.modulate = Color(1, 1, 1, 0)
+		unit_info_panel.scale = Vector2(0.96, 0.96)
+		move_child(unit_info_panel, get_child_count() - 1)
+		if _camp_unit_info_dimmer != null:
+			move_child(_camp_unit_info_dimmer, unit_info_panel.get_index() - 1)
 
-	# --- Phase 1: Combat stat bars (%HpStatBar … %AgiStatBar); cap for display, reset and attach sheen ---
-	var stat_bar_cap: float = 50.0
-	var stat_bar_keys: Array[String] = ["Hp", "Str", "Mag", "Def", "Res", "Spd", "Agi"]
-	var stat_bar_values: Array[float] = [float(mini(hp, int(stat_bar_cap))), float(str_val), float(mag_val), float(def_val), float(res_val), float(spd_val), float(agi_val)]
-	var combat_bars: Array[Dictionary] = []
-	for i in range(stat_bar_keys.size()):
-		var bar: ProgressBar = get_node_or_null("%" + stat_bar_keys[i] + "StatBar") as ProgressBar
+	_camp_build_unit_info_relationship_cards(unit_data)
+
+	var animate_tween := create_tween().set_parallel(true)
+	_camp_unit_info_anim_tween = animate_tween
+	if _camp_unit_info_dimmer != null:
+		animate_tween.tween_property(_camp_unit_info_dimmer, "modulate", Color.WHITE, 0.16)
+	animate_tween.tween_property(unit_info_panel, "modulate", Color.WHITE, 0.16)
+	animate_tween.tween_property(unit_info_panel, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+	var primary_rows := {
+		"hp": {"current": current_hp, "max": max_hp, "text": "%d/%d" % [current_hp, max_hp]},
+		"poise": {"current": current_poise, "max": max_poise, "text": "%d/%d" % [current_poise, max_poise]},
+		"xp": {"current": xp_current, "max": xp_max, "text": "%d/%d" % [xp_current, xp_max]},
+	}
+
+	var primary_defs := _camp_unit_info_primary_bar_definitions()
+	for idx in range(primary_defs.size()):
+		var bar_key: String = str(primary_defs[idx].get("key", ""))
+		if not _camp_unit_info_primary_widgets.has(bar_key):
+			continue
+		var widgets: Dictionary = _camp_unit_info_primary_widgets[bar_key]
+		var row_data: Dictionary = primary_rows.get(bar_key, {})
+		var current_value: int = int(row_data.get("current", 0))
+		var max_value: int = max(1, int(row_data.get("max", 1)))
+		var fill_color := _camp_unit_info_primary_fill_color(bar_key, current_value, max_value)
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var desc_label := widgets.get("desc") as Label
+		var sheen := widgets.get("sheen") as ColorRect
+		if panel != null:
+			var panel_border := Color(min(fill_color.r + 0.08, 1.0), min(fill_color.g + 0.08, 1.0), min(fill_color.b + 0.08, 1.0), 0.76)
+			var tinted_fill := Color(lerpf(0.10, fill_color.r, 0.10), lerpf(0.09, fill_color.g, 0.10), lerpf(0.07, fill_color.b, 0.10), 0.92)
+			_camp_style_panel(panel, tinted_fill, panel_border, 10, 4)
+			panel.modulate = Color(1, 1, 1, 0)
+			animate_tween.tween_property(panel, "modulate", Color.WHITE, 0.18).set_delay(float(idx) * 0.05)
+		if name_label != null:
+			name_label.text = str(primary_defs[idx].get("label", bar_key))
+			_camp_style_label(name_label, fill_color, 16, 2)
+		if value_chip != null:
+			_camp_style_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color.lightened(0.10), 6, 3)
+		if value_label != null:
+			value_label.text = str(row_data.get("text", "0/0"))
+			_camp_style_label(value_label, CAMP_TEXT, 18, 2)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		if bar != null:
-			bar.min_value = 0.0
-			bar.max_value = stat_bar_cap
+			bar.max_value = float(max_value)
 			bar.value = 0.0
-			bar.show_percentage = false
-			bar.modulate.a = 0.0
-			var sheen_rect: ColorRect = _attach_unit_info_bar_sheen(bar)
-			combat_bars.append({"bar": bar, "value": minf(stat_bar_values[i], stat_bar_cap), "sheen": sheen_rect})
+			_camp_style_unit_info_primary_bar(bar, fill_color, bar_key)
+			animate_tween.tween_property(bar, "value", clampf(float(current_value), 0.0, float(max_value)), 0.30).set_delay(float(idx) * 0.05)
+			if sheen != null:
+				_animate_unit_info_bar_sheen(sheen, bar, float(idx) * 0.05 + 0.05)
+		if desc_label != null:
+			desc_label.text = _camp_unit_info_primary_description(bar_key)
+			_camp_style_label(desc_label, CAMP_MUTED, 13, 1)
+			desc_label.modulate = Color(1, 1, 1, 0)
+			animate_tween.tween_property(desc_label, "modulate", Color.WHITE, 0.16).set_delay(float(idx) * 0.05 + 0.03)
 
-	# --- Phase 2: Growth potential bars (%HpGrowthBar … %AgiGrowthBar); reset and attach sheen ---
-	var growth_bars: Array[Dictionary] = []
-	var bar_keys: Array[String] = ["Hp", "Str", "Mag", "Def", "Res", "Spd", "Agi"]
-	var bar_values: Array[int] = [growth_hp, growth_str, growth_mag, growth_def, growth_res, growth_spd, growth_agi]
-	for i in range(bar_keys.size()):
-		var bar: ProgressBar = get_node_or_null("%" + bar_keys[i] + "GrowthBar") as ProgressBar
+	var stat_defs := _camp_unit_info_stat_definitions()
+	for idx in range(stat_defs.size()):
+		var stat_key: String = str(stat_defs[idx].get("key", ""))
+		if not _camp_unit_info_stat_widgets.has(stat_key):
+			continue
+		var raw_value: int = int(unit_data.get(stat_key, 0))
+		var display_value: float = _camp_unit_info_stat_display_value(raw_value)
+		var fill_color := _camp_unit_info_stat_fill_color(stat_key, raw_value)
+		var overcap: bool = raw_value >= int(CAMP_UNIT_INFO_STAT_BAR_CAP)
+		var widgets: Dictionary = _camp_unit_info_stat_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var hints_root := widgets.get("hints") as HBoxContainer
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var desc_label := widgets.get("desc") as Label
+		var sheen := widgets.get("sheen") as ColorRect
+		if panel != null:
+			var tinted_fill := Color(lerpf(0.10, fill_color.r, 0.16), lerpf(0.09, fill_color.g, 0.16), lerpf(0.07, fill_color.b, 0.16), 0.92)
+			var stat_border := fill_color if overcap else fill_color.darkened(0.08)
+			_camp_style_panel(panel, tinted_fill, stat_border, 10, 4)
+			panel.modulate = Color(1, 1, 1, 0)
+			animate_tween.tween_property(panel, "modulate", Color.WHITE, 0.16).set_delay(0.16 + float(idx) * 0.04)
+		if name_label != null:
+			name_label.text = _camp_unit_info_stat_label(stat_key)
+			_camp_style_label(name_label, fill_color, 19, 2)
+		if hints_root != null:
+			for child in hints_root.get_children():
+				hints_root.remove_child(child)
+				child.queue_free()
+			for spec in _camp_unit_info_stat_hint_specs(stat_key):
+				var chip := Panel.new()
+				chip.custom_minimum_size = Vector2(48, 20)
+				var chip_color: Color = spec.get("color", fill_color)
+				_camp_style_panel(chip, Color(0.10, 0.09, 0.07, 0.95), chip_color, 5, 2)
+				hints_root.add_child(chip)
+				var chip_label := Label.new()
+				chip_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+				_camp_style_label(chip_label, chip_color, 10, 1)
+				chip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				chip_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				chip_label.text = str(spec.get("text", ""))
+				chip.add_child(chip_label)
+		if value_chip != null:
+			_camp_style_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color, 6, 3)
+		if value_label != null:
+			value_label.text = str(raw_value)
+			_camp_style_label(value_label, CAMP_TEXT, 18, 1)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		if bar != null:
-			bar.min_value = 0.0
-			bar.max_value = 100.0
+			bar.max_value = CAMP_UNIT_INFO_STAT_BAR_CAP
 			bar.value = 0.0
-			bar.show_percentage = false
-			bar.modulate.a = 0.0
-			var sheen_rect: ColorRect = _attach_unit_info_bar_sheen(bar)
-			growth_bars.append({"bar": bar, "value": bar_values[i], "sheen": sheen_rect})
+			_camp_style_unit_info_stat_bar(bar, fill_color, overcap)
+			animate_tween.tween_property(bar, "value", display_value, 0.24).set_delay(0.16 + float(idx) * 0.04)
+			if sheen != null:
+				_animate_unit_info_bar_sheen(sheen, bar, 0.20 + float(idx) * 0.04)
+		if desc_label != null:
+			desc_label.text = _camp_unit_info_stat_description(stat_key)
+			_camp_style_label(desc_label, CAMP_MUTED, 15, 1)
+			desc_label.modulate = Color(1, 1, 1, 0)
+			animate_tween.tween_property(desc_label, "modulate", Color.WHITE, 0.18).set_delay(0.19 + float(idx) * 0.04)
 
-	# --- Close button ---
-	if close_btn != null:
-		if not close_btn.pressed.is_connected(_hide_unit_info_panel):
-			close_btn.pressed.connect(_hide_unit_info_panel)
+	_refresh_camp_unit_info_growth_widgets(growth_totals, true, animate_tween)
 
-	# --- Show panel with snappy pop-in (scale 0.8 -> 1.0 in 0.12s, near-instant feel) ---
-	unit_info_panel.visible = true
-	unit_info_panel.scale = Vector2(0.8, 0.8)
-	var open_tween := create_tween()
-	open_tween.tween_property(unit_info_panel, "scale", Vector2(1.0, 1.0), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await open_tween.finished
-
-	# --- Phase 1: Sequential combat stat bar reveal; cascade stagger 0.04s (fade 0.10s, fill 0.25s, sheen) ---
-	for j in range(combat_bars.size()):
-		var entry: Dictionary = combat_bars[j]
-		var progress_bar: ProgressBar = entry["bar"]
-		var target_val: float = float(entry["value"])
-		var sheen_rect: ColorRect = entry["sheen"]
-		var row_tw := create_tween().set_parallel(true)
-		row_tw.tween_property(progress_bar, "modulate:a", 1.0, 0.10)
-		row_tw.tween_property(progress_bar, "value", target_val, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		_animate_unit_info_bar_sheen(sheen_rect, progress_bar)
-		await row_tw.finished
-		await get_tree().create_timer(0.04).timeout
-
-	# --- Phase 2: Sequential growth bar reveal (after Phase 1); same cascade stagger 0.04s ---
-	for j in range(growth_bars.size()):
-		var entry: Dictionary = growth_bars[j]
-		var progress_bar: ProgressBar = entry["bar"]
-		var target_val: float = float(entry["value"])
-		var sheen_rect: ColorRect = entry["sheen"]
-		var row_tw := create_tween().set_parallel(true)
-		row_tw.tween_property(progress_bar, "modulate:a", 1.0, 0.10)
-		row_tw.tween_property(progress_bar, "value", target_val, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		_animate_unit_info_bar_sheen(sheen_rect, progress_bar)
-		await row_tw.finished
-		await get_tree().create_timer(0.04).timeout
+	animate_tween.finished.connect(func():
+		_camp_unit_info_anim_tween = null
+	, CONNECT_ONE_SHOT)
 
 # --- Sheen helpers (adapted from BattleField.gd level-up bar juice): diagonal highlight sweep across growth bars. ---
-## Attaches a diagonal white ColorRect as child of the ProgressBar for sheen effect. Bar clips contents so sheen doesn't overflow.
-## Purpose: Visual "juice" so the fill feels responsive; sheen position is animated in _animate_unit_info_bar_sheen.
-## Inputs: bar (ProgressBar). Outputs: ColorRect (the sheen node). Side effects: Sets bar.clip_contents = true; adds sheen as child.
 func _attach_unit_info_bar_sheen(bar: ProgressBar) -> ColorRect:
 	bar.clip_contents = true
 	var sheen: ColorRect = ColorRect.new()
@@ -1856,10 +4002,7 @@ func _attach_unit_info_bar_sheen(bar: ProgressBar) -> ColorRect:
 	bar.add_child(sheen)
 	return sheen
 
-## Animates the sheen across the bar: fade in, move position.x to bar_width+30, fade out. Optimized: sweep 0.28s to match faster bar fill (0.25s).
-## Purpose: Diagonal light sweep in sync with bar fill. Timings: fade in 0.05s, sweep 0.28s, fade out 0.06s (overclocked).
-## Inputs: sheen (ColorRect from _attach_unit_info_bar_sheen), bar (ProgressBar). Outputs: None. Side effects: Creates tween on sheen.
-func _animate_unit_info_bar_sheen(sheen: ColorRect, bar: ProgressBar) -> void:
+func _animate_unit_info_bar_sheen(sheen: ColorRect, bar: ProgressBar, delay: float = 0.0) -> void:
 	if sheen == null or bar == null:
 		return
 	var bar_width: float = maxf(bar.size.x, bar.custom_minimum_size.x)
@@ -1867,12 +4010,18 @@ func _animate_unit_info_bar_sheen(sheen: ColorRect, bar: ProgressBar) -> void:
 	sheen.position = Vector2(-70, -8)
 	sheen.modulate.a = 0.0
 	var tw := create_tween()
+	if delay > 0.0:
+		tw.tween_interval(delay)
 	tw.tween_property(sheen, "modulate:a", 1.0, 0.05)
 	tw.parallel().tween_property(sheen, "position:x", bar_width + 30.0, 0.28).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(sheen, "modulate:a", 0.0, 0.06)
 
-## Hides the unit info panel. Called by %UnitInfoCloseButton.
 func _hide_unit_info_panel() -> void:
+	if _camp_unit_info_anim_tween != null:
+		_camp_unit_info_anim_tween.kill()
+		_camp_unit_info_anim_tween = null
+	if _camp_unit_info_dimmer != null:
+		_camp_unit_info_dimmer.visible = false
 	if unit_info_panel != null:
 		unit_info_panel.visible = false
 
@@ -2715,6 +4864,12 @@ func _on_save_clicked() -> void:
 	if select_sound: select_sound.play()
 	
 	if save_popup:
+		_layout_camp_save_records_popup()
+		if _camp_save_dimmer != null:
+			_camp_save_dimmer.visible = true
+			_camp_save_dimmer.modulate = Color(1, 1, 1, 0.0)
+			move_child(_camp_save_dimmer, max(0, save_popup.get_index()))
+		move_child(save_popup, get_child_count() - 1)
 		# Start the popup invisible and slightly smaller for a "pop-in" effect
 		save_popup.modulate.a = 0.0
 		save_popup.scale = Vector2(0.9, 0.9)
@@ -2722,6 +4877,8 @@ func _on_save_clicked() -> void:
 		save_popup.visible = true
 		
 		var tween = create_tween().set_parallel(true)
+		if _camp_save_dimmer != null:
+			tween.tween_property(_camp_save_dimmer, "modulate:a", 1.0, 0.18)
 		tween.tween_property(save_popup, "modulate:a", 1.0, 0.2)
 		tween.tween_property(save_popup, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		
@@ -2733,11 +4890,15 @@ func _on_back_pressed() -> void:
 	
 	if save_popup:
 		var tween = create_tween().set_parallel(true)
+		if _camp_save_dimmer != null and _camp_save_dimmer.visible:
+			tween.tween_property(_camp_save_dimmer, "modulate:a", 0.0, 0.15)
 		tween.tween_property(save_popup, "modulate:a", 0.0, 0.15)
 		tween.tween_property(save_popup, "scale", Vector2(0.9, 0.9), 0.15)
 		
 		await tween.finished
 		save_popup.visible = false
+		if _camp_save_dimmer != null:
+			_camp_save_dimmer.visible = false
 
 func _try_to_save(slot: int) -> void:
 	# Standard click sound when picking a slot
@@ -2772,8 +4933,13 @@ func _proceed_with_save(slot: int) -> void:
 		# Play the specific "Save Success" sound!
 		if save_confirm_sound: save_confirm_sound.play()
 		
-		var original_text = clicked_button.text
-		clicked_button.text = "--- SAVED SUCCESSFULLY ---"
+		var original_preview := _get_camp_slot_preview_data(slot)
+		_camp_apply_save_slot_preview(clicked_button, {
+			"badge": "SLOT %d  //  RECORD WRITTEN" % slot,
+			"title": "Campaign saved successfully.",
+			"meta": "Manual field archive updated.",
+			"stamp": "Returning to camp..."
+		})
 		clicked_button.modulate = Color(0.2, 1.0, 0.2)
 		
 		clicked_button.pivot_offset = clicked_button.size / 2.0
@@ -2784,39 +4950,26 @@ func _proceed_with_save(slot: int) -> void:
 		await get_tree().create_timer(0.8).timeout
 		
 		clicked_button.modulate = Color.WHITE
-		clicked_button.text = original_text
+		_camp_apply_save_slot_preview(clicked_button, original_preview)
 
 	_on_back_pressed()
 
 func _update_slot_labels() -> void:
-	# Now they will look exactly like the Main Menu buttons!
-	if save_slot_1: save_slot_1.text = _get_camp_slot_preview(1)
-	if save_slot_2: save_slot_2.text = _get_camp_slot_preview(2)
-	if save_slot_3: save_slot_3.text = _get_camp_slot_preview(3)
+	if save_slot_1:
+		_style_camp_save_slot_button(save_slot_1, 1)
+	if save_slot_2:
+		_style_camp_save_slot_button(save_slot_2, 2)
+	if save_slot_3:
+		_style_camp_save_slot_button(save_slot_3, 3)
 
-# --- NEW: GENERATE BEAUTIFUL SLOT TEXT ---
 func _get_camp_slot_preview(slot_num: int) -> String:
-	var path = CampaignManager.get_save_path(slot_num, false)
-	
-	if not FileAccess.file_exists(path):
-		return "Slot %d: (Empty)" % slot_num
-		
-	var file = FileAccess.open(path, FileAccess.READ)
-	var save_data = file.get_var()
-	file.close()
-	
-	var roster = save_data.get("player_roster", [])
-	var leader_name = "Unknown"
-	var leader_lvl = 1
-	
-	if roster.size() > 0:
-		leader_name = roster[0].get("unit_name", "Hero")
-		leader_lvl = roster[0].get("level", 1)
-		
-	var gold = save_data.get("global_gold", 0)
-	var map_idx = save_data.get("current_level_index", 0) + 1 
-	
-	return "Slot %d: %s (Lv %d)  |  Map %d  |  %dG" % [slot_num, leader_name, leader_lvl, map_idx, gold]
+	var preview := _get_camp_slot_preview_data(slot_num)
+	return "%s\n%s\n%s\n%s" % [
+		str(preview.get("badge", "")),
+		str(preview.get("title", "")),
+		str(preview.get("meta", "")),
+		str(preview.get("stamp", ""))
+	]
 
 func _on_inventory_item_selected(list_index: int) -> void:
 	if inventory_mapping.is_empty() or list_index >= inventory_mapping.size(): return
@@ -4362,10 +6515,49 @@ func _jukebox_sorted_playlist_names() -> Array[String]:
 	return names
 
 func _open_jukebox() -> void:
-	if jukebox_panel == null or jukebox_list == null: return
-	if select_sound: select_sound.play()
+	if jukebox_panel == null or jukebox_list == null:
+		return
+	if select_sound:
+		select_sound.play()
+	_ensure_camp_jukebox_modal()
+	_layout_camp_jukebox_panel()
 	if not _jukebox_playlist_ui_created:
 		_create_jukebox_playlist_ui()
+	jukebox_list.clear()
+	jukebox_list.add_item("DEFAULT CAMP AMBIANCE")
+	jukebox_list.set_item_metadata(0, "DEFAULT")
+	var jukebox_list_index := 1
+	for playlist_name in _jukebox_sorted_playlist_names():
+		jukebox_list.add_item("[PLAYLIST] " + playlist_name)
+		jukebox_list.set_item_metadata(jukebox_list_index, "PLAYLIST|" + playlist_name)
+		jukebox_list_index += 1
+	var jukebox_entries: Array[Dictionary] = []
+	for saved_track in CampaignManager.unlocked_music_paths:
+		var parts := str(saved_track).split("|")
+		if parts.size() != 2:
+			continue
+		var track_name := parts[0]
+		var track_path := parts[1]
+		if _jukebox_favorites_only_cb != null and _jukebox_favorites_only_cb.button_pressed and track_path not in CampaignManager.favorite_music_paths:
+			continue
+		jukebox_entries.append({"name": track_name, "path": track_path})
+	if _jukebox_track_sort_mode == JUKEBOX_SORT_ALPHA:
+		jukebox_entries.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.get("name", "")).naturalnocasecmp_to(str(b.get("name", ""))) < 0)
+	for entry in jukebox_entries:
+		var entry_path := str(entry.get("path", ""))
+		var entry_name := str(entry.get("name", ""))
+		var entry_prefix := "[FAVORITE] " if entry_path in CampaignManager.favorite_music_paths else ""
+		jukebox_list.add_item(entry_prefix + entry_name)
+		jukebox_list.set_item_metadata(jukebox_list_index, entry_path)
+		jukebox_list_index += 1
+	_refresh_jukebox_playlist_option()
+	_update_now_playing_ui()
+	if _camp_jukebox_dimmer != null:
+		_camp_jukebox_dimmer.visible = true
+		move_child(_camp_jukebox_dimmer, max(0, get_child_count() - 2))
+	jukebox_panel.visible = true
+	move_child(jukebox_panel, get_child_count() - 1)
+	return
 	jukebox_list.clear()
 	# Option 0: default ambient
 	jukebox_list.add_item("⛺ Default Camp Ambiance")
@@ -4402,7 +6594,100 @@ func _open_jukebox() -> void:
 	jukebox_panel.visible = true
 
 func _create_jukebox_playlist_ui() -> void:
-	if jukebox_panel == null or _jukebox_playlist_ui_created: return
+	if jukebox_panel == null or _jukebox_playlist_ui_created:
+		return
+	if _camp_jukebox_mode_row == null or _camp_jukebox_playlist_row == null or _camp_jukebox_manage_row == null or _camp_jukebox_filter_row == null:
+		return
+	var mode_text_label := Label.new()
+	mode_text_label.text = "PLAYBACK MODE"
+	_camp_style_label(mode_text_label, CAMP_MUTED, 15, 1)
+	_camp_jukebox_mode_row.add_child(mode_text_label)
+	_jukebox_mode_option = OptionButton.new()
+	_jukebox_mode_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_jukebox_mode_option.add_item("Default", 0)
+	_jukebox_mode_option.add_item("Loop track", 1)
+	_jukebox_mode_option.add_item("Loop playlist", 2)
+	_jukebox_mode_option.add_item("Shuffle playlist", 3)
+	_jukebox_mode_option.item_selected.connect(_on_jukebox_mode_selected)
+	_camp_style_option_button(_jukebox_mode_option, 15, 38.0)
+	_camp_jukebox_mode_row.add_child(_jukebox_mode_option)
+
+	var playlist_text_label := Label.new()
+	playlist_text_label.text = "ACTIVE PLAYLIST"
+	_camp_style_label(playlist_text_label, CAMP_MUTED, 15, 1)
+	_camp_jukebox_playlist_row.add_child(playlist_text_label)
+	_jukebox_playlist_option = OptionButton.new()
+	_jukebox_playlist_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_jukebox_playlist_option.item_selected.connect(_on_jukebox_playlist_option_selected)
+	_camp_style_option_button(_jukebox_playlist_option, 15, 38.0)
+	_camp_jukebox_playlist_row.add_child(_jukebox_playlist_option)
+	_jukebox_new_playlist_btn = Button.new()
+	_jukebox_new_playlist_btn.text = "New Playlist"
+	_jukebox_new_playlist_btn.pressed.connect(_on_jukebox_new_playlist_pressed)
+	_camp_style_button(_jukebox_new_playlist_btn, false, 15, 38.0)
+	_camp_jukebox_playlist_row.add_child(_jukebox_new_playlist_btn)
+	_jukebox_rename_playlist_btn = Button.new()
+	_jukebox_rename_playlist_btn.text = "Rename"
+	_jukebox_rename_playlist_btn.pressed.connect(_on_jukebox_rename_playlist_pressed)
+	_camp_style_button(_jukebox_rename_playlist_btn, false, 15, 38.0)
+	_camp_jukebox_playlist_row.add_child(_jukebox_rename_playlist_btn)
+	_jukebox_delete_playlist_btn = Button.new()
+	_jukebox_delete_playlist_btn.text = "Delete"
+	_jukebox_delete_playlist_btn.pressed.connect(_on_jukebox_delete_playlist_pressed)
+	_camp_style_button(_jukebox_delete_playlist_btn, false, 15, 38.0)
+	_camp_jukebox_playlist_row.add_child(_jukebox_delete_playlist_btn)
+
+	_jukebox_add_to_playlist_btn = Button.new()
+	_jukebox_add_to_playlist_btn.text = "Add Selected Track"
+	_jukebox_add_to_playlist_btn.pressed.connect(_on_jukebox_add_to_playlist_pressed)
+	_camp_style_button(_jukebox_add_to_playlist_btn, false, 15, 38.0)
+	_camp_jukebox_manage_row.add_child(_jukebox_add_to_playlist_btn)
+	_jukebox_remove_from_playlist_btn = Button.new()
+	_jukebox_remove_from_playlist_btn.text = "Remove from Playlist"
+	_jukebox_remove_from_playlist_btn.pressed.connect(_on_jukebox_remove_from_playlist_pressed)
+	_camp_style_button(_jukebox_remove_from_playlist_btn, false, 15, 38.0)
+	_camp_jukebox_manage_row.add_child(_jukebox_remove_from_playlist_btn)
+	_jukebox_move_up_btn = Button.new()
+	_jukebox_move_up_btn.text = "Move Up"
+	_jukebox_move_up_btn.pressed.connect(_on_jukebox_move_up_pressed)
+	_camp_style_button(_jukebox_move_up_btn, false, 15, 38.0)
+	_camp_jukebox_manage_row.add_child(_jukebox_move_up_btn)
+	_jukebox_move_down_btn = Button.new()
+	_jukebox_move_down_btn.text = "Move Down"
+	_jukebox_move_down_btn.pressed.connect(_on_jukebox_move_down_pressed)
+	_camp_style_button(_jukebox_move_down_btn, false, 15, 38.0)
+	_camp_jukebox_manage_row.add_child(_jukebox_move_down_btn)
+
+	_jukebox_favorite_btn = Button.new()
+	_jukebox_favorite_btn.text = "Mark Favorite"
+	_jukebox_favorite_btn.pressed.connect(_on_jukebox_favorite_pressed)
+	_camp_style_button(_jukebox_favorite_btn, false, 15, 38.0)
+	_camp_jukebox_filter_row.add_child(_jukebox_favorite_btn)
+	_jukebox_favorites_only_cb = CheckButton.new()
+	_jukebox_favorites_only_cb.text = "Favorites Only"
+	_jukebox_favorites_only_cb.toggled.connect(func(_enabled: bool): _open_jukebox())
+	_camp_style_check_button(_jukebox_favorites_only_cb, 15)
+	_camp_jukebox_filter_row.add_child(_jukebox_favorites_only_cb)
+	var sort_text_label := Label.new()
+	sort_text_label.text = "TRACK SORT"
+	_camp_style_label(sort_text_label, CAMP_MUTED, 15, 1)
+	_camp_jukebox_filter_row.add_child(sort_text_label)
+	_jukebox_track_sort_option = OptionButton.new()
+	_jukebox_track_sort_option.add_item("Unlock Order", 0)
+	_jukebox_track_sort_option.add_item("A-Z", 1)
+	_jukebox_track_sort_option.item_selected.connect(_on_jukebox_track_sort_selected)
+	_camp_style_option_button(_jukebox_track_sort_option, 15, 38.0)
+	_camp_jukebox_filter_row.add_child(_jukebox_track_sort_option)
+
+	if _jukebox_playlist_popup == null or not is_instance_valid(_jukebox_playlist_popup):
+		_jukebox_playlist_popup = PopupMenu.new()
+		_jukebox_playlist_popup.id_pressed.connect(_on_jukebox_add_to_playlist_id_pressed)
+		jukebox_panel.add_child(_jukebox_playlist_popup)
+
+	_jukebox_playlist_ui_created = true
+	_sync_jukebox_mode_option()
+	_sync_jukebox_sort_option()
+	return
 	var row = HBoxContainer.new()
 	row.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	row.offset_left = 20.0
@@ -4486,12 +6771,24 @@ func _create_jukebox_playlist_ui() -> void:
 
 func _refresh_jukebox_playlist_option() -> void:
 	if _jukebox_playlist_option == null: return
+	var previous_playlist_name := ""
+	var previous_index := _jukebox_playlist_option.selected
+	if previous_index >= 0:
+		var previous_id := _jukebox_playlist_option.get_item_id(previous_index)
+		if previous_id >= 0 and previous_id < _jukebox_playlist_names_ordered.size():
+			previous_playlist_name = _jukebox_playlist_names_ordered[previous_id]
+	if previous_playlist_name.is_empty():
+		previous_playlist_name = jukebox_active_playlist_name
 	_jukebox_playlist_option.clear()
 	_jukebox_playlist_names_ordered.clear()
 	_jukebox_playlist_option.add_item("(None)", -1)
+	var selected_option_index := 0
 	for pl_name in _jukebox_sorted_playlist_names():
 		_jukebox_playlist_names_ordered.append(pl_name)
 		_jukebox_playlist_option.add_item(pl_name, _jukebox_playlist_names_ordered.size() - 1)
+		if pl_name == previous_playlist_name:
+			selected_option_index = _jukebox_playlist_option.item_count - 1
+	_jukebox_playlist_option.select(selected_option_index)
 
 func _sync_jukebox_mode_option() -> void:
 	if _jukebox_mode_option == null: return
@@ -4525,7 +6822,36 @@ func _on_jukebox_mode_selected(idx: int) -> void:
 	CampaignManager.jukebox_last_mode = jukebox_playback_mode
 
 func _on_jukebox_playlist_option_selected(_idx: int) -> void:
-	pass
+	if _jukebox_playlist_option == null:
+		return
+	var selected_index := _jukebox_playlist_option.selected
+	var selected_id := _jukebox_playlist_option.get_item_id(selected_index)
+	if selected_id < 0 or selected_id >= _jukebox_playlist_names_ordered.size():
+		if jukebox_playback_mode == JUKEBOX_MODE_LOOP_PLAYLIST or jukebox_playback_mode == JUKEBOX_MODE_SHUFFLE_PLAYLIST:
+			jukebox_active_playlist_name = ""
+			jukebox_active_playlist_tracks.clear()
+			jukebox_playlist_index = 0
+			jukebox_shuffled_indices.clear()
+			CampaignManager.jukebox_last_playlist_name = ""
+			_update_now_playing_ui()
+		return
+	var playlist_name := _jukebox_playlist_names_ordered[selected_id]
+	if jukebox_playback_mode == JUKEBOX_MODE_LOOP_PLAYLIST or jukebox_playback_mode == JUKEBOX_MODE_SHUFFLE_PLAYLIST:
+		var tracks: Array = CampaignManager.saved_music_playlists.get(playlist_name, [])
+		jukebox_active_playlist_name = playlist_name
+		jukebox_active_playlist_tracks.clear()
+		for track in tracks:
+			jukebox_active_playlist_tracks.append(str(track))
+		jukebox_playlist_index = 0
+		jukebox_shuffled_indices.clear()
+		CampaignManager.jukebox_last_playlist_name = playlist_name
+		if jukebox_active_playlist_tracks.is_empty():
+			_update_now_playing_ui()
+		else:
+			_start_playlist_playback()
+			_update_now_playing_ui()
+	else:
+		_jukebox_show_feedback("Playlist target: " + playlist_name)
 
 func _on_jukebox_new_playlist_pressed() -> void:
 	var dialog = AcceptDialog.new()
@@ -4701,17 +7027,31 @@ func _on_jukebox_add_to_playlist_id_pressed(id: int) -> void:
 		return
 	arr.append(path_str)
 	CampaignManager.saved_music_playlists[pl_name] = arr
+	if jukebox_active_playlist_name == pl_name:
+		jukebox_active_playlist_tracks.clear()
+		for a in arr:
+			jukebox_active_playlist_tracks.append(str(a))
+		if jukebox_playlist_index >= jukebox_active_playlist_tracks.size():
+			jukebox_playlist_index = max(0, jukebox_active_playlist_tracks.size() - 1)
+	_jukebox_show_feedback("Added to " + pl_name)
+	_open_jukebox()
 
 func _on_jukebox_track_selected(index: int) -> void:
 	if select_sound: select_sound.play()
 	var meta = jukebox_list.get_item_metadata(index)
 	var track_name = jukebox_list.get_item_text(index)
 	var meta_str = str(meta)
+	var clean_track_name := track_name.replace("[FAVORITE] ", "").replace("[PLAYLIST] ", "")
 	if _jukebox_favorite_btn != null:
 		if meta_str != "DEFAULT" and not meta_str.begins_with("PLAYLIST|"):
 			_jukebox_favorite_btn.text = "☆ Unfavorite" if meta_str in CampaignManager.favorite_music_paths else "★ Favorite"
 		else:
 			_jukebox_favorite_btn.text = "★ Favorite"
+	if _jukebox_favorite_btn != null:
+		if meta_str != "DEFAULT" and not meta_str.begins_with("PLAYLIST|"):
+			_jukebox_favorite_btn.text = "Unfavorite" if meta_str in CampaignManager.favorite_music_paths else "Mark Favorite"
+		else:
+			_jukebox_favorite_btn.text = "Mark Favorite"
 	if meta_str == "DEFAULT":
 		is_playing_custom_track = false
 		current_custom_track = null
@@ -4751,7 +7091,7 @@ func _on_jukebox_track_selected(index: int) -> void:
 			CampaignManager.jukebox_last_track_path = path
 			CampaignManager.jukebox_last_playlist_name = ""
 			_crossfade_music(stream)
-		_update_now_playing_ui(track_name)
+		_update_now_playing_ui(clean_track_name)
 
 func _get_display_name_for_path(path: String) -> String:
 	for saved_str in CampaignManager.unlocked_music_paths:

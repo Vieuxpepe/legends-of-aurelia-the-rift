@@ -35,6 +35,7 @@
 [ext_resource type="Texture2D" uid="uid://bigyf64jegxai" path="res://animations/Phase Banner Animation/8.png" id="49_6fq8w"]
 [ext_resource type="Texture2D" uid="uid://cw72c26r1h67a" path="res://animations/Phase Banner Animation/9.png" id="50_ixfd1"]
 [ext_resource type="Texture2D" uid="uid://crunw8ni8runi" path="res://animations/Phase Banner Animation/10.png" id="51_tkoln"]
+[ext_resource type="AudioStream" uid="uid://rrvy3o3cnmej" path="res://SoundEffects/CriticalHit.wav" id="52_unmsu"]
 [ext_resource type="Texture2D" uid="uid://4t7fnt0whbh4" path="res://animations/Phase Banner Animation/11.png" id="52_xbyy1"]
 [ext_resource type="Texture2D" uid="uid://80phei8o0fkl" path="res://animations/Phase Banner Animation/12.png" id="53_fvxl4"]
 [ext_resource type="AudioStream" uid="uid://dl4s21ip7hen8" path="res://SoundEffects/Music/music discs/The Multiverse Arena Battle.mp3" id="53_unmsu"]
@@ -52,7 +53,6 @@
 [ext_resource type="Texture2D" uid="uid://d07qhv8g2nqrr" path="res://animations/Phase Banner Animation/24.png" id="65_cd12y"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="66_k2brg"]
 [ext_resource type="AudioStream" uid="uid://cx2nrdjtlm8r5" path="res://SoundEffects/Level Up, Clean, Simple, 16 Bit, Heroic.mp3" id="67_0w3d6"]
-[ext_resource type="AudioStream" uid="uid://dcg0hr3gr8ufa" path="res://SoundEffects/critical-hit-1 (1).mp3" id="68_fbwhy"]
 [ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="70_x6otu"]
 [ext_resource type="AudioStream" uid="uid://c1l68wat5t453" path="res://SoundEffects/attacking_a_unit_in__#3-1771002816393.wav" id="71_j44sx"]
 [ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="72_ohgdx"]
@@ -482,6 +482,23 @@ player_unit_scene = ExtResource("2_of5bi")
 dash_fx_scene = ExtResource("8_whup6")
 slash_fx_scene = ExtResource("9_0k1eq")
 level_up_fx_scene = ExtResource("10_ddpcx")
+default_fire_tile_damage = null
+fire_tile_extinguish_shrink_sec = null
+GRID_SIZE = null
+zoom_step = null
+min_zoom = null
+max_zoom = null
+zoom_to_cursor = null
+camera_speed = null
+edge_margin = null
+use_fog_of_war = null
+default_vision_range = null
+vision_blocking_terrain = null
+intro_dialogue = null
+outro_dialogue = null
+map_objective = null
+custom_objective_text = null
+turn_limit = null
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
 
@@ -1859,7 +1876,7 @@ anchor_mode = 0
 position_smoothing_enabled = true
 
 [node name="CritSound" type="AudioStreamPlayer" parent="." unique_id=342712717]
-stream = ExtResource("68_fbwhy")
+stream = ExtResource("52_unmsu")
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1925426781]
 process_mode = 3

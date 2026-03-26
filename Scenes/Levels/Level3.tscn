@@ -55,12 +55,12 @@
 [ext_resource type="Texture2D" uid="uid://cwtepxw00gyt1" path="res://animations/Phase Banner Animation/19.png" id="52_d50vf"]
 [ext_resource type="AudioStream" uid="uid://cx2nrdjtlm8r5" path="res://SoundEffects/Level Up, Clean, Simple, 16 Bit, Heroic.mp3" id="52_qu6fs"]
 [ext_resource type="Texture2D" uid="uid://bi4aw63ux4rqe" path="res://animations/Phase Banner Animation/20.png" id="53_6kslc"]
+[ext_resource type="AudioStream" uid="uid://rrvy3o3cnmej" path="res://SoundEffects/CriticalHit.wav" id="53_qu6fs"]
 [ext_resource type="Texture2D" uid="uid://dofq0g15lcmo7" path="res://animations/Phase Banner Animation/21.png" id="54_2o1k5"]
 [ext_resource type="Texture2D" uid="uid://ccmatpngb33vg" path="res://animations/Phase Banner Animation/22.png" id="55_vsf1i"]
 [ext_resource type="Texture2D" uid="uid://c6xrwlmwanyrg" path="res://animations/Phase Banner Animation/23.png" id="56_jwur5"]
 [ext_resource type="Texture2D" uid="uid://d07qhv8g2nqrr" path="res://animations/Phase Banner Animation/24.png" id="57_urf3x"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="58_n2ebu"]
-[ext_resource type="AudioStream" uid="uid://dcg0hr3gr8ufa" path="res://SoundEffects/critical-hit-1 (1).mp3" id="60_qqlgx"]
 [ext_resource type="AudioStream" uid="uid://dj3mwc6tapmbn" path="res://SoundEffects/NoDamageSound.mp3" id="61_l82fr"]
 [ext_resource type="AudioStream" uid="uid://dvj8na3bctl7y" path="res://SoundEffects/Music/Emberwood BGM (1).mp3" id="61_nktan"]
 [ext_resource type="AudioStream" uid="uid://culcdsqmruen7" path="res://SoundEffects/DefenseMode.mp3" id="62_bex5q"]
@@ -678,11 +678,22 @@ promotion_sound = ExtResource("5_a5mj7")
 dash_fx_scene = ExtResource("10_gikfr")
 slash_fx_scene = ExtResource("11_dbhwt")
 level_up_fx_scene = ExtResource("12_ftigw")
+default_fire_tile_damage = null
+fire_tile_extinguish_shrink_sec = null
 GRID_SIZE = Vector2i(20, 30)
+zoom_step = null
+min_zoom = null
+max_zoom = null
+zoom_to_cursor = null
+camera_speed = null
+edge_margin = null
 use_fog_of_war = true
+default_vision_range = null
+vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_bcjqv")]([SubResource("Resource_8a6bc"), SubResource("Resource_yu4i8"), SubResource("Resource_qqdt2"), SubResource("Resource_hhqx0"), SubResource("Resource_lsi8b")])
 outro_dialogue = Array[ExtResource("6_bcjqv")]([SubResource("Resource_0tovn"), SubResource("Resource_08kon")])
 map_objective = 2
+custom_objective_text = null
 turn_limit = 20
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
@@ -1954,7 +1965,7 @@ anchor_mode = 0
 position_smoothing_enabled = true
 
 [node name="CritSound" type="AudioStreamPlayer" parent="." unique_id=342712717]
-stream = ExtResource("60_qqlgx")
+stream = ExtResource("53_qu6fs")
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1925426781]
 process_mode = 3

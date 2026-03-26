@@ -115,6 +115,41 @@ const BURN_TICK_MAX_HP_FRACTION := 0.06
 const BURN_TICK_DAMAGE_MIN := 1
 const BURN_TICK_DAMAGE_MAX := 10
 
+# Reinforcement telegraphing: expose existing EnemySpawner slot timers without new map schema.
+const REINFORCEMENT_WARNING_ENEMY_PHASES := 1
+const REINFORCEMENT_OVERLAY_LATER_FILL := Color(0.98, 0.84, 0.28, 0.08)
+const REINFORCEMENT_OVERLAY_LATER_BORDER := Color(0.98, 0.84, 0.28, 0.65)
+const REINFORCEMENT_OVERLAY_SOON_FILL := Color(1.0, 0.58, 0.08, 0.18)
+const REINFORCEMENT_OVERLAY_SOON_BORDER := Color(1.0, 0.70, 0.16, 0.95)
+const DECOR_FOG_SHADOW_TINT := Color(0.42, 0.45, 0.55, 0.96)
+const TACTICAL_UI_BG := Color(0.08, 0.075, 0.06, 0.92)
+const TACTICAL_UI_BG_ALT := Color(0.13, 0.115, 0.085, 0.95)
+const TACTICAL_UI_BG_SOFT := Color(0.17, 0.15, 0.11, 0.88)
+const TACTICAL_UI_BORDER := Color(0.82, 0.71, 0.38, 0.95)
+const TACTICAL_UI_BORDER_MUTED := Color(0.44, 0.39, 0.27, 0.95)
+const TACTICAL_UI_TEXT := Color(0.94, 0.92, 0.84, 1.0)
+const TACTICAL_UI_TEXT_MUTED := Color(0.72, 0.69, 0.60, 1.0)
+const TACTICAL_UI_ACCENT := Color(0.90, 0.80, 0.37, 1.0)
+const TACTICAL_UI_ACCENT_SOFT := Color(0.74, 0.86, 0.42, 1.0)
+const TACTICAL_UI_PRIMARY_FILL := Color(0.67, 0.52, 0.16, 0.98)
+const TACTICAL_UI_PRIMARY_HOVER := Color(0.78, 0.61, 0.22, 0.98)
+const TACTICAL_UI_PRIMARY_PRESS := Color(0.49, 0.36, 0.10, 1.0)
+const TACTICAL_UI_SECONDARY_FILL := Color(0.21, 0.16, 0.08, 0.98)
+const TACTICAL_UI_SECONDARY_HOVER := Color(0.30, 0.23, 0.11, 1.0)
+const TACTICAL_UI_SECONDARY_PRESS := Color(0.14, 0.10, 0.05, 1.0)
+const TACTICAL_UI_MARGIN := 24.0
+const TACTICAL_UI_RAIL_WIDTH := 308.0
+const TACTICAL_UI_BOTTOM_HEIGHT := 212.0
+const TACTICAL_UI_HUD_SCALE := 1.5
+const TACTICAL_UI_BOTTOM_PANEL_SCALE_MULT := 0.85
+const TACTICAL_UI_LOG_HEIGHT_RATIO := 0.75
+const TACTICAL_UI_BOTTOM_EDGE_MARGIN := 8.0
+const UNIT_INFO_STAT_BAR_CAP := 50.0
+const UNIT_INFO_STAT_TIER_CYAN := Color(0.28, 0.88, 1.0, 1.0)
+const UNIT_INFO_STAT_TIER_PURPLE := Color(0.76, 0.48, 1.0, 1.0)
+const UNIT_INFO_STAT_TIER_ORANGE := Color(1.0, 0.64, 0.22, 1.0)
+const UNIT_INFO_STAT_TIER_WHITE := Color(0.96, 0.96, 0.98, 1.0)
+
 # Boss Personal Dialogue (V1): trigger logic and tracking in BattleField; content in BossPersonalDialogueDB.
 const BossDialogueDB = preload("res://Scripts/Narrative/BossPersonalDialogueDB.gd")
 # Defy Death rescue lines by savior support_personality; content in SupportRescueDialogueDB.
@@ -126,10 +161,22 @@ const FloatingTextScene = preload("res://Scenes/FloatingText.tscn")
 var detailed_unit_info_layer: CanvasLayer
 var detailed_unit_info_panel: Panel
 var detailed_unit_info_name: Label
+var detailed_unit_info_meta_label: Label
+var detailed_unit_info_summary_text: RichTextLabel
+var detailed_unit_info_weapon_badge: Label
+var detailed_unit_info_weapon_icon: TextureRect
+var detailed_unit_info_weapon_name: Label
 var detailed_unit_info_portrait: TextureRect
 var detailed_unit_info_left_text: RichTextLabel
 var detailed_unit_info_right_text: RichTextLabel
+var detailed_unit_info_relationships_root: VBoxContainer
 var detailed_unit_info_close_btn: Button
+var detailed_unit_info_primary_widgets: Dictionary = {}
+var detailed_unit_info_stat_widgets: Dictionary = {}
+var detailed_unit_info_growth_widgets: Dictionary = {}
+var detailed_unit_info_anim_tween: Tween
+var field_log_toggle_btn: Button
+var field_log_toggle_tween: Tween
 
 # =============================================================================
 # EXPORTED SCENE / AUDIO / GENERAL CONFIG
@@ -205,11 +252,13 @@ var detailed_unit_info_close_btn: Button
 @onready var cursor = $Cursor
 @onready var cursor_sprite = $Cursor/Sprite2D
 @onready var target_cursor = $TargetCursor
+@onready var target_cursor_sprite: Sprite2D = get_node_or_null("TargetCursor/Sprite2D") as Sprite2D
 @onready var path_line: Line2D = $PathLine
 @onready var hover_glow = $HoverGlow
 
 @onready var minimap_container: Control = %MiniMapContainer
 @onready var map_drawer: CanvasItem = %MapDrawer
+@onready var decor_layer: Node = get_node_or_null("Decor")
 
 
 # =============================================================================
@@ -217,12 +266,15 @@ var detailed_unit_info_close_btn: Button
 # =============================================================================
 
 @onready var unit_info_panel = $UI/UnitInfoPanel
+@onready var ui_root: CanvasLayer = $UI
 @onready var unit_portrait = $UI/UnitInfoPanel/PortraitRect
 @onready var unit_name_label = $UI/UnitInfoPanel/NameLabel
 @onready var unit_hp_label = $UI/UnitInfoPanel/HPLabel
 @onready var unit_stats_label = $UI/UnitInfoPanel/StatsLabel
 @onready var support_btn = $UI/UnitInfoPanel/SupportButton
 @onready var open_inv_button = $UI/UnitInfoPanel/OpenInvButton
+@onready var unit_details_button: Button = get_node_or_null("UI/UnitDetailsButton") as Button
+var inspected_unit: Node2D = null
 
 @onready var gold_label = $UI/GoldLabel
 @onready var battle_log = $UI/BattleLogPanel/RichTextLabel
@@ -298,6 +350,17 @@ var forecast_atk_support_label: Label
 var forecast_def_support_label: Label
 var forecast_instruction_label: Label
 var forecast_reaction_label: Label
+var forecast_atk_hp_bar: ProgressBar
+var forecast_def_hp_bar: ProgressBar
+var _unit_info_primary_widgets: Dictionary = {}
+var _unit_info_primary_anim_tween: Tween
+var _unit_info_primary_anim_source_id: int = -1
+var _unit_info_primary_animating: bool = false
+var _unit_info_stat_widgets: Dictionary = {}
+var _unit_info_stat_anim_tween: Tween
+var _unit_info_stat_source_id: int = -1
+var _unit_info_stat_anim_source_id: int = -1
+var _unit_info_stat_animating: bool = false
 
 
 # =============================================================================
@@ -400,6 +463,7 @@ var show_danger_zone: bool = false
 var danger_zone_move_tiles: Array[Vector2i] = []
 var danger_zone_attack_tiles: Array[Vector2i] = []
 var _danger_zone_recalc_dirty: bool = false
+var _last_enemy_reinforcement_warning_turn: int = -1
 
 
 # =============================================================================
@@ -408,6 +472,7 @@ var _danger_zone_recalc_dirty: bool = false
 
 var fow_grid: Dictionary = {}
 var fow_display_alphas: Dictionary = {}
+var _decor_fow_base_modulates: Dictionary = {}
 
 var fow_image: Image
 var fow_texture: ImageTexture
@@ -2493,6 +2558,7 @@ func _coop_remote_sync_enemy_turn_move(body: Dictionary) -> void:
 	await unit.move_along_path(path_typed)
 	unit.move_points_used_this_turn = float(body.get("path_cost", get_path_move_cost(path_typed, unit)))
 	rebuild_grid()
+	update_fog_of_war()
 
 
 func _coop_remote_sync_enemy_turn_combat(body: Dictionary) -> void:
@@ -2648,6 +2714,2058 @@ func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
 	queue_redraw()
 	if current_state == pre_battle_state and pre_battle_state != null and pre_battle_state.has_method("_refresh_ui_list"):
 		pre_battle_state.call("_refresh_ui_list")
+
+func _queue_tactical_ui_overhaul() -> void:
+	if not is_inside_tree():
+		return
+	call_deferred("_apply_tactical_ui_overhaul")
+
+func _make_tactical_panel_style(fill: Color, border: Color = TACTICAL_UI_BORDER, border_width: int = 2, radius: int = 10) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(radius)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.32)
+	style.shadow_size = 8
+	style.shadow_offset = Vector2(0, 4)
+	style.content_margin_left = 12
+	style.content_margin_top = 10
+	style.content_margin_right = 12
+	style.content_margin_bottom = 10
+	return style
+
+func _make_tactical_bar_style(fill: Color, border: Color = TACTICAL_UI_BORDER_MUTED, border_width: int = 1, radius: int = 6) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(radius)
+	return style
+
+func _style_tactical_panel(panel: Panel, fill: Color = TACTICAL_UI_BG, border: Color = TACTICAL_UI_BORDER, border_width: int = 2, radius: int = 10) -> void:
+	if panel == null:
+		return
+	panel.add_theme_stylebox_override("panel", _make_tactical_panel_style(fill, border, border_width, radius))
+
+func _style_tactical_button(btn: Button, label: String, primary: bool = false, font_size: int = 24) -> void:
+	if btn == null:
+		return
+	var normal_fill: Color = TACTICAL_UI_PRIMARY_FILL if primary else TACTICAL_UI_SECONDARY_FILL
+	var hover_fill: Color = TACTICAL_UI_PRIMARY_HOVER if primary else TACTICAL_UI_SECONDARY_HOVER
+	var press_fill: Color = TACTICAL_UI_PRIMARY_PRESS if primary else TACTICAL_UI_SECONDARY_PRESS
+	var font_color: Color = Color(0.12, 0.08, 0.04, 1.0) if primary else TACTICAL_UI_TEXT
+	var regular_font: Font = btn.get_theme_font("font", "Label")
+	btn.text = label
+	btn.scale = Vector2.ONE
+	btn.add_theme_font_size_override("font_size", font_size)
+	if regular_font != null:
+		btn.add_theme_font_override("font", regular_font)
+	btn.add_theme_color_override("font_color", font_color)
+	btn.add_theme_color_override("font_hover_color", font_color)
+	btn.add_theme_color_override("font_pressed_color", font_color)
+	btn.add_theme_color_override("font_focus_color", font_color)
+	btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.9))
+	btn.add_theme_constant_override("outline_size", 4)
+	btn.add_theme_stylebox_override("normal", _make_tactical_panel_style(normal_fill, TACTICAL_UI_BORDER, 2, 10))
+	btn.add_theme_stylebox_override("hover", _make_tactical_panel_style(hover_fill, TACTICAL_UI_BORDER, 2, 10))
+	btn.add_theme_stylebox_override("pressed", _make_tactical_panel_style(press_fill, TACTICAL_UI_BORDER, 2, 10))
+	btn.add_theme_stylebox_override("focus", _make_tactical_panel_style(hover_fill, TACTICAL_UI_ACCENT, 2, 10))
+	btn.custom_minimum_size = btn.size
+
+
+func _get_battle_log_panel() -> Panel:
+	if battle_log == null:
+		return null
+	return battle_log.get_parent() as Panel
+
+
+func _ensure_field_log_toggle_button() -> Button:
+	if ui_root == null:
+		return null
+	if field_log_toggle_btn != null and is_instance_valid(field_log_toggle_btn):
+		return field_log_toggle_btn
+	var btn := ui_root.get_node_or_null("FieldLogToggleBtn") as Button
+	if btn == null:
+		btn = Button.new()
+		btn.name = "FieldLogToggleBtn"
+		ui_root.add_child(btn)
+	field_log_toggle_btn = btn
+	if not field_log_toggle_btn.pressed.is_connected(_on_field_log_toggle_pressed):
+		field_log_toggle_btn.pressed.connect(_on_field_log_toggle_pressed)
+	return field_log_toggle_btn
+
+
+func _set_field_log_toggle_button_text() -> void:
+	if field_log_toggle_btn == null:
+		return
+	_style_tactical_button(field_log_toggle_btn, "SHOW LOG" if not CampaignManager.battle_show_log else "HIDE LOG", false, 16)
+
+
+func _apply_field_log_visibility(animated: bool = false) -> void:
+	var battle_log_panel: Panel = _get_battle_log_panel()
+	var btn: Button = _ensure_field_log_toggle_button()
+	if battle_log_panel == null or btn == null:
+		return
+	if current_state == pre_battle_state:
+		if field_log_toggle_tween != null:
+			field_log_toggle_tween.kill()
+			field_log_toggle_tween = null
+		btn.visible = false
+		battle_log_panel.visible = false
+		if battle_log != null:
+			battle_log.visible = false
+		return
+	var expanded_panel_y: float = float(battle_log_panel.get_meta("field_log_expanded_y")) if battle_log_panel.has_meta("field_log_expanded_y") else battle_log_panel.position.y
+	var collapsed_panel_y: float = float(battle_log_panel.get_meta("field_log_collapsed_y")) if battle_log_panel.has_meta("field_log_collapsed_y") else battle_log_panel.position.y
+	var expanded_button_y: float = float(btn.get_meta("field_log_expanded_y")) if btn.has_meta("field_log_expanded_y") else btn.position.y
+	var collapsed_button_y: float = float(btn.get_meta("field_log_collapsed_y")) if btn.has_meta("field_log_collapsed_y") else btn.position.y
+	var target_panel_y: float = expanded_panel_y if CampaignManager.battle_show_log else collapsed_panel_y
+	var target_button_y: float = expanded_button_y if CampaignManager.battle_show_log else collapsed_button_y
+
+	btn.visible = true
+	battle_log_panel.visible = true
+	if battle_log != null and CampaignManager.battle_show_log:
+		battle_log.visible = true
+
+	if field_log_toggle_tween != null:
+		field_log_toggle_tween.kill()
+	field_log_toggle_tween = null
+
+	if not animated:
+		battle_log_panel.position.y = target_panel_y
+		btn.position.y = target_button_y
+		if battle_log != null:
+			battle_log.visible = CampaignManager.battle_show_log
+		_set_field_log_toggle_button_text()
+		return
+
+	field_log_toggle_tween = create_tween()
+	field_log_toggle_tween.set_parallel(true)
+	field_log_toggle_tween.set_trans(Tween.TRANS_BACK)
+	field_log_toggle_tween.set_ease(Tween.EASE_IN_OUT)
+	field_log_toggle_tween.tween_property(battle_log_panel, "position:y", target_panel_y, 0.28)
+	field_log_toggle_tween.tween_property(btn, "position:y", target_button_y, 0.28)
+	await field_log_toggle_tween.finished
+	field_log_toggle_tween = null
+	if battle_log != null:
+		battle_log.visible = CampaignManager.battle_show_log
+	_set_field_log_toggle_button_text()
+
+
+func _on_field_log_toggle_pressed() -> void:
+	CampaignManager.battle_show_log = not CampaignManager.battle_show_log
+	CampaignManager.save_global_settings()
+	if select_sound and select_sound.stream:
+		select_sound.pitch_scale = randf_range(0.96, 1.04)
+		select_sound.play()
+	_apply_field_log_visibility(true)
+
+func _style_tactical_label(label: Label, color: Color = TACTICAL_UI_TEXT, font_size: int = 22, outline_size: int = 4) -> void:
+	if label == null:
+		return
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.9))
+	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_font_size_override("font_size", font_size)
+
+func _style_tactical_richtext(text_box: RichTextLabel, font_size: int = 18, bold_font_size: int = 20) -> void:
+	if text_box == null:
+		return
+	text_box.add_theme_color_override("default_color", TACTICAL_UI_TEXT)
+	text_box.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.82))
+	text_box.add_theme_constant_override("outline_size", 3)
+	text_box.add_theme_font_size_override("normal_font_size", font_size)
+	text_box.add_theme_font_size_override("bold_font_size", font_size)
+	var normal_font: Font = text_box.get_theme_font("normal_font")
+	if normal_font != null:
+		text_box.add_theme_font_override("bold_font", normal_font)
+
+func _style_tactical_item_list(item_list: ItemList) -> void:
+	if item_list == null:
+		return
+	item_list.add_theme_stylebox_override("panel", _make_tactical_panel_style(TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 8))
+	item_list.add_theme_stylebox_override("cursor", _make_tactical_panel_style(Color(0.52, 0.43, 0.17, 0.32), TACTICAL_UI_BORDER, 2, 8))
+	item_list.add_theme_stylebox_override("cursor_unfocused", _make_tactical_panel_style(Color(0.45, 0.37, 0.15, 0.20), TACTICAL_UI_BORDER_MUTED, 1, 8))
+	item_list.add_theme_color_override("font_color", TACTICAL_UI_TEXT)
+	item_list.add_theme_color_override("font_selected_color", Color.WHITE)
+
+func _unit_info_primary_bar_definitions() -> Array[Dictionary]:
+	return [
+		{"key": "hp", "label": "HP"},
+		{"key": "poise", "label": "POISE"},
+		{"key": "xp", "label": "XP"},
+	]
+
+func _unit_info_primary_fill_color(bar_key: String, current_value: int, max_value: int) -> Color:
+	match bar_key:
+		"hp":
+			return _forecast_hp_fill_color(current_value, max_value)
+		"poise":
+			if max_value <= 0:
+				return TACTICAL_UI_TEXT_MUTED
+			var ratio := clampf(float(current_value) / float(max_value), 0.0, 1.0)
+			if ratio >= 0.67:
+				return Color(0.48, 0.90, 1.0, 1.0)
+			if ratio >= 0.34:
+				return Color(0.88, 0.78, 0.30, 1.0)
+			return Color(0.93, 0.42, 0.30, 1.0)
+		"xp":
+			return Color(0.96, 0.82, 0.36, 1.0)
+		_:
+			return TACTICAL_UI_ACCENT_SOFT
+
+func _style_unit_info_primary_bar(bar: ProgressBar, fill: Color, bar_key: String = "") -> void:
+	if bar == null:
+		return
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.clip_contents = true
+	var radius := 5
+	var bg_border := Color(0.38, 0.33, 0.22, 0.92)
+	match bar_key:
+		"hp":
+			radius = 7
+			bg_border = Color(0.54, 0.28, 0.22, 0.94)
+		"poise":
+			radius = 3
+			bg_border = Color(0.22, 0.46, 0.56, 0.94)
+		"xp":
+			radius = 2
+			bg_border = Color(0.56, 0.46, 0.18, 0.94)
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.06, 0.06, 0.05, 0.98)
+	bg_style.border_color = bg_border
+	bg_style.set_border_width_all(1)
+	bg_style.set_corner_radius_all(radius)
+	bg_style.shadow_color = Color(0.0, 0.0, 0.0, 0.24)
+	bg_style.shadow_size = 2
+
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = fill
+	fill_style.border_color = fill.lightened(0.18)
+	fill_style.set_border_width_all(1)
+	fill_style.set_corner_radius_all(radius)
+
+	bar.add_theme_stylebox_override("background", bg_style)
+	bar.add_theme_stylebox_override("fill", fill_style)
+
+func _attach_unit_info_bar_sheen(bar: ProgressBar) -> ColorRect:
+	if bar == null:
+		return null
+	bar.clip_contents = true
+	var sheen := bar.get_node_or_null("Sheen") as ColorRect
+	if sheen == null:
+		sheen = ColorRect.new()
+		sheen.name = "Sheen"
+		sheen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.add_child(sheen)
+	sheen.color = Color(1.0, 1.0, 1.0, 0.14)
+	sheen.size = Vector2(34, 20)
+	sheen.position = Vector2(-52, -6)
+	sheen.rotation_degrees = 14.0
+	sheen.modulate.a = 0.0
+	return sheen
+
+func _animate_unit_info_bar_sheen(sheen: ColorRect, bar: ProgressBar, delay: float = 0.0) -> void:
+	if sheen == null or bar == null:
+		return
+	var bar_width: float = max(bar.size.x, bar.custom_minimum_size.x, 120.0)
+	sheen.position = Vector2(-52, -6)
+	sheen.modulate.a = 0.0
+	var tw := create_tween()
+	if delay > 0.0:
+		tw.tween_interval(delay)
+	tw.tween_property(sheen, "modulate:a", 1.0, 0.08)
+	tw.parallel().tween_property(sheen, "position:x", bar_width + 18.0, 0.46).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(sheen, "modulate:a", 0.0, 0.12)
+
+func _ensure_unit_info_primary_widgets() -> Control:
+	if unit_info_panel == null:
+		return null
+	var root := unit_info_panel.get_node_or_null("UnitPrimaryBarsRoot") as Control
+	if root == null:
+		root = Control.new()
+		root.name = "UnitPrimaryBarsRoot"
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		unit_info_panel.add_child(root)
+
+	for bar_def in _unit_info_primary_bar_definitions():
+		var bar_key: String = str(bar_def.get("key", ""))
+		if bar_key == "":
+			continue
+		var row_name := "PrimaryBlock_%s" % bar_key
+		var block := root.get_node_or_null(row_name) as Panel
+		if block == null:
+			block = Panel.new()
+			block.name = row_name
+			block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			root.add_child(block)
+		_style_tactical_panel(block, Color(0.10, 0.09, 0.07, 0.82), Color(0.36, 0.31, 0.20, 0.72), 1, 6)
+
+		var name_label := block.get_node_or_null("Name") as Label
+		if name_label == null:
+			name_label = Label.new()
+			name_label.name = "Name"
+			name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(name_label)
+		var value_label := block.get_node_or_null("Value") as Label
+		if value_label == null:
+			value_label = Label.new()
+			value_label.name = "Value"
+			value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(value_label)
+		var value_chip := block.get_node_or_null("ValueChip") as Panel
+		if value_chip == null:
+			value_chip = Panel.new()
+			value_chip.name = "ValueChip"
+			value_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(value_chip)
+		var bar := block.get_node_or_null("Bar") as ProgressBar
+		if bar == null:
+			bar = ProgressBar.new()
+			bar.name = "Bar"
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(bar)
+		var sheen := _attach_unit_info_bar_sheen(bar)
+		value_chip.z_index = 1
+		value_label.z_index = 2
+		block.move_child(value_chip, max(0, block.get_child_count() - 2))
+		block.move_child(value_label, block.get_child_count() - 1)
+
+		_unit_info_primary_widgets[bar_key] = {
+			"panel": block,
+			"name": name_label,
+			"value_chip": value_chip,
+			"value": value_label,
+			"bar": bar,
+			"sheen": sheen,
+		}
+
+	_layout_unit_info_primary_widgets()
+	return root
+
+func _layout_unit_info_primary_widgets() -> void:
+	var root: Control = null
+	if unit_info_panel != null:
+		root = unit_info_panel.get_node_or_null("UnitPrimaryBarsRoot") as Control
+	if root == null:
+		return
+	root.position = Vector2(16, 60)
+	root.size = Vector2(210, 78)
+	var block_height := 24.0
+	var gap_y := 3.0
+	var defs := _unit_info_primary_bar_definitions()
+	for idx in range(defs.size()):
+		var bar_key: String = str(defs[idx].get("key", ""))
+		if not _unit_info_primary_widgets.has(bar_key):
+			continue
+		var widgets: Dictionary = _unit_info_primary_widgets[bar_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var pos := Vector2(0, idx * (block_height + gap_y))
+		if panel != null:
+			panel.position = pos
+			panel.size = Vector2(210, block_height)
+		if name_label != null:
+			name_label.position = Vector2(4, 0)
+			name_label.size = Vector2(42, 11)
+			name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			_style_tactical_label(name_label, TACTICAL_UI_TEXT_MUTED, 10, 2)
+		if value_chip != null:
+			value_chip.position = Vector2(138, 0)
+			value_chip.size = Vector2(68, 13)
+			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), Color(0.34, 0.30, 0.22, 0.86), 1, 4)
+		if value_label != null:
+			value_label.position = Vector2(144, 0)
+			value_label.size = Vector2(56, 13)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 13, 1)
+		if bar != null:
+			bar.min_value = 0.0
+			bar.max_value = 100.0
+			bar.position = Vector2(4, 15)
+			bar.size = Vector2(202, 8)
+
+func _set_unit_info_primary_widgets_visible(visible: bool) -> void:
+	var root: Control = null
+	if unit_info_panel != null:
+		root = unit_info_panel.get_node_or_null("UnitPrimaryBarsRoot") as Control
+	if not visible and _unit_info_primary_anim_tween != null:
+		_unit_info_primary_anim_tween.kill()
+		_unit_info_primary_anim_tween = null
+		_unit_info_primary_animating = false
+		_unit_info_primary_anim_source_id = -1
+	if root != null:
+		root.visible = visible
+
+func _animate_unit_info_primary_widgets_in(target_values: Dictionary, source_id: int) -> void:
+	if _unit_info_primary_anim_tween != null:
+		_unit_info_primary_anim_tween.kill()
+	_unit_info_primary_anim_tween = create_tween().set_parallel(true)
+	_unit_info_primary_animating = true
+	_unit_info_primary_anim_source_id = source_id
+	var defs := _unit_info_primary_bar_definitions()
+	for idx in range(defs.size()):
+		var bar_key: String = str(defs[idx].get("key", ""))
+		if not _unit_info_primary_widgets.has(bar_key):
+			continue
+		var widgets: Dictionary = _unit_info_primary_widgets[bar_key]
+		var panel := widgets.get("panel") as Panel
+		var bar := widgets.get("bar") as ProgressBar
+		var sheen := widgets.get("sheen") as ColorRect
+		var delay := float(idx) * 0.045
+		if panel != null:
+			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			_unit_info_primary_anim_tween.tween_property(panel, "modulate", Color.WHITE, 0.18).set_delay(delay)
+		if bar != null:
+			bar.value = 0.0
+			_unit_info_primary_anim_tween.tween_property(bar, "value", float(target_values.get(bar_key, 0.0)), 0.28).set_delay(delay)
+		if sheen != null:
+			_animate_unit_info_bar_sheen(sheen, bar, delay + 0.06)
+	_unit_info_primary_anim_tween.finished.connect(func():
+		_unit_info_primary_anim_tween = null
+		_unit_info_primary_animating = false
+		_unit_info_primary_anim_source_id = -1
+	, CONNECT_ONE_SHOT)
+
+func _refresh_unit_info_primary_widgets(primary_values: Dictionary, animate: bool = false, source_id: int = -1) -> void:
+	var root := _ensure_unit_info_primary_widgets()
+	if root == null:
+		return
+	root.visible = true
+	var display_values: Dictionary = {}
+	for bar_def in _unit_info_primary_bar_definitions():
+		var bar_key: String = str(bar_def.get("key", ""))
+		if not _unit_info_primary_widgets.has(bar_key):
+			continue
+		var widgets: Dictionary = _unit_info_primary_widgets[bar_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var sheen := widgets.get("sheen") as ColorRect
+		var row_data: Dictionary = primary_values.get(bar_key, {})
+		var current_value: int = int(row_data.get("current", 0))
+		var max_value: int = max(1, int(row_data.get("max", 1)))
+		var display_text: String = str(row_data.get("text", "%d/%d" % [current_value, max_value]))
+		var fill_color := _unit_info_primary_fill_color(bar_key, current_value, max_value)
+		display_values[bar_key] = float(clampf(float(current_value), 0.0, float(max_value)))
+		if name_label != null:
+			name_label.text = str(bar_def.get("label", bar_key))
+			_style_tactical_label(name_label, fill_color, 10, 2)
+		if panel != null:
+			var panel_border := Color(
+				min(fill_color.r + 0.08, 1.0),
+				min(fill_color.g + 0.08, 1.0),
+				min(fill_color.b + 0.08, 1.0),
+				0.72
+			)
+			var panel_fill := Color(0.10, 0.09, 0.07, 0.84)
+			var panel_radius := 6
+			match bar_key:
+				"hp":
+					panel_radius = 8
+				"poise":
+					panel_radius = 5
+				"xp":
+					panel_radius = 4
+			_style_tactical_panel(panel, panel_fill, panel_border, 1, panel_radius)
+		if value_chip != null:
+			var chip_fill := Color(0.10, 0.09, 0.07, 0.98)
+			var chip_border := Color(
+				min(fill_color.r + 0.12, 1.0),
+				min(fill_color.g + 0.12, 1.0),
+				min(fill_color.b + 0.12, 1.0),
+				0.92
+			)
+			_style_tactical_panel(value_chip, chip_fill, chip_border, 1, 4)
+		if value_label != null:
+			value_label.text = display_text
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 13, 2)
+		if bar != null:
+			bar.max_value = float(max_value)
+			if not animate and not (_unit_info_primary_animating and _unit_info_primary_anim_source_id == source_id):
+				bar.value = display_values[bar_key]
+			_style_unit_info_primary_bar(bar, fill_color, bar_key)
+	if animate:
+		_animate_unit_info_primary_widgets_in(display_values, source_id)
+
+func _unit_info_stat_tier_index(stat_value: int) -> int:
+	if stat_value >= 200:
+		return 4
+	if stat_value >= 150:
+		return 3
+	if stat_value >= 100:
+		return 2
+	if stat_value >= 50:
+		return 1
+	return 0
+
+func _unit_info_stat_definitions() -> Array[Dictionary]:
+	return [
+		{"key": "strength", "label": "STR"},
+		{"key": "magic", "label": "MAG"},
+		{"key": "defense", "label": "DEF"},
+		{"key": "resistance", "label": "RES"},
+		{"key": "speed", "label": "SPD"},
+		{"key": "agility", "label": "AGI"},
+	]
+
+func _unit_info_stat_fill_color(stat_key: String, stat_value: int) -> Color:
+	if stat_value >= 200:
+		return UNIT_INFO_STAT_TIER_WHITE
+	if stat_value >= 150:
+		return UNIT_INFO_STAT_TIER_ORANGE
+	if stat_value >= 100:
+		return UNIT_INFO_STAT_TIER_PURPLE
+	if stat_value >= 50:
+		return UNIT_INFO_STAT_TIER_CYAN
+	match stat_key:
+		"strength":
+			return Color(0.94, 0.48, 0.36, 1.0)
+		"magic":
+			return Color(0.78, 0.48, 0.96, 1.0)
+		"defense":
+			return Color(0.50, 0.88, 0.50, 1.0)
+		"resistance":
+			return Color(0.38, 0.90, 0.82, 1.0)
+		"speed":
+			return Color(0.46, 0.76, 1.0, 1.0)
+		"agility":
+			return Color(0.96, 0.82, 0.44, 1.0)
+		_:
+			return TACTICAL_UI_ACCENT_SOFT
+
+func _style_unit_info_stat_bar(bar: ProgressBar, fill: Color, overcap: bool) -> void:
+	if bar == null:
+		return
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.06, 0.06, 0.05, 0.98)
+	bg_style.border_color = fill if overcap else Color(0.24, 0.22, 0.18, 1.0)
+	bg_style.set_border_width_all(1)
+	bg_style.set_corner_radius_all(5)
+	bg_style.shadow_color = Color(0.0, 0.0, 0.0, 0.22)
+	bg_style.shadow_size = 2
+
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = fill
+	fill_style.border_color = fill.lightened(0.18)
+	fill_style.set_border_width_all(1)
+	fill_style.set_corner_radius_all(5)
+
+	bar.add_theme_stylebox_override("background", bg_style)
+	bar.add_theme_stylebox_override("fill", fill_style)
+
+func _ensure_unit_info_stat_fx_nodes(block: Panel) -> void:
+	if block == null:
+		return
+	var aura := block.get_node_or_null("TierAura") as ColorRect
+	if aura == null:
+		aura = ColorRect.new()
+		aura.name = "TierAura"
+		aura.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		block.add_child(aura)
+		block.move_child(aura, 0)
+	aura.modulate.a = 0.0
+
+	var flash := block.get_node_or_null("TierFlash") as ColorRect
+	if flash == null:
+		flash = ColorRect.new()
+		flash.name = "TierFlash"
+		flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		block.add_child(flash)
+		block.move_child(flash, 0)
+	flash.modulate.a = 0.0
+
+	block.clip_contents = false
+	var arcs_root := _get_unit_info_stat_arcs_root(block)
+	if arcs_root == null:
+		return
+	for idx in range(8):
+		var arc_name := "Arc%d" % idx
+		var arc := arcs_root.get_node_or_null(arc_name) as ColorRect
+		if arc == null:
+			arc = ColorRect.new()
+			arc.name = arc_name
+			arc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arcs_root.add_child(arc)
+		arc.z_index = 220
+		arc.size = Vector2(20, 4)
+		arc.color = Color.WHITE
+		arc.modulate.a = 0.0
+	_position_unit_info_stat_fx_nodes(block)
+
+func _get_unit_info_stat_arcs_root(block: Panel) -> Control:
+	if block == null or ui_root == null:
+		return null
+	var arcs_root: Control = null
+	if block.has_meta("tier_arcs_root_ref"):
+		var stored_root = block.get_meta("tier_arcs_root_ref")
+		if is_instance_valid(stored_root):
+			arcs_root = stored_root as Control
+	if arcs_root == null:
+		arcs_root = Control.new()
+		arcs_root.name = "TierArcs"
+		ui_root.add_child(arcs_root)
+		block.set_meta("tier_arcs_root_ref", arcs_root)
+	var block_rect: Rect2 = block.get_global_rect()
+	arcs_root.position = block_rect.position + Vector2(-10, -10)
+	arcs_root.size = block_rect.size + Vector2(20, 20)
+	arcs_root.visible = false
+	arcs_root.z_index = 200
+	arcs_root.clip_contents = false
+	return arcs_root
+
+func _position_unit_info_stat_fx_nodes(block: Panel) -> void:
+	if block == null:
+		return
+	var aura := block.get_node_or_null("TierAura") as ColorRect
+	if aura != null:
+		aura.position = Vector2(4, 8)
+		aura.size = Vector2(max(block.size.x - 8.0, 20.0), 7)
+	var flash := block.get_node_or_null("TierFlash") as ColorRect
+	if flash != null:
+		flash.position = Vector2.ZERO
+		flash.size = block.size
+	var arcs_root := _get_unit_info_stat_arcs_root(block)
+	if arcs_root != null:
+		var block_rect: Rect2 = block.get_global_rect()
+		arcs_root.position = block_rect.position + Vector2(-10, -10)
+		arcs_root.size = block_rect.size + Vector2(20, 20)
+
+func _stop_unit_info_stat_tier_fx(block: Panel) -> void:
+	if block == null:
+		return
+	var flash_tween = null
+	if block.has_meta("tier_flash_tween"):
+		flash_tween = block.get_meta("tier_flash_tween")
+	if flash_tween is Tween:
+		(flash_tween as Tween).kill()
+	if block.has_meta("tier_flash_tween"):
+		block.remove_meta("tier_flash_tween")
+	var loop_tween = null
+	if block.has_meta("tier_loop_tween"):
+		loop_tween = block.get_meta("tier_loop_tween")
+	if loop_tween is Tween:
+		(loop_tween as Tween).kill()
+	if block.has_meta("tier_loop_tween"):
+		block.remove_meta("tier_loop_tween")
+	var arc_tweens: Array = []
+	if block.has_meta("tier_arc_tweens"):
+		var stored_arc_tweens = block.get_meta("tier_arc_tweens")
+		if stored_arc_tweens is Array:
+			arc_tweens = stored_arc_tweens
+	if arc_tweens is Array:
+		for item in arc_tweens:
+			if item is Tween:
+				(item as Tween).kill()
+	if block.has_meta("tier_arc_tweens"):
+		block.remove_meta("tier_arc_tweens")
+	if block.has_meta("tier_loop_tier"):
+		block.remove_meta("tier_loop_tier")
+	var flash := block.get_node_or_null("TierFlash") as ColorRect
+	if flash != null:
+		flash.modulate.a = 0.0
+	var aura := block.get_node_or_null("TierAura") as ColorRect
+	if aura != null:
+		aura.modulate.a = 0.0
+	var arcs_root := _get_unit_info_stat_arcs_root(block)
+	if arcs_root != null:
+		arcs_root.visible = false
+		for child in arcs_root.get_children():
+			if child is ColorRect:
+				var arc := child as ColorRect
+				arc.modulate.a = 0.0
+
+func _unit_info_stat_arc_count_for_tier(tier: int) -> int:
+	match tier:
+		1:
+			return 3
+		2:
+			return 4
+		3:
+			return 6
+		_:
+			return 8
+
+func _unit_info_stat_arc_perimeter_length(field_size: Vector2) -> float:
+	var width: float = max(field_size.x - 8.0, 12.0)
+	var height: float = max(field_size.y - 8.0, 12.0)
+	return (width * 2.0) + (height * 2.0)
+
+func _unit_info_stat_arc_perimeter_point(field_size: Vector2, raw_offset: float) -> Vector2:
+	var inset: float = 4.0
+	var width: float = max(field_size.x - (inset * 2.0), 12.0)
+	var height: float = max(field_size.y - (inset * 2.0), 12.0)
+	var perimeter: float = (width * 2.0) + (height * 2.0)
+	if perimeter <= 0.0:
+		return Vector2(inset, inset)
+	var offset: float = fposmod(raw_offset, perimeter)
+	if offset < width:
+		return Vector2(inset + offset, inset)
+	offset -= width
+	if offset < height:
+		return Vector2(inset + width, inset + offset)
+	offset -= height
+	if offset < width:
+		return Vector2((inset + width) - offset, inset + height)
+	offset -= width
+	return Vector2(inset, (inset + height) - offset)
+
+func _unit_info_stat_arc_perimeter_normal(field_size: Vector2, raw_offset: float) -> Vector2:
+	var inset: float = 4.0
+	var width: float = max(field_size.x - (inset * 2.0), 12.0)
+	var height: float = max(field_size.y - (inset * 2.0), 12.0)
+	var perimeter: float = (width * 2.0) + (height * 2.0)
+	if perimeter <= 0.0:
+		return Vector2.UP
+	var offset: float = fposmod(raw_offset, perimeter)
+	if offset < width:
+		return Vector2.UP
+	offset -= width
+	if offset < height:
+		return Vector2.RIGHT
+	offset -= height
+	if offset < width:
+		return Vector2.DOWN
+	return Vector2.LEFT
+
+func _set_unit_info_stat_arc_progress(progress: float, arc: ColorRect, field_size: Vector2, segment_length: float, tier: int, phase: float, clockwise: bool) -> void:
+	if arc == null:
+		return
+	var point: Vector2 = _unit_info_stat_arc_perimeter_point(field_size, progress)
+	var normal: Vector2 = _unit_info_stat_arc_perimeter_normal(field_size, progress)
+	var direction: float = 1.0 if clockwise else -1.0
+	var outward_push: float = 1.5 + (float(tier) * 0.8)
+	var wave: float = sin((progress * 0.08 * direction) + phase)
+	var thickness: float = 4.0 + (float(tier) * 0.7)
+	var long_length: float = max(segment_length * 0.42, 12.0)
+	var short_length: float = max(segment_length * 0.22, 8.0)
+	if absf(normal.x) > 0.5:
+		arc.size = Vector2(thickness, long_length if clockwise else short_length)
+		arc.position = point - Vector2(arc.size.x * 0.5, arc.size.y * 0.5) + (normal * ((wave * 1.4) + outward_push))
+	else:
+		arc.size = Vector2(long_length if clockwise else short_length, thickness)
+		arc.position = point - Vector2(arc.size.x * 0.5, arc.size.y * 0.5) + (normal * ((wave * 1.4) + outward_push))
+
+func _play_unit_info_stat_tier_flash(block: Panel, tier: int, color: Color) -> void:
+	if block == null or tier <= 0:
+		return
+	_position_unit_info_stat_fx_nodes(block)
+	var flash := block.get_node_or_null("TierFlash") as ColorRect
+	if flash == null:
+		return
+	var flash_tween = null
+	if block.has_meta("tier_flash_tween"):
+		flash_tween = block.get_meta("tier_flash_tween")
+	if flash_tween is Tween:
+		(flash_tween as Tween).kill()
+	flash.color = Color(color.r, color.g, color.b, 0.15 + (float(tier) * 0.04))
+	flash.modulate.a = 0.0
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_SINE)
+	tw.set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(flash, "modulate:a", 1.0, 0.10)
+	tw.tween_property(flash, "modulate:a", 0.0, 0.24)
+	block.set_meta("tier_flash_tween", tw)
+
+func _start_unit_info_stat_tier_loop(block: Panel, tier: int, color: Color) -> void:
+	if block == null or tier <= 0:
+		return
+	_position_unit_info_stat_fx_nodes(block)
+	var aura := block.get_node_or_null("TierAura") as ColorRect
+	var arcs_root := _get_unit_info_stat_arcs_root(block)
+	if aura == null or arcs_root == null:
+		return
+	var loop_tween = null
+	if block.has_meta("tier_loop_tween"):
+		loop_tween = block.get_meta("tier_loop_tween")
+	if loop_tween is Tween:
+		(loop_tween as Tween).kill()
+	var arc_tweens_old: Array = []
+	if block.has_meta("tier_arc_tweens"):
+		var stored_arc_tweens_old = block.get_meta("tier_arc_tweens")
+		if stored_arc_tweens_old is Array:
+			arc_tweens_old = stored_arc_tweens_old
+	if arc_tweens_old is Array:
+		for item in arc_tweens_old:
+			if item is Tween:
+				(item as Tween).kill()
+
+	var aura_color := color.lightened(0.10)
+	aura.color = aura_color
+	aura.modulate.a = 0.22 + (float(tier) * 0.06)
+	arcs_root.visible = true
+
+	var field_size: Vector2 = arcs_root.size
+	var alpha_peak: float = float(min(0.96 + (float(tier) * 0.02), 1.0))
+	var alpha_idle: float = 0.72 + (float(tier) * 0.05)
+	var cycle_time: float = float(max(0.68 - (float(tier) * 0.07), 0.28))
+	var perimeter: float = _unit_info_stat_arc_perimeter_length(field_size)
+	var segment_length: float = clampf(perimeter * (0.13 + (float(tier) * 0.02)), 22.0, perimeter * 0.34)
+
+	var tw := create_tween().set_parallel(true).set_loops()
+	tw.set_trans(Tween.TRANS_SINE)
+	tw.set_ease(Tween.EASE_IN_OUT)
+	tw.parallel().tween_property(aura, "modulate:a", min(0.34 + (float(tier) * 0.08), 0.72), cycle_time * 0.60)
+	tw.parallel().tween_property(aura, "modulate:a", 0.16 + (float(tier) * 0.05), cycle_time * 0.40).set_delay(cycle_time * 0.60)
+
+	var arc_count: int = _unit_info_stat_arc_count_for_tier(tier)
+	var arc_tweens: Array = []
+	for idx in range(arcs_root.get_child_count()):
+		var arc := arcs_root.get_child(idx) as ColorRect
+		if arc == null:
+			continue
+		if idx >= arc_count:
+			arc.modulate.a = 0.0
+			continue
+		var arc_color := color.lightened(0.22 + (float(idx) * 0.03))
+		var start_offset: float = (perimeter / float(arc_count)) * float(idx)
+		var end_offset: float = start_offset + (perimeter * (1.0 if idx % 2 == 0 else -1.0))
+		var phase: float = float(idx) * 0.85
+		arc.color = arc_color
+		_set_unit_info_stat_arc_progress(start_offset, arc, field_size, segment_length, tier, phase, idx % 2 == 0)
+		arc.modulate.a = alpha_idle
+		var arc_tw := create_tween().set_parallel(true).set_loops()
+		arc_tw.set_trans(Tween.TRANS_SINE)
+		arc_tw.set_ease(Tween.EASE_IN_OUT)
+		arc_tw.tween_method(
+			Callable(self, "_set_unit_info_stat_arc_progress").bind(arc, field_size, segment_length, tier, phase, idx % 2 == 0),
+			start_offset,
+			end_offset,
+			cycle_time
+		)
+		arc_tw.parallel().tween_property(arc, "modulate:a", alpha_peak, cycle_time * 0.44)
+		arc_tw.parallel().tween_property(arc, "modulate:a", alpha_idle, cycle_time * 0.56).set_delay(cycle_time * 0.44)
+		arc_tweens.append(arc_tw)
+	block.set_meta("tier_loop_tween", tw)
+	block.set_meta("tier_arc_tweens", arc_tweens)
+	block.set_meta("tier_loop_tier", tier)
+
+func _play_unit_info_stat_tier_fx(block: Panel, tier: int, color: Color) -> void:
+	if block == null or tier <= 0:
+		return
+	_ensure_unit_info_stat_fx_nodes(block)
+	_play_unit_info_stat_tier_flash(block, tier, color)
+	_start_unit_info_stat_tier_loop(block, tier, color)
+
+func _ensure_unit_info_stat_widgets() -> Control:
+	if unit_info_panel == null:
+		return null
+	var root := unit_info_panel.get_node_or_null("UnitStatBarsRoot") as Control
+	if root == null:
+		root = Control.new()
+		root.name = "UnitStatBarsRoot"
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		unit_info_panel.add_child(root)
+
+	for stat_def in _unit_info_stat_definitions():
+		var stat_key: String = str(stat_def.get("key", ""))
+		if stat_key == "":
+			continue
+		var panel_name := "StatBlock_%s" % stat_key
+		var block := root.get_node_or_null(panel_name) as Panel
+		if block == null:
+			block = Panel.new()
+			block.name = panel_name
+			block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			root.add_child(block)
+		_style_tactical_panel(block, Color(0.10, 0.09, 0.07, 0.88), TACTICAL_UI_BORDER_MUTED, 1, 6)
+
+		var name_label := block.get_node_or_null("Name") as Label
+		if name_label == null:
+			name_label = Label.new()
+			name_label.name = "Name"
+			name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(name_label)
+		var value_label := block.get_node_or_null("Value") as Label
+		if value_label == null:
+			value_label = Label.new()
+			value_label.name = "Value"
+			value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(value_label)
+		var bar := block.get_node_or_null("Bar") as ProgressBar
+		if bar == null:
+			bar = ProgressBar.new()
+			bar.name = "Bar"
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			block.add_child(bar)
+
+		_unit_info_stat_widgets[stat_key] = {
+			"panel": block,
+			"name": name_label,
+			"value": value_label,
+			"bar": bar,
+		}
+
+	_layout_unit_info_stat_widgets()
+	return root
+
+func _layout_unit_info_stat_widgets() -> void:
+	var root: Control = null
+	if unit_info_panel != null:
+		root = unit_info_panel.get_node_or_null("UnitStatBarsRoot") as Control
+	if root == null:
+		return
+	root.position = Vector2(16, 170)
+	root.size = Vector2(210, 50)
+	var block_width := 102.0
+	var block_height := 16.0
+	var gap_x := 6.0
+	var gap_y := 2.0
+	var defs := _unit_info_stat_definitions()
+	for idx in range(defs.size()):
+		var stat_key: String = str(defs[idx].get("key", ""))
+		if not _unit_info_stat_widgets.has(stat_key):
+			continue
+		var widgets: Dictionary = _unit_info_stat_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var col: int = idx % 2
+		var row: int = idx / 2
+		var pos := Vector2(col * (block_width + gap_x), row * (block_height + gap_y))
+		if panel != null:
+			panel.position = pos
+			panel.size = Vector2(block_width, block_height)
+			_ensure_unit_info_stat_fx_nodes(panel)
+		if name_label != null:
+			name_label.position = Vector2(4, 0)
+			name_label.size = Vector2(30, 8)
+			name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			_style_tactical_label(name_label, TACTICAL_UI_TEXT_MUTED, 10, 2)
+		if value_label != null:
+			value_label.position = Vector2(34, 0)
+			value_label.size = Vector2(64, 8)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 10, 2)
+		if bar != null:
+			bar.min_value = 0.0
+			bar.max_value = UNIT_INFO_STAT_BAR_CAP
+			bar.position = Vector2(4, 9)
+			bar.size = Vector2(94, 5)
+
+func _set_unit_info_stat_widgets_visible(visible: bool) -> void:
+	var root: Control = null
+	if unit_info_panel != null:
+		root = unit_info_panel.get_node_or_null("UnitStatBarsRoot") as Control
+	if not visible and _unit_info_stat_anim_tween != null:
+		_unit_info_stat_anim_tween.kill()
+		_unit_info_stat_anim_tween = null
+		_unit_info_stat_animating = false
+		_unit_info_stat_anim_source_id = -1
+	if root != null:
+		if not visible:
+			for child in root.get_children():
+				if child is Panel:
+					_stop_unit_info_stat_tier_fx(child as Panel)
+		root.visible = visible
+
+func _unit_info_stat_display_value(raw_value: int) -> float:
+	if raw_value <= 0:
+		return 0.0
+	var cap_int := int(UNIT_INFO_STAT_BAR_CAP)
+	if raw_value < cap_int:
+		return float(raw_value)
+	var wrapped := raw_value % cap_int
+	if wrapped == 0:
+		return UNIT_INFO_STAT_BAR_CAP
+	return float(wrapped)
+
+func _animate_unit_info_stat_widgets_in(display_values: Dictionary, source_id: int) -> void:
+	if _unit_info_stat_anim_tween != null:
+		_unit_info_stat_anim_tween.kill()
+	_unit_info_stat_anim_tween = create_tween().set_parallel(true)
+	_unit_info_stat_animating = true
+	_unit_info_stat_anim_source_id = source_id
+	var defs := _unit_info_stat_definitions()
+	for idx in range(defs.size()):
+		var stat_key: String = str(defs[idx].get("key", ""))
+		if not _unit_info_stat_widgets.has(stat_key):
+			continue
+		var widgets: Dictionary = _unit_info_stat_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var bar := widgets.get("bar") as ProgressBar
+		var delay := float(idx) * 0.028
+		if panel != null:
+			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			_unit_info_stat_anim_tween.tween_property(panel, "modulate", Color.WHITE, 0.16).set_delay(delay)
+		if bar != null:
+			bar.value = 0.0
+			_unit_info_stat_anim_tween.tween_property(bar, "value", float(display_values.get(stat_key, 0.0)), 0.22).set_delay(delay)
+	_unit_info_stat_anim_tween.finished.connect(func():
+		_unit_info_stat_anim_tween = null
+		_unit_info_stat_animating = false
+		_unit_info_stat_anim_source_id = -1
+	, CONNECT_ONE_SHOT)
+
+func _refresh_unit_info_stat_widgets(stat_values: Dictionary, animate: bool = false, source_id: int = -1) -> void:
+	var root := _ensure_unit_info_stat_widgets()
+	if root == null:
+		return
+	root.visible = true
+	var display_values: Dictionary = {}
+	for stat_def in _unit_info_stat_definitions():
+		var stat_key: String = str(stat_def.get("key", ""))
+		var stat_label: String = str(stat_def.get("label", stat_key))
+		if not _unit_info_stat_widgets.has(stat_key):
+			continue
+		var widgets: Dictionary = _unit_info_stat_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var raw_value: int = int(stat_values.get(stat_key, 0))
+		var display_value := _unit_info_stat_display_value(raw_value)
+		display_values[stat_key] = display_value
+		var overcap: bool = raw_value >= int(UNIT_INFO_STAT_BAR_CAP)
+		var fill_color := _unit_info_stat_fill_color(stat_key, raw_value)
+		var tier := _unit_info_stat_tier_index(raw_value)
+		var previous_tier := -1
+		if panel != null and panel.has_meta("stat_tier"):
+			previous_tier = int(panel.get_meta("stat_tier"))
+		if panel != null:
+			panel.modulate = Color.WHITE
+			_style_tactical_panel(panel, Color(0.10, 0.09, 0.07, 0.88), fill_color if overcap else TACTICAL_UI_BORDER_MUTED, 1, 6)
+			panel.set_meta("stat_tier", tier)
+		if name_label != null:
+			name_label.text = stat_label
+			_style_tactical_label(name_label, fill_color, 11, 2)
+		if value_label != null:
+			value_label.text = str(raw_value)
+			_style_tactical_label(value_label, fill_color if overcap else TACTICAL_UI_TEXT, 11, 2)
+		if bar != null:
+			_style_unit_info_stat_bar(bar, fill_color, overcap)
+			if not animate and not (_unit_info_stat_animating and _unit_info_stat_anim_source_id == source_id):
+				bar.value = display_value
+		if panel != null:
+			if tier <= 0:
+				_stop_unit_info_stat_tier_fx(panel)
+			elif animate or (previous_tier >= 0 and previous_tier != tier) or not panel.has_meta("tier_loop_tween"):
+				_play_unit_info_stat_tier_fx(panel, tier, fill_color)
+	if animate:
+		_animate_unit_info_stat_widgets_in(display_values, source_id)
+
+func _style_forecast_hp_bar(bar: ProgressBar, fill: Color) -> void:
+	if bar == null:
+		return
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_theme_stylebox_override("background", _make_tactical_bar_style(Color(0.10, 0.09, 0.06, 0.98), Color(0.72, 0.61, 0.28, 1.0), 2, 6))
+	bar.add_theme_stylebox_override("fill", _make_tactical_bar_style(fill, Color(0.85, 0.78, 0.44, 0.95), 1, 6))
+
+func _forecast_hp_fill_color(current_hp: int, max_hp: int) -> Color:
+	if max_hp <= 0:
+		return Color(0.82, 0.25, 0.22, 1.0)
+	var ratio: float = clampf(float(current_hp) / float(max_hp), 0.0, 1.0)
+	if ratio >= 0.67:
+		return Color(0.24, 0.86, 0.50, 1.0)
+	if ratio >= 0.34:
+		return Color(0.93, 0.74, 0.24, 1.0)
+	return Color(0.92, 0.32, 0.27, 1.0)
+
+func _truncate_forecast_text(text: String, max_chars: int) -> String:
+	var clean: String = str(text).strip_edges()
+	if max_chars <= 3 or clean.length() <= max_chars:
+		return clean
+	return clean.substr(0, max_chars - 3) + "..."
+
+func _format_forecast_name(prefix: String, unit_name: String, max_name_chars: int = 14) -> String:
+	var pre: String = str(prefix).strip_edges()
+	var capped_name: String = _truncate_forecast_text(unit_name, max_name_chars)
+	if pre == "":
+		return capped_name
+	return pre + ": " + capped_name
+
+func _format_forecast_name_fitted(prefix: String, unit_name: String, max_total_chars: int = 18) -> String:
+	var pre: String = str(prefix).strip_edges()
+	var prefix_text: String = pre + ": " if pre != "" else ""
+	var available_name_chars: int = maxi(4, max_total_chars - prefix_text.length())
+	return prefix_text + _truncate_forecast_text(unit_name, available_name_chars)
+
+func _forecast_weapon_marker(weapon: WeaponData) -> String:
+	if weapon == null:
+		return "[---]"
+	if WeaponData.is_staff_like(weapon):
+		return "[STF]"
+	match int(weapon.weapon_type):
+		WeaponData.WeaponType.SWORD:
+			return "[SWD]"
+		WeaponData.WeaponType.LANCE:
+			return "[LNC]"
+		WeaponData.WeaponType.AXE:
+			return "[AXE]"
+		WeaponData.WeaponType.BOW:
+			return "[BOW]"
+		WeaponData.WeaponType.TOME:
+			return "[TOM]"
+		WeaponData.WeaponType.KNIFE:
+			return "[KNF]"
+		WeaponData.WeaponType.FIREARM:
+			return "[GUN]"
+		WeaponData.WeaponType.FIST:
+			return "[FST]"
+		WeaponData.WeaponType.INSTRUMENT:
+			return "[SON]"
+		WeaponData.WeaponType.DARK_TOME:
+			return "[DRK]"
+		_:
+			return "[---]"
+
+func _format_forecast_weapon_text(weapon: WeaponData) -> String:
+	if weapon == null:
+		return "[---] UNARMED"
+	return "%s %s" % [_forecast_weapon_marker(weapon), String(weapon.weapon_name).to_upper()]
+
+func _format_forecast_weapon_name(weapon: WeaponData, max_chars: int = 14) -> String:
+	if weapon == null:
+		return "UNARMED"
+	return _truncate_forecast_text(String(weapon.weapon_name).to_upper(), max_chars)
+
+func _forecast_weapon_rarity_glow_color(weapon: WeaponData) -> Color:
+	if weapon == null:
+		return Color(0, 0, 0, 0)
+	match String(weapon.rarity):
+		"Rare":
+			return Color(0.42, 0.72, 1.0, 0.22)
+		"Epic":
+			return Color(0.82, 0.50, 1.0, 0.22)
+		"Legendary":
+			return Color(1.0, 0.84, 0.38, 0.26)
+		_:
+			return Color(0, 0, 0, 0)
+
+func _style_forecast_weapon_glow(glow_panel: Panel, glow_color: Color) -> void:
+	if glow_panel == null:
+		return
+	var style := StyleBoxFlat.new()
+	style.bg_color = glow_color
+	style.set_corner_radius_all(6)
+	style.shadow_color = Color(glow_color.r, glow_color.g, glow_color.b, glow_color.a * 1.6)
+	style.shadow_size = 10
+	style.shadow_offset = Vector2.ZERO
+	glow_panel.add_theme_stylebox_override("panel", style)
+
+func _ensure_tactical_backdrop(name: String) -> Panel:
+	var ui_root := get_node_or_null("UI")
+	if ui_root == null:
+		return null
+	var panel := ui_root.get_node_or_null(name) as Panel
+	if panel != null:
+		return panel
+	panel = Panel.new()
+	panel.name = name
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_root.add_child(panel)
+	ui_root.move_child(panel, 0)
+	return panel
+
+func _ensure_unit_details_button() -> Button:
+	var ui_root := get_node_or_null("UI")
+	if ui_root == null:
+		return null
+	if unit_details_button != null and is_instance_valid(unit_details_button):
+		return unit_details_button
+	var btn := ui_root.get_node_or_null("UnitDetailsButton") as Button
+	if btn == null:
+		btn = Button.new()
+		btn.name = "UnitDetailsButton"
+		btn.visible = false
+		btn.focus_mode = Control.FOCUS_NONE
+		ui_root.add_child(btn)
+	unit_details_button = btn
+	if not unit_details_button.pressed.is_connected(_on_unit_details_button_pressed):
+		unit_details_button.pressed.connect(_on_unit_details_button_pressed)
+	return unit_details_button
+
+func _detach_tactical_action_buttons_to_ui_root() -> void:
+	var ui_root := get_node_or_null("UI")
+	if ui_root == null:
+		return
+	for btn in [open_inv_button, support_btn, _ensure_unit_details_button()]:
+		if btn == null or not is_instance_valid(btn):
+			continue
+		if btn.get_parent() != ui_root:
+			btn.reparent(ui_root)
+		btn.top_level = false
+		btn.mouse_filter = Control.MOUSE_FILTER_STOP
+
+func _ensure_tactical_header(panel: Control, node_name: String, text: String) -> Label:
+	if panel == null:
+		return null
+	var header := panel.get_node_or_null(node_name) as Label
+	if header == null:
+		header = Label.new()
+		header.name = node_name
+		header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(header)
+	header.text = text
+	header.position = Vector2(16, 10)
+	header.size = Vector2(max(panel.size.x - 32.0, 120.0), 20)
+	header.uppercase = true
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_style_tactical_label(header, TACTICAL_UI_TEXT_MUTED, 15, 3)
+	return header
+
+func _ensure_forecast_hp_bars() -> void:
+	if forecast_panel == null:
+		return
+	if forecast_atk_hp_bar == null:
+		forecast_atk_hp_bar = ProgressBar.new()
+		forecast_atk_hp_bar.name = "AtkHPBar"
+		forecast_panel.add_child(forecast_atk_hp_bar)
+	if forecast_def_hp_bar == null:
+		forecast_def_hp_bar = ProgressBar.new()
+		forecast_def_hp_bar.name = "DefHPBar"
+		forecast_panel.add_child(forecast_def_hp_bar)
+	for bar in [forecast_atk_hp_bar, forecast_def_hp_bar]:
+		if bar == null:
+			continue
+		bar.min_value = 0.0
+		bar.max_value = 100.0
+		bar.value = 100.0
+		bar.step = 0.1
+		bar.custom_minimum_size = Vector2(190, 10)
+		bar.size = Vector2(190, 10)
+		bar.z_index = 2
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_style_forecast_hp_bar(bar, Color(0.24, 0.86, 0.50, 1.0))
+
+func _ensure_forecast_weapon_badges() -> void:
+	if forecast_panel == null:
+		return
+	var specs: Array[Dictionary] = [
+		{
+			"panel_name": "AtkWeaponBadgePanel",
+			"fill": Color(0.34, 0.17, 0.10, 0.92),
+			"border": Color(0.94, 0.72, 0.42, 0.92),
+			"text_color": Color(1.0, 0.88, 0.62, 1.0),
+		},
+		{
+			"panel_name": "DefWeaponBadgePanel",
+			"fill": Color(0.10, 0.18, 0.34, 0.92),
+			"border": Color(0.58, 0.80, 1.0, 0.92),
+			"text_color": Color(0.88, 0.95, 1.0, 1.0),
+		},
+	]
+	for spec in specs:
+		var panel_name: String = str(spec.get("panel_name", ""))
+		var panel := forecast_panel.get_node_or_null(panel_name) as Panel
+		if panel == null:
+			panel = Panel.new()
+			panel.name = panel_name
+			panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(panel)
+		panel.z_index = 3
+		_style_tactical_panel(panel, spec.get("fill", TACTICAL_UI_BG_SOFT), spec.get("border", TACTICAL_UI_BORDER), 1, 8)
+		var badge_label := panel.get_node_or_null("Text") as Label
+		if badge_label == null:
+			badge_label = Label.new()
+			badge_label.name = "Text"
+			badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(badge_label)
+		badge_label.position = Vector2.ZERO
+		badge_label.size = panel.size
+		badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_style_tactical_label(badge_label, spec.get("text_color", TACTICAL_UI_TEXT), 15, 3)
+
+func _ensure_forecast_weapon_pair_frames() -> void:
+	if forecast_panel == null:
+		return
+	for panel_name in ["AtkWeaponPairFrame", "DefWeaponPairFrame"]:
+		var frame := forecast_panel.get_node_or_null(panel_name) as Panel
+		if frame == null:
+			frame = Panel.new()
+			frame.name = panel_name
+			frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(frame)
+		frame.z_index = 2
+		_style_tactical_panel(frame, Color(0.16, 0.13, 0.09, 0.88), Color(0.46, 0.40, 0.26, 0.88), 1, 8)
+		var bevel_top := frame.get_node_or_null("BevelTop") as ColorRect
+		if bevel_top == null:
+			bevel_top = ColorRect.new()
+			bevel_top.name = "BevelTop"
+			bevel_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			frame.add_child(bevel_top)
+		bevel_top.color = Color(1.0, 0.94, 0.74, 0.18)
+		var bevel_bottom := frame.get_node_or_null("BevelBottom") as ColorRect
+		if bevel_bottom == null:
+			bevel_bottom = ColorRect.new()
+			bevel_bottom.name = "BevelBottom"
+			bevel_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			frame.add_child(bevel_bottom)
+		bevel_bottom.color = Color(0.0, 0.0, 0.0, 0.20)
+
+func _ensure_forecast_weapon_icons() -> void:
+	if forecast_panel == null:
+		return
+	for panel_name in ["AtkWeaponIconPanel", "DefWeaponIconPanel"]:
+		var panel := forecast_panel.get_node_or_null(panel_name) as Panel
+		if panel == null:
+			panel = Panel.new()
+			panel.name = panel_name
+			panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(panel)
+		panel.z_index = 3
+		_style_tactical_panel(panel, TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 7)
+		var glow_panel := panel.get_node_or_null("Glow") as Panel
+		if glow_panel == null:
+			glow_panel = Panel.new()
+			glow_panel.name = "Glow"
+			glow_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(glow_panel)
+			panel.move_child(glow_panel, 0)
+		glow_panel.position = Vector2(2, 2)
+		glow_panel.size = Vector2(22, 22)
+		glow_panel.visible = false
+		var icon_rect := panel.get_node_or_null("Icon") as TextureRect
+		if icon_rect == null:
+			icon_rect = TextureRect.new()
+			icon_rect.name = "Icon"
+			icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(icon_rect)
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.position = Vector2(3, 3)
+		icon_rect.size = Vector2(20, 20)
+
+func _reset_forecast_emphasis_visuals() -> void:
+	if crit_flash_tween != null:
+		crit_flash_tween.kill()
+	for lbl in [forecast_atk_dmg, forecast_def_dmg, forecast_atk_crit, forecast_def_crit]:
+		if lbl is Label:
+			var ui_lbl := lbl as Label
+			ui_lbl.modulate = Color.WHITE
+			ui_lbl.scale = Vector2.ONE
+
+func _start_forecast_emphasis_pulse(attacker_lethal: bool, defender_lethal: bool, attacker_crit_ready: bool, defender_crit_ready: bool) -> void:
+	_reset_forecast_emphasis_visuals()
+	var pulse_targets: Array[Dictionary] = []
+	if attacker_lethal and forecast_atk_dmg != null:
+		pulse_targets.append({
+			"label": forecast_atk_dmg,
+			"color": Color(1.0, 0.86, 0.62, 1.0),
+			"scale": Vector2(1.08, 1.08),
+		})
+	if defender_lethal and forecast_def_dmg != null:
+		pulse_targets.append({
+			"label": forecast_def_dmg,
+			"color": Color(0.74, 0.92, 1.0, 1.0),
+			"scale": Vector2(1.08, 1.08),
+		})
+	if attacker_crit_ready and forecast_atk_crit != null:
+		pulse_targets.append({
+			"label": forecast_atk_crit,
+			"color": Color(1.0, 0.94, 0.62, 1.0),
+			"scale": Vector2(1.05, 1.05),
+		})
+	if defender_crit_ready and forecast_def_crit != null:
+		pulse_targets.append({
+			"label": forecast_def_crit,
+			"color": Color(0.88, 0.94, 1.0, 1.0),
+			"scale": Vector2(1.05, 1.05),
+		})
+	if pulse_targets.is_empty():
+		return
+
+	crit_flash_tween = create_tween().set_loops()
+	crit_flash_tween.set_trans(Tween.TRANS_SINE)
+	crit_flash_tween.set_ease(Tween.EASE_IN_OUT)
+
+	var first_up: bool = true
+	for pulse in pulse_targets:
+		var lbl: Label = pulse.get("label") as Label
+		if lbl == null:
+			continue
+		var pulse_color: Color = pulse.get("color", Color.WHITE)
+		var pulse_scale: Vector2 = pulse.get("scale", Vector2.ONE)
+		if first_up:
+			crit_flash_tween.tween_property(lbl, "modulate", pulse_color, 0.55)
+			crit_flash_tween.parallel().tween_property(lbl, "scale", pulse_scale, 0.55)
+			first_up = false
+		else:
+			crit_flash_tween.parallel().tween_property(lbl, "modulate", pulse_color, 0.55)
+			crit_flash_tween.parallel().tween_property(lbl, "scale", pulse_scale, 0.55)
+
+	var first_down: bool = true
+	for pulse in pulse_targets:
+		var lbl_down: Label = pulse.get("label") as Label
+		if lbl_down == null:
+			continue
+		if first_down:
+			crit_flash_tween.tween_property(lbl_down, "modulate", Color.WHITE, 0.55)
+			crit_flash_tween.parallel().tween_property(lbl_down, "scale", Vector2.ONE, 0.55)
+			first_down = false
+		else:
+			crit_flash_tween.parallel().tween_property(lbl_down, "modulate", Color.WHITE, 0.55)
+			crit_flash_tween.parallel().tween_property(lbl_down, "scale", Vector2.ONE, 0.55)
+
+func _set_unit_portrait_block_visible(show: bool) -> void:
+	if unit_portrait != null:
+		unit_portrait.visible = show
+	if unit_info_panel != null:
+		var portrait_frame := unit_info_panel.get_node_or_null("PortraitFrame") as Panel
+		if portrait_frame != null:
+			portrait_frame.visible = show
+
+func _apply_tactical_ui_overhaul() -> void:
+	if not _tactical_ui_resize_hooked:
+		var vp := get_viewport()
+		if vp != null:
+			vp.size_changed.connect(_queue_tactical_ui_overhaul)
+		_tactical_ui_resize_hooked = true
+
+	var ui_root := get_node_or_null("UI")
+	if ui_root == null:
+		return
+	_ensure_unit_details_button()
+	_detach_tactical_action_buttons_to_ui_root()
+
+	for path in ["UI/BottomBarUI", "UI/ColorRect", "UI/ColorRect2", "UI/FramePortrait", "UI/Panel"]:
+		var legacy := get_node_or_null(path) as CanvasItem
+		if legacy != null:
+			legacy.visible = false
+
+	var vp_size := get_viewport_rect().size
+	var hud_scale := TACTICAL_UI_HUD_SCALE
+	var hud_scale_vec := Vector2(hud_scale, hud_scale)
+	var bottom_panel_scale := hud_scale * TACTICAL_UI_BOTTOM_PANEL_SCALE_MULT
+	var bottom_panel_scale_vec := Vector2(bottom_panel_scale, bottom_panel_scale)
+	var rail_render_w: float = TACTICAL_UI_RAIL_WIDTH * hud_scale
+	var info_h: float = 258.0
+	var bottom_render_h: float = info_h * bottom_panel_scale
+	var log_panel_h: float = TACTICAL_UI_BOTTOM_HEIGHT * TACTICAL_UI_LOG_HEIGHT_RATIO
+	var log_render_h: float = log_panel_h * bottom_panel_scale
+	var info_w: float = 384.0
+	var info_render_w: float = info_w * bottom_panel_scale
+	var hud_gap: float = 18.0 * bottom_panel_scale
+	var right_x: float = vp_size.x - rail_render_w - TACTICAL_UI_MARGIN
+	var bottom_y: float = vp_size.y - bottom_render_h - TACTICAL_UI_BOTTOM_EDGE_MARGIN
+	var log_y: float = bottom_y + (bottom_render_h - log_render_h)
+	var log_x: float = TACTICAL_UI_MARGIN + info_render_w + hud_gap
+	var log_render_w: float = max(372.0 * bottom_panel_scale, right_x - log_x - (hud_gap + (44.0 * bottom_panel_scale)))
+	var log_w: float = log_render_w / bottom_panel_scale
+
+	var right_rail := _ensure_tactical_backdrop("TacticalRightRail")
+	var show_deployment_rail: bool = current_state == pre_battle_state
+	var show_battle_hud: bool = not show_deployment_rail
+	if right_rail != null:
+		right_rail.visible = false
+		right_rail.position = Vector2(right_x, TACTICAL_UI_MARGIN)
+		right_rail.size = Vector2(rail_render_w, vp_size.y - (TACTICAL_UI_MARGIN * 2.0))
+		_style_tactical_panel(right_rail, TACTICAL_UI_BG, TACTICAL_UI_BORDER_MUTED, 1, 12)
+
+	var bottom_backdrop := _ensure_tactical_backdrop("TacticalBottomBackdrop")
+	if bottom_backdrop != null:
+		bottom_backdrop.visible = false
+
+	var gold_backdrop := _ensure_tactical_backdrop("TacticalGoldBackdrop")
+	var objective_panel_render_bottom: float = 252.0
+	var gold_panel_height: float = 32.0
+	var gold_anchor_y: float = vp_size.y - gold_panel_height - TACTICAL_UI_BOTTOM_EDGE_MARGIN
+	var command_cluster_margin_render: float = 18.0
+	var command_button_gap_render: float = 4.0
+	var command_button_height: float = 40.0
+	var command_cluster_x: float = right_x + command_cluster_margin_render
+	var command_cluster_width_render: float = rail_render_w - (command_cluster_margin_render * 2.0)
+	var command_button_width: float = (command_cluster_width_render - command_button_gap_render) * 0.5
+	var command_buttons_y: float = gold_anchor_y - command_button_height - 10.0
+	if gold_backdrop != null:
+		gold_backdrop.z_index = 18
+		gold_backdrop.scale = Vector2.ONE
+		gold_backdrop.position = Vector2(command_cluster_x, gold_anchor_y)
+		gold_backdrop.size = Vector2(command_cluster_width_render, gold_panel_height)
+		_style_tactical_panel(gold_backdrop, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER_MUTED, 1, 8)
+
+	if objective_toggle_btn != null:
+		objective_toggle_btn.scale = hud_scale_vec
+		objective_toggle_btn.z_index = 31
+		objective_toggle_btn.position = Vector2(right_x + rail_render_w - (144.0 * hud_scale) - 10.0, 18.0)
+		objective_toggle_btn.size = Vector2(144.0, 38.0)
+		objective_toggle_btn.visible = show_battle_hud
+		objective_toggle_btn.text = "Hide Goals" if is_objective_expanded else "Show Goals"
+		_style_tactical_button(objective_toggle_btn, objective_toggle_btn.text, false, 18)
+
+	if objective_panel != null:
+		objective_panel.scale = hud_scale_vec
+		objective_panel.z_index = 24
+		objective_panel.clip_contents = true
+		var objective_expanded_pos := Vector2(right_x + 12.0, 18.0 + (38.0 * hud_scale) + 14.0)
+		var objective_collapsed_x: float = vp_size.x + 50.0
+		objective_panel.position = Vector2(objective_expanded_pos.x if is_objective_expanded else objective_collapsed_x, objective_expanded_pos.y)
+		objective_panel.size.x = TACTICAL_UI_RAIL_WIDTH - 24.0
+		objective_panel.pivot_offset = objective_panel.size / 2.0
+		objective_panel.visible = show_battle_hud
+		objective_panel.set_meta("objective_expanded_x", objective_expanded_pos.x)
+		objective_panel.set_meta("objective_collapsed_x", objective_collapsed_x)
+		_style_tactical_panel(objective_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+		objective_panel_render_bottom = objective_panel.position.y + (objective_panel.size.y * hud_scale) + 18.0
+	if objective_label != null:
+		objective_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 16)
+		objective_label.scroll_active = true
+		_style_tactical_richtext(objective_label, 19, 23)
+
+	var skip_button := get_node_or_null("UI/SkipButton") as Button
+	if skip_button != null:
+		skip_button.scale = Vector2.ONE
+		skip_button.position = Vector2(command_cluster_x, command_buttons_y)
+		skip_button.size = Vector2(command_button_width, command_button_height)
+		skip_button.visible = show_battle_hud
+		_style_tactical_button(skip_button, "END TURN", true, 20)
+		var end_turn_fill: Color = TACTICAL_UI_PRIMARY_FILL.lerp(TACTICAL_UI_ACCENT, 0.20)
+		var end_turn_hover: Color = TACTICAL_UI_PRIMARY_HOVER.lerp(TACTICAL_UI_ACCENT, 0.28)
+		var end_turn_press: Color = TACTICAL_UI_PRIMARY_PRESS.lerp(TACTICAL_UI_ACCENT, 0.12)
+		skip_button.add_theme_stylebox_override("normal", _make_tactical_panel_style(end_turn_fill, TACTICAL_UI_ACCENT, 3, 10))
+		skip_button.add_theme_stylebox_override("hover", _make_tactical_panel_style(end_turn_hover, TACTICAL_UI_ACCENT, 3, 10))
+		skip_button.add_theme_stylebox_override("pressed", _make_tactical_panel_style(end_turn_press, TACTICAL_UI_ACCENT, 3, 10))
+		skip_button.add_theme_stylebox_override("focus", _make_tactical_panel_style(end_turn_hover, TACTICAL_UI_ACCENT_SOFT, 3, 10))
+
+	if convoy_button != null:
+		convoy_button.scale = Vector2.ONE
+		convoy_button.position = Vector2(
+			command_cluster_x + command_button_width + command_button_gap_render,
+			command_buttons_y
+		)
+		convoy_button.size = Vector2(command_button_width, command_button_height)
+		convoy_button.visible = show_battle_hud
+		_style_tactical_button(convoy_button, "CONVOY", false, 20)
+
+	if gold_label != null:
+		gold_label.z_index = 19
+		gold_label.scale = Vector2.ONE
+		gold_label.position = Vector2(command_cluster_x + 14.0, gold_anchor_y + 2.0)
+		gold_label.size = Vector2(command_cluster_width_render - 28.0, 28.0)
+		gold_label.visible = show_battle_hud
+		gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_style_tactical_label(gold_label, TACTICAL_UI_ACCENT, 20, 4)
+	if gold_backdrop != null:
+		gold_backdrop.visible = show_battle_hud
+
+	if unit_info_panel != null:
+		unit_info_panel.scale = bottom_panel_scale_vec
+		unit_info_panel.position = Vector2(TACTICAL_UI_MARGIN, bottom_y)
+		unit_info_panel.size = Vector2(info_w, info_h)
+		unit_info_panel.clip_contents = true
+		_style_tactical_panel(unit_info_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+		var portrait_frame := unit_info_panel.get_node_or_null("PortraitFrame") as Panel
+		if portrait_frame == null:
+			portrait_frame = Panel.new()
+			portrait_frame.name = "PortraitFrame"
+			portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			unit_info_panel.add_child(portrait_frame)
+			unit_info_panel.move_child(portrait_frame, 0)
+		portrait_frame.z_index = 0
+		portrait_frame.position = Vector2(240, 18)
+		portrait_frame.size = Vector2(122, 156)
+		_style_tactical_panel(portrait_frame, TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 8)
+
+	if unit_name_label != null:
+		unit_name_label.position = Vector2(18, 16)
+		unit_name_label.size = Vector2(208, 30)
+		unit_name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_style_tactical_label(unit_name_label, TACTICAL_UI_ACCENT, 24, 4)
+	if unit_hp_label != null:
+		unit_hp_label.position = Vector2(18, 35)
+		unit_hp_label.size = Vector2(208, 16)
+		unit_hp_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_style_tactical_label(unit_hp_label, TACTICAL_UI_ACCENT_SOFT, 14, 3)
+		var header_divider := unit_info_panel.get_node_or_null("HeaderDivider") as Panel
+		if header_divider == null:
+			header_divider = Panel.new()
+			header_divider.name = "HeaderDivider"
+			header_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			unit_info_panel.add_child(header_divider)
+		header_divider.position = Vector2(18, 53)
+		header_divider.size = Vector2(208, 3)
+		header_divider.z_index = 1
+		_style_tactical_panel(
+			header_divider,
+			Color(0.19, 0.16, 0.10, 0.92),
+			Color(0.55, 0.48, 0.26, 0.55),
+			1,
+			4
+		)
+	if unit_stats_label != null:
+		unit_stats_label.position = Vector2(16, 142)
+		unit_stats_label.size = Vector2(210, 24)
+		unit_stats_label.scroll_active = false
+		_style_tactical_richtext(unit_stats_label, 11, 12)
+	_ensure_unit_info_primary_widgets()
+	_layout_unit_info_primary_widgets()
+	_ensure_unit_info_stat_widgets()
+	_layout_unit_info_stat_widgets()
+	if unit_portrait != null:
+		unit_portrait.z_index = 1
+		unit_portrait.position = Vector2(244, 22)
+		unit_portrait.size = Vector2(114, 148)
+		unit_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		unit_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	if open_inv_button != null:
+		open_inv_button.top_level = false
+		open_inv_button.scale = bottom_panel_scale_vec
+		open_inv_button.position = unit_info_panel.position + (Vector2(16, 228) * bottom_panel_scale)
+		open_inv_button.size = Vector2(92, 28)
+		open_inv_button.z_index = 20
+		_style_tactical_button(open_inv_button, "ITEMS", false, 18)
+	if support_btn != null:
+		support_btn.top_level = false
+		support_btn.scale = bottom_panel_scale_vec
+		support_btn.position = unit_info_panel.position + (Vector2(112, 228) * bottom_panel_scale)
+		support_btn.size = Vector2(104, 28)
+		support_btn.z_index = 20
+		_style_tactical_button(support_btn, "SUPPORTS", false, 16)
+	if unit_details_button != null:
+		unit_details_button.top_level = false
+		unit_details_button.scale = bottom_panel_scale_vec
+		unit_details_button.position = unit_info_panel.position + (Vector2(238, 228) * bottom_panel_scale)
+		unit_details_button.size = Vector2(122, 28)
+		unit_details_button.z_index = 20
+		unit_details_button.visible = true
+		_style_tactical_button(unit_details_button, "UNIT INFO", false, 16)
+
+	var battle_log_panel: Panel = null
+	if battle_log != null:
+		battle_log_panel = battle_log.get_parent() as Panel
+	if battle_log_panel != null:
+		var field_log_toggle_gap: float = 8.0 * bottom_panel_scale
+		var field_log_toggle_size := Vector2(132.0, 28.0)
+		var field_log_toggle_render_size: Vector2 = field_log_toggle_size * bottom_panel_scale
+		var field_log_expanded_button_pos := Vector2(
+			log_x + log_render_w - field_log_toggle_render_size.x - (12.0 * bottom_panel_scale),
+			log_y - field_log_toggle_render_size.y - field_log_toggle_gap
+		)
+		var field_log_collapsed_panel_y: float = vp_size.y + (6.0 * bottom_panel_scale)
+		var field_log_collapsed_button_y: float = field_log_collapsed_panel_y - field_log_toggle_render_size.y - field_log_toggle_gap
+		battle_log_panel.scale = bottom_panel_scale_vec
+		battle_log_panel.position = Vector2(log_x, log_y)
+		battle_log_panel.size = Vector2(log_w, log_panel_h)
+		battle_log_panel.set_meta("field_log_expanded_y", log_y)
+		battle_log_panel.set_meta("field_log_collapsed_y", field_log_collapsed_panel_y)
+		_style_tactical_panel(battle_log_panel, Color(0.12, 0.11, 0.09, 0.88), Color(0.46, 0.40, 0.28, 0.44), 1, 10)
+		var legacy_log_fill := battle_log_panel.get_node_or_null("ColorRect") as ColorRect
+		if legacy_log_fill != null:
+			legacy_log_fill.visible = false
+		var log_header := _ensure_tactical_header(battle_log_panel, "HeaderLabel", "Field Log")
+		if log_header != null:
+			_style_tactical_label(log_header, TACTICAL_UI_TEXT_MUTED, 13, 3)
+		var field_log_toggle := _ensure_field_log_toggle_button()
+		if field_log_toggle != null:
+			field_log_toggle.scale = bottom_panel_scale_vec
+			field_log_toggle.size = field_log_toggle_size
+			field_log_toggle.position = field_log_expanded_button_pos
+			field_log_toggle.z_index = 22
+			field_log_toggle.set_meta("field_log_expanded_y", field_log_expanded_button_pos.y)
+			field_log_toggle.set_meta("field_log_collapsed_y", field_log_collapsed_button_y)
+			field_log_toggle.custom_minimum_size = field_log_toggle_size
+			_set_field_log_toggle_button_text()
+			_apply_field_log_visibility(false)
+	elif field_log_toggle_btn != null and is_instance_valid(field_log_toggle_btn):
+		field_log_toggle_btn.visible = false
+	if battle_log != null:
+		battle_log.position = Vector2(16, 36)
+		battle_log.size = Vector2(log_w - 32.0, log_panel_h - 50.0)
+		battle_log.scroll_active = true
+		_style_tactical_richtext(battle_log, 13, 15)
+
+	if forecast_panel != null:
+		var forecast_size := Vector2(540.0, 360.0)
+		forecast_panel.position = Vector2(max(260.0, right_x - forecast_size.x - 20.0), max(120.0, bottom_y - forecast_size.y - 18.0))
+		forecast_panel.size = forecast_size
+		forecast_panel.clip_contents = false
+		_style_tactical_panel(forecast_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+		var forecast_left_tint := forecast_panel.get_node_or_null("ForecastLeftTint") as ColorRect
+		if forecast_left_tint == null:
+			forecast_left_tint = ColorRect.new()
+			forecast_left_tint.name = "ForecastLeftTint"
+			forecast_left_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(forecast_left_tint)
+		forecast_left_tint.position = Vector2(14.0, 16.0)
+		forecast_left_tint.size = Vector2(214.0, 236.0)
+		forecast_left_tint.color = Color(0.78, 0.30, 0.18, 0.08)
+		var forecast_right_tint := forecast_panel.get_node_or_null("ForecastRightTint") as ColorRect
+		if forecast_right_tint == null:
+			forecast_right_tint = ColorRect.new()
+			forecast_right_tint.name = "ForecastRightTint"
+			forecast_right_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(forecast_right_tint)
+		forecast_right_tint.position = Vector2(forecast_size.x - 228.0, 16.0)
+		forecast_right_tint.size = Vector2(214.0, 236.0)
+		forecast_right_tint.color = Color(0.18, 0.35, 0.76, 0.08)
+		forecast_panel.move_child(forecast_left_tint, 0)
+		forecast_panel.move_child(forecast_right_tint, 1)
+		var center_line_top := forecast_panel.get_node_or_null("CenterLineTop") as ColorRect
+		if center_line_top == null:
+			center_line_top = ColorRect.new()
+			center_line_top.name = "CenterLineTop"
+			center_line_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(center_line_top)
+		center_line_top.position = Vector2((forecast_size.x * 0.5) - 1.0, 24.0)
+		center_line_top.size = Vector2(2.0, 92.0)
+		center_line_top.color = Color(0.73, 0.64, 0.34, 0.68)
+		var center_line_bottom := forecast_panel.get_node_or_null("CenterLineBottom") as ColorRect
+		if center_line_bottom == null:
+			center_line_bottom = ColorRect.new()
+			center_line_bottom.name = "CenterLineBottom"
+			center_line_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(center_line_bottom)
+		center_line_bottom.position = Vector2((forecast_size.x * 0.5) - 1.0, 164.0)
+		center_line_bottom.size = Vector2(2.0, 94.0)
+		center_line_bottom.color = Color(0.73, 0.64, 0.34, 0.56)
+		var center_badge := forecast_panel.get_node_or_null("CenterBadge") as Label
+		if center_badge == null:
+			center_badge = Label.new()
+			center_badge.name = "CenterBadge"
+			center_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			forecast_panel.add_child(center_badge)
+		center_badge.text = "VS"
+		center_badge.position = Vector2((forecast_size.x * 0.5) - 24.0, 126.0)
+		center_badge.size = Vector2(48.0, 26.0)
+		center_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_style_tactical_label(center_badge, Color(1.0, 0.90, 0.58), 18, 3)
+		_ensure_forecast_support_labels()
+		_ensure_forecast_hp_bars()
+		_ensure_forecast_weapon_badges()
+		_ensure_forecast_weapon_pair_frames()
+		_ensure_forecast_weapon_icons()
+		var atk_weapon_pair_frame := forecast_panel.get_node_or_null("AtkWeaponPairFrame") as Panel
+		var def_weapon_pair_frame := forecast_panel.get_node_or_null("DefWeaponPairFrame") as Panel
+		var atk_weapon_badge_panel := forecast_panel.get_node_or_null("AtkWeaponBadgePanel") as Panel
+		var def_weapon_badge_panel := forecast_panel.get_node_or_null("DefWeaponBadgePanel") as Panel
+		var atk_weapon_icon_panel := forecast_panel.get_node_or_null("AtkWeaponIconPanel") as Panel
+		var def_weapon_icon_panel := forecast_panel.get_node_or_null("DefWeaponIconPanel") as Panel
+		var left_col_x := 24.0
+		var right_col_x := forecast_size.x - 214.0
+		var col_w := 190.0
+		var stat_y := {
+			"name": 18.0,
+			"hp": 54.0,
+			"bar": 78.0,
+			"hit": 92.0,
+			"dmg": 126.0,
+			"crit": 160.0,
+			"support": 194.0,
+			"weapon": 222.0,
+			"footer": 250.0,
+			"instruction": 266.0,
+			"reaction": 290.0,
+			"buttons": 306.0,
+		}
+		var name_labels: Array = [forecast_atk_name, forecast_def_name]
+		var hp_labels: Array = [forecast_atk_hp, forecast_def_hp]
+		var hit_labels: Array = [forecast_atk_hit, forecast_def_hit]
+		var dmg_labels: Array = [forecast_atk_dmg, forecast_def_dmg]
+		var crit_labels: Array = [forecast_atk_crit, forecast_def_crit]
+		var support_labels: Array = [forecast_atk_support_label, forecast_def_support_label]
+		var weapon_labels: Array = [forecast_atk_weapon, forecast_def_weapon]
+		var adv_labels: Array = [forecast_atk_adv, forecast_def_adv]
+		var double_labels: Array = [forecast_atk_double, forecast_def_double]
+		var col_positions: Array[float] = [left_col_x, right_col_x]
+		for idx in range(2):
+			var base_x: float = col_positions[idx]
+			var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT if idx == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+			var name_lbl := name_labels[idx] as Label
+			if name_lbl != null:
+				name_lbl.position = Vector2(base_x, stat_y["name"])
+				name_lbl.size = Vector2(col_w, 28)
+				name_lbl.horizontal_alignment = align
+				name_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
+				name_lbl.clip_text = true
+				name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			var hp_lbl := hp_labels[idx] as Label
+			if hp_lbl != null:
+				hp_lbl.position = Vector2(base_x, stat_y["hp"])
+				hp_lbl.size = Vector2(col_w, 24)
+				hp_lbl.horizontal_alignment = align
+			var hp_bar: ProgressBar = forecast_atk_hp_bar if idx == 0 else forecast_def_hp_bar
+			if hp_bar != null:
+				hp_bar.position = Vector2(base_x, stat_y["bar"])
+				hp_bar.size = Vector2(col_w, 10)
+			var hit_lbl := hit_labels[idx] as Label
+			if hit_lbl != null:
+				hit_lbl.position = Vector2(base_x, stat_y["hit"])
+				hit_lbl.size = Vector2(col_w, 22)
+				hit_lbl.horizontal_alignment = align
+			var dmg_lbl := dmg_labels[idx] as Label
+			if dmg_lbl != null:
+				dmg_lbl.position = Vector2(base_x, stat_y["dmg"])
+				dmg_lbl.size = Vector2(col_w, 22)
+				dmg_lbl.horizontal_alignment = align
+			var crit_lbl := crit_labels[idx] as Label
+			if crit_lbl != null:
+				crit_lbl.position = Vector2(base_x, stat_y["crit"])
+				crit_lbl.size = Vector2(col_w, 22)
+				crit_lbl.horizontal_alignment = align
+			var support_lbl := support_labels[idx] as Label
+			if support_lbl != null:
+				support_lbl.position = Vector2(base_x, stat_y["support"])
+				support_lbl.size = Vector2(col_w, 22)
+				support_lbl.horizontal_alignment = align
+			var weapon_lbl := weapon_labels[idx] as Label
+			if weapon_lbl != null:
+				if idx == 0:
+					weapon_lbl.position = Vector2(base_x + 96.0, stat_y["weapon"])
+				else:
+					weapon_lbl.position = Vector2(base_x, stat_y["weapon"])
+				weapon_lbl.size = Vector2(col_w - 100.0, 22)
+				weapon_lbl.horizontal_alignment = align
+				weapon_lbl.clip_text = true
+				weapon_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			var adv_lbl := adv_labels[idx] as Label
+			if adv_lbl != null:
+				adv_lbl.position = Vector2(base_x, stat_y["footer"])
+				adv_lbl.size = Vector2(110.0, 22)
+				adv_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if idx == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+			var double_lbl := double_labels[idx] as Label
+			if double_lbl != null:
+				var double_x := base_x + 118.0 if idx == 0 else base_x + 118.0
+				double_lbl.position = Vector2(double_x, stat_y["dmg"])
+				double_lbl.size = Vector2(60.0, 22)
+				double_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		if atk_weapon_badge_panel != null:
+			atk_weapon_badge_panel.position = Vector2(left_col_x, stat_y["weapon"] - 4.0)
+			atk_weapon_badge_panel.size = Vector2(56.0, 26.0)
+			var atk_badge_label := atk_weapon_badge_panel.get_node_or_null("Text") as Label
+			if atk_badge_label != null:
+				atk_badge_label.size = atk_weapon_badge_panel.size
+		if atk_weapon_pair_frame != null:
+			atk_weapon_pair_frame.position = Vector2(left_col_x - 6.0, stat_y["weapon"] - 6.0)
+			atk_weapon_pair_frame.size = Vector2(96.0, 30.0)
+			var atk_bevel_top := atk_weapon_pair_frame.get_node_or_null("BevelTop") as ColorRect
+			if atk_bevel_top != null:
+				atk_bevel_top.position = Vector2(4, 3)
+				atk_bevel_top.size = Vector2(atk_weapon_pair_frame.size.x - 8.0, 2.0)
+			var atk_bevel_bottom := atk_weapon_pair_frame.get_node_or_null("BevelBottom") as ColorRect
+			if atk_bevel_bottom != null:
+				atk_bevel_bottom.position = Vector2(4, atk_weapon_pair_frame.size.y - 5.0)
+				atk_bevel_bottom.size = Vector2(atk_weapon_pair_frame.size.x - 8.0, 2.0)
+		if atk_weapon_icon_panel != null:
+			atk_weapon_icon_panel.position = Vector2(left_col_x + 62.0, stat_y["weapon"] - 4.0)
+			atk_weapon_icon_panel.size = Vector2(26.0, 26.0)
+			var atk_glow := atk_weapon_icon_panel.get_node_or_null("Glow") as Panel
+			if atk_glow != null:
+				atk_glow.position = Vector2(2, 2)
+				atk_glow.size = Vector2(22, 22)
+		if def_weapon_badge_panel != null:
+			def_weapon_badge_panel.position = Vector2(right_col_x + col_w - 56.0, stat_y["weapon"] - 4.0)
+			def_weapon_badge_panel.size = Vector2(56.0, 26.0)
+			var def_badge_label := def_weapon_badge_panel.get_node_or_null("Text") as Label
+			if def_badge_label != null:
+				def_badge_label.size = def_weapon_badge_panel.size
+		if def_weapon_pair_frame != null:
+			def_weapon_pair_frame.position = Vector2(right_col_x + col_w - 90.0, stat_y["weapon"] - 6.0)
+			def_weapon_pair_frame.size = Vector2(96.0, 30.0)
+			var def_bevel_top := def_weapon_pair_frame.get_node_or_null("BevelTop") as ColorRect
+			if def_bevel_top != null:
+				def_bevel_top.position = Vector2(4, 3)
+				def_bevel_top.size = Vector2(def_weapon_pair_frame.size.x - 8.0, 2.0)
+			var def_bevel_bottom := def_weapon_pair_frame.get_node_or_null("BevelBottom") as ColorRect
+			if def_bevel_bottom != null:
+				def_bevel_bottom.position = Vector2(4, def_weapon_pair_frame.size.y - 5.0)
+				def_bevel_bottom.size = Vector2(def_weapon_pair_frame.size.x - 8.0, 2.0)
+		if def_weapon_icon_panel != null:
+			def_weapon_icon_panel.position = Vector2(right_col_x + col_w - 88.0, stat_y["weapon"] - 4.0)
+			def_weapon_icon_panel.size = Vector2(26.0, 26.0)
+			var def_glow := def_weapon_icon_panel.get_node_or_null("Glow") as Panel
+			if def_glow != null:
+				def_glow.position = Vector2(2, 2)
+				def_glow.size = Vector2(22, 22)
+	for lbl in [forecast_atk_name, forecast_atk_hp, forecast_atk_dmg, forecast_atk_hit, forecast_atk_crit, forecast_atk_weapon, forecast_atk_adv, forecast_atk_double, forecast_def_name, forecast_def_hp, forecast_def_dmg, forecast_def_hit, forecast_def_crit, forecast_def_weapon, forecast_def_adv, forecast_def_double]:
+		if lbl is Label:
+			_style_tactical_label(lbl as Label, TACTICAL_UI_TEXT, 23, 3)
+	for name_lbl in [forecast_atk_name, forecast_def_name]:
+		if name_lbl is Label:
+			_style_tactical_label(name_lbl as Label, Color(1.0, 0.90, 0.54), 24, 4)
+	if forecast_atk_name != null:
+		forecast_atk_name.add_theme_color_override("font_color", Color(1.0, 0.88, 0.52))
+	if forecast_def_name != null:
+		forecast_def_name.add_theme_color_override("font_color", Color(0.86, 0.92, 1.0))
+	for hp_lbl in [forecast_atk_hp, forecast_def_hp]:
+		if hp_lbl is Label:
+			_style_tactical_label(hp_lbl as Label, Color(0.90, 0.96, 0.92), 21, 3)
+	for hit_lbl in [forecast_atk_hit, forecast_def_hit]:
+		if hit_lbl is Label:
+			_style_tactical_label(hit_lbl as Label, Color(0.57, 0.94, 1.0), 20, 3)
+	if forecast_atk_dmg != null:
+		_style_tactical_label(forecast_atk_dmg, Color(1.0, 0.72, 0.49), 20, 3)
+	if forecast_def_dmg != null:
+		_style_tactical_label(forecast_def_dmg, Color(0.67, 0.87, 1.0), 20, 3)
+	for crit_lbl in [forecast_atk_crit, forecast_def_crit]:
+		if crit_lbl is Label:
+			_style_tactical_label(crit_lbl as Label, Color(1.0, 0.84, 0.38), 20, 3)
+	for weapon_lbl in [forecast_atk_weapon, forecast_def_weapon]:
+		if weapon_lbl is Label:
+			_style_tactical_label(weapon_lbl as Label, Color(0.93, 0.91, 0.80), 20, 3)
+	if forecast_atk_weapon != null:
+		forecast_atk_weapon.add_theme_color_override("font_color", Color(1.0, 0.84, 0.68))
+	if forecast_def_weapon != null:
+		forecast_def_weapon.add_theme_color_override("font_color", Color(0.78, 0.90, 1.0))
+	for adv_lbl in [forecast_atk_adv, forecast_def_adv]:
+		if adv_lbl is Label:
+			_style_tactical_label(adv_lbl as Label, Color(0.76, 0.96, 0.62), 19, 3)
+	for dbl in [forecast_atk_double, forecast_def_double]:
+		if dbl is Label:
+			_style_tactical_label(dbl as Label, Color(0.48, 0.90, 1.0), 23, 3)
+	var forecast_confirm := get_node_or_null("UI/CombatForecastPanel/ConfirmButton") as Button
+	var forecast_cancel := get_node_or_null("UI/CombatForecastPanel/CancelButton") as Button
+	if forecast_confirm != null:
+		_style_tactical_button(forecast_confirm, "ATTACK", true, 22)
+	if forecast_cancel != null:
+		_style_tactical_button(forecast_cancel, "BACK", false, 22)
+	if forecast_talk_btn != null:
+		_style_tactical_button(forecast_talk_btn, "TALK", false, 20)
+	if forecast_ability_btn != null:
+		_style_tactical_button(forecast_ability_btn, "ABILITY", false, 20)
+	if forecast_instruction_label != null:
+		forecast_instruction_label.position = Vector2(24, 262)
+		forecast_instruction_label.size = Vector2(492, 20)
+		forecast_instruction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		forecast_instruction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_style_tactical_label(forecast_instruction_label, Color(0.84, 0.84, 0.90), 14, 2)
+	if forecast_reaction_label != null:
+		forecast_reaction_label.position = Vector2(24, 284)
+		forecast_reaction_label.size = Vector2(492, 18)
+		forecast_reaction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		forecast_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_style_tactical_label(forecast_reaction_label, Color(0.96, 0.85, 0.57), 13, 2)
+	if forecast_confirm != null:
+		forecast_confirm.position = Vector2(110, 306)
+		forecast_confirm.size = Vector2(158, 42)
+	if forecast_cancel != null:
+		forecast_cancel.position = Vector2(282, 306)
+		forecast_cancel.size = Vector2(158, 42)
+	if forecast_talk_btn != null and forecast_ability_btn != null:
+		forecast_talk_btn.position = Vector2(24, 372)
+		forecast_talk_btn.size = Vector2(96, 42)
+		forecast_ability_btn.position = Vector2(126, 372)
+		forecast_ability_btn.size = Vector2(96, 42)
+	elif forecast_talk_btn != null:
+		forecast_talk_btn.position = Vector2(24, 372)
+		forecast_talk_btn.size = Vector2(96, 42)
+	elif forecast_ability_btn != null:
+		forecast_ability_btn.position = Vector2(24, 372)
+		forecast_ability_btn.size = Vector2(96, 42)
+
+	if inventory_panel != null:
+		_style_tactical_panel(inventory_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	if inv_desc_label != null:
+		_style_tactical_richtext(inv_desc_label, 17, 19)
+	_style_tactical_button(equip_button, "EQUIP", false, 18)
+	_style_tactical_button(use_button, "USE", false, 18)
+	var inv_close := get_node_or_null("UI/InventoryPanel/CloseButton") as Button
+	if inv_close != null:
+		_style_tactical_button(inv_close, "CLOSE", false, 18)
+	_style_tactical_item_list(get_node_or_null("UI/InventoryPanel/ItemList") as ItemList)
+	_style_tactical_item_list(get_node_or_null("UI/RosterPanel/RosterList") as ItemList)
+	_style_tactical_item_list(loot_item_list)
+
+	if loot_window != null:
+		_style_tactical_panel(loot_window, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	if loot_desc_label != null:
+		_style_tactical_richtext(loot_desc_label, 17, 19)
+	if close_loot_button != null:
+		_style_tactical_button(close_loot_button, "CLAIM ALL", true, 20)
+
+	if support_tracker_panel != null:
+		_style_tactical_panel(support_tracker_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	if support_list_text != null:
+		_style_tactical_richtext(support_list_text, 18, 20)
+	if close_support_btn != null:
+		_style_tactical_button(close_support_btn, "CLOSE", false, 18)
+
+	if trade_popup != null:
+		_style_tactical_panel(trade_popup, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	if trade_popup_btn != null:
+		_style_tactical_button(trade_popup_btn, "TRADE", false, 18)
+	if popup_talk_btn != null:
+		_style_tactical_button(popup_talk_btn, "SUPPORT TALK", false, 16)
+
+	if trade_window != null:
+		_style_tactical_panel(trade_window, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	for lbl in [trade_left_name, trade_right_name]:
+		if lbl is Label:
+			_style_tactical_label(lbl as Label, TACTICAL_UI_ACCENT, 20, 3)
+	if trade_close_btn != null:
+		_style_tactical_button(trade_close_btn, "CLOSE", false, 18)
+	_style_tactical_item_list(trade_left_list)
+	_style_tactical_item_list(trade_right_list)
+
+	if talk_panel != null:
+		_style_tactical_panel(talk_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	if talk_name != null:
+		_style_tactical_label(talk_name, TACTICAL_UI_ACCENT, 22, 4)
+	if talk_text != null:
+		_style_tactical_richtext(talk_text, 19, 21)
+	if talk_next_btn != null:
+		_style_tactical_button(talk_next_btn, "CONTINUE", true, 18)
+
+	if level_up_panel != null:
+		_style_tactical_panel(level_up_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 14)
+	if level_up_title != null:
+		_style_tactical_label(level_up_title, TACTICAL_UI_ACCENT, 30, 5)
+	if level_up_stats != null:
+		_style_tactical_richtext(level_up_stats, 18, 20)
+
+	if game_over_panel != null:
+		_style_tactical_panel(game_over_panel, Color(0.06, 0.05, 0.04, 0.96), TACTICAL_UI_BORDER, 3, 16)
+	if result_label != null:
+		_style_tactical_label(result_label, TACTICAL_UI_ACCENT, 66, 6)
+	_style_tactical_button(restart_button, restart_button.text if restart_button != null else "PLAY AGAIN", true, 24)
+	_style_tactical_button(continue_button, continue_button.text if continue_button != null else "CONTINUE", false, 24)
+
+	var roster_panel := get_node_or_null("UI/RosterPanel") as Panel
+	var count_text := get_node_or_null("UI/RosterPanel/DeployCountLabel") as Label
+	var roster_items := get_node_or_null("UI/RosterPanel/RosterList") as ItemList
+	var build_button := get_node_or_null("UI/RosterPanel/BuildButton") as Button
+	if roster_panel != null:
+		roster_panel.visible = show_deployment_rail
+		roster_panel.scale = hud_scale_vec
+		var roster_top: float = max(252.0, objective_panel_render_bottom)
+		roster_panel.position = Vector2(right_x + 12.0, roster_top)
+		roster_panel.size = Vector2(TACTICAL_UI_RAIL_WIDTH - 24.0, max(180.0, (vp_size.y - roster_top - (108.0 * hud_scale)) / hud_scale))
+		_style_tactical_panel(roster_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	if count_text != null and roster_panel != null:
+		count_text.position = Vector2(16, 16)
+		count_text.size = Vector2(roster_panel.size.x - 32.0, 24.0)
+		count_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_style_tactical_label(count_text, TACTICAL_UI_ACCENT, 21, 4)
+	if roster_items != null and roster_panel != null:
+		roster_items.position = Vector2(12, 50)
+		roster_items.size = Vector2(roster_panel.size.x - 24.0, max(180.0, roster_panel.size.y - 122.0))
+		roster_items.fixed_icon_size = Vector2i(48, 48)
+		roster_items.add_theme_font_size_override("font_size", 20)
+	if build_button != null and roster_panel != null:
+		build_button.position = Vector2(12, roster_panel.size.y - 58.0)
+		build_button.size = Vector2(roster_panel.size.x - 24.0, 46.0)
+		_style_tactical_button(build_button, build_button.text if build_button.text != "" else "BUILD DEFENSES", false, 20)
+	var bond_rows := get_node_or_null("UI/RosterPanel/RosterBondRows") as VBoxContainer
+	if bond_rows != null and roster_panel != null:
+		bond_rows.offset_left = 16
+		bond_rows.offset_top = 56
+		bond_rows.offset_right = 72
+		bond_rows.offset_bottom = roster_panel.size.y - 68
+	var bond_strip := get_node_or_null("UI/RosterPanel/BondIconsStrip") as HBoxContainer
+	if bond_strip != null and roster_panel != null:
+		bond_strip.position = Vector2(16, roster_panel.size.y - 92.0)
+
+	var start_button := get_node_or_null("UI/StartBattleButton") as Button
+	if start_button != null:
+		start_button.z_index = 26
+		start_button.scale = hud_scale_vec
+		start_button.position = Vector2((vp_size.x - (460.0 * hud_scale)) * 0.5, max(110.0, ((bottom_y - (78.0 * hud_scale)) * 0.5)))
+		start_button.size = Vector2(460.0, 78.0)
+		start_button.visible = show_deployment_rail
+		_style_tactical_button(start_button, start_button.text if start_button.text != "" else "START BATTLE", true, 42)
 
 
 func _coop_remote_sync_prebattle_ready(body: Dictionary) -> void:
@@ -3251,6 +5369,7 @@ func _present_mock_coop_joint_expedition_charter() -> void:
 		add_combat_log("Issues: %s" % str(ctx.validation_errors), "orange")
 
 var _ui_sfx_block_until_msec := 0
+var _tactical_ui_resize_hooked: bool = false
 
 func _ready() -> void:
 	# 1. SETUP ASTAR GRID
@@ -3316,6 +5435,8 @@ func _ready() -> void:
 	if popup_talk_btn: popup_talk_btn.pressed.connect(_on_support_talk_pressed)
 	if talk_next_btn: talk_next_btn.pressed.connect(func(): emit_signal("dialogue_advanced"))
 	if support_btn: support_btn.pressed.connect(_on_support_btn_pressed)
+	if unit_details_button and not unit_details_button.pressed.is_connected(_on_unit_details_button_pressed):
+		unit_details_button.pressed.connect(_on_unit_details_button_pressed)
 	if close_support_btn: close_support_btn.pressed.connect(func(): support_tracker_panel.visible = false)
 	if main_camera != null:
 		_camera_zoom_target = main_camera.zoom.x
@@ -3587,6 +5708,7 @@ func _ready() -> void:
 	# 9. REBUILD GRID (Moved to END so it accounts for Skirmish Spawns)
 	rebuild_grid()
 	_setup_objective_ui()
+	_queue_tactical_ui_overhaul()
 	update_fog_of_war()
 	
 	# 10. START GAME
@@ -3731,10 +5853,16 @@ func change_state(new_state: GameState) -> void:
 			coop_enet_sync_after_host_authority_enemy_phase_setup()
 		elif not coop_enet_should_wait_for_host_authority_enemy_turn():
 			await _process_spawners(0)
+
+	update_objective_ui(true)
+	queue_redraw()
+	if new_state == player_state:
+		_maybe_log_enemy_reinforcement_warning_for_player_phase()
 		
 	current_state = new_state
 	if current_state:
 		current_state.enter(self)
+	_queue_tactical_ui_overhaul()
 				
 func _process_spawners(faction_id: int) -> void:
 	if destructibles_container:
@@ -4414,19 +6542,18 @@ func update_cursor_pos() -> void:
 		clamp(m.x / CELL_SIZE.x, 0, GRID_SIZE.x - 1), 
 		clamp(m.y / CELL_SIZE.y, 0, GRID_SIZE.y - 1)
 	)
-	
+
 	if new_grid_pos != cursor_grid_pos:
 		cursor_grid_pos = new_grid_pos
 		var target_pos = Vector2(cursor_grid_pos.x * CELL_SIZE.x, cursor_grid_pos.y * CELL_SIZE.y)
-		
-		# Move the HoverGlow instantly or with a very fast tween
-		hover_glow.position = target_pos
-		
-		# Smoothly slide the cursor to the new tile (snappier follow for battle readability)
-		var tween = create_tween()
-		tween.tween_property(cursor, "position", target_pos, 0.07)\
-			.set_trans(Tween.TRANS_QUAD)\
-			.set_ease(Tween.EASE_OUT)
+		if hover_glow.position != target_pos:
+			hover_glow.position = target_pos
+			var tween = create_tween()
+			tween.tween_property(cursor, "position", target_pos, 0.07)\
+				.set_trans(Tween.TRANS_QUAD)\
+				.set_ease(Tween.EASE_OUT)
+
+	_update_locked_inspect_cursor()
 
 func update_cursor_color() -> void:
 	# 1. Start by resetting to the default white color every frame
@@ -4455,6 +6582,54 @@ func update_cursor_color() -> void:
 			cursor_sprite.modulate = Color(0.5, 0.92, 1.0)
 			if is_instance_valid(hover_glow):
 				hover_glow.modulate = Color(0.45, 0.88, 1.0, 0.95)
+
+
+func _update_locked_inspect_cursor() -> void:
+	if not is_instance_valid(target_cursor):
+		return
+	if player_state != null and player_state.is_forecasting:
+		return
+	var locked_inspect_unit: Node2D = _get_locked_inspect_unit()
+	if locked_inspect_unit == null:
+		if is_instance_valid(target_cursor_sprite):
+			target_cursor_sprite.modulate = Color.WHITE
+		target_cursor.visible = false
+		return
+	target_cursor.z_index = 82
+	target_cursor.global_position = locked_inspect_unit.global_position
+	var tint: Color = _get_inspect_cursor_tint(locked_inspect_unit)
+	target_cursor.modulate = tint
+	if is_instance_valid(target_cursor_sprite):
+		target_cursor_sprite.modulate = tint
+	target_cursor.visible = true
+
+
+func _get_inspect_cursor_tint(unit: Node2D) -> Color:
+	if unit == null or not is_instance_valid(unit):
+		return Color(1.0, 0.85, 0.34, 1.0)
+	if _is_neutral_inspect_unit(unit):
+		return Color(0.36, 0.96, 0.50, 1.0)
+	var is_flagged_enemy: bool = unit.get("is_enemy") == true
+	if _is_friendly_unit_on_field(unit) or unit.get_parent() == ally_container or unit.get("is_enemy") == false:
+		return Color(0.36, 0.96, 0.50, 1.0)
+	if is_flagged_enemy or unit.get_parent() == enemy_container:
+		return Color(1.0, 0.28, 0.28, 1.0)
+	return Color(1.0, 0.85, 0.34, 1.0)
+
+
+func _is_neutral_inspect_unit(unit: Node2D) -> bool:
+	if unit == null or not is_instance_valid(unit):
+		return false
+	var data_variant: Variant = unit.get("data")
+	var data_res: Resource = data_variant as Resource if data_variant is Resource else null
+	if data_res == null:
+		return false
+	var res_path: String = String(data_res.resource_path)
+	if res_path.contains("/Resources/Units/NeutralAllies/"):
+		return true
+	if res_path.contains("/Resources/Units/NeutralFactionAllies/"):
+		return true
+	return false
 
 func draw_preview_path() -> void:
 	if path_line == null:
@@ -4563,6 +6738,15 @@ func _draw() -> void:
 		for pos in enemy_attackable_tiles:
 			if _danger_overlay_cell_drawable(pos):
 				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.4, 0.0, 0.5))
+
+	var reinforcement_snapshot: Dictionary = _build_enemy_reinforcement_telegraph_snapshot()
+	for pos in reinforcement_snapshot.get("later_tiles", []):
+		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_LATER_FILL)
+		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_LATER_BORDER, false, 2.0)
+
+	for pos in reinforcement_snapshot.get("soon_tiles", []):
+		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_SOON_FILL)
+		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_SOON_BORDER, false, 4.0)
 
 func get_grid_pos(node: Node2D) -> Vector2i:
 	return Vector2i(int(node.position.x / CELL_SIZE.x), int(node.position.y / CELL_SIZE.y))
@@ -4996,32 +7180,42 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 			
 func update_unit_info_panel() -> void:
 	var target_unit: Node2D = null
-	var hover_unit: Node2D = null
-	var show_cursor_unit_row: bool = false
 
-	if current_state == player_state and player_state.active_unit != null:
+	var locked_inspect_unit: Node2D = _get_locked_inspect_unit()
+	var hovered_occupant: Node2D = get_occupant_at(cursor_grid_pos)
+	if locked_inspect_unit != null:
+		target_unit = locked_inspect_unit
+	elif hovered_occupant != null:
+		target_unit = hovered_occupant
+	elif current_state == player_state and player_state.active_unit != null:
 		target_unit = player_state.active_unit
-		hover_unit = get_occupant_at(cursor_grid_pos)
-		if hover_unit != null and hover_unit != target_unit and hover_unit.get("data") != null:
-			show_cursor_unit_row = true
-	else:
-		target_unit = get_occupant_at(cursor_grid_pos)
 
 	var terrain = get_terrain_data(cursor_grid_pos)
 	var terrain_bb = "\n[color=yellow]%s[/color] [color=gray]|[/color] [color=cyan]DEF +%d[/color] [color=gray]|[/color] [color=chartreuse]AVO +%d%%[/color]" % [terrain["name"], terrain["def"], terrain["avo"]]
 
 	if target_unit == null:
+		_unit_info_stat_source_id = -1
+		_set_unit_info_primary_widgets_visible(false)
+		_set_unit_info_stat_widgets_visible(false)
 		unit_name_label.text = "Map Tile"
 		unit_hp_label.text = ""
+		unit_stats_label.position = Vector2(16, 80)
+		unit_stats_label.size = Vector2(194, 84)
+		_style_tactical_richtext(unit_stats_label, 16, 18)
 		unit_stats_label.text = "[center]TERRAIN INFO" + terrain_bb + "[/center]"
-		unit_portrait.visible = false
+		_set_unit_portrait_block_visible(false)
 		open_inv_button.visible = false
+		if support_btn: support_btn.visible = false
+		if unit_details_button: unit_details_button.visible = false
 		unit_info_panel.visible = true
 		return
 		
 	if target_unit.get("data") != null:
+		var unit_info_source_id: int = target_unit.get_instance_id()
+		var animate_stat_bars: bool = unit_info_source_id != _unit_info_stat_source_id
 		var current_xp = target_unit.experience
 		var required_xp = target_unit.get_exp_required() if target_unit.has_method("get_exp_required") else 100
+		var status_line: String = ""
 		
 		var active_tag: String = ""
 		if current_state == player_state and player_state.active_unit == target_unit:
@@ -5031,8 +7225,14 @@ func update_unit_info_panel() -> void:
 				active_tag = " [Moved — act]"
 			else:
 				active_tag = " [ACTIVE]"
-		unit_name_label.text = target_unit.unit_name + active_tag + " (Lv " + str(target_unit.level) + " | XP: " + str(current_xp) + " / " + str(required_xp) + ")"
-		unit_hp_label.text = "HP: " + str(target_unit.current_hp) + " / " + str(target_unit.max_hp)
+		if current_state == player_state and player_state.active_unit == target_unit:
+			if target_unit.is_exhausted:
+				status_line = "[color=gold]Turn Done[/color]\n"
+			elif target_unit.has_moved:
+				status_line = "[color=gold]Moved - Action Ready[/color]\n"
+			else:
+				status_line = "[color=cyan]Selected Unit[/color]\n"
+		unit_name_label.text = String(target_unit.unit_name).to_upper()
 
 		var display_def = target_unit.defense
 		var display_res = target_unit.resistance
@@ -5057,60 +7257,81 @@ func update_unit_info_panel() -> void:
 		var u_spd = target_unit.get("speed") if target_unit.get("speed") != null else 0
 		var u_agi = target_unit.get("agility") if target_unit.get("agility") != null else 0
 
-		var s = "[center]"
-		if current_state == player_state and player_state.active_unit == target_unit:
-			s += "[color=cyan][b]Selected unit[/b][/color]\n"
-		var coop_own_line: String = _mock_coop_unit_ownership_bbcode_line_for_panel(target_unit)
-		if coop_own_line != "":
-			s += coop_own_line
-		s += "[color=gray]Class:[/color] %s [color=gray]|[/color] [color=gray]Move:[/color] %d\n" % [u_class, u_move]
-		s += "[color=gray]------------------------------------[/color]\n"
-		s += "[color=coral]STR:[/color] %d  [color=orchid]MAG:[/color] %d  [color=skyblue]SPD:[/color] %d\n" % [u_str, u_mag, u_spd]
-		s += "[color=palegreen]DEF:[/color] [color=%s]%d[/color]  [color=aquamarine]RES:[/color] [color=%s]%d[/color]  [color=wheat]AGI:[/color] %d\n" % [def_color, display_def, def_color, display_res, u_agi]
-		
-		# --- POISE HUD ADDITION ---
-		var u_poise = "?"
+		var current_poise: int = 0
+		var max_poise: int = 1
+		var u_poise = "--"
 		if target_unit.has_method("get_current_poise"):
-			u_poise = str(target_unit.get_current_poise()) + "/" + str(target_unit.get_max_poise())
-		s += "[color=gold]POISE:[/color] %s\n" % [u_poise]
-		
+			current_poise = int(target_unit.get_current_poise())
+			max_poise = max(1, int(target_unit.get_max_poise()))
+			u_poise = str(current_poise) + "/" + str(max_poise)
+
+		unit_hp_label.text = "LV %d  |  MOVE %d" % [
+			int(target_unit.level),
+			int(u_move),
+		]
+
+		unit_stats_label.position = Vector2(16, 142)
+		unit_stats_label.size = Vector2(210, 24)
+		_style_tactical_richtext(unit_stats_label, 11, 12)
+
+		var meta_lines: PackedStringArray = PackedStringArray()
+		var coop_own_line: String = _mock_coop_unit_ownership_bbcode_line_for_panel(target_unit).strip_edges()
+		if status_line != "":
+			meta_lines.append(status_line.strip_edges())
+		elif coop_own_line != "":
+			meta_lines.append(coop_own_line)
+		meta_lines.append("[color=gray]CLASS:[/color] %s" % [String(u_class).to_upper()])
+		var detail_parts: PackedStringArray = PackedStringArray()
 		if target_unit.has_meta("is_burning") and target_unit.get_meta("is_burning") == true:
-			s += "[color=orangered][b]BURNING[/b][/color] — fire damage after enemy phase\n"
-		
-		# --- UPDATED: WEAPON INFO WITH DURABILITY ---
-		if target_unit.equipped_weapon != null:
-			var wpn = target_unit.equipped_weapon
-			var d_cur = wpn.get("current_durability") if wpn.get("current_durability") != null else 0
-			var d_max = wpn.get("max_durability") if wpn.get("max_durability") != null else 0
-			s += "[color=gray]Eqp:[/color] [color=yellow]%s[/color] [color=gray](Dur: %d/%d)[/color]\n" % [wpn.weapon_name, d_cur, d_max]
-		else:
-			s += "[color=gray]Eqp: Unarmed[/color]\n"
-
-		s += UnitTraitsLib.bbcode_section(UnitTraitsLib.trait_lines_from_unit(target_unit))
-
-		if show_cursor_unit_row and is_instance_valid(hover_unit) and hover_unit.get("data") != null:
-			s += "[color=gray]————————————————————[/color]\n"
-			s += "[color=gold][b]Under cursor[/b][/color]: [color=white]%s[/color]  HP %d/%d\n" % [
-				hover_unit.unit_name, hover_unit.current_hp, hover_unit.max_hp
-			]
-			var coop_hover_line: String = _mock_coop_unit_ownership_bbcode_line_for_panel(hover_unit)
-			if coop_hover_line != "":
-				s += coop_hover_line
-			if hover_unit.get_parent() == enemy_container and hover_unit.data.get("is_recruitable") == true:
-				s += "[color=chartreuse]Recruitable — use Talk in combat preview when available.[/color]\n"
-
-		s += terrain_bb + "[/center]"
-		unit_stats_label.text = s
+			detail_parts.append("[color=orangered][b]BURNING[/b][/color]")
+		elif target_unit.equipped_weapon != null:
+			detail_parts.append("[color=yellow]%s[/color]" % _truncate_forecast_text(String(target_unit.equipped_weapon.weapon_name).to_upper(), 12))
+		if detail_parts.size() > 0:
+			meta_lines.append(" [color=gray]|[/color] ".join(detail_parts))
+		unit_stats_label.text = "[center]" + "\n".join(meta_lines) + "[/center]"
+		_refresh_unit_info_primary_widgets({
+			"hp": {
+				"current": int(target_unit.current_hp),
+				"max": max(1, int(target_unit.max_hp)),
+				"text": "%d/%d" % [int(target_unit.current_hp), int(target_unit.max_hp)],
+			},
+			"poise": {
+				"current": current_poise,
+				"max": max_poise,
+				"text": u_poise,
+			},
+			"xp": {
+				"current": int(current_xp),
+				"max": max(1, int(required_xp)),
+				"text": "%d/%d" % [int(current_xp), int(required_xp)],
+			},
+		}, animate_stat_bars, unit_info_source_id)
+		_refresh_unit_info_stat_widgets({
+			"strength": u_str,
+			"magic": u_mag,
+			"defense": display_def,
+			"resistance": display_res,
+			"speed": u_spd,
+			"agility": u_agi,
+		}, animate_stat_bars, unit_info_source_id)
+		_unit_info_stat_source_id = unit_info_source_id
 
 		if target_unit.data != null and target_unit.data.get("portrait") != null:
 			unit_portrait.texture = target_unit.data.portrait
-			unit_portrait.visible = true
+			_set_unit_portrait_block_visible(true)
+		else:
+			_set_unit_portrait_block_visible(false)
 		
 		var is_friendly = (target_unit.get_parent() == player_container or target_unit.get_parent() == ally_container)
 		open_inv_button.visible = (target_unit.get_parent() == player_container)
 		if support_btn: support_btn.visible = is_friendly
+		if unit_details_button: unit_details_button.visible = true
 		unit_info_panel.visible = true
 	else:
+		_unit_info_stat_source_id = -1
+		_set_unit_info_primary_widgets_visible(false)
+		_set_unit_info_stat_widgets_visible(false)
+		if unit_details_button: unit_details_button.visible = false
 		unit_info_panel.visible = false
 				
 func _on_unit_leveled_up(unit: Node2D, gains: Dictionary) -> void:
@@ -5397,27 +7618,63 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
 
 	# UI Updates (columns: left = attacker / you, right = defender / target)
-	forecast_atk_name.text = "ATK: " + attacker.unit_name
-	forecast_atk_weapon.text = atk_wpn.weapon_name if atk_wpn else "Unarmed"
+	forecast_atk_name.text = _format_forecast_name_fitted("ATK", attacker.unit_name, 17)
+	forecast_atk_weapon.text = _format_forecast_weapon_name(atk_wpn, 14)
 	forecast_atk_hp.text = "HP: %d / %d" % [attacker.current_hp, attacker.max_hp]
 	
-	forecast_def_name.text = defender.unit_name
-	forecast_def_weapon.text = def_wpn.weapon_name if def_wpn else "Unarmed"
+	forecast_def_name.text = _format_forecast_name_fitted("TARGET", defender.unit_name, 18)
+	forecast_def_weapon.text = _format_forecast_weapon_name(def_wpn, 14)
 	forecast_def_hp.text = "HP: %d / %d" % [defender.current_hp, defender.max_hp]
+	var atk_weapon_badge := forecast_panel.get_node_or_null("AtkWeaponBadgePanel/Text") as Label
+	if atk_weapon_badge != null:
+		atk_weapon_badge.text = _forecast_weapon_marker(atk_wpn)
+	var def_weapon_badge := forecast_panel.get_node_or_null("DefWeaponBadgePanel/Text") as Label
+	if def_weapon_badge != null:
+		def_weapon_badge.text = _forecast_weapon_marker(def_wpn)
+	var atk_weapon_icon_panel := forecast_panel.get_node_or_null("AtkWeaponIconPanel") as Panel
+	var atk_weapon_icon := forecast_panel.get_node_or_null("AtkWeaponIconPanel/Icon") as TextureRect
+	var atk_weapon_glow := forecast_panel.get_node_or_null("AtkWeaponIconPanel/Glow") as Panel
+	var atk_weapon_glow_color := _forecast_weapon_rarity_glow_color(atk_wpn)
+	if atk_weapon_icon_panel != null:
+		atk_weapon_icon_panel.visible = atk_wpn != null and atk_wpn.icon != null
+	if atk_weapon_icon != null:
+		atk_weapon_icon.texture = atk_wpn.icon if atk_wpn != null else null
+	if atk_weapon_glow != null:
+		atk_weapon_glow.visible = atk_wpn != null and atk_wpn.icon != null and atk_weapon_glow_color.a > 0.0
+		_style_forecast_weapon_glow(atk_weapon_glow, atk_weapon_glow_color)
+	var def_weapon_icon_panel := forecast_panel.get_node_or_null("DefWeaponIconPanel") as Panel
+	var def_weapon_icon := forecast_panel.get_node_or_null("DefWeaponIconPanel/Icon") as TextureRect
+	var def_weapon_glow := forecast_panel.get_node_or_null("DefWeaponIconPanel/Glow") as Panel
+	var def_weapon_glow_color := _forecast_weapon_rarity_glow_color(def_wpn)
+	if def_weapon_icon_panel != null:
+		def_weapon_icon_panel.visible = def_wpn != null and def_wpn.icon != null
+	if def_weapon_icon != null:
+		def_weapon_icon.texture = def_wpn.icon if def_wpn != null else null
+	if def_weapon_glow != null:
+		def_weapon_glow.visible = def_wpn != null and def_wpn.icon != null and def_weapon_glow_color.a > 0.0
+		_style_forecast_weapon_glow(def_weapon_glow, def_weapon_glow_color)
+	_ensure_forecast_hp_bars()
+	if forecast_atk_hp_bar != null:
+		forecast_atk_hp_bar.max_value = float(max(1, int(attacker.max_hp)))
+		forecast_atk_hp_bar.value = float(clampi(int(attacker.current_hp), 0, int(attacker.max_hp)))
+		_style_forecast_hp_bar(forecast_atk_hp_bar, _forecast_hp_fill_color(int(attacker.current_hp), int(attacker.max_hp)))
+	if forecast_def_hp_bar != null:
+		forecast_def_hp_bar.max_value = float(max(1, int(defender.max_hp)))
+		forecast_def_hp_bar.value = float(clampi(int(defender.current_hp), 0, int(defender.max_hp)))
+		_style_forecast_hp_bar(forecast_def_hp_bar, _forecast_hp_fill_color(int(defender.current_hp), int(defender.max_hp)))
 	
 	# --- RESET UI MODULATES ---
-	forecast_atk_dmg.modulate = Color.WHITE
-	forecast_atk_dmg.scale = Vector2.ONE
+	_reset_forecast_emphasis_visuals()
 	
 	# --- HEALING VS ATTACKING LOGIC ---
 	if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-		forecast_def_name.text = "Target: " + defender.unit_name
+		forecast_def_name.text = _format_forecast_name_fitted("TARGET", defender.unit_name, 18)
 		var heal_amount = attacker.magic + atk_wpn.might
 		forecast_atk_dmg.text = "HEAL: " + str(heal_amount)
 		forecast_atk_hit.text = "HIT: 100%"
 		forecast_atk_crit.text = "CRIT: 0%"
 		
-		forecast_def_dmg.text = "Damage: —"
+		forecast_def_dmg.text = "DAMAGE: --"
 		forecast_def_hit.text = ""
 		forecast_def_crit.text = ""
 		
@@ -5431,32 +7688,23 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 		forecast_atk_hit.text = "HIT: " + str(atk_hit) + "%"
 		forecast_atk_crit.text = "CRIT: " + str(atk_crit) + "%"
 		
-		# --- CRITICAL FLASH TRIGGER ---
-		if crit_flash_tween: crit_flash_tween.kill()
-		if atk_crit > 15:
-			crit_flash_tween = create_tween().set_loops()
-			crit_flash_tween.tween_property(forecast_atk_dmg, "modulate", Color.YELLOW, 0.2)
-			crit_flash_tween.tween_property(forecast_atk_dmg, "modulate", Color.WHITE, 0.2)
-			crit_flash_tween.parallel().tween_property(forecast_atk_dmg, "scale", Vector2(1.15, 1.15), 0.2)
-			crit_flash_tween.set_trans(Tween.TRANS_SINE)
-		
 		var def_is_healer = def_wpn != null and def_wpn.get("is_healing_staff") == true
 		if defender.get_parent() == enemy_container:
-			forecast_def_name.text = "DEF: " + defender.unit_name
+			forecast_def_name.text = _format_forecast_name_fitted("DEF", defender.unit_name, 17)
 		else:
-			forecast_def_name.text = "Target: " + defender.unit_name
+			forecast_def_name.text = _format_forecast_name_fitted("TARGET", defender.unit_name, 18)
 		
 		if def_wpn == null or def_is_healer or not is_in_range(defender, attacker):
-			forecast_def_dmg.text = "Counter: none"
+			forecast_def_dmg.text = "COUNTER: NONE"
 			forecast_def_hit.text = ""
 			forecast_def_crit.text = ""
 			forecast_def_double.text = ""
 		else:
-			forecast_def_dmg.text = "Counter dmg: " + str(def_dmg)
-			forecast_def_hit.text = "Counter hit: " + str(def_hit) + "%"
-			forecast_def_crit.text = "Counter crit: " + str(def_crit) + "%"
+			forecast_def_dmg.text = "COUNTER: " + str(def_dmg)
+			forecast_def_hit.text = "HIT: " + str(def_hit) + "%"
+			forecast_def_crit.text = "CRIT: " + str(def_crit) + "%"
 			var def_doubles = (defender.speed - attacker.speed) >= 4
-			forecast_def_double.text = "×2" if def_doubles else ""
+			forecast_def_double.text = "x2" if def_doubles else ""
 
 		# Advantage Indicators
 		if advantage == 1:
@@ -5489,7 +7737,10 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 			forecast_def_adv.modulate = Color.ORANGE
 			
 		var atk_doubles = (attacker.speed - defender.speed) >= 4
-		forecast_atk_double.text = "×2" if atk_doubles else ""
+		forecast_atk_double.text = "x2" if atk_doubles else ""
+		var attacker_lethal: bool = atk_hit > 0 and atk_dmg >= int(defender.current_hp)
+		var defender_lethal: bool = forecast_def_dmg.text != "COUNTER: NONE" and def_hit > 0 and def_dmg >= int(attacker.current_hp)
+		_start_forecast_emphasis_pulse(attacker_lethal, defender_lethal, atk_crit > 0, def_crit > 0)
 
 	# --- FIGURE-8 ANIMATION TRIGGER ---
 	if forecast_atk_double.text != "" or forecast_def_double.text != "":
@@ -5559,6 +7810,9 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	
 	if is_instance_valid(target_cursor):
 		target_cursor.z_index = 80
+		target_cursor.modulate = Color.WHITE
+		if is_instance_valid(target_cursor_sprite):
+			target_cursor_sprite.modulate = Color.WHITE
 		# Match main Cursor: parent sits on tile top-left; child Sprite2D (~half cell + texture offset) centers the art.
 		target_cursor.global_position = defender.global_position
 		target_cursor.visible = true
@@ -5572,15 +7826,12 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	
 	# --- CLEANUP AND RESET ---
 	if figure_8_tween: figure_8_tween.kill()
-	if crit_flash_tween: crit_flash_tween.kill()
+	_reset_forecast_emphasis_visuals()
 	
 	if atk_double_origin != Vector2.ZERO:
 		forecast_atk_double.position = atk_double_origin
 		forecast_def_double.position = def_double_origin
 		
-	forecast_atk_dmg.modulate = Color.WHITE
-	forecast_atk_dmg.scale = Vector2.ONE
-	
 	if forecast_atk_support_label:
 		forecast_atk_support_label.visible = false
 	if forecast_def_support_label:
@@ -5591,6 +7842,8 @@ func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	
 	forecast_panel.visible = false
 	if is_instance_valid(target_cursor):
+		if is_instance_valid(target_cursor_sprite):
+			target_cursor_sprite.modulate = Color.WHITE
 		target_cursor.visible = false
 	return [action, used_ability]
 	
@@ -11014,6 +13267,7 @@ func calculate_enemy_threat_range(enemy: Node2D) -> void:
 	enemy_reachable_tiles.clear()
 	enemy_attackable_tiles.clear()
 	if enemy == null: return
+	if not can_preview_enemy_threat(enemy): return
 
 	var footprint: Array[Vector2i] = _unit_footprint_tiles(enemy)
 	var move_range = enemy.get("move_range") if enemy.get("move_range") != null else 0
@@ -11053,7 +13307,8 @@ func calculate_enemy_threat_range(enemy: Node2D) -> void:
 
 	var min_r = 1
 	var max_r = 1
-	var ew: Resource = enemy.equipped_weapon
+	var ew_variant: Variant = enemy.get("equipped_weapon")
+	var ew: Resource = ew_variant as Resource if ew_variant is Resource else null
 	var enemy_use_los: bool = true
 	if ew != null:
 		min_r = ew.min_range
@@ -12498,10 +14753,12 @@ func _setup_objective_ui() -> void:
 
 func _on_objective_toggle_pressed() -> void:
 	is_objective_expanded = !is_objective_expanded
-	var vp_size = get_viewport_rect().size
-	
-	# Slide target: When hidden, shove it completely off the right side of the screen
-	var target_x = vp_size.x - 420 if is_objective_expanded else vp_size.x + 50
+	var target_x: float = 0.0
+	if objective_panel != null and objective_panel.has_meta("objective_expanded_x") and objective_panel.has_meta("objective_collapsed_x"):
+		target_x = float(objective_panel.get_meta("objective_expanded_x")) if is_objective_expanded else float(objective_panel.get_meta("objective_collapsed_x"))
+	else:
+		var vp_size = get_viewport_rect().size
+		target_x = vp_size.x - 420 if is_objective_expanded else vp_size.x + 50
 	
 	var tween = create_tween()
 	tween.tween_property(objective_panel, "position:x", target_x, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN_OUT)
@@ -12513,6 +14770,7 @@ func update_objective_ui(skip_animation: bool = false) -> void:
 	if objective_label == null: return
 	
 	var txt = "[center][b][color=gold]--- CURRENT OBJECTIVE ---[/color][/b]\n"
+	var target_height = 120 # Default panel height
 	
 	match map_objective:
 		Objective.ROUT_ENEMY:
@@ -12559,13 +14817,13 @@ func update_objective_ui(skip_animation: bool = false) -> void:
 			txt += instruction + " (Turn " + str(current_turn) + "/" + str(turn_limit) + ")\n"
 			txt += "[color=gray]Convoy Status: [/color][color=" + hp_color + "]" + vip_hp_str + "[/color]"
 
-	# ==========================================
-	# --- NEW: LIVE BOUNTY TRACKER ---
-	# ==========================================
-	var target_height = 120 # Default panel height
+	var reinforcement_line: String = _build_enemy_reinforcement_objective_bbcode()
+	if reinforcement_line != "":
+		txt += "\n" + reinforcement_line
+		target_height += 28
 	
 	if CampaignManager.merchant_quest_active:
-		target_height = 190 # Expand the panel to fit the side quest text
+		target_height = 190 + (28 if reinforcement_line != "" else 0) # Expand the panel to fit quest + telegraph text
 		
 		var target_item = CampaignManager.merchant_quest_item_name
 		var target_amt = CampaignManager.merchant_quest_target_amount
@@ -12619,6 +14877,8 @@ func update_objective_ui(skip_animation: bool = false) -> void:
 				add_child(tick_player)
 				tick_player.play()
 				tick_player.finished.connect(tick_player.queue_free)
+
+	queue_redraw()
 				
 # ==========================================
 # --- EPIC VFX SPAWNERS ---
@@ -12800,15 +15060,44 @@ func _start_intro_sequence() -> void:
 				formatted_lines.append(f_line)
 				
 			# Play this block, and wait for the player to click through it before loading the next one
-			await play_cinematic_dialogue(final_name, final_portrait, formatted_lines)
+			await play_cinematic_dialogue(final_name, final_portrait, formatted_lines, true)
 
 	# Once all the dialogue finishes (or is skipped), begin the Deployment Phase!
 	change_state(pre_battle_state)
 	
-func play_cinematic_dialogue(speaker_name: String, portrait_tex: Texture2D, lines: Array) -> void:
+func _capture_ui_visibility_snapshot() -> Array[Dictionary]:
+	var snapshot: Array[Dictionary] = []
+	if ui_root == null:
+		return snapshot
+	for child in ui_root.get_children():
+		if child is CanvasItem:
+			snapshot.append({
+				"node": child,
+				"visible": (child as CanvasItem).visible,
+			})
+	return snapshot
+
+func _set_ui_children_visible(visible: bool) -> void:
+	if ui_root == null:
+		return
+	for child in ui_root.get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).visible = visible
+
+func _restore_ui_visibility_snapshot(snapshot: Array[Dictionary]) -> void:
+	for entry in snapshot:
+		var node_variant: Variant = entry.get("node")
+		if node_variant is CanvasItem and is_instance_valid(node_variant):
+			(node_variant as CanvasItem).visible = bool(entry.get("visible", true))
+
+func play_cinematic_dialogue(speaker_name: String, portrait_tex: Texture2D, lines: Array, hide_gameplay_ui: bool = false) -> void:
 	# 1. Freeze the game so nothing moves in the background
 	get_tree().paused = true
 	var vp_size = get_viewport_rect().size
+	var ui_visibility_snapshot: Array[Dictionary] = []
+	if hide_gameplay_ui:
+		ui_visibility_snapshot = _capture_ui_visibility_snapshot()
+		_set_ui_children_visible(false)
 	
 	# ==========================================
 	# --- FIX: ROBUST NAME MATCHING & CAMERA WAKEUP ---
@@ -13003,6 +15292,8 @@ func play_cinematic_dialogue(speaker_name: String, portrait_tex: Texture2D, line
 		highlight.queue_free()
 		
 	cine_layer.queue_free()
+	if hide_gameplay_ui:
+		_restore_ui_visibility_snapshot(ui_visibility_snapshot)
 	get_tree().paused = false
 	
 func animate_shield_drop(unit: Node2D) -> void:
@@ -13086,7 +15377,7 @@ func _trigger_victory() -> void:
 				formatted_lines.append(f_line)
 				
 			# Wait for the dialogue block to finish!
-			await play_cinematic_dialogue(final_name, final_portrait, formatted_lines)
+			await play_cinematic_dialogue(final_name, final_portrait, formatted_lines, true)
 
 	# --- UNLOCK THE BLACKSMITH IF WE BEAT LEVEL 3 ---
 	if CampaignManager.current_level_index == 2: # Index 2 is Level 3!
@@ -13165,6 +15456,7 @@ func update_fog_of_war() -> void:
 	_apply_fow_visibility(enemy_container)
 	_apply_fow_visibility(destructibles_container)
 	_apply_fow_visibility(chests_container)
+	_apply_decor_fow_shadow()
 	
 	# Force the black squares to redraw
 	fog_drawer.queue_redraw()
@@ -13230,6 +15522,37 @@ func _apply_fow_visibility(container: Node) -> void:
 		# An enemy is only visible if their tile is currently State 2 (Visible)
 		var tile_visible: bool = fow_grid.has(pos) and fow_grid[pos] == 2
 		child.visible = tile_visible
+
+func _decor_base_modulate(item: CanvasItem) -> Color:
+	var key: int = item.get_instance_id()
+	if not _decor_fow_base_modulates.has(key):
+		_decor_fow_base_modulates[key] = item.modulate
+	return _decor_fow_base_modulates[key]
+
+func _decor_tile_currently_visible(node: Node2D) -> bool:
+	for tile in _unit_footprint_tiles(node):
+		if fow_grid.has(tile) and fow_grid[tile] == 2:
+			return true
+	return false
+
+func _apply_decor_fow_shadow() -> void:
+	if decor_layer == null:
+		return
+	for child in decor_layer.get_children():
+		var item: CanvasItem = child as CanvasItem
+		if item == null or not is_instance_valid(item) or item.is_queued_for_deletion():
+			continue
+		var base: Color = _decor_base_modulate(item)
+		var node_2d: Node2D = child as Node2D
+		if node_2d == null or _decor_tile_currently_visible(node_2d):
+			item.modulate = base
+			continue
+		item.modulate = Color(
+			base.r * DECOR_FOG_SHADOW_TINT.r,
+			base.g * DECOR_FOG_SHADOW_TINT.g,
+			base.b * DECOR_FOG_SHADOW_TINT.b,
+			base.a * DECOR_FOG_SHADOW_TINT.a
+		)
 
 func _process_fog(delta: float) -> void:
 	if not use_fog_of_war or fog_drawer == null: return
@@ -13491,6 +15814,136 @@ func _count_active_enemy_spawners(exclude: Node2D = null) -> int:
 			if d.has_method("process_turn") and d.get("spawner_faction") == 0:
 				count += 1
 	return count
+
+func _is_enemy_reinforcement_spawner(node: Node2D) -> bool:
+	if node == null or not is_instance_valid(node) or node.is_queued_for_deletion():
+		return false
+	if not node.visible:
+		return false
+	if not node.has_method("process_turn"):
+		return false
+	var raw_faction: Variant = node.get("spawner_faction")
+	if raw_faction == null or int(raw_faction) != 0:
+		return false
+	var slot_timers_value: Variant = node.get("slot_timers")
+	return slot_timers_value is Array
+
+func _enemy_spawner_slot_is_open(active_units_value: Variant, slot_index: int) -> bool:
+	if active_units_value is Dictionary:
+		var active_unit: Variant = active_units_value.get(slot_index, null)
+		if active_unit == null:
+			return true
+		if active_unit is Node:
+			var active_node: Node = active_unit as Node
+			return not is_instance_valid(active_node) or active_node.is_queued_for_deletion()
+	return true
+
+func _predict_turns_until_enemy_spawner_spawn(spawner: Node2D) -> int:
+	if not _is_enemy_reinforcement_spawner(spawner):
+		return -1
+	var slot_timers_value: Variant = spawner.get("slot_timers")
+	if not (slot_timers_value is Array):
+		return -1
+	var slot_timers: Array = slot_timers_value
+	var active_units_value: Variant = spawner.get("active_units")
+	var best_turns: int = -1
+	for slot_index in range(slot_timers.size()):
+		if not _enemy_spawner_slot_is_open(active_units_value, slot_index):
+			continue
+		var raw_timer: Variant = slot_timers[slot_index]
+		if raw_timer == null:
+			continue
+		var timer: int = int(raw_timer)
+		if timer < 0:
+			continue
+		var turns_until_spawn: int = 1 if timer <= 1 else timer
+		if best_turns == -1 or turns_until_spawn < best_turns:
+			best_turns = turns_until_spawn
+	return best_turns
+
+func _get_spawner_display_tiles(spawner: Node2D) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	if spawner == null or not is_instance_valid(spawner):
+		return tiles
+	if spawner.has_method("get_occupied_tiles"):
+		for raw_tile in spawner.get_occupied_tiles(self):
+			if raw_tile is Vector2i and not tiles.has(raw_tile):
+				tiles.append(raw_tile)
+	if tiles.is_empty():
+		tiles.append(get_grid_pos(spawner))
+	return tiles
+
+func _build_enemy_reinforcement_telegraph_snapshot() -> Dictionary:
+	var telegraphable_count: int = 0
+	var due_next_count: int = 0
+	var next_turns: int = -1
+	var soon_tiles: Array[Vector2i] = []
+	var later_tiles: Array[Vector2i] = []
+
+	if destructibles_container == null:
+		return {
+			"telegraphable_count": telegraphable_count,
+			"due_next_count": due_next_count,
+			"next_turns": next_turns,
+			"soon_tiles": soon_tiles,
+			"later_tiles": later_tiles,
+		}
+
+	for child in destructibles_container.get_children():
+		var spawner: Node2D = child as Node2D
+		if not _is_enemy_reinforcement_spawner(spawner):
+			continue
+		var turns_until_spawn: int = _predict_turns_until_enemy_spawner_spawn(spawner)
+		if turns_until_spawn < 0:
+			continue
+		telegraphable_count += 1
+		if next_turns == -1 or turns_until_spawn < next_turns:
+			next_turns = turns_until_spawn
+		if turns_until_spawn <= REINFORCEMENT_WARNING_ENEMY_PHASES:
+			due_next_count += 1
+			for tile in _get_spawner_display_tiles(spawner):
+				if not soon_tiles.has(tile):
+					soon_tiles.append(tile)
+		else:
+			for tile in _get_spawner_display_tiles(spawner):
+				if not later_tiles.has(tile):
+					later_tiles.append(tile)
+
+	return {
+		"telegraphable_count": telegraphable_count,
+		"due_next_count": due_next_count,
+		"next_turns": next_turns,
+		"soon_tiles": soon_tiles,
+		"later_tiles": later_tiles,
+	}
+
+func _build_enemy_reinforcement_objective_bbcode() -> String:
+	var snapshot: Dictionary = _build_enemy_reinforcement_telegraph_snapshot()
+	var telegraphable_count: int = int(snapshot.get("telegraphable_count", 0))
+	if telegraphable_count <= 0:
+		return ""
+	var next_turns: int = int(snapshot.get("next_turns", -1))
+	var due_next_count: int = int(snapshot.get("due_next_count", 0))
+	if next_turns <= 0:
+		return "[color=gray]Enemy reinforcements: movement is obscured.[/color]"
+	if next_turns == 1:
+		var soon_noun: String = "spawner" if due_next_count == 1 else "spawners"
+		return "[color=orange]Enemy reinforcements: " + str(due_next_count) + " " + soon_noun + " primed for the next enemy phase.[/color]"
+	var phase_noun: String = "phase" if next_turns == 1 else "phases"
+	return "[color=gold]Enemy reinforcements: next wave in " + str(next_turns) + " enemy " + phase_noun + ".[/color]"
+
+func _maybe_log_enemy_reinforcement_warning_for_player_phase() -> void:
+	if battle_log == null or not battle_log.visible:
+		return
+	if _last_enemy_reinforcement_warning_turn == current_turn:
+		return
+	var snapshot: Dictionary = _build_enemy_reinforcement_telegraph_snapshot()
+	var due_next_count: int = int(snapshot.get("due_next_count", 0))
+	if due_next_count <= 0:
+		return
+	_last_enemy_reinforcement_warning_turn = current_turn
+	var soon_noun: String = "spawner" if due_next_count == 1 else "spawners"
+	add_combat_log("Scout report: " + str(due_next_count) + " enemy " + soon_noun + " are primed for the next enemy phase.", "orange")
 
 # ==========================================
 # --- MULTIVERSE ARENA SPAWNER ---
@@ -14921,8 +17374,8 @@ func _ensure_forecast_support_labels() -> void:
 	if forecast_atk_support_label == null:
 		forecast_atk_support_label = Label.new()
 		forecast_atk_support_label.name = "AtkSupportBonus"
-		forecast_atk_support_label.position = forecast_atk_crit.position + Vector2(0, 26)
-		forecast_atk_support_label.size = Vector2(240, 22)
+		forecast_atk_support_label.position = Vector2(24, 190)
+		forecast_atk_support_label.size = Vector2(190, 22)
 		forecast_atk_support_label.add_theme_font_size_override("font_size", 16)
 		forecast_atk_support_label.add_theme_color_override("font_color", Color(0.60, 0.95, 1.0))
 		forecast_panel.add_child(forecast_atk_support_label)
@@ -14930,8 +17383,8 @@ func _ensure_forecast_support_labels() -> void:
 	if forecast_def_support_label == null:
 		forecast_def_support_label = Label.new()
 		forecast_def_support_label.name = "DefSupportBonus"
-		forecast_def_support_label.position = forecast_def_crit.position + Vector2(0, 26)
-		forecast_def_support_label.size = Vector2(240, 22)
+		forecast_def_support_label.position = Vector2(326, 190)
+		forecast_def_support_label.size = Vector2(190, 22)
 		forecast_def_support_label.add_theme_font_size_override("font_size", 16)
 		forecast_def_support_label.add_theme_color_override("font_color", Color(0.60, 0.95, 1.0))
 		forecast_panel.add_child(forecast_def_support_label)
@@ -14939,34 +17392,34 @@ func _ensure_forecast_support_labels() -> void:
 	if forecast_instruction_label == null:
 		forecast_instruction_label = Label.new()
 		forecast_instruction_label.name = "ForecastInstruction"
-		forecast_instruction_label.position = Vector2(8, 148)
-		forecast_instruction_label.size = Vector2(384, 26)
+		forecast_instruction_label.position = Vector2(24, 262)
+		forecast_instruction_label.size = Vector2(492, 20)
 		forecast_instruction_label.add_theme_font_size_override("font_size", 11)
 		forecast_instruction_label.add_theme_color_override("font_color", Color(0.78, 0.82, 0.9))
 		forecast_instruction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		forecast_instruction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		forecast_instruction_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		forecast_instruction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		forecast_panel.add_child(forecast_instruction_label)
 
 	if forecast_reaction_label == null:
 		forecast_reaction_label = Label.new()
 		forecast_reaction_label.name = "ForecastReactionSummary"
-		forecast_reaction_label.position = Vector2(8, 174)
-		forecast_reaction_label.size = Vector2(384, 28)
+		forecast_reaction_label.position = Vector2(24, 284)
+		forecast_reaction_label.size = Vector2(492, 18)
 		forecast_reaction_label.add_theme_font_size_override("font_size", 10)
 		forecast_reaction_label.add_theme_color_override("font_color", Color(0.90, 0.84, 0.62))
 		forecast_reaction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		forecast_reaction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		forecast_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		forecast_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		forecast_panel.add_child(forecast_reaction_label)
 
 	# Keep bottom stack above Confirm/Cancel (~y 201+).
 	if forecast_instruction_label != null:
-		forecast_instruction_label.position = Vector2(8, 148)
-		forecast_instruction_label.size = Vector2(384, 26)
+		forecast_instruction_label.position = Vector2(24, 262)
+		forecast_instruction_label.size = Vector2(492, 20)
 	if forecast_reaction_label != null:
-		forecast_reaction_label.position = Vector2(8, 174)
-		forecast_reaction_label.size = Vector2(384, 28)
+		forecast_reaction_label.position = Vector2(24, 284)
+		forecast_reaction_label.size = Vector2(492, 18)
 
 func apply_campaign_settings() -> void:
 	camera_follows_enemies = CampaignManager.battle_follow_enemy_camera
@@ -15109,13 +17562,46 @@ func _unit_can_use_item_for_ui(unit: Node2D, item: Resource) -> bool:
 
 
 func _get_unit_target_for_details() -> Node2D:
+	var locked_inspect_unit: Node2D = _get_locked_inspect_unit()
+	if locked_inspect_unit != null:
+		return locked_inspect_unit
+	var hovered_occupant: Node2D = get_occupant_at(cursor_grid_pos)
+	if hovered_occupant != null:
+		return hovered_occupant
 	if current_state == player_state and player_state.active_unit != null:
 		return player_state.active_unit
-	return get_occupant_at(cursor_grid_pos)
+	return null
+
+
+func can_preview_enemy_threat(unit: Node2D) -> bool:
+	if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+		return false
+	if unit.get_parent() != enemy_container:
+		return false
+	if unit.get("move_range") == null:
+		return false
+	if unit.get("move_type") == null:
+		return false
+	return true
+
+
+func _get_locked_inspect_unit() -> Node2D:
+	if inspected_unit == null:
+		return null
+	if not is_instance_valid(inspected_unit) or inspected_unit.is_queued_for_deletion():
+		inspected_unit = null
+		return null
+	if current_state == player_state and player_state.active_unit != null:
+		return null
+	return inspected_unit
 	
 func _ensure_detailed_unit_info_panel() -> void:
 	if detailed_unit_info_layer != null and is_instance_valid(detailed_unit_info_layer):
 		return
+
+	detailed_unit_info_primary_widgets.clear()
+	detailed_unit_info_stat_widgets.clear()
+	detailed_unit_info_growth_widgets.clear()
 
 	detailed_unit_info_layer = CanvasLayer.new()
 	detailed_unit_info_layer.layer = 120
@@ -15130,7 +17616,7 @@ func _ensure_detailed_unit_info_panel() -> void:
 
 	detailed_unit_info_panel = Panel.new()
 	detailed_unit_info_panel.name = "DetailedUnitInfoPanel"
-	detailed_unit_info_panel.custom_minimum_size = Vector2(1180, 760)
+	detailed_unit_info_panel.custom_minimum_size = Vector2(1320, 860)
 	detailed_unit_info_panel.visible = false
 	detailed_unit_info_layer.add_child(detailed_unit_info_panel)
 
@@ -15138,72 +17624,375 @@ func _ensure_detailed_unit_info_panel() -> void:
 	detailed_unit_info_panel.anchor_top = 0.5
 	detailed_unit_info_panel.anchor_right = 0.5
 	detailed_unit_info_panel.anchor_bottom = 0.5
-	detailed_unit_info_panel.offset_left = -590
-	detailed_unit_info_panel.offset_top = -380
-	detailed_unit_info_panel.offset_right = 590
-	detailed_unit_info_panel.offset_bottom = 380
+	detailed_unit_info_panel.offset_left = -660
+	detailed_unit_info_panel.offset_top = -430
+	detailed_unit_info_panel.offset_right = 660
+	detailed_unit_info_panel.offset_bottom = 430
+	_style_tactical_panel(detailed_unit_info_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 16)
 
 	var root = VBoxContainer.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
-	root.add_theme_constant_override("separation", 14)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 24)
+	root.add_theme_constant_override("separation", 18)
 	detailed_unit_info_panel.add_child(root)
 
 	var header = HBoxContainer.new()
 	header.add_theme_constant_override("separation", 20)
 	root.add_child(header)
 
+	var portrait_frame := Panel.new()
+	portrait_frame.custom_minimum_size = Vector2(214, 214)
+	_style_tactical_panel(portrait_frame, TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 12)
+	header.add_child(portrait_frame)
+
 	detailed_unit_info_portrait = TextureRect.new()
 	detailed_unit_info_portrait.custom_minimum_size = Vector2(190, 190)
 	detailed_unit_info_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	detailed_unit_info_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	header.add_child(detailed_unit_info_portrait)
+	detailed_unit_info_portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+	portrait_frame.add_child(detailed_unit_info_portrait)
 
 	var name_box = VBoxContainer.new()
 	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_box.add_theme_constant_override("separation", 10)
+	name_box.add_theme_constant_override("separation", 8)
 	header.add_child(name_box)
 
 	detailed_unit_info_name = Label.new()
-	detailed_unit_info_name.add_theme_font_size_override("font_size", 40)
+	_style_tactical_label(detailed_unit_info_name, TACTICAL_UI_ACCENT, 40, 3)
 	name_box.add_child(detailed_unit_info_name)
 
+	detailed_unit_info_meta_label = Label.new()
+	_style_tactical_label(detailed_unit_info_meta_label, TACTICAL_UI_TEXT_MUTED, 22, 2)
+	name_box.add_child(detailed_unit_info_meta_label)
+
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(0, 3)
+	divider.color = Color(TACTICAL_UI_BORDER.r, TACTICAL_UI_BORDER.g, TACTICAL_UI_BORDER.b, 0.55)
+	name_box.add_child(divider)
+
+	var weapon_row := HBoxContainer.new()
+	weapon_row.add_theme_constant_override("separation", 10)
+	name_box.add_child(weapon_row)
+
+	var weapon_pair_frame := Panel.new()
+	weapon_pair_frame.custom_minimum_size = Vector2(114, 48)
+	_style_tactical_panel(weapon_pair_frame, Color(0.16, 0.13, 0.09, 0.94), TACTICAL_UI_BORDER_MUTED, 1, 8)
+	weapon_row.add_child(weapon_pair_frame)
+
+	var weapon_pair_inner := HBoxContainer.new()
+	weapon_pair_inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 6)
+	weapon_pair_inner.add_theme_constant_override("separation", 6)
+	weapon_pair_frame.add_child(weapon_pair_inner)
+
+	var weapon_badge_panel := Panel.new()
+	weapon_badge_panel.custom_minimum_size = Vector2(50, 32)
+	_style_tactical_panel(weapon_badge_panel, Color(0.24, 0.18, 0.10, 0.96), TACTICAL_UI_BORDER, 1, 7)
+	weapon_pair_inner.add_child(weapon_badge_panel)
+
+	detailed_unit_info_weapon_badge = Label.new()
+	detailed_unit_info_weapon_badge.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+	_style_tactical_label(detailed_unit_info_weapon_badge, TACTICAL_UI_ACCENT, 16, 2)
+	detailed_unit_info_weapon_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detailed_unit_info_weapon_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	weapon_badge_panel.add_child(detailed_unit_info_weapon_badge)
+
+	var weapon_icon_panel := Panel.new()
+	weapon_icon_panel.custom_minimum_size = Vector2(32, 32)
+	_style_tactical_panel(weapon_icon_panel, Color(0.11, 0.10, 0.08, 0.96), TACTICAL_UI_BORDER_MUTED, 1, 6)
+	weapon_pair_inner.add_child(weapon_icon_panel)
+
+	detailed_unit_info_weapon_icon = TextureRect.new()
+	detailed_unit_info_weapon_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	detailed_unit_info_weapon_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	detailed_unit_info_weapon_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 3)
+	weapon_icon_panel.add_child(detailed_unit_info_weapon_icon)
+
+	detailed_unit_info_weapon_name = Label.new()
+	detailed_unit_info_weapon_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_tactical_label(detailed_unit_info_weapon_name, TACTICAL_UI_TEXT, 22, 2)
+	weapon_row.add_child(detailed_unit_info_weapon_name)
+
+	detailed_unit_info_summary_text = RichTextLabel.new()
+	detailed_unit_info_summary_text.bbcode_enabled = true
+	detailed_unit_info_summary_text.fit_content = true
+	detailed_unit_info_summary_text.scroll_active = false
+	detailed_unit_info_summary_text.custom_minimum_size = Vector2(0, 94)
+	_style_tactical_richtext(detailed_unit_info_summary_text, 22, 22)
+	name_box.add_child(detailed_unit_info_summary_text)
+
+	var close_box := VBoxContainer.new()
+	close_box.alignment = BoxContainer.ALIGNMENT_END
+	header.add_child(close_box)
+
 	detailed_unit_info_close_btn = Button.new()
-	detailed_unit_info_close_btn.text = "Close"
-	detailed_unit_info_close_btn.custom_minimum_size = Vector2(170, 56)
-	detailed_unit_info_close_btn.add_theme_font_size_override("font_size", 22)
+	detailed_unit_info_close_btn.custom_minimum_size = Vector2(196, 68)
+	_style_tactical_button(detailed_unit_info_close_btn, "Close", false, 26)
 	detailed_unit_info_close_btn.pressed.connect(func():
 		_hide_detailed_unit_info_panel()
 	)
-	name_box.add_child(detailed_unit_info_close_btn)
+	close_box.add_child(detailed_unit_info_close_btn)
 
 	var body = HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 18)
+	body.add_theme_constant_override("separation", 20)
 	root.add_child(body)
 
 	var left_panel = Panel.new()
-	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_panel.custom_minimum_size = Vector2(560, 0)
 	left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_style_tactical_panel(left_panel, TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 12)
 	body.add_child(left_panel)
 
 	var right_panel = Panel.new()
 	right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_style_tactical_panel(right_panel, TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 12)
 	body.add_child(right_panel)
 
-	detailed_unit_info_left_text = RichTextLabel.new()
-	detailed_unit_info_left_text.bbcode_enabled = true
-	detailed_unit_info_left_text.fit_content = false
-	detailed_unit_info_left_text.scroll_active = true
-	detailed_unit_info_left_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 14)
-	left_panel.add_child(detailed_unit_info_left_text)
+	var left_scroll := ScrollContainer.new()
+	left_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
+	left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	left_panel.add_child(left_scroll)
+
+	var left_root := VBoxContainer.new()
+	left_root.custom_minimum_size = Vector2(0, 760)
+	left_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_root.add_theme_constant_override("separation", 14)
+	left_scroll.add_child(left_root)
+
+	var core_status_label := Label.new()
+	_style_tactical_label(core_status_label, TACTICAL_UI_ACCENT, 22, 2)
+	core_status_label.text = "Core Status"
+	left_root.add_child(core_status_label)
+
+	var primary_root := VBoxContainer.new()
+	primary_root.name = "DetailedUnitPrimaryBarsRoot"
+	primary_root.add_theme_constant_override("separation", 10)
+	left_root.add_child(primary_root)
+
+	for bar_def in _unit_info_primary_bar_definitions():
+		var bar_key: String = str(bar_def.get("key", ""))
+		var block := Panel.new()
+		block.custom_minimum_size = Vector2(0, 102)
+		_style_tactical_panel(block, Color(0.10, 0.09, 0.07, 0.90), TACTICAL_UI_BORDER_MUTED, 1, 8)
+		primary_root.add_child(block)
+
+		var block_box := VBoxContainer.new()
+		block_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+		block_box.add_theme_constant_override("separation", 6)
+		block.add_child(block_box)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		block_box.add_child(row)
+
+		var name_label := Label.new()
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+
+		var value_chip := Panel.new()
+		value_chip.custom_minimum_size = Vector2(116, 28)
+		row.add_child(value_chip)
+
+		var value_label := Label.new()
+		value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+		value_chip.add_child(value_label)
+
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 18)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		block_box.add_child(bar)
+
+		var desc_label := Label.new()
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		desc_label.custom_minimum_size = Vector2(0, 34)
+		block_box.add_child(desc_label)
+
+		var sheen := _attach_unit_info_bar_sheen(bar)
+		detailed_unit_info_primary_widgets[bar_key] = {
+			"panel": block,
+			"name": name_label,
+			"value_chip": value_chip,
+			"value": value_label,
+			"bar": bar,
+			"desc": desc_label,
+			"sheen": sheen,
+		}
+
+	_ensure_detailed_unit_info_primary_widgets_style()
+
+	var combat_profile_label := Label.new()
+	_style_tactical_label(combat_profile_label, TACTICAL_UI_ACCENT, 22, 2)
+	combat_profile_label.text = "Combat Profile"
+	left_root.add_child(combat_profile_label)
+
+	var stat_root := GridContainer.new()
+	stat_root.name = "DetailedUnitStatGrid"
+	stat_root.columns = 1
+	stat_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stat_root.add_theme_constant_override("h_separation", 0)
+	stat_root.add_theme_constant_override("v_separation", 12)
+	left_root.add_child(stat_root)
+
+	for stat_def in _unit_info_stat_definitions():
+		var stat_key: String = str(stat_def.get("key", ""))
+		var stat_block := Panel.new()
+		stat_block.custom_minimum_size = Vector2(0, 92)
+		stat_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_style_tactical_panel(stat_block, Color(0.10, 0.09, 0.07, 0.88), TACTICAL_UI_BORDER_MUTED, 1, 6)
+		stat_root.add_child(stat_block)
+
+		var stat_box := VBoxContainer.new()
+		stat_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 6)
+		stat_box.add_theme_constant_override("separation", 6)
+		stat_block.add_child(stat_box)
+
+		var stat_row := HBoxContainer.new()
+		stat_row.add_theme_constant_override("separation", 8)
+		stat_box.add_child(stat_row)
+
+		var stat_name := Label.new()
+		stat_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_row.add_child(stat_name)
+
+		var stat_hints := HBoxContainer.new()
+		stat_hints.add_theme_constant_override("separation", 4)
+		stat_row.add_child(stat_hints)
+
+		var stat_value_chip := Panel.new()
+		stat_value_chip.custom_minimum_size = Vector2(88, 28)
+		stat_row.add_child(stat_value_chip)
+
+		var stat_value_label := Label.new()
+		stat_value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+		stat_value_chip.add_child(stat_value_label)
+
+		var stat_bar := ProgressBar.new()
+		stat_bar.custom_minimum_size = Vector2(0, 16)
+		stat_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_box.add_child(stat_bar)
+
+		var stat_desc := Label.new()
+		stat_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		stat_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_box.add_child(stat_desc)
+
+		var stat_sheen := _attach_unit_info_bar_sheen(stat_bar)
+		detailed_unit_info_stat_widgets[stat_key] = {
+			"panel": stat_block,
+			"name": stat_name,
+			"hints": stat_hints,
+			"value_chip": stat_value_chip,
+			"value": stat_value_label,
+			"bar": stat_bar,
+			"desc": stat_desc,
+			"sheen": stat_sheen,
+		}
+
+	var right_root := VBoxContainer.new()
+	right_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 18)
+	right_root.add_theme_constant_override("separation", 10)
+	right_panel.add_child(right_root)
+
+	var right_scroll := ScrollContainer.new()
+	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right_root.add_child(right_scroll)
+
+	var right_content := VBoxContainer.new()
+	right_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_content.add_theme_constant_override("separation", 14)
+	right_scroll.add_child(right_content)
+
+	var growth_title := Label.new()
+	_style_tactical_label(growth_title, TACTICAL_UI_ACCENT, 22, 2)
+	growth_title.text = "Growth Outlook"
+	right_content.add_child(growth_title)
+
+	var growth_root := VBoxContainer.new()
+	growth_root.name = "DetailedUnitGrowthRoot"
+	growth_root.add_theme_constant_override("separation", 8)
+	right_content.add_child(growth_root)
+
+	for growth_def in [
+		{"key": "hp_growth_bonus", "label": "HP", "base": "hp"},
+		{"key": "str_growth_bonus", "label": "STR", "base": "strength"},
+		{"key": "mag_growth_bonus", "label": "MAG", "base": "magic"},
+		{"key": "def_growth_bonus", "label": "DEF", "base": "defense"},
+		{"key": "res_growth_bonus", "label": "RES", "base": "resistance"},
+		{"key": "spd_growth_bonus", "label": "SPD", "base": "speed"},
+		{"key": "agi_growth_bonus", "label": "AGI", "base": "agility"},
+	]:
+		var growth_key: String = str(growth_def.get("key", ""))
+		var growth_block := Panel.new()
+		growth_block.custom_minimum_size = Vector2(0, 48)
+		_style_tactical_panel(growth_block, Color(0.10, 0.09, 0.07, 0.84), TACTICAL_UI_BORDER_MUTED, 1, 7)
+		growth_root.add_child(growth_block)
+
+		var growth_box := VBoxContainer.new()
+		growth_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 6)
+		growth_box.add_theme_constant_override("separation", 2)
+		growth_block.add_child(growth_box)
+
+		var growth_row := HBoxContainer.new()
+		growth_row.add_theme_constant_override("separation", 8)
+		growth_box.add_child(growth_row)
+
+		var growth_name := Label.new()
+		growth_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		growth_row.add_child(growth_name)
+
+		var growth_value_chip := Panel.new()
+		growth_value_chip.custom_minimum_size = Vector2(92, 22)
+		growth_row.add_child(growth_value_chip)
+
+		var growth_value_label := Label.new()
+		growth_value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+		growth_value_chip.add_child(growth_value_label)
+
+		var growth_bar := ProgressBar.new()
+		growth_bar.custom_minimum_size = Vector2(0, 14)
+		growth_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		growth_box.add_child(growth_bar)
+
+		var growth_sheen := _attach_unit_info_bar_sheen(growth_bar)
+		detailed_unit_info_growth_widgets[growth_key] = {
+			"panel": growth_block,
+			"name": growth_name,
+			"value_chip": growth_value_chip,
+			"value": growth_value_label,
+			"bar": growth_bar,
+			"sheen": growth_sheen,
+			"base_key": String(growth_def.get("base", "")),
+			"label": String(growth_def.get("label", growth_key)),
+		}
+
+	var rel_title := Label.new()
+	_style_tactical_label(rel_title, TACTICAL_UI_ACCENT, 22, 2)
+	rel_title.text = "Bond Network"
+	right_content.add_child(rel_title)
+
+	detailed_unit_info_relationships_root = VBoxContainer.new()
+	detailed_unit_info_relationships_root.add_theme_constant_override("separation", 10)
+	right_content.add_child(detailed_unit_info_relationships_root)
+
+	var right_title := Label.new()
+	_style_tactical_label(right_title, TACTICAL_UI_ACCENT, 22, 2)
+	right_title.text = "Field Record"
+	right_content.add_child(right_title)
 
 	detailed_unit_info_right_text = RichTextLabel.new()
 	detailed_unit_info_right_text.bbcode_enabled = true
 	detailed_unit_info_right_text.fit_content = false
-	detailed_unit_info_right_text.scroll_active = true
-	detailed_unit_info_right_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 14)
-	right_panel.add_child(detailed_unit_info_right_text)
+	detailed_unit_info_right_text.scroll_active = false
+	detailed_unit_info_right_text.custom_minimum_size = Vector2(0, 300)
+	detailed_unit_info_right_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_style_tactical_richtext(detailed_unit_info_right_text, 24, 24)
+	right_content.add_child(detailed_unit_info_right_text)
+
+	detailed_unit_info_left_text = null
 			
 func _show_detailed_unit_info_panel(unit: Node2D) -> void:
 	_ensure_detailed_unit_info_panel()
@@ -15223,16 +18012,525 @@ func _show_detailed_unit_info_panel(unit: Node2D) -> void:
 
 	detailed_unit_info_portrait.texture = portrait_tex
 	detailed_unit_info_name.text = unit.unit_name
-	detailed_unit_info_left_text.bbcode_text = _build_detailed_unit_info_left_text(unit)
-	detailed_unit_info_right_text.bbcode_text = _build_detailed_unit_info_right_text(unit)
+	detailed_unit_info_meta_label.text = _build_detailed_unit_info_meta_line(unit)
+	_populate_detailed_unit_info_weapon_row(unit)
+	detailed_unit_info_summary_text.bbcode_text = _build_detailed_unit_info_summary_text(unit)
+	detailed_unit_info_right_text.bbcode_text = _build_detailed_unit_info_record_text(unit)
+	_build_detailed_unit_info_relationship_cards(unit)
+	_refresh_detailed_unit_info_visuals(unit, true)
 	
 func _hide_detailed_unit_info_panel() -> void:
 	if detailed_unit_info_panel == null:
 		return
 
+	if detailed_unit_info_anim_tween != null:
+		detailed_unit_info_anim_tween.kill()
+		detailed_unit_info_anim_tween = null
 	var dimmer = detailed_unit_info_layer.get_node("Dimmer")
 	dimmer.visible = false
 	detailed_unit_info_panel.visible = false
+
+func _ensure_detailed_unit_info_primary_widgets_style() -> void:
+	for bar_def in _unit_info_primary_bar_definitions():
+		var bar_key: String = str(bar_def.get("key", ""))
+		if not detailed_unit_info_primary_widgets.has(bar_key):
+			continue
+		var widgets: Dictionary = detailed_unit_info_primary_widgets[bar_key]
+		var name_label := widgets.get("name") as Label
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var desc_label := widgets.get("desc") as Label
+		if name_label != null:
+			_style_tactical_label(name_label, TACTICAL_UI_TEXT_MUTED, 14, 2)
+		if value_chip != null:
+			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), Color(0.36, 0.32, 0.22, 0.90), 1, 6)
+		if value_label != null:
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 18, 2)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if bar != null:
+			bar.min_value = 0.0
+		if desc_label != null:
+			_style_tactical_label(desc_label, TACTICAL_UI_TEXT_MUTED, 13, 1)
+
+func _resolve_detailed_unit_info_class_label(unit: Node2D) -> String:
+	if unit == null:
+		return "Unknown"
+	var class_res: Resource = null
+	if unit.get("active_class_data") != null:
+		class_res = unit.active_class_data
+	if class_res != null and class_res.get("job_name") != null:
+		return str(class_res.job_name)
+	if unit.get("unit_class_name") != null:
+		return str(unit.unit_class_name)
+	return "Unknown"
+
+func _build_detailed_unit_info_meta_line(unit: Node2D) -> String:
+	if unit == null:
+		return ""
+	var level_value: int = int(unit.get("level")) if unit.get("level") != null else 1
+	var move_value: int = int(unit.get("move_range")) if unit.get("move_range") != null else 0
+	return "LV %d  |  MOVE %d  |  CLASS %s" % [level_value, move_value, _resolve_detailed_unit_info_class_label(unit).to_upper()]
+
+func _build_detailed_unit_info_summary_text(unit: Node2D) -> String:
+	if unit == null:
+		return ""
+	var lines: Array[String] = []
+	var ability_name: String = ""
+	if "unlocked_abilities" in unit and unit.unlocked_abilities.size() > 0:
+		ability_name = ", ".join(unit.unlocked_abilities)
+	elif unit.get("ability") != null and str(unit.ability).strip_edges() != "":
+		ability_name = str(unit.ability)
+	if ability_name != "":
+		lines.append("[color=#87d4ff]Ability:[/color] [color=#e9f8ff]%s[/color]" % ability_name)
+	var inventory_count: int = unit.inventory.size() if "inventory" in unit else 0
+	lines.append("[color=#f2bf59]Inventory:[/color] [color=#fff0c8]%d carried item%s[/color]" % [inventory_count, "" if inventory_count == 1 else "s"])
+	return "\n".join(lines)
+
+func _detailed_unit_info_stat_description(stat_key: String) -> String:
+	match stat_key:
+		"strength":
+			return "Raises damage with swords, lances, axes, bows, and many physical techniques."
+		"magic":
+			return "Raises damage with spells, magic weapons, and abilities that scale from magical power."
+		"defense":
+			return "Reduces damage taken from physical attacks like blades, arrows, claws, and blunt impacts."
+		"resistance":
+			return "Reduces damage taken from spells, elemental attacks, curses, and other magical effects."
+		"speed":
+			return "Helps this unit strike twice before slower enemies and avoid being struck twice by faster ones."
+		"agility":
+			return "Improves dodge and evasive reactions, and it is the main stat feeding base critical chance before weapon, skill, and battle bonuses."
+		_:
+			return ""
+
+func _detailed_unit_info_stat_label(stat_key: String) -> String:
+	match stat_key:
+		"strength":
+			return "STRENGTH"
+		"magic":
+			return "MAGIC"
+		"defense":
+			return "DEFENSE"
+		"resistance":
+			return "RESISTANCE"
+		"speed":
+			return "SPEED"
+		"agility":
+			return "AGILITY"
+		_:
+			return stat_key.to_upper()
+
+func _detailed_unit_info_stat_hint_specs(stat_key: String) -> Array[Dictionary]:
+	match stat_key:
+		"speed":
+			return [
+				{"text": "x2", "color": Color(0.45, 0.78, 1.0, 1.0)},
+				{"text": "TEMPO", "color": Color(0.58, 0.84, 1.0, 1.0)},
+			]
+		"agility":
+			return [
+				{"text": "CRIT", "color": Color(1.0, 0.78, 0.30, 1.0)},
+				{"text": "EVADE", "color": Color(0.60, 0.94, 0.76, 1.0)},
+			]
+		_:
+			return []
+
+func _detailed_unit_info_growth_label(growth_key: String) -> String:
+	match growth_key:
+		"hp_growth_bonus":
+			return "HEALTH GROWTH"
+		"str_growth_bonus":
+			return "STRENGTH GROWTH"
+		"mag_growth_bonus":
+			return "MAGIC GROWTH"
+		"def_growth_bonus":
+			return "DEFENSE GROWTH"
+		"res_growth_bonus":
+			return "RESISTANCE GROWTH"
+		"spd_growth_bonus":
+			return "SPEED GROWTH"
+		"agi_growth_bonus":
+			return "AGILITY GROWTH"
+		_:
+			return growth_key.replace("_", " ").to_upper()
+
+func _detailed_unit_info_primary_description(bar_key: String) -> String:
+	match bar_key:
+		"hp":
+			return "Life total. If HP reaches 0, the unit is defeated or forced out of the fight."
+		"poise":
+			return "Stagger resistance. Higher Poise helps resist breaks, shock, and forced openings. It is usually improved by sturdier classes, defensive bonuses, certain gear, dragon effects, or traits."
+		"xp":
+			return "Current experience toward the next level, where the unit can gain stronger stats and improve overall combat power."
+		_:
+			return ""
+
+func _populate_detailed_unit_info_weapon_row(unit: Node2D) -> void:
+	if detailed_unit_info_weapon_badge == null or detailed_unit_info_weapon_name == null or detailed_unit_info_weapon_icon == null:
+		return
+	if unit == null or unit.get("equipped_weapon") == null:
+		detailed_unit_info_weapon_badge.text = "--"
+		detailed_unit_info_weapon_name.text = "UNARMED"
+		detailed_unit_info_weapon_icon.texture = null
+		return
+	var weapon: WeaponData = unit.equipped_weapon as WeaponData
+	if weapon == null:
+		detailed_unit_info_weapon_badge.text = "--"
+		detailed_unit_info_weapon_name.text = "UNARMED"
+		detailed_unit_info_weapon_icon.texture = null
+		return
+	detailed_unit_info_weapon_badge.text = _forecast_weapon_marker(weapon)
+	detailed_unit_info_weapon_name.text = String(weapon.weapon_name).to_upper()
+	detailed_unit_info_weapon_icon.texture = weapon.icon
+
+func _detailed_unit_info_growth_fill_color(stat_key: String, growth_value: int) -> Color:
+	var base_key: String = stat_key.replace("_growth_bonus", "")
+	if base_key == "str":
+		return Color(0.92, 0.48, 0.36, 1.0)
+	if base_key == "mag":
+		return Color(0.82, 0.54, 0.98, 1.0)
+	if base_key == "def":
+		return Color(0.55, 0.89, 0.52, 1.0)
+	if base_key == "res":
+		return Color(0.40, 0.92, 0.88, 1.0)
+	if base_key == "spd":
+		return Color(0.44, 0.72, 0.98, 1.0)
+	if base_key == "agi":
+		return Color(0.95, 0.82, 0.43, 1.0)
+	if base_key == "hp":
+		return Color(0.48, 0.88, 0.55, 1.0)
+	if growth_value < 0:
+		return Color(0.84, 0.36, 0.32, 1.0)
+	return TACTICAL_UI_ACCENT_SOFT
+
+func _refresh_detailed_unit_info_growth_widgets(unit: Node2D, animate: bool, tween: Tween = null) -> void:
+	if unit == null:
+		return
+	var class_res: Resource = unit.get("active_class_data") if unit.get("active_class_data") != null else null
+	var index: int = 0
+	for growth_key in [
+		"hp_growth_bonus",
+		"str_growth_bonus",
+		"mag_growth_bonus",
+		"def_growth_bonus",
+		"res_growth_bonus",
+		"spd_growth_bonus",
+		"agi_growth_bonus",
+	]:
+		if not detailed_unit_info_growth_widgets.has(growth_key):
+			continue
+		var widgets: Dictionary = detailed_unit_info_growth_widgets[growth_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var sheen := widgets.get("sheen") as ColorRect
+		var label_text: String = _detailed_unit_info_growth_label(String(growth_key))
+		var growth_value: int = 0
+		if class_res != null and class_res.get(growth_key) != null:
+			growth_value = int(class_res.get(growth_key))
+		var fill_color := _detailed_unit_info_growth_fill_color(String(growth_key), growth_value)
+		if name_label != null:
+			name_label.text = label_text
+			_style_tactical_label(name_label, fill_color, 15, 2)
+		if value_chip != null:
+			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color.lightened(0.10), 1, 5)
+		if value_label != null:
+			value_label.text = "%+d%%" % growth_value
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 14, 1)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if panel != null:
+			_style_tactical_panel(panel, Color(0.10, 0.09, 0.07, 0.84), fill_color if growth_value != 0 else TACTICAL_UI_BORDER_MUTED, 1, 7)
+		if bar != null:
+			bar.max_value = 100.0
+			bar.min_value = 0.0
+			_style_unit_info_stat_bar(bar, fill_color, growth_value >= 50)
+			var target: float = clampf(absf(float(growth_value)), 0.0, 100.0)
+			if not animate:
+				bar.value = target
+			else:
+				bar.value = 0.0
+				var delay := 0.06 + float(index) * 0.03
+				if panel != null:
+					panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+					tween.tween_property(panel, "modulate", Color.WHITE, 0.14).set_delay(delay)
+				tween.tween_property(bar, "value", target, 0.24).set_delay(delay)
+				if sheen != null:
+					_animate_unit_info_bar_sheen(sheen, bar, delay + 0.03)
+		index += 1
+
+func _build_detailed_unit_info_relationship_cards(unit: Node2D) -> void:
+	if detailed_unit_info_relationships_root == null:
+		return
+	for child in detailed_unit_info_relationships_root.get_children():
+		child.queue_free()
+	if unit == null:
+		return
+	var unit_id: String = get_relationship_id(unit)
+	var candidate_ids: Array = []
+	if player_container != null:
+		for ally in player_container.get_children():
+			if is_instance_valid(ally) and ally != unit:
+				candidate_ids.append(get_relationship_id(ally))
+	var rel_entries: Array = CampaignManager.get_top_relationship_entries_for_unit(unit_id, candidate_ids, 6)
+	if rel_entries.is_empty():
+		var empty_label := Label.new()
+		_style_tactical_label(empty_label, TACTICAL_UI_TEXT_MUTED, 16, 2)
+		empty_label.text = "No notable bonds in this deployment yet."
+		detailed_unit_info_relationships_root.add_child(empty_label)
+		return
+
+	for entry_raw in rel_entries:
+		var entry: Dictionary = entry_raw as Dictionary
+		var stat: String = str(entry.get("stat")) if entry.get("stat") != null else ""
+		var value: int = int(entry.get("value")) if entry.get("value") != null else 0
+		var formed: bool = bool(entry.get("formed")) if entry.get("formed") != null else false
+		var partner_id: String = str(entry.get("partner_id")) if entry.get("partner_id") != null else "?"
+		var tint: Color = CampaignManager.get_relationship_type_color(stat)
+		var effect_hint: String = CampaignManager.get_relationship_effect_hint(stat, value)
+
+		var card := Panel.new()
+		card.custom_minimum_size = Vector2(0, 96)
+		_style_tactical_panel(card, Color(0.11, 0.10, 0.08, 0.92), tint.lightened(0.08), 1, 9)
+		detailed_unit_info_relationships_root.add_child(card)
+
+		var box := VBoxContainer.new()
+		box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+		box.add_theme_constant_override("separation", 5)
+		card.add_child(box)
+
+		var top_row := HBoxContainer.new()
+		top_row.add_theme_constant_override("separation", 8)
+		box.add_child(top_row)
+
+		var partner_label := Label.new()
+		partner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_style_tactical_label(partner_label, TACTICAL_UI_TEXT, 18, 2)
+		partner_label.text = partner_id
+		top_row.add_child(partner_label)
+
+		var state_chip := Panel.new()
+		state_chip.custom_minimum_size = Vector2(144, 28)
+		_style_tactical_panel(state_chip, Color(0.10, 0.09, 0.07, 0.96), tint, 1, 6)
+		top_row.add_child(state_chip)
+
+		var state_label := Label.new()
+		state_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+		_style_tactical_label(state_label, TACTICAL_UI_TEXT, 15, 2)
+		state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		state_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		state_label.text = ("%s FORMED" % CampaignManager.get_relationship_type_display_name(stat).to_upper()) if formed else ("%s %d" % [CampaignManager.get_relationship_type_display_name(stat).to_upper(), value])
+		state_chip.add_child(state_label)
+
+		var hint_label := Label.new()
+		_style_tactical_label(hint_label, tint.lightened(0.18), 16, 2)
+		hint_label.text = effect_hint
+		box.add_child(hint_label)
+
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 14)
+		bar.max_value = 100.0
+		bar.value = clampf(float(value), 0.0, 100.0)
+		_style_unit_info_stat_bar(bar, tint, formed)
+		box.add_child(bar)
+		var sheen := _attach_unit_info_bar_sheen(bar)
+		_animate_unit_info_bar_sheen(sheen, bar, 0.02)
+
+func _refresh_detailed_unit_info_visuals(unit: Node2D, animate: bool = false) -> void:
+	if unit == null:
+		return
+	if detailed_unit_info_anim_tween != null:
+		detailed_unit_info_anim_tween.kill()
+		detailed_unit_info_anim_tween = null
+
+	var current_poise: int = 0
+	var max_poise: int = 1
+	if unit.has_method("get_current_poise") and unit.has_method("get_max_poise"):
+		current_poise = int(unit.get_current_poise())
+		max_poise = max(1, int(unit.get_max_poise()))
+	elif unit.get("poise") != null:
+		current_poise = int(unit.get("poise"))
+		max_poise = max(1, int(unit.get("max_poise")) if unit.get("max_poise") != null else current_poise)
+
+	var xp_current: int = int(unit.get("experience")) if unit.get("experience") != null else 0
+	var xp_max: int = unit.get_exp_required() if unit.has_method("get_exp_required") else 100
+	xp_max = max(1, xp_max)
+
+	var current_hp: int = int(unit.get("current_hp")) if unit.get("current_hp") != null else 0
+	var max_hp: int = max(1, int(unit.get("max_hp")) if unit.get("max_hp") != null else 1)
+	var primary_rows: Dictionary = {
+		"hp": {"current": current_hp, "max": max_hp, "text": "%d/%d" % [current_hp, max_hp]},
+		"poise": {"current": current_poise, "max": max_poise, "text": "%d/%d" % [current_poise, max_poise]},
+		"xp": {"current": xp_current, "max": xp_max, "text": "%d/%d" % [xp_current, xp_max]},
+	}
+
+	var primary_targets: Dictionary = {}
+	for bar_def in _unit_info_primary_bar_definitions():
+		var bar_key: String = str(bar_def.get("key", ""))
+		if not detailed_unit_info_primary_widgets.has(bar_key):
+			continue
+		var row_data: Dictionary = primary_rows.get(bar_key, {})
+		var current_value: int = int(row_data.get("current", 0))
+		var max_value: int = max(1, int(row_data.get("max", 1)))
+		var display_text: String = str(row_data.get("text", "%d/%d" % [current_value, max_value]))
+		var fill_color := _unit_info_primary_fill_color(bar_key, current_value, max_value)
+		var widgets: Dictionary = detailed_unit_info_primary_widgets[bar_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var hints_root := widgets.get("hints") as HBoxContainer
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var desc_label := widgets.get("desc") as Label
+		if panel != null:
+			var panel_border := Color(min(fill_color.r + 0.08, 1.0), min(fill_color.g + 0.08, 1.0), min(fill_color.b + 0.08, 1.0), 0.76)
+			var tinted_fill := Color(
+				lerpf(0.10, fill_color.r, 0.10),
+				lerpf(0.09, fill_color.g, 0.10),
+				lerpf(0.07, fill_color.b, 0.10),
+				0.92
+			)
+			_style_tactical_panel(panel, tinted_fill, panel_border, 1, 8)
+		if name_label != null:
+			name_label.text = str(bar_def.get("label", bar_key))
+			_style_tactical_label(name_label, fill_color, 16, 2)
+		if value_chip != null:
+			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color.lightened(0.10), 1, 6)
+		if value_label != null:
+			value_label.text = display_text
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 18, 2)
+		if bar != null:
+			bar.max_value = float(max_value)
+			_style_unit_info_primary_bar(bar, fill_color, bar_key)
+			primary_targets[bar_key] = float(clampf(float(current_value), 0.0, float(max_value)))
+			if not animate:
+				bar.value = primary_targets[bar_key]
+		if desc_label != null:
+			desc_label.text = _detailed_unit_info_primary_description(bar_key)
+			_style_tactical_label(desc_label, TACTICAL_UI_TEXT_MUTED, 13, 1)
+
+	var stat_targets: Dictionary = {}
+	for stat_def in _unit_info_stat_definitions():
+		var stat_key: String = str(stat_def.get("key", ""))
+		if not detailed_unit_info_stat_widgets.has(stat_key):
+			continue
+		var raw_value: int = int(unit.get(stat_key)) if unit.get(stat_key) != null else 0
+		var display_value: float = _unit_info_stat_display_value(raw_value)
+		var fill_color := _unit_info_stat_fill_color(stat_key, raw_value)
+		var overcap: bool = raw_value >= int(UNIT_INFO_STAT_BAR_CAP)
+		var widgets: Dictionary = detailed_unit_info_stat_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var name_label := widgets.get("name") as Label
+		var hints_root := widgets.get("hints") as HBoxContainer
+		var value_chip := widgets.get("value_chip") as Panel
+		var value_label := widgets.get("value") as Label
+		var bar := widgets.get("bar") as ProgressBar
+		var desc_label := widgets.get("desc") as Label
+		if panel != null:
+			var tinted_fill := Color(
+				lerpf(0.10, fill_color.r, 0.16),
+				lerpf(0.09, fill_color.g, 0.16),
+				lerpf(0.07, fill_color.b, 0.16),
+				0.92
+			)
+			_style_tactical_panel(panel, tinted_fill, fill_color if overcap else fill_color.darkened(0.20), 1, 6)
+		if name_label != null:
+			name_label.text = _detailed_unit_info_stat_label(stat_key)
+			_style_tactical_label(name_label, fill_color, 17, 2)
+		if hints_root != null:
+			for child in hints_root.get_children():
+				child.queue_free()
+			for spec in _detailed_unit_info_stat_hint_specs(stat_key):
+				var chip := Panel.new()
+				chip.custom_minimum_size = Vector2(52, 20)
+				var chip_color: Color = spec.get("color", fill_color)
+				_style_tactical_panel(chip, Color(0.10, 0.09, 0.07, 0.95), chip_color, 1, 5)
+				hints_root.add_child(chip)
+
+				var chip_label := Label.new()
+				chip_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+				_style_tactical_label(chip_label, chip_color, 10, 1)
+				chip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				chip_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				chip_label.text = str(spec.get("text", ""))
+				chip.add_child(chip_label)
+		if value_chip != null:
+			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color, 1, 4)
+		if value_label != null:
+			value_label.text = str(raw_value)
+			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 16, 1)
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if bar != null:
+			bar.max_value = UNIT_INFO_STAT_BAR_CAP
+			_style_unit_info_stat_bar(bar, fill_color, overcap)
+			stat_targets[stat_key] = display_value
+			if not animate:
+				bar.value = display_value
+		if desc_label != null:
+			desc_label.text = _detailed_unit_info_stat_description(stat_key)
+			_style_tactical_label(desc_label, TACTICAL_UI_TEXT_MUTED, 13, 1)
+
+	if not animate:
+		_refresh_detailed_unit_info_growth_widgets(unit, false, null)
+		return
+
+	detailed_unit_info_anim_tween = create_tween().set_parallel(true)
+	var primary_defs := _unit_info_primary_bar_definitions()
+	for idx in range(primary_defs.size()):
+		var bar_key: String = str(primary_defs[idx].get("key", ""))
+		if not detailed_unit_info_primary_widgets.has(bar_key):
+			continue
+		var widgets: Dictionary = detailed_unit_info_primary_widgets[bar_key]
+		var panel := widgets.get("panel") as Panel
+		var bar := widgets.get("bar") as ProgressBar
+		var desc_label := widgets.get("desc") as Label
+		var sheen := widgets.get("sheen") as ColorRect
+		var delay := float(idx) * 0.05
+		if panel != null:
+			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			detailed_unit_info_anim_tween.tween_property(panel, "modulate", Color.WHITE, 0.18).set_delay(delay)
+		if bar != null:
+			bar.value = 0.0
+			detailed_unit_info_anim_tween.tween_property(bar, "value", float(primary_targets.get(bar_key, 0.0)), 0.30).set_delay(delay)
+		if sheen != null and bar != null:
+			_animate_unit_info_bar_sheen(sheen, bar, delay + 0.05)
+		if desc_label != null:
+			desc_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			detailed_unit_info_anim_tween.tween_property(desc_label, "modulate", Color.WHITE, 0.16).set_delay(delay + 0.03)
+
+	var stat_defs := _unit_info_stat_definitions()
+	for idx in range(stat_defs.size()):
+		var stat_key: String = str(stat_defs[idx].get("key", ""))
+		if not detailed_unit_info_stat_widgets.has(stat_key):
+			continue
+		var widgets: Dictionary = detailed_unit_info_stat_widgets[stat_key]
+		var panel := widgets.get("panel") as Panel
+		var bar := widgets.get("bar") as ProgressBar
+		var sheen := widgets.get("sheen") as ColorRect
+		var delay := 0.16 + float(idx) * 0.04
+		if panel != null:
+			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			detailed_unit_info_anim_tween.tween_property(panel, "modulate", Color.WHITE, 0.16).set_delay(delay)
+		if bar != null:
+			bar.value = 0.0
+			detailed_unit_info_anim_tween.tween_property(bar, "value", float(stat_targets.get(stat_key, 0.0)), 0.24).set_delay(delay)
+			if sheen != null and bar != null:
+				_animate_unit_info_bar_sheen(sheen, bar, delay + 0.04)
+		var desc_label := widgets.get("desc") as Label
+		if desc_label != null:
+			desc_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			detailed_unit_info_anim_tween.tween_property(desc_label, "modulate", Color.WHITE, 0.18).set_delay(delay + 0.03)
+
+	_refresh_detailed_unit_info_growth_widgets(unit, animate, detailed_unit_info_anim_tween)
+
+	detailed_unit_info_anim_tween.finished.connect(func():
+		detailed_unit_info_anim_tween = null
+	, CONNECT_ONE_SHOT)
 	
 func _build_detailed_unit_info_text(unit: Node2D) -> String:
 	if unit == null:
@@ -15500,6 +18798,57 @@ func _build_detailed_unit_info_right_text(unit: Node2D) -> String:
 		return ""
 
 	var lines: Array[String] = []
+	var class_res: Resource = null
+	if unit.get("active_class_data") != null:
+		class_res = unit.active_class_data
+
+	lines.append("[color=gold]Class Profile[/color]")
+	lines.append("Class: [color=cyan]%s[/color]" % _resolve_detailed_unit_info_class_label(unit))
+	lines.append("Move: %d" % (int(unit.get("move_range")) if unit.get("move_range") != null else 0))
+	lines.append("")
+
+	if class_res != null:
+		lines.append("[color=gold]Weapon Permissions[/color]")
+		lines.append(_format_class_weapon_permissions(class_res))
+		lines.append("")
+
+		lines.append("[color=gold]Class Bonuses[/color]")
+		var class_bonus_parts: Array[String] = []
+		if class_res.get("hp_bonus") != null and int(class_res.hp_bonus) != 0:
+			class_bonus_parts.append("HP %+d" % int(class_res.hp_bonus))
+		if class_res.get("str_bonus") != null and int(class_res.str_bonus) != 0:
+			class_bonus_parts.append("[color=coral]STR %+d[/color]" % int(class_res.str_bonus))
+		if class_res.get("mag_bonus") != null and int(class_res.mag_bonus) != 0:
+			class_bonus_parts.append("[color=orchid]MAG %+d[/color]" % int(class_res.mag_bonus))
+		if class_res.get("def_bonus") != null and int(class_res.def_bonus) != 0:
+			class_bonus_parts.append("[color=palegreen]DEF %+d[/color]" % int(class_res.def_bonus))
+		if class_res.get("res_bonus") != null and int(class_res.res_bonus) != 0:
+			class_bonus_parts.append("[color=aquamarine]RES %+d[/color]" % int(class_res.res_bonus))
+		if class_res.get("spd_bonus") != null and int(class_res.spd_bonus) != 0:
+			class_bonus_parts.append("[color=skyblue]SPD %+d[/color]" % int(class_res.spd_bonus))
+		if class_res.get("agi_bonus") != null and int(class_res.agi_bonus) != 0:
+			class_bonus_parts.append("[color=wheat]AGI %+d[/color]" % int(class_res.agi_bonus))
+		lines.append("None" if class_bonus_parts.is_empty() else ", ".join(class_bonus_parts))
+		lines.append("")
+
+		lines.append("[color=gold]Promotion Bonuses[/color]")
+		var promo_parts: Array[String] = []
+		if class_res.get("promo_hp_bonus") != null and int(class_res.promo_hp_bonus) != 0:
+			promo_parts.append("HP %+d" % int(class_res.promo_hp_bonus))
+		if class_res.get("promo_str_bonus") != null and int(class_res.promo_str_bonus) != 0:
+			promo_parts.append("[color=coral]STR %+d[/color]" % int(class_res.promo_str_bonus))
+		if class_res.get("promo_mag_bonus") != null and int(class_res.promo_mag_bonus) != 0:
+			promo_parts.append("[color=orchid]MAG %+d[/color]" % int(class_res.promo_mag_bonus))
+		if class_res.get("promo_def_bonus") != null and int(class_res.promo_def_bonus) != 0:
+			promo_parts.append("[color=palegreen]DEF %+d[/color]" % int(class_res.promo_def_bonus))
+		if class_res.get("promo_res_bonus") != null and int(class_res.promo_res_bonus) != 0:
+			promo_parts.append("[color=aquamarine]RES %+d[/color]" % int(class_res.promo_res_bonus))
+		if class_res.get("promo_spd_bonus") != null and int(class_res.promo_spd_bonus) != 0:
+			promo_parts.append("[color=skyblue]SPD %+d[/color]" % int(class_res.promo_spd_bonus))
+		if class_res.get("promo_agi_bonus") != null and int(class_res.promo_agi_bonus) != 0:
+			promo_parts.append("[color=wheat]AGI %+d[/color]" % int(class_res.promo_agi_bonus))
+		lines.append("None" if promo_parts.is_empty() else ", ".join(promo_parts))
+		lines.append("")
 
 	if "unlocked_abilities" in unit and unit.unlocked_abilities.size() > 0:
 		lines.append("[color=gold]Abilities[/color]")
@@ -15549,6 +18898,98 @@ func _build_detailed_unit_info_right_text(unit: Node2D) -> String:
 
 	lines.append("")
 	lines.append("[color=gold]Notes[/color]")
+	lines.append("Green = usable")
+	lines.append("Red = class locked")
+
+	return "[font_size=24]" + "\n".join(lines) + "[/font_size]"
+
+func _build_detailed_unit_info_record_text(unit: Node2D) -> String:
+	if unit == null:
+		return ""
+
+	var lines: Array[String] = []
+	var class_res: Resource = unit.get("active_class_data") if unit.get("active_class_data") != null else null
+
+	lines.append("[color=gold]Field Doctrine[/color]")
+	lines.append("Class: [color=cyan]%s[/color]" % _resolve_detailed_unit_info_class_label(unit))
+	lines.append("Move: %d" % (int(unit.get("move_range")) if unit.get("move_range") != null else 0))
+	lines.append("")
+
+	if class_res != null:
+		lines.append("[color=gold]Weapon Permissions[/color]")
+		lines.append(_format_class_weapon_permissions(class_res))
+		lines.append("")
+
+		lines.append("[color=gold]Class Bonuses[/color]")
+		var class_bonus_parts: Array[String] = []
+		for pair in [
+			["hp_bonus", "HP", ""],
+			["str_bonus", "STR", "coral"],
+			["mag_bonus", "MAG", "orchid"],
+			["def_bonus", "DEF", "palegreen"],
+			["res_bonus", "RES", "aquamarine"],
+			["spd_bonus", "SPD", "skyblue"],
+			["agi_bonus", "AGI", "wheat"],
+		]:
+			var key: String = String(pair[0])
+			if class_res.get(key) == null or int(class_res.get(key)) == 0:
+				continue
+			var chunk: String = "%s %+d" % [String(pair[1]), int(class_res.get(key))]
+			var tint: String = String(pair[2])
+			class_bonus_parts.append(chunk if tint == "" else "[color=%s]%s[/color]" % [tint, chunk])
+		lines.append("None" if class_bonus_parts.is_empty() else ", ".join(class_bonus_parts))
+		lines.append("")
+
+		lines.append("[color=gold]Promotion Bonuses[/color]")
+		var promo_parts: Array[String] = []
+		for pair in [
+			["promo_hp_bonus", "HP", ""],
+			["promo_str_bonus", "STR", "coral"],
+			["promo_mag_bonus", "MAG", "orchid"],
+			["promo_def_bonus", "DEF", "palegreen"],
+			["promo_res_bonus", "RES", "aquamarine"],
+			["promo_spd_bonus", "SPD", "skyblue"],
+			["promo_agi_bonus", "AGI", "wheat"],
+		]:
+			var key: String = String(pair[0])
+			if class_res.get(key) == null or int(class_res.get(key)) == 0:
+				continue
+			var chunk: String = "%s %+d" % [String(pair[1]), int(class_res.get(key))]
+			var tint: String = String(pair[2])
+			promo_parts.append(chunk if tint == "" else "[color=%s]%s[/color]" % [tint, chunk])
+		lines.append("None" if promo_parts.is_empty() else ", ".join(promo_parts))
+		lines.append("")
+
+	if "unlocked_abilities" in unit and unit.unlocked_abilities.size() > 0:
+		lines.append("[color=gold]Abilities[/color]")
+		lines.append(", ".join(unit.unlocked_abilities))
+		lines.append("")
+	elif unit.get("ability") != null and str(unit.ability) != "":
+		lines.append("[color=gold]Ability[/color]")
+		lines.append(str(unit.ability))
+		lines.append("")
+
+	lines.append("[color=gold]Inventory[/color]")
+	if "inventory" in unit and unit.inventory.size() > 0:
+		for item in unit.inventory:
+			if item == null:
+				continue
+			var item_name: String = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
+			var marker: String = ""
+			if item is WeaponData:
+				marker = " [color=lime](usable)[/color]" if _unit_can_use_item_for_ui(unit, item) else " [color=red](locked)[/color]"
+				var w_type: String = _weapon_type_name_safe(int(item.weapon_type))
+				var extra: String = " | Mt " + str(item.might) + " | Hit +" + str(item.hit_bonus) + " | Rng " + str(item.min_range) + "-" + str(item.max_range)
+				lines.append("- " + str(item_name) + " (" + w_type + ")" + marker)
+				lines.append("  " + extra)
+			else:
+				lines.append("- " + str(item_name))
+	else:
+		lines.append("None")
+
+	lines.append("")
+	lines.append("[color=gold]Notes[/color]")
+	lines.append("Growth outlook and bond cards are surfaced above.")
 	lines.append("Green = usable")
 	lines.append("Red = class locked")
 

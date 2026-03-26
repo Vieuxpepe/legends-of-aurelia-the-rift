@@ -54,7 +54,6 @@
 [ext_resource type="Texture2D" uid="uid://dh38x1stypndc" path="res://Assets/Tilesets/tiles/2 Fence/1.png" id="39_e3f3y"]
 [ext_resource type="Texture2D" uid="uid://drf44711ayw6n" path="res://animations/Phase Banner Animation/1.png" id="39_ipvgp"]
 [ext_resource type="Texture2D" uid="uid://cee26bmp1xp7" path="res://animations/Phase Banner Animation/2.png" id="40_314h1"]
-[ext_resource type="AudioStream" uid="uid://dcg0hr3gr8ufa" path="res://SoundEffects/critical-hit-1 (1).mp3" id="40_tu8xp"]
 [ext_resource type="Texture2D" uid="uid://bx8daklg07fc7" path="res://Assets/Tilesets/tiles/7 Decor/Tree1.png" id="40_yppqf"]
 [ext_resource type="Shader" uid="uid://dfamekt6ypiku" path="res://vignette.gdshader" id="41_ostiu"]
 [ext_resource type="Texture2D" uid="uid://bnrgjd1e8nla2" path="res://animations/Phase Banner Animation/3.png" id="41_sx0kx"]
@@ -104,6 +103,7 @@
 [ext_resource type="AudioStream" uid="uid://culcdsqmruen7" path="res://SoundEffects/DefenseMode.mp3" id="62_qvwph"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="64_sx0kx"]
 [ext_resource type="AudioStream" uid="uid://cx2nrdjtlm8r5" path="res://SoundEffects/Level Up, Clean, Simple, 16 Bit, Heroic.mp3" id="67_be25e"]
+[ext_resource type="AudioStream" uid="uid://rrvy3o3cnmej" path="res://SoundEffects/CriticalHit.wav" id="70_314h1"]
 [ext_resource type="PackedScene" uid="uid://dl0ahk8so1jdh" path="res://Scenes/HouseFireVFX.tscn" id="82_lkv2p"]
 [ext_resource type="PackedScene" uid="uid://c80ef0dbdtjjb" path="res://Scenes/fire_glow.tscn" id="83_8a6bc"]
 [ext_resource type="Texture2D" uid="uid://cx81cte88pqya" path="res://Assets/Backgrounds/BackgroundParallax.jpeg" id="85_0blb5"]
@@ -612,8 +612,22 @@ dash_fx_scene = ExtResource("7_dp7rq")
 slash_fx_scene = ExtResource("8_4k0yu")
 level_up_fx_scene = ExtResource("9_qy62q")
 fire_tile_loop_vfx_scene = ExtResource("9_314h1")
+default_fire_tile_damage = null
+fire_tile_extinguish_shrink_sec = null
+GRID_SIZE = null
+zoom_step = null
+min_zoom = null
+max_zoom = null
+zoom_to_cursor = null
+camera_speed = null
+edge_margin = null
+use_fog_of_war = null
+default_vision_range = null
+vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_dm0ry")]([SubResource("Resource_8a6bc")])
+outro_dialogue = null
 map_objective = 1
+custom_objective_text = null
 turn_limit = 7
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
@@ -674,6 +688,8 @@ script = ExtResource("7_pwqrq")
 [node name="Kaelen" type="Sprite2D" parent="AllyUnits" unique_id=814773553]
 position = Vector2(384, 384)
 script = ExtResource("7_snvte")
+ai_intelligence = 5
+ai_behavior = 4
 data = ExtResource("5_lpgos")
 
 [node name="Sprite" type="Sprite2D" parent="AllyUnits/Kaelen" unique_id=11403484]
@@ -2169,7 +2185,7 @@ anchor_mode = 0
 position_smoothing_enabled = true
 
 [node name="CritSound" type="AudioStreamPlayer" parent="." unique_id=342712717]
-stream = ExtResource("40_tu8xp")
+stream = ExtResource("70_314h1")
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1925426781]
 process_mode = 3
