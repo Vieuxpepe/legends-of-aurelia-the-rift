@@ -1,4 +1,5 @@
 extends Control
+# Harmless comment: verified this existing script can be edited.
 
 const MENU_BG := Color(0.12, 0.10, 0.07, 0.96)
 const MENU_BG_ALT := Color(0.17, 0.13, 0.09, 0.96)
