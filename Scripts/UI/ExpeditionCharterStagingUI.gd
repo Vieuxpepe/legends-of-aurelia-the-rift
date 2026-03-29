@@ -248,7 +248,7 @@ func _get_local_avatar_preview_name() -> String:
 	if name_str == "":
 		name_str = str(payload.get("display_name", "")).strip_edges()
 	if name_str == "":
-		name_str = str(CampaignManager.custom_avatar.get("unit_name", CampaignManager.custom_avatar.get("name", "Commander"))).strip_edges()
+		name_str = CampaignManager.get_player_display_name("Commander")
 	return name_str if name_str != "" else "Commander"
 
 

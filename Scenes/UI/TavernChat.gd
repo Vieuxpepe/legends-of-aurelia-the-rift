@@ -51,7 +51,7 @@ func _on_send_pressed() -> void:
 	chat_input.clear()
 	send_btn.disabled = true
 	
-	var player_name = CampaignManager.custom_avatar.get("name", "Traveler")
+	var player_name = CampaignManager.get_player_display_name("Traveler")
 	var current_time = int(Time.get_unix_time_from_system())
 	
 	# 1. Pack the message into metadata (Keep it as a Dictionary)

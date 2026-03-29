@@ -1,4 +1,5 @@
 extends Control
+const ROADMAP_MILESTONE_DATA_SCRIPT: GDScript = preload("res://Scripts/UI/Roadmap/RoadmapMilestoneData.gd")
 
 const MENU_BG := Color(0.12, 0.10, 0.07, 0.96)
 const MENU_BG_ALT := Color(0.17, 0.13, 0.09, 0.96)
@@ -15,12 +16,12 @@ const DISPATCH_LEADERBOARD := "main_menu_dispatch"
 const DISPATCH_CATEGORIES := ["NEWS", "MODIFICATIONS", "OTHER"]
 const DISPATCH_APPROVED_STEAM_IDS: Array[String] = []
 const DISPATCH_ALLOW_DEBUG_EDITOR := true
+const STUDIO_HANDOFF_META_FLAG := "studio_intro_black_handoff"
+const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
 
 @onready var backdrop_art: TextureRect = $BackdropArt
 @onready var backdrop_shade: ColorRect = $BackdropShade
 @onready var backdrop_warmth: ColorRect = $BackdropWarmth
-@onready var header_panel: Control = $HeaderPanel
-@onready var header_card: PanelContainer = $HeaderPanel/HeaderCard
 @onready var intel_panel: Control = $IntelPanel
 @onready var intel_card: PanelContainer = $IntelPanel/IntelCard
 @onready var dispatch_panel: Control = $DispatchPanel
@@ -30,25 +31,29 @@ const DISPATCH_ALLOW_DEBUG_EDITOR := true
 
 @onready var start_button: Button = $CenterStage/MainPanel/Margin/VBox/StartButton
 @onready var settings_button: Button = $CenterStage/MainPanel/Margin/VBox/SettingsButton
+@onready var profile_button: Button = $CenterStage/MainPanel/Margin/VBox/ProfileButton
+@onready var credits_button: Button = $CenterStage/MainPanel/Margin/VBox/CreditsButton
+@onready var roadmap_button: Button = $CenterStage/MainPanel/Margin/VBox/RoadmapButton
+@onready var achievements_button: Button = $CenterStage/MainPanel/Margin/VBox/AchievementsButton
 @onready var quit_button: Button = $CenterStage/MainPanel/Margin/VBox/QuitButton
 
-@onready var continue_button: Button = $CenterStage/CampaignMenu/Margin/VBox/ContinueButton
-@onready var new_game_button: Button = $CenterStage/CampaignMenu/Margin/VBox/NewGameButton
-@onready var load_game_button: Button = $CenterStage/CampaignMenu/Margin/VBox/LoadGameButton
-@onready var back_button: Button = $CenterStage/CampaignMenu/Margin/VBox/BackButton
-@onready var slots_container: VBoxContainer = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer
+@onready var continue_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/ContinueButton
+@onready var new_game_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/NewGameButton
+@onready var load_game_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/LoadGameButton
+@onready var back_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/BackButton
+@onready var slots_container: VBoxContainer = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer
 
-@onready var auto_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/AutoSlot1Button
-@onready var auto_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/AutoSlot2Button
-@onready var auto_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/AutoSlot3Button
+@onready var auto_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/AutoSlot1Button
+@onready var auto_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/AutoSlot2Button
+@onready var auto_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/AutoSlot3Button
 
-@onready var slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button
-@onready var slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button
-@onready var slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button
+@onready var slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button
+@onready var slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button
+@onready var slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button
 
-@onready var del_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/DeleteSlot1
-@onready var del_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/DeleteSlot2
-@onready var del_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/DeleteSlot3
+@onready var del_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/DeleteSlot1
+@onready var del_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/DeleteSlot2
+@onready var del_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/DeleteSlot3
 @onready var delete_dialog: ConfirmationDialog = $DeleteConfirmation
 @onready var overwrite_dialog: ConfirmationDialog = $OverwriteConfirmation
 @onready var dispatch_editor_dialog: ConfirmationDialog = $DispatchEditorDialog
@@ -64,6 +69,45 @@ const DISPATCH_ALLOW_DEBUG_EDITOR := true
 @onready var dispatch_category_option: OptionButton = $DispatchEditorDialog/Margin/VBox/DispatchCategoryOption
 @onready var dispatch_headline_edit: LineEdit = $DispatchEditorDialog/Margin/VBox/DispatchHeadlineEdit
 @onready var dispatch_body_edit: TextEdit = $DispatchEditorDialog/Margin/VBox/DispatchBodyEdit
+@onready var roadmap_dialog: AcceptDialog = $RoadmapDialog
+@onready var roadmap_overline_label: Label = $RoadmapDialog/Margin/VBox/RoadmapOverline
+@onready var roadmap_title_label: Label = $RoadmapDialog/Margin/VBox/RoadmapTitle
+@onready var roadmap_hint_label: Label = $RoadmapDialog/Margin/VBox/RoadmapHint
+@onready var roadmap_rule: ColorRect = $RoadmapDialog/Margin/VBox/RoadmapRule
+@onready var roadmap_progress_row: HBoxContainer = $RoadmapDialog/Margin/VBox/RoadmapProgressRow
+@onready var roadmap_progress_label: Label = $RoadmapDialog/Margin/VBox/RoadmapProgressRow/RoadmapProgressLabel
+@onready var roadmap_progress_bar: ProgressBar = $RoadmapDialog/Margin/VBox/RoadmapProgressRow/RoadmapProgressBar
+@onready var roadmap_progress_value: Label = $RoadmapDialog/Margin/VBox/RoadmapProgressRow/RoadmapProgressValue
+@onready var roadmap_scroll: ScrollContainer = $RoadmapDialog/Margin/VBox/RoadmapScroll
+@onready var roadmap_canvas: Control = $RoadmapDialog/Margin/VBox/RoadmapScroll/RoadmapCanvas
+@onready var achievements_dialog: AcceptDialog = $AchievementsDialog
+@onready var achievements_overline_label: Label = $AchievementsDialog/Margin/VBox/AchievementsOverline
+@onready var achievements_title_label: Label = $AchievementsDialog/Margin/VBox/AchievementsTitle
+@onready var achievements_hint_label: Label = $AchievementsDialog/Margin/VBox/AchievementsHint
+@onready var achievements_rule: ColorRect = $AchievementsDialog/Margin/VBox/AchievementsRule
+@onready var achievements_placeholder_label: Label = $AchievementsDialog/Margin/VBox/AchievementsPlaceholder
+@onready var profile_dialog: Window = $ProfileDialog
+@onready var profile_scroll: ScrollContainer = $ProfileDialog/Margin/Scroll
+@onready var profile_overline_label: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileOverline
+@onready var profile_resolved_headline: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileResolvedHeadline
+@onready var profile_steam_name_line: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileSteamNameLine
+@onready var profile_override_line: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileOverrideLine
+@onready var profile_fallback_line: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileFallbackLine
+@onready var profile_coop_line: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileCoopLine
+@onready var profile_steam_status_label: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileSteamActionsRow/ProfileSteamStatusLabel
+@onready var profile_view_steam_button: Button = $ProfileDialog/Margin/Scroll/VBox/ProfileSteamActionsRow/ProfileViewSteamButton
+@onready var profile_campaign_overline: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileCampaignOverline
+@onready var profile_campaign_body: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileCampaignBody
+@onready var profile_edit_overline: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileEditOverline
+@onready var profile_hint_label: Label = $ProfileDialog/Margin/Scroll/VBox/ProfileHint
+@onready var profile_rule: ColorRect = $ProfileDialog/Margin/Scroll/VBox/ProfileRule
+@onready var profile_name_edit: LineEdit = $ProfileDialog/Margin/Scroll/VBox/ProfileNameEdit
+@onready var profile_use_steam_button: Button = $ProfileDialog/Margin/Scroll/VBox/ProfileUseSteamRow/ProfileUseSteamButton
+@onready var profile_save_button: Button = $ProfileDialog/Margin/Scroll/VBox/ProfileUseSteamRow/ProfileSaveButton
+@onready var steam_profile_corner: Control = $SteamProfileCorner
+@onready var steam_avatar_frame: PanelContainer = $SteamProfileCorner/SteamCornerVBox/SteamAvatarFrame
+@onready var steam_avatar_button: TextureButton = $SteamProfileCorner/SteamCornerVBox/SteamAvatarFrame/Margin/SteamAvatarButton
+@onready var steam_playing_as_label: Label = $SteamProfileCorner/SteamCornerVBox/SteamPlayingAsLabel
 
 var pending_delete_slot: int = 0
 var _dispatch_payload: Dictionary = {}
@@ -74,6 +118,63 @@ var MENU_MUSIC: AudioStream = preload("res://audio/Menu Music (Remastered).wav")
 
 var _music_player: AudioStreamPlayer
 var _sfx_player: AudioStreamPlayer
+var _startup_black_overlay: ColorRect = null
+var _startup_black_tween: Tween = null
+
+const CREDITS_SCENE_PATH := "res://Scenes/credits_scene.tscn"
+@export_group("Roadmap Data")
+@export var roadmap_use_default_if_empty: bool = true
+@export var roadmap_milestones: Array[Resource] = []
+const DEFAULT_ROADMAP_MILESTONES: Array[Dictionary] = [
+	{
+		"phase": "MILESTONE 01",
+		"title": "TACTICAL FOUNDATION",
+		"eta": "COMPLETED",
+		"status": "COMPLETED",
+		"summary": "Core turn flow, unit identity, convoy pressure loops, and first polished battlefield UI pass.",
+		"progress_to_next": 1.0
+	},
+	{
+		"phase": "MILESTONE 02",
+		"title": "WAR TABLE EXPERIENCE",
+		"eta": "COMPLETED",
+		"status": "COMPLETED",
+		"summary": "Main menu overhaul, dispatch board pipeline, premium settings UI, and campaign archive readability.",
+		"progress_to_next": 1.0
+	},
+	{
+		"phase": "MILESTONE 03",
+		"title": "CAMP COMMAND EXPANSION",
+		"eta": "IN PROGRESS",
+		"status": "IN_PROGRESS",
+		"summary": "Camp UI modernization, inventory flow upgrades, unit dossier parity, and jukebox presentation polish.",
+		"progress_to_next": 0.58
+	},
+	{
+		"phase": "MILESTONE 04",
+		"title": "RIVALRY + BOND ESCALATION",
+		"eta": "NEXT",
+		"status": "PLANNED",
+		"summary": "Deeper unit relationships, rivalry payoffs, and consequence-rich interactions in and out of battle.",
+		"progress_to_next": 0.0
+	},
+	{
+		"phase": "MILESTONE 05",
+		"title": "RAIDING OPERATIONS",
+		"eta": "UPCOMING",
+		"status": "PLANNED",
+		"summary": "4-player hero raids against map-scale bosses with elite rewards and cooperative tactical objectives.",
+		"progress_to_next": 0.0
+	},
+	{
+		"phase": "MILESTONE 06",
+		"title": "RANKED WARFARE 1V1",
+		"eta": "UPCOMING",
+		"status": "PLANNED",
+		"summary": "Competitive ladder ecosystem with match integrity rules, balance cadence, and season progression.",
+		"progress_to_next": 0.0
+	}
+]
 
 
 func _make_panel_style(fill: Color, border: Color, border_width: int = 2, radius: int = 16, shadow_alpha: float = 0.40, shadow_size: int = 10, shadow_y: int = 4) -> StyleBoxFlat:
@@ -96,6 +197,15 @@ func _style_panel(panel: Control, fill: Color, border: Color, border_width: int 
 		(panel as PanelContainer).add_theme_stylebox_override("panel", style)
 	elif panel is Panel:
 		(panel as Panel).add_theme_stylebox_override("panel", style)
+
+
+func _style_main_command_panel(panel: Control) -> void:
+	if panel == null or not (panel is PanelContainer):
+		return
+	var fill := Color(0.23, 0.19, 0.13, 0.99).lerp(MENU_BG_ALT, 0.45)
+	var border := Color(0.98, 0.86, 0.42, 1.0).lerp(MENU_BORDER, 0.42)
+	var box := _make_panel_style(fill, border, 3, 26, 0.52, 17, 7)
+	(panel as PanelContainer).add_theme_stylebox_override("panel", box)
 
 
 func _style_label(label: Label, color: Color, font_size: int, outline_size: int = 2, alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> void:
@@ -181,6 +291,115 @@ func _style_button(btn: Button, label_text: String, primary: bool, font_size: in
 	btn.add_theme_stylebox_override("focus", _make_panel_style(hover_fill, MENU_ACCENT_SOFT, 2, 12, 0.40, 11, 3))
 
 
+func _style_hero_primary_button(btn: Button, label_text: String, font_size: int = 24, min_height: int = 64) -> void:
+	if btn == null:
+		return
+	var regular_font: Font = btn.get_theme_font("font", "Label")
+	if regular_font != null:
+		btn.add_theme_font_override("font", regular_font)
+	btn.text = label_text
+	btn.custom_minimum_size = Vector2(0, min_height)
+	btn.add_theme_font_size_override("font_size", font_size)
+	var font_color := Color(0.11, 0.07, 0.03, 1.0)
+	btn.add_theme_color_override("font_color", font_color)
+	btn.add_theme_color_override("font_hover_color", font_color)
+	btn.add_theme_color_override("font_pressed_color", font_color)
+	btn.add_theme_color_override("font_focus_color", font_color)
+	btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
+	btn.add_theme_constant_override("outline_size", 2)
+	var gold_neutral := Color(0.64, 0.49, 0.17, 0.98)
+	var normal_fill := Color(0.72, 0.55, 0.18, 0.99).lerp(gold_neutral, 0.38)
+	var hover_fill := Color(0.84, 0.64, 0.22, 0.99).lerp(gold_neutral.lightened(0.07), 0.38)
+	var press_fill := Color(0.52, 0.38, 0.12, 0.99).lerp(gold_neutral.darkened(0.12), 0.35)
+	var border_gold := Color(0.55, 0.42, 0.14, 1.0).lerp(MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.62), 0.45)
+	btn.add_theme_stylebox_override("normal", _make_panel_style(normal_fill, border_gold, 3, 14, 0.36, 11, 4))
+	btn.add_theme_stylebox_override("hover", _make_panel_style(hover_fill, MENU_BORDER, 3, 14, 0.40, 13, 4))
+	btn.add_theme_stylebox_override("pressed", _make_panel_style(press_fill, MENU_BORDER, 3, 14, 0.30, 8, 2))
+	btn.add_theme_stylebox_override("focus", _make_panel_style(hover_fill, MENU_ACCENT_SOFT, 3, 14, 0.40, 12, 4))
+
+
+## Secondary main-menu actions: each slot uses a different hue while staying in the same leather / gold / parchment family.
+func _style_secondary_main_menu_button(btn: Button, label_text: String, slot: String, font_size: int = 22, min_height: int = 58) -> void:
+	if btn == null:
+		return
+	var regular_font: Font = btn.get_theme_font("font", "Label")
+	if regular_font != null:
+		btn.add_theme_font_override("font", regular_font)
+	btn.text = label_text
+	btn.custom_minimum_size = Vector2(0, min_height)
+	btn.add_theme_font_size_override("font_size", font_size)
+	btn.add_theme_color_override("font_color", MENU_TEXT)
+	btn.add_theme_color_override("font_hover_color", MENU_TEXT)
+	btn.add_theme_color_override("font_pressed_color", MENU_TEXT)
+	btn.add_theme_color_override("font_focus_color", MENU_TEXT)
+	btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
+	btn.add_theme_constant_override("outline_size", 2)
+	var n: Color
+	var h: Color
+	var p: Color
+	var b: Color
+	match slot:
+		"settings":
+			n = Color(0.17, 0.19, 0.22, 0.98)
+			h = Color(0.22, 0.26, 0.30, 0.98)
+			p = Color(0.13, 0.15, 0.17, 0.98)
+			b = Color(0.42, 0.58, 0.68, 0.95)
+		"profile":
+			n = Color(0.24, 0.19, 0.15, 0.98)
+			h = Color(0.32, 0.24, 0.18, 0.98)
+			p = Color(0.16, 0.13, 0.10, 0.98)
+			b = Color(0.78, 0.52, 0.32, 0.92)
+		"credits":
+			n = Color(0.20, 0.17, 0.23, 0.98)
+			h = Color(0.28, 0.22, 0.32, 0.98)
+			p = Color(0.14, 0.12, 0.16, 0.98)
+			b = Color(0.62, 0.48, 0.78, 0.88)
+		"roadmap":
+			n = Color(0.16, 0.21, 0.18, 0.98)
+			h = Color(0.20, 0.28, 0.23, 0.98)
+			p = Color(0.12, 0.16, 0.14, 0.98)
+			b = Color(0.40, 0.62, 0.50, 0.90)
+		"achievements":
+			n = Color(0.26, 0.21, 0.12, 0.98)
+			h = Color(0.34, 0.28, 0.14, 0.98)
+			p = Color(0.18, 0.15, 0.09, 0.98)
+			b = Color(0.92, 0.74, 0.28, 0.98)
+		"quit":
+			n = Color(0.20, 0.15, 0.15, 0.98)
+			h = Color(0.30, 0.20, 0.19, 0.98)
+			p = Color(0.14, 0.11, 0.11, 0.98)
+			b = Color(0.65, 0.38, 0.36, 0.92)
+		_:
+			n = Color(0.20, 0.16, 0.11, 0.98)
+			h = Color(0.28, 0.22, 0.14, 0.98)
+			p = Color(0.16, 0.13, 0.09, 0.98)
+			b = MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.45)
+	var mute_fill: Color = Color(0.192, 0.156, 0.11, 0.98)
+	var mute_border: Color = MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.44)
+	n = n.lerp(mute_fill, 0.55)
+	h = h.lerp(mute_fill.lightened(0.05), 0.55)
+	p = p.lerp(mute_fill.darkened(0.05), 0.55)
+	b = b.lerp(mute_border, 0.52)
+	var bh: Color = b.lerp(MENU_BORDER, 0.5)
+	btn.add_theme_stylebox_override("normal", _make_panel_style(n, b, 2, 13, 0.22, 7, 2))
+	btn.add_theme_stylebox_override("hover", _make_panel_style(h, bh, 2, 13, 0.28, 9, 3))
+	btn.add_theme_stylebox_override("pressed", _make_panel_style(p, b, 2, 13, 0.18, 5, 2))
+	btn.add_theme_stylebox_override("focus", _make_panel_style(h, MENU_ACCENT_SOFT, 2, 13, 0.28, 8, 3))
+
+
+func _style_steam_avatar_button(btn: TextureButton) -> void:
+	if btn == null:
+		return
+	var empty := StyleBoxEmpty.new()
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.add_theme_stylebox_override("normal", empty)
+	btn.add_theme_stylebox_override("hover", empty)
+	btn.add_theme_stylebox_override("pressed", empty)
+	btn.add_theme_stylebox_override("disabled", empty)
+	btn.add_theme_stylebox_override("focus", empty)
+
+
 func _set_control_rect(control: Control, pos: Vector2, rect_size: Vector2) -> void:
 	if control == null:
 		return
@@ -246,7 +465,7 @@ func _style_delete_button(btn: Button) -> void:
 	btn.add_theme_stylebox_override("focus", _make_panel_style(Color(0.31, 0.11, 0.10, 0.98), MENU_ACCENT_SOFT, 2, 12, 0.28, 8, 2))
 
 
-func _style_dialog(dialog: ConfirmationDialog) -> void:
+func _style_dialog(dialog: AcceptDialog) -> void:
 	if dialog == null:
 		return
 	var regular_font: Font = dialog.get_theme_font("font", "Label")
@@ -259,6 +478,350 @@ func _style_dialog(dialog: ConfirmationDialog) -> void:
 	dialog.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
 	dialog.add_theme_constant_override("outline_size", 2)
 	dialog.add_theme_stylebox_override("panel", _make_panel_style(MENU_BG, MENU_BORDER, 2, 18, 0.44, 14, 6))
+
+
+func _get_roadmap_status_color(status_text: String) -> Color:
+	var normalized: String = status_text.to_upper()
+	if normalized == "COMPLETED":
+		return MENU_SUCCESS
+	if normalized == "IN_PROGRESS":
+		return MENU_WARNING
+	return MENU_ACCENT_SOFT
+
+
+func _default_segment_progress_from_status(status_text: String) -> float:
+	var normalized: String = status_text.to_upper()
+	if normalized == "COMPLETED":
+		return 1.0
+	if normalized == "IN_PROGRESS":
+		return 0.50
+	return 0.0
+
+
+func _ensure_roadmap_data() -> void:
+	if not roadmap_milestones.is_empty():
+		return
+	if not roadmap_use_default_if_empty:
+		return
+	roadmap_milestones = _build_default_roadmap_resources()
+
+
+func _build_default_roadmap_resources() -> Array[Resource]:
+	var resources: Array[Resource] = []
+	for entry_variant in DEFAULT_ROADMAP_MILESTONES:
+		var entry: Dictionary = entry_variant
+		var res: Resource = ROADMAP_MILESTONE_DATA_SCRIPT.new()
+		res.set("phase", str(entry.get("phase", "MILESTONE")))
+		res.set("title", str(entry.get("title", "Roadmap Item")))
+		res.set("eta", str(entry.get("eta", "UPCOMING")))
+		res.set("status", str(entry.get("status", "PLANNED")))
+		res.set("summary", str(entry.get("summary", "")))
+		res.set("progress_to_next", clampf(float(entry.get("progress_to_next", _default_segment_progress_from_status(str(entry.get("status", "PLANNED"))))), 0.0, 1.0))
+		resources.append(res)
+	return resources
+
+
+func _get_active_roadmap_entries() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for res_variant in roadmap_milestones:
+		var res: Resource = res_variant
+		if res == null:
+			continue
+		var title_text: String = str(res.get("title")).strip_edges()
+		if title_text == "":
+			continue
+		var phase_text: String = str(res.get("phase")).strip_edges()
+		if phase_text == "":
+			phase_text = "MILESTONE"
+		var eta_text: String = str(res.get("eta")).strip_edges()
+		if eta_text == "":
+			eta_text = "UPCOMING"
+		var status_text: String = str(res.get("status")).strip_edges()
+		if status_text == "":
+			status_text = "PLANNED"
+		var summary_text: String = str(res.get("summary")).strip_edges()
+		var progress_to_next: float = _default_segment_progress_from_status(status_text)
+		var progress_variant: Variant = res.get("progress_to_next")
+		if progress_variant is float or progress_variant is int:
+			progress_to_next = clampf(float(progress_variant), 0.0, 1.0)
+		result.append({
+			"phase": phase_text,
+			"title": title_text,
+			"eta": eta_text,
+			"status": status_text,
+			"summary": summary_text,
+			"progress_to_next": progress_to_next
+		})
+	return result
+
+
+func _update_roadmap_progress_ui(_milestones: Array[Dictionary]) -> void:
+	# Progress now lives directly on each roadmap segment fill.
+	if roadmap_progress_row != null:
+		roadmap_progress_row.visible = false
+	if roadmap_progress_label != null:
+		roadmap_progress_label.text = ""
+	if roadmap_progress_bar != null:
+		roadmap_progress_bar.value = 0.0
+	if roadmap_progress_value != null:
+		roadmap_progress_value.text = ""
+
+
+func _clear_roadmap_canvas() -> void:
+	if roadmap_canvas == null:
+		return
+	var children: Array = roadmap_canvas.get_children()
+	for child_variant in children:
+		var child_node: Node = child_variant as Node
+		if child_node != null:
+			roadmap_canvas.remove_child(child_node)
+			child_node.queue_free()
+
+
+func _set_mouse_ignore(control: Control) -> void:
+	if control == null:
+		return
+	control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _build_roadmap_visual() -> void:
+	if roadmap_canvas == null:
+		return
+	_set_mouse_ignore(roadmap_canvas)
+	_clear_roadmap_canvas()
+	_ensure_roadmap_data()
+	var milestones: Array[Dictionary] = _get_active_roadmap_entries()
+	_update_roadmap_progress_ui(milestones)
+	if milestones.is_empty():
+		return
+	var canvas_width: float = maxf(760.0, roadmap_scroll.size.x - 18.0) if roadmap_scroll != null else 900.0
+	roadmap_canvas.custom_minimum_size.x = canvas_width
+	var center_x: float = canvas_width * 0.5
+	var lane_amplitude: float = clampf(canvas_width * 0.08, 46.0, 88.0)
+	var left_x: float = center_x - lane_amplitude
+	var right_x: float = center_x + lane_amplitude
+	var top_y: float = 120.0
+	var row_gap: float = 205.0
+	var points: PackedVector2Array = PackedVector2Array()
+	for idx in range(milestones.size()):
+		var use_left: bool = idx % 2 == 0
+		var px: float = left_x if use_left else right_x
+		var py: float = top_y + (float(idx) * row_gap)
+		points.append(Vector2(px, py))
+
+	var road_shadow: Line2D = Line2D.new()
+	road_shadow.default_color = Color(0.08, 0.06, 0.05, 0.95)
+	road_shadow.width = 28.0
+	road_shadow.joint_mode = Line2D.LINE_JOINT_ROUND
+	road_shadow.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	road_shadow.end_cap_mode = Line2D.LINE_CAP_ROUND
+	road_shadow.points = points
+	roadmap_canvas.add_child(road_shadow)
+
+	var road_lane: Line2D = Line2D.new()
+	road_lane.default_color = MENU_BORDER_MUTED.lerp(Color(0.18, 0.15, 0.10, 1.0), 0.45)
+	road_lane.width = 16.0
+	road_lane.joint_mode = Line2D.LINE_JOINT_ROUND
+	road_lane.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	road_lane.end_cap_mode = Line2D.LINE_CAP_ROUND
+	road_lane.points = points
+	roadmap_canvas.add_child(road_lane)
+
+	for segment_idx in range(points.size() - 1):
+		var start_point: Vector2 = points[segment_idx]
+		var end_point: Vector2 = points[segment_idx + 1]
+		var segment_data: Dictionary = milestones[segment_idx]
+		var segment_progress: float = clampf(float(segment_data.get("progress_to_next", 0.0)), 0.0, 1.0)
+		if segment_progress <= 0.001:
+			continue
+		var status_text: String = str(segment_data.get("status", "PLANNED")).to_upper()
+		var fill_color: Color = _get_roadmap_status_color(status_text).lerp(MENU_ACCENT, 0.24)
+		var fill_shadow: Line2D = Line2D.new()
+		fill_shadow.default_color = Color(0.04, 0.03, 0.02, 0.85)
+		fill_shadow.width = 18.0
+		fill_shadow.joint_mode = Line2D.LINE_JOINT_ROUND
+		fill_shadow.begin_cap_mode = Line2D.LINE_CAP_ROUND
+		fill_shadow.end_cap_mode = Line2D.LINE_CAP_ROUND
+		fill_shadow.points = PackedVector2Array([start_point, start_point.lerp(end_point, segment_progress)])
+		roadmap_canvas.add_child(fill_shadow)
+		var fill_lane: Line2D = Line2D.new()
+		fill_lane.default_color = fill_color
+		fill_lane.width = 11.0
+		fill_lane.joint_mode = Line2D.LINE_JOINT_ROUND
+		fill_lane.begin_cap_mode = Line2D.LINE_CAP_ROUND
+		fill_lane.end_cap_mode = Line2D.LINE_CAP_ROUND
+		fill_lane.points = PackedVector2Array([start_point, start_point.lerp(end_point, segment_progress)])
+		roadmap_canvas.add_child(fill_lane)
+
+	for idx in range(milestones.size()):
+		var milestone: Dictionary = milestones[idx]
+		var point: Vector2 = points[idx]
+		var status: String = str(milestone.get("status", "PLANNED")).to_upper()
+		var status_color: Color = _get_roadmap_status_color(status)
+
+		var stop_shadow: ColorRect = ColorRect.new()
+		_set_mouse_ignore(stop_shadow)
+		stop_shadow.color = Color(0.0, 0.0, 0.0, 0.35)
+		stop_shadow.custom_minimum_size = Vector2(34, 34)
+		stop_shadow.position = point - Vector2(17, 17) + Vector2(0, 3)
+		roadmap_canvas.add_child(stop_shadow)
+
+		var stop_dot: ColorRect = ColorRect.new()
+		_set_mouse_ignore(stop_dot)
+		stop_dot.color = status_color
+		stop_dot.custom_minimum_size = Vector2(28, 28)
+		stop_dot.position = point - Vector2(14, 14)
+		roadmap_canvas.add_child(stop_dot)
+
+		var card_margin: float = 28.0
+		var card_w: float = clampf(canvas_width * 0.40, 320.0, 420.0)
+		var card_h: float = 136.0
+		var show_left_card: bool = idx % 2 == 0
+		var card_x: float = card_margin if show_left_card else (canvas_width - card_w - card_margin)
+		var card_y: float = point.y - (card_h * 0.5)
+		card_x = clampf(card_x, 16.0, canvas_width - card_w - 16.0)
+
+		var connector: ColorRect = ColorRect.new()
+		_set_mouse_ignore(connector)
+		connector.color = status_color.lerp(MENU_BORDER, 0.35)
+		var connector_len: float = absf((card_x + card_w) - point.x) if show_left_card else absf(point.x - card_x)
+		connector.custom_minimum_size = Vector2(maxf(connector_len - 14.0, 16.0), 3)
+		if show_left_card:
+			connector.position = Vector2(card_x + card_w + 8.0, point.y - 1.5)
+		else:
+			connector.position = Vector2(card_x - connector.custom_minimum_size.x - 8.0, point.y - 1.5)
+		roadmap_canvas.add_child(connector)
+
+		var card: PanelContainer = PanelContainer.new()
+		_set_mouse_ignore(card)
+		card.custom_minimum_size = Vector2(card_w, card_h)
+		card.position = Vector2(card_x, card_y)
+		card.add_theme_stylebox_override("panel", _make_panel_style(Color(0.15, 0.12, 0.09, 0.94), status_color.lerp(MENU_BORDER, 0.45), 2, 14, 0.30, 8, 3))
+		roadmap_canvas.add_child(card)
+
+		var margin: MarginContainer = MarginContainer.new()
+		_set_mouse_ignore(margin)
+		margin.add_theme_constant_override("margin_left", 14)
+		margin.add_theme_constant_override("margin_top", 12)
+		margin.add_theme_constant_override("margin_right", 14)
+		margin.add_theme_constant_override("margin_bottom", 10)
+		card.add_child(margin)
+
+		var vbox: VBoxContainer = VBoxContainer.new()
+		_set_mouse_ignore(vbox)
+		vbox.add_theme_constant_override("separation", 5)
+		margin.add_child(vbox)
+
+		var phase_label: Label = Label.new()
+		_set_mouse_ignore(phase_label)
+		phase_label.text = str(milestone.get("phase", "MILESTONE"))
+		_style_label(phase_label, status_color, 15, 1)
+		vbox.add_child(phase_label)
+
+		var title_label: Label = Label.new()
+		_set_mouse_ignore(title_label)
+		title_label.text = str(milestone.get("title", "Roadmap Item"))
+		_style_label(title_label, MENU_ACCENT, 22, 2)
+		vbox.add_child(title_label)
+
+		var eta_label: Label = Label.new()
+		_set_mouse_ignore(eta_label)
+		eta_label.text = "STATUS // %s" % str(milestone.get("eta", "UPCOMING"))
+		_style_label(eta_label, MENU_TEXT_MUTED, 14, 1)
+		vbox.add_child(eta_label)
+
+		var summary_label: Label = Label.new()
+		_set_mouse_ignore(summary_label)
+		summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		summary_label.text = str(milestone.get("summary", ""))
+		_style_label(summary_label, MENU_TEXT, 14, 1)
+		vbox.add_child(summary_label)
+
+	var total_height: float = top_y + (float(maxi(milestones.size() - 1, 0)) * row_gap) + 300.0
+	roadmap_canvas.custom_minimum_size = Vector2(canvas_width, total_height)
+	roadmap_canvas.size = roadmap_canvas.custom_minimum_size
+	roadmap_canvas.position = Vector2.ZERO
+
+
+func _open_achievements_dialog() -> void:
+	if achievements_dialog == null:
+		return
+	var vp_size: Vector2i = Vector2i(get_viewport_rect().size)
+	var max_w: int = maxi(480, vp_size.x - 80)
+	var max_h: int = maxi(300, vp_size.y - 100)
+	achievements_dialog.min_size = Vector2i(480, 300)
+	achievements_dialog.max_size = Vector2i(max_w, max_h)
+	var popup_size := Vector2i(
+		clampi(560, 480, max_w),
+		clampi(380, 300, max_h)
+	)
+	achievements_dialog.popup_centered_clamped(popup_size, 0.88)
+
+
+func _open_roadmap_dialog() -> void:
+	if roadmap_dialog == null:
+		return
+	var vp_size: Vector2i = Vector2i(get_viewport_rect().size)
+	var safe_margin_x: int = 90
+	var safe_margin_y: int = 150
+	var max_w: int = maxi(640, vp_size.x - (safe_margin_x * 2))
+	var max_h: int = maxi(420, vp_size.y - (safe_margin_y * 2))
+	roadmap_dialog.min_size = Vector2i(520, 360)
+	roadmap_dialog.max_size = Vector2i(max_w, max_h)
+	var popup_size: Vector2i = Vector2i(
+		mini(max_w, 1180),
+		mini(max_h, 680)
+	)
+	if roadmap_scroll != null:
+		var dynamic_scroll_h: float = clampf(float(popup_size.y) - 260.0, 180.0, 520.0)
+		roadmap_scroll.custom_minimum_size = Vector2(0.0, dynamic_scroll_h)
+	roadmap_dialog.popup_centered_clamped(popup_size, 0.90)
+	call_deferred("_finalize_roadmap_open", float(safe_margin_y))
+
+func _finalize_roadmap_open(safe_margin: float = 36.0) -> void:
+	if roadmap_dialog != null:
+		var vp_size: Vector2i = Vector2i(get_viewport_rect().size)
+		var max_w: int = maxi(640, vp_size.x - int(safe_margin * 2.0))
+		var max_h: int = maxi(420, vp_size.y - int(safe_margin * 2.0))
+		roadmap_dialog.max_size = Vector2i(max_w, max_h)
+		var clamped_size := Vector2i(
+			clampi(roadmap_dialog.size.x, 520, max_w),
+			clampi(roadmap_dialog.size.y, 360, max_h)
+		)
+		roadmap_dialog.size = clamped_size
+		roadmap_dialog.position = Vector2i(
+			maxi(int(safe_margin), (vp_size.x - clamped_size.x) / 2),
+			maxi(int(safe_margin), (vp_size.y - clamped_size.y) / 2)
+		)
+	if roadmap_scroll != null:
+		var dynamic_scroll_h: float = clampf(float(roadmap_dialog.size.y) - 245.0, 240.0, 560.0)
+		roadmap_scroll.custom_minimum_size = Vector2(0.0, dynamic_scroll_h)
+		roadmap_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+		roadmap_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		roadmap_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+		roadmap_scroll.scroll_horizontal = 0
+		roadmap_scroll.scroll_vertical = 0
+	_build_roadmap_visual()
+	if roadmap_scroll != null:
+		roadmap_scroll.scroll_horizontal = 0
+		roadmap_scroll.scroll_vertical = 0
+
+
+func _on_roadmap_scroll_gui_input(event: InputEvent) -> void:
+	if roadmap_scroll == null:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event == null:
+		return
+	if not mouse_event.pressed:
+		return
+	var step: int = 92
+	if mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		roadmap_scroll.scroll_vertical += step
+		roadmap_scroll.accept_event()
+	elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		roadmap_scroll.scroll_vertical = maxi(roadmap_scroll.scroll_vertical - step, 0)
+		roadmap_scroll.accept_event()
 
 
 func _style_slot_contents(slot_button: Button) -> void:
@@ -461,19 +1024,12 @@ func _publish_dispatch_async(payload: Dictionary) -> void:
 
 
 func _apply_theme() -> void:
-	_style_panel(header_panel, Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0, 0, 0.0)
 	_style_panel(intel_panel, Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0, 0, 0.0)
 	_style_panel(dispatch_panel, Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0, 0, 0.0)
-	_style_panel(header_card, MENU_BG, MENU_BORDER, 2, 22, 0.46)
-	_style_panel(intel_card, Color(0.14, 0.11, 0.08, 0.94), MENU_BORDER_MUTED, 1, 20, 0.34)
-	_style_panel(dispatch_card, Color(0.14, 0.11, 0.08, 0.94), MENU_BORDER_MUTED, 1, 20, 0.34)
-	_style_panel(main_vbox, MENU_BG_ALT, MENU_BORDER, 2, 22, 0.50)
+	_style_panel(intel_card, Color(0.132, 0.108, 0.082, 0.93), MENU_BORDER_MUTED, 1, 19, 0.26)
+	_style_panel(dispatch_card, Color(0.132, 0.108, 0.082, 0.93), MENU_BORDER_MUTED, 1, 19, 0.26)
+	_style_main_command_panel(main_vbox)
 	_style_panel(campaign_vbox, MENU_BG, MENU_BORDER, 2, 22, 0.50)
-
-	_style_label($HeaderPanel/HeaderCard/Margin/VBox/Overline, MENU_TEXT_MUTED, 16, 1)
-	_style_label($HeaderPanel/HeaderCard/Margin/VBox/HeaderTitle, MENU_ACCENT, 40, 4)
-	_style_label($HeaderPanel/HeaderCard/Margin/VBox/HeaderSubtitle, MENU_TEXT, 28, 3)
-	_style_label($HeaderPanel/HeaderCard/Margin/VBox/HeaderBody, MENU_TEXT_MUTED, 17, 1)
 
 	_style_label($IntelPanel/IntelCard/Margin/VBox/IntelTitle, MENU_ACCENT, 28, 3)
 	_style_rule(intel_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
@@ -503,15 +1059,30 @@ func _apply_theme() -> void:
 	_style_label($CenterStage/MainPanel/Margin/VBox/MainTitle, MENU_ACCENT, 30, 3)
 	_style_label($CenterStage/MainPanel/Margin/VBox/MainBody, MENU_TEXT_MUTED, 17, 1)
 	_style_label($CenterStage/MainPanel/Margin/VBox/MainHint, MENU_ACCENT_SOFT.lerp(MENU_TEXT, 0.35), 15, 1)
+	_style_label(roadmap_overline_label, MENU_TEXT_MUTED, 15, 1)
+	_style_label(roadmap_title_label, MENU_ACCENT, 28, 3)
+	_style_label(roadmap_hint_label, MENU_TEXT_MUTED, 15, 1)
+	_style_rule(roadmap_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
+	if roadmap_progress_row != null:
+		roadmap_progress_row.visible = false
+	_style_label(achievements_overline_label, MENU_TEXT_MUTED, 15, 1)
+	_style_label(achievements_title_label, MENU_ACCENT, 28, 3)
+	_style_label(achievements_hint_label, MENU_TEXT_MUTED, 15, 1)
+	_style_rule(achievements_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
+	_style_label(achievements_placeholder_label, MENU_TEXT, 15, 1)
 
-	_style_label($CenterStage/CampaignMenu/Margin/VBox/CampaignKicker, MENU_TEXT_MUTED, 16, 1)
-	_style_label($CenterStage/CampaignMenu/Margin/VBox/CampaignTitle, MENU_ACCENT, 30, 3)
-	_style_label($CenterStage/CampaignMenu/Margin/VBox/CampaignBody, MENU_TEXT_MUTED, 17, 1)
-	_style_label($CenterStage/CampaignMenu/Margin/VBox/SlotsHeader, MENU_WARNING, 18, 2)
+	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignKicker, MENU_TEXT_MUTED, 16, 1)
+	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignTitle, MENU_ACCENT, 30, 3)
+	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignBody, MENU_TEXT_MUTED, 17, 1)
+	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsHeader, MENU_WARNING, 18, 2)
 
-	_style_button(start_button, "CAMPAIGN COMMAND", true, 24, 64)
-	_style_button(settings_button, "FIELD SETTINGS", false, 22, 58)
-	_style_button(quit_button, "QUIT TO DESKTOP", false, 22, 58)
+	_style_hero_primary_button(start_button, "CAMPAIGN COMMAND", 24, 64)
+	_style_secondary_main_menu_button(settings_button, "FIELD SETTINGS", "settings")
+	_style_secondary_main_menu_button(profile_button, "COMMANDER PROFILE", "profile")
+	_style_secondary_main_menu_button(credits_button, "CREDITS", "credits")
+	_style_secondary_main_menu_button(roadmap_button, "ROADMAP", "roadmap")
+	_style_secondary_main_menu_button(achievements_button, "ACHIEVEMENTS", "achievements")
+	_style_secondary_main_menu_button(quit_button, "QUIT TO DESKTOP", "quit")
 	_style_button(continue_button, "CONTINUE CAMPAIGN", true, 22, 66)
 	_style_button(new_game_button, "NEW CAMPAIGN", false, 22, 62)
 	_style_button(load_game_button, "ARCHIVE SLOTS", false, 22, 62)
@@ -532,6 +1103,46 @@ func _apply_theme() -> void:
 	_style_dialog(delete_dialog)
 	_style_dialog(overwrite_dialog)
 	_style_dialog(dispatch_editor_dialog)
+	_style_dialog(roadmap_dialog)
+	if roadmap_dialog != null:
+		roadmap_dialog.min_size = Vector2i(520, 360)
+		var roadmap_ok := roadmap_dialog.get_ok_button()
+		if roadmap_ok != null:
+			_style_button(roadmap_ok, "CLOSE ROADMAP", false, 20, 54)
+	_style_dialog(achievements_dialog)
+	if achievements_dialog != null:
+		achievements_dialog.min_size = Vector2i(480, 300)
+		var ach_ok := achievements_dialog.get_ok_button()
+		if ach_ok != null:
+			_style_button(ach_ok, "CLOSE", false, 20, 54)
+	if profile_dialog != null:
+		profile_dialog.add_theme_font_size_override("title_font_size", 20)
+		profile_dialog.add_theme_color_override("title_color", MENU_ACCENT)
+		var bg_panel_node: Panel = profile_dialog.get_node_or_null("BgPanel")
+		if bg_panel_node != null:
+			bg_panel_node.add_theme_stylebox_override("panel", _make_panel_style(MENU_BG, MENU_BORDER, 2, 0, 0.44, 14, 6))
+	_style_label(profile_overline_label, MENU_TEXT_MUTED, 15, 1)
+	_style_label(profile_resolved_headline, MENU_ACCENT, 26, 3)
+	_style_label(profile_steam_name_line, MENU_TEXT_MUTED, 14, 1)
+	_style_label(profile_override_line, MENU_TEXT_MUTED, 14, 1)
+	_style_label(profile_fallback_line, MENU_TEXT_MUTED, 14, 1)
+	_style_label(profile_coop_line, MENU_TEXT, 15, 1)
+	_style_label(profile_steam_status_label, MENU_TEXT_MUTED, 14, 1)
+	_style_button(profile_view_steam_button, "VIEW STEAM PROFILE", false, 16, 44)
+	_style_label(profile_campaign_overline, MENU_ACCENT_SOFT, 15, 2)
+	_style_label(profile_campaign_body, MENU_TEXT, 14, 1)
+	_style_label(profile_edit_overline, MENU_ACCENT, 18, 2)
+	_style_label(profile_hint_label, MENU_TEXT_MUTED, 14, 1)
+	if steam_playing_as_label != null:
+		_style_label(steam_playing_as_label, MENU_TEXT_MUTED, 11, 1, HORIZONTAL_ALIGNMENT_CENTER)
+		steam_playing_as_label.custom_minimum_size = Vector2(88, 0)
+	_style_rule(profile_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
+	_style_line_edit(profile_name_edit)
+	_style_button(profile_use_steam_button, "USE STEAM / DEFAULT", false, 18, 48)
+	_style_button(profile_save_button, "SAVE", true, 20, 52)
+	if steam_avatar_frame != null:
+		_style_panel(steam_avatar_frame, Color(0.14, 0.11, 0.08, 0.94), MENU_BORDER_MUTED, 2, 14, 0.30)
+	_style_steam_avatar_button(steam_avatar_button)
 	_style_label($DispatchEditorDialog/Margin/VBox/DispatchCategoryLabel, MENU_ACCENT, 18, 2)
 	_style_label($DispatchEditorDialog/Margin/VBox/DispatchHeadlineLabel, MENU_ACCENT, 18, 2)
 	_style_label($DispatchEditorDialog/Margin/VBox/DispatchBodyLabel, MENU_ACCENT, 18, 2)
@@ -544,6 +1155,7 @@ func _apply_theme() -> void:
 func _init_audio() -> void:
 	_music_player = AudioStreamPlayer.new()
 	_music_player.stream = MENU_MUSIC
+	_music_player.bus = "Music"
 	_music_player.autoplay = true
 	_music_player.volume_db = -6.0
 	add_child(_music_player)
@@ -614,6 +1226,10 @@ func _connect_signals() -> void:
 
 	start_button.pressed.connect(_on_start_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
+	profile_button.pressed.connect(_on_profile_pressed)
+	credits_button.pressed.connect(_on_credits_pressed)
+	roadmap_button.pressed.connect(_on_roadmap_pressed)
+	achievements_button.pressed.connect(_on_achievements_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	new_game_button.pressed.connect(_on_new_game_pressed)
@@ -638,10 +1254,26 @@ func _connect_signals() -> void:
 		dispatch_editor_dialog.confirmed.connect(_on_dispatch_editor_confirmed)
 	if edit_dispatch_button != null:
 		edit_dispatch_button.pressed.connect(_open_dispatch_editor)
+	if roadmap_scroll != null and not roadmap_scroll.gui_input.is_connected(_on_roadmap_scroll_gui_input):
+		roadmap_scroll.gui_input.connect(_on_roadmap_scroll_gui_input)
+	if profile_dialog != null:
+		profile_dialog.close_requested.connect(func(): profile_dialog.hide())
+	if profile_name_edit != null and not profile_name_edit.text_submitted.is_connected(_on_profile_name_submitted):
+		profile_name_edit.text_submitted.connect(_on_profile_name_submitted)
+	if profile_name_edit != null and not profile_name_edit.text_changed.is_connected(_on_profile_name_text_changed):
+		profile_name_edit.text_changed.connect(_on_profile_name_text_changed)
+	if profile_use_steam_button != null:
+		profile_use_steam_button.pressed.connect(_on_profile_use_steam_pressed)
+	if profile_save_button != null:
+		profile_save_button.pressed.connect(_on_profile_save_pressed)
 
 	_wire_button_feedback([
 		start_button,
 		settings_button,
+		profile_button,
+		credits_button,
+		roadmap_button,
+		achievements_button,
 		quit_button,
 		continue_button,
 		new_game_button,
@@ -658,6 +1290,51 @@ func _connect_signals() -> void:
 		del_slot_3_btn,
 		edit_dispatch_button
 	])
+	if roadmap_dialog != null and roadmap_dialog.get_ok_button() != null:
+		_wire_button_feedback([roadmap_dialog.get_ok_button()])
+	if achievements_dialog != null and achievements_dialog.get_ok_button() != null:
+		_wire_button_feedback([achievements_dialog.get_ok_button()])
+	if profile_use_steam_button != null and profile_save_button != null:
+		_wire_button_feedback([profile_use_steam_button, profile_save_button])
+	if profile_view_steam_button != null:
+		_wire_button_feedback([profile_view_steam_button])
+	if steam_avatar_button != null:
+		_wire_button_feedback([steam_avatar_button])
+
+	if SteamService != null and SteamService.has_signal("player_avatar_loaded"):
+		var cb := Callable(self, "_on_steam_player_avatar_loaded")
+		if not SteamService.player_avatar_loaded.is_connected(cb):
+			SteamService.player_avatar_loaded.connect(cb)
+	if steam_avatar_button != null:
+		steam_avatar_button.pressed.connect(_on_steam_avatar_pressed)
+	if profile_view_steam_button != null:
+		profile_view_steam_button.pressed.connect(_on_profile_view_steam_pressed)
+
+
+func _on_steam_player_avatar_loaded(tex: Variant) -> void:
+	if steam_profile_corner == null:
+		return
+	var texture := tex as Texture2D
+	if texture == null:
+		steam_profile_corner.visible = false
+		if steam_avatar_button != null:
+			steam_avatar_button.disabled = true
+			steam_avatar_button.texture_normal = null
+		return
+	if steam_avatar_button != null:
+		steam_avatar_button.texture_normal = texture
+		steam_avatar_button.disabled = false
+	steam_profile_corner.visible = true
+	_update_steam_corner_playing_as_label()
+
+
+func _on_steam_avatar_pressed() -> void:
+	_open_profile_dialog()
+
+
+func _on_profile_view_steam_pressed() -> void:
+	if SteamService != null and SteamService.has_method("open_local_player_steam_profile"):
+		SteamService.open_local_player_steam_profile()
 
 
 func _prepare_intro_state() -> void:
@@ -669,9 +1346,6 @@ func _prepare_intro_state() -> void:
 	main_vbox.scale = Vector2(0.97, 0.97)
 	campaign_vbox.modulate.a = 0.0
 	campaign_vbox.scale = Vector2(0.97, 0.97)
-	if header_panel != null:
-		header_panel.modulate.a = 0.0
-		header_panel.position.y -= 18.0
 	if intel_panel != null:
 		intel_panel.modulate.a = 0.0
 		intel_panel.position.y += 18.0
@@ -682,9 +1356,6 @@ func _prepare_intro_state() -> void:
 	intro.set_parallel(true)
 	intro.tween_property(main_vbox, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	intro.tween_property(main_vbox, "scale", Vector2.ONE, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	if header_panel != null:
-		intro.tween_property(header_panel, "modulate:a", 1.0, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		intro.tween_property(header_panel, "position:y", header_panel.position.y + 18.0, 0.34).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	if intel_panel != null:
 		intro.tween_property(intel_panel, "modulate:a", 1.0, 0.34).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		intro.tween_property(intel_panel, "position:y", intel_panel.position.y - 18.0, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -692,10 +1363,19 @@ func _prepare_intro_state() -> void:
 		intro.tween_property(dispatch_panel, "modulate:a", 1.0, 0.38).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		intro.tween_property(dispatch_panel, "position:y", dispatch_panel.position.y - 18.0, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
+func _enter_tree() -> void:
+	_ensure_startup_black_overlay()
+	if _startup_black_overlay == null:
+		return
+	var from_studio: bool = Engine.has_meta(STUDIO_HANDOFF_META_FLAG) and bool(Engine.get_meta(STUDIO_HANDOFF_META_FLAG))
+	_startup_black_overlay.visible = from_studio
+	_startup_black_overlay.modulate.a = 1.0 if from_studio else 0.0
+
 
 func _ready() -> void:
 	if SettingsMenu != null and SettingsMenu.has_method("hide_menu"):
 		SettingsMenu.hide_menu()
+	_ensure_roadmap_data()
 	_apply_theme()
 	_connect_signals()
 	_layout_menu()
@@ -709,17 +1389,23 @@ func _ready() -> void:
 	_start_atmosphere_pass()
 	_fetch_dispatch_feed()
 	start_button.grab_focus()
+	_handle_startup_black_handoff()
+	_request_steam_profile_avatar()
+	_update_steam_corner_playing_as_label()
+
+
+func _request_steam_profile_avatar() -> void:
+	if SteamService == null or not SteamService.has_method("request_local_player_avatar"):
+		if steam_profile_corner != null:
+			steam_profile_corner.visible = false
+		return
+	SteamService.request_local_player_avatar(true)
 
 
 func _layout_menu() -> void:
 	var vp_size := get_viewport_rect().size
 	if backdrop_art != null:
 		backdrop_art.pivot_offset = vp_size * 0.5
-	if header_panel != null:
-		var header_size := Vector2(clampf(vp_size.x * 0.42, 700.0, 850.0), clampf(vp_size.y * 0.165, 154.0, 188.0))
-		_set_control_rect(header_panel, Vector2(32.0, 28.0), header_size)
-		if header_card != null:
-			_set_control_rect(header_card, Vector2.ZERO, header_size)
 	if intel_panel != null:
 		var right_width := clampf(vp_size.x * 0.23, 360.0, 430.0)
 		var right_x := vp_size.x - right_width - 32.0
@@ -737,12 +1423,67 @@ func _layout_menu() -> void:
 			if dispatch_card != null:
 				_set_control_rect(dispatch_card, Vector2.ZERO, dispatch_size)
 	if main_vbox != null:
-		var main_size := Vector2(clampf(vp_size.x * 0.41, 740.0, 900.0), clampf(vp_size.y * 0.24, 286.0, 350.0))
-		_set_control_rect(main_vbox, Vector2((vp_size.x - main_size.x) * 0.5, clampf(vp_size.y * 0.34, 278.0, 356.0)), main_size)
+		var main_size := Vector2(clampf(vp_size.x * 0.41, 740.0, 900.0), clampf(vp_size.y * 0.30, 340.0, 430.0))
+		_set_control_rect(main_vbox, Vector2((vp_size.x - main_size.x) * 0.5, clampf(vp_size.y * 0.21, 175.0, 255.0)), main_size)
 	if campaign_vbox != null:
 		var campaign_size := Vector2(clampf(vp_size.x * 0.66, 1120.0, 1320.0), clampf(vp_size.y * 0.56, 520.0, 640.0))
 		_set_control_rect(campaign_vbox, Vector2((vp_size.x - campaign_size.x) * 0.5, clampf(vp_size.y * 0.22, 196.0, 252.0)), campaign_size)
 	_refresh_dispatch_body_layout()
+
+func _ensure_startup_black_overlay() -> void:
+	if _startup_black_overlay != null and is_instance_valid(_startup_black_overlay):
+		return
+	_startup_black_overlay = ColorRect.new()
+	_startup_black_overlay.name = "StartupBlackOverlay"
+	_startup_black_overlay.layout_mode = 1
+	_startup_black_overlay.anchors_preset = Control.PRESET_FULL_RECT
+	_startup_black_overlay.anchor_right = 1.0
+	_startup_black_overlay.anchor_bottom = 1.0
+	_startup_black_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_startup_black_overlay.z_index = 4000
+	_startup_black_overlay.color = Color(0.0, 0.0, 0.0, 1.0)
+	_startup_black_overlay.modulate.a = 0.0
+	add_child(_startup_black_overlay)
+
+func _handle_startup_black_handoff() -> void:
+	if _startup_black_overlay == null:
+		return
+	var use_handoff: bool = Engine.has_meta(STUDIO_HANDOFF_META_FLAG) and bool(Engine.get_meta(STUDIO_HANDOFF_META_FLAG))
+	var fade_seconds: float = 0.95
+	if Engine.has_meta(STUDIO_HANDOFF_META_FADE):
+		fade_seconds = float(Engine.get_meta(STUDIO_HANDOFF_META_FADE))
+	if Engine.has_meta(STUDIO_HANDOFF_META_FLAG):
+		Engine.remove_meta(STUDIO_HANDOFF_META_FLAG)
+	if Engine.has_meta(STUDIO_HANDOFF_META_FADE):
+		Engine.remove_meta(STUDIO_HANDOFF_META_FADE)
+	if not use_handoff:
+		_startup_black_overlay.visible = false
+		_startup_black_overlay.modulate.a = 0.0
+		return
+
+	# Preferred path: fade in from persistent SceneTransition black overlay.
+	if Engine.has_singleton("SceneTransition"):
+		var transition_rect := SceneTransition.get_node_or_null("ColorRect") as ColorRect
+		if transition_rect != null and transition_rect.modulate.a > 0.01 and SceneTransition.has_method("fade_in_from_black"):
+			_startup_black_overlay.visible = false
+			_startup_black_overlay.modulate.a = 0.0
+			var old_fade_in: float = SceneTransition.fade_in_time
+			SceneTransition.fade_in_time = maxf(0.05, fade_seconds)
+			SceneTransition.fade_in_from_black()
+			SceneTransition.fade_in_time = old_fade_in
+			return
+
+	# Fallback path: local startup overlay.
+	_startup_black_overlay.visible = true
+	_startup_black_overlay.modulate.a = 1.0
+	if _startup_black_tween != null:
+		_startup_black_tween.kill()
+	_startup_black_tween = create_tween()
+	_startup_black_tween.tween_property(_startup_black_overlay, "modulate:a", 0.0, maxf(0.05, fade_seconds)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_startup_black_tween.tween_callback(func() -> void:
+		if _startup_black_overlay != null:
+			_startup_black_overlay.visible = false
+	)
 
 
 func _format_record_timestamp(unix_time: int) -> String:
@@ -755,6 +1496,93 @@ func _format_record_timestamp(unix_time: int) -> String:
 	var hour := int(date_info.get("hour", 0))
 	var minute := int(date_info.get("minute", 0))
 	return "UPDATED: %02d/%02d/%04d  %02d:%02d" % [day, month, year, hour, minute]
+
+
+func _format_playtime_seconds(sec: int) -> String:
+	var s: int = maxi(sec, 0)
+	var h: int = s / 3600
+	var m: int = (s % 3600) / 60
+	if h > 0:
+		return "%dh %02dm" % [h, m]
+	if m > 0:
+		return "%dm" % m
+	if s > 0:
+		return "%ds" % (s % 60)
+	return "0m"
+
+
+func _build_campaign_snapshot_profile_text() -> String:
+	if CampaignManager == null or not CampaignManager.has_method("get_newest_save_snapshot"):
+		return "No field record found."
+	var snap: Dictionary = CampaignManager.get_newest_save_snapshot()
+	if snap.is_empty():
+		return "No field record on file — start or load a campaign to create a save."
+	var slot: int = int(snap.get("save_slot", 0))
+	var is_auto: bool = bool(snap.get("save_is_auto", false))
+	var slot_label: String = "AUTO %d" % slot if is_auto else "SLOT %d" % slot
+	var gold: int = int(snap.get("global_gold", 0))
+	var map_n: int = int(snap.get("map_display_index", 1))
+	var leader: String = str(snap.get("leader_name", "")).strip_edges()
+	if leader == "":
+		leader = "Unknown"
+	var unix: int = int(snap.get("modified_unix", 0))
+	var pt: int = int(snap.get("playtime_seconds", 0))
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append("%s  ·  MAP %d  ·  GOLD %d" % [slot_label, map_n, gold])
+	lines.append("Commander: %s" % leader)
+	if unix > 0:
+		lines.append("Last written: %s" % _format_record_timestamp(unix))
+	if pt > 0:
+		lines.append("Playtime (in save): %s" % _format_playtime_seconds(pt))
+	else:
+		lines.append("Playtime: not stored in this save file.")
+	var out: String = ""
+	for i in range(lines.size()):
+		if i > 0:
+			out += "\n"
+		out += lines[i]
+	return out
+
+
+func _profile_identity_breakdown_from_edit() -> Dictionary:
+	var override_raw: String = profile_name_edit.text if profile_name_edit != null else ""
+	var resolved: String = ""
+	if CampaignManager != null and CampaignManager.has_method("resolve_player_display_name"):
+		resolved = str(CampaignManager.resolve_player_display_name(override_raw)).strip_edges()
+	var steam_name: String = ""
+	if SteamService != null and SteamService.is_steam_ready() and SteamService.has_method("get_steam_persona_name"):
+		steam_name = str(SteamService.get_steam_persona_name()).strip_edges()
+	var override_sanitized: String = ""
+	if CampaignManager != null and CampaignManager.has_method("sanitize_player_display_name"):
+		override_sanitized = str(CampaignManager.sanitize_player_display_name(override_raw)).strip_edges()
+	var has_override: bool = override_sanitized != ""
+	var fallback_cmd: String = ""
+	if CampaignManager != null:
+		fallback_cmd = str(CampaignManager.custom_avatar.get("name", CampaignManager.custom_avatar.get("unit_name", ""))).strip_edges()
+	if fallback_cmd == "":
+		fallback_cmd = "— (create a commander in campaign)"
+	return {
+		"resolved": resolved if resolved != "" else "Commander",
+		"steam_name": steam_name,
+		"override_sanitized": override_sanitized,
+		"has_override": has_override,
+		"fallback_commander": fallback_cmd
+	}
+
+
+func _update_steam_corner_playing_as_label() -> void:
+	if steam_playing_as_label == null:
+		return
+	var name_str: String = "Commander"
+	if CampaignManager != null and CampaignManager.has_method("get_player_display_name"):
+		name_str = str(CampaignManager.get_player_display_name()).strip_edges()
+	if name_str == "":
+		name_str = "Commander"
+	var max_chars: int = 22
+	var shown: String = name_str
+	if shown.length() > max_chars:
+		shown = shown.substr(0, max_chars - 1) + "…"
+	steam_playing_as_label.text = "Playing as:\n%s" % shown
 
 
 func _start_atmosphere_pass() -> void:
@@ -963,8 +1791,103 @@ func _on_back_pressed() -> void:
 
 
 func _on_settings_pressed() -> void:
-	if SettingsMenu != null and SettingsMenu.has_method("show_menu"):
-		SettingsMenu.show_menu()
+	if SettingsMenu != null and SettingsMenu.has_method("show_settings_only"):
+		SettingsMenu.show_settings_only()
+
+
+func _on_profile_pressed() -> void:
+	_open_profile_dialog()
+
+
+func _open_profile_dialog() -> void:
+	if profile_dialog == null or profile_name_edit == null:
+		return
+	profile_name_edit.text = CampaignManager.player_profile_display_override
+	_refresh_profile_dialog_fields()
+	var vp := get_viewport_rect().size
+	var dlg_w := clampi(640, 420, int(vp.x * 0.56))
+	var dlg_h := clampi(560, 380, int(vp.y * 0.78))
+	if profile_scroll != null:
+		profile_scroll.custom_minimum_size = Vector2(maxf(float(dlg_w) - 40.0, 360.0), 0.0)
+	var dlg_pos := Vector2i(int((vp.x - float(dlg_w)) * 0.5), int((vp.y - float(dlg_h)) * 0.5))
+	profile_dialog.popup(Rect2i(dlg_pos, Vector2i(dlg_w, dlg_h)))
+	profile_name_edit.call_deferred("grab_focus")
+
+
+func _refresh_profile_dialog_fields() -> void:
+	var idn := _profile_identity_breakdown_from_edit()
+	if profile_resolved_headline != null:
+		profile_resolved_headline.text = idn["resolved"]
+	if profile_steam_name_line != null:
+		if str(idn["steam_name"]).strip_edges() != "":
+			profile_steam_name_line.text = "Steam name: %s" % idn["steam_name"]
+		else:
+			profile_steam_name_line.text = "Steam name: — (Steam not active in this session)"
+	if profile_override_line != null:
+		if bool(idn["has_override"]):
+			profile_override_line.text = "Custom tag: %s" % idn["override_sanitized"]
+		else:
+			profile_override_line.text = "Custom tag: (none — using Steam or commander fallback order)"
+	if profile_fallback_line != null:
+		profile_fallback_line.text = "Commander fallback: %s" % idn["fallback_commander"]
+	if profile_coop_line != null:
+		profile_coop_line.text = "Co-op / online: %s" % idn["resolved"]
+	if profile_steam_status_label != null:
+		if SteamService != null and SteamService.is_steam_ready():
+			var pn2: String = str(idn["steam_name"]).strip_edges()
+			if pn2 != "":
+				profile_steam_status_label.text = "Steam connected as %s." % pn2
+			else:
+				profile_steam_status_label.text = "Steam running — persona name unavailable in this build."
+		else:
+			profile_steam_status_label.text = "Steam not active (editor, DRM-free build, or GodotSteam missing)."
+	if profile_view_steam_button != null:
+		profile_view_steam_button.visible = true
+		profile_view_steam_button.disabled = SteamService == null or not SteamService.is_steam_ready()
+	if profile_campaign_body != null:
+		profile_campaign_body.text = _build_campaign_snapshot_profile_text()
+
+
+func _on_profile_name_text_changed(_new_text: String) -> void:
+	_refresh_profile_dialog_fields()
+
+
+func _on_profile_name_submitted(_text: String) -> void:
+	_on_profile_save_pressed()
+
+
+func _on_profile_use_steam_pressed() -> void:
+	if profile_name_edit != null:
+		profile_name_edit.text = ""
+	_refresh_profile_dialog_fields()
+
+
+func _on_profile_save_pressed() -> void:
+	_on_profile_dialog_confirmed()
+	if profile_dialog != null:
+		profile_dialog.hide()
+
+
+func _on_profile_dialog_confirmed() -> void:
+	if not CampaignManager.has_method("sanitize_player_display_name"):
+		return
+	var raw: String = profile_name_edit.text if profile_name_edit != null else ""
+	CampaignManager.player_profile_display_override = CampaignManager.sanitize_player_display_name(raw)
+	if CampaignManager.has_method("save_global_settings"):
+		CampaignManager.save_global_settings()
+	_refresh_profile_dialog_fields()
+	_update_steam_corner_playing_as_label()
+
+
+func _on_credits_pressed() -> void:
+	SceneTransition.change_scene_to_file(CREDITS_SCENE_PATH)
+
+func _on_roadmap_pressed() -> void:
+	_open_roadmap_dialog()
+
+
+func _on_achievements_pressed() -> void:
+	_open_achievements_dialog()
 
 
 func _on_new_game_pressed() -> void:

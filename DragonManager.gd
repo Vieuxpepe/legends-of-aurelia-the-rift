@@ -419,9 +419,20 @@ const DRAGON_TRAINING_ORDER: Array[String] = [
 	"balanced"
 ]
 
+const TRAINING_STAT_DISPLAY_NAMES: Dictionary = {
+	"max_hp": "Max HP",
+	"strength": "Strength",
+	"magic": "Magic",
+	"defense": "Defense",
+	"resistance": "Resistance",
+	"speed": "Speed",
+	"agility": "Agility"
+}
+
 const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	"endurance": {
 		"display_name": "Endurance Drill",
+		"help_text": "Long drills and holding form—builds staying power. Good if you want a dragon that can take hits and stay in the fight.",
 		"gold_cost": 120,
 		"happiness_loss": 6,
 		"fatigue_gain": 12,
@@ -433,6 +444,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"power": {
 		"display_name": "Power Sparring",
+		"help_text": "Close combat and heavy strikes—prioritizes physical offense and a bit of endurance.",
 		"gold_cost": 140,
 		"happiness_loss": 7,
 		"fatigue_gain": 13,
@@ -444,6 +456,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"arcana": {
 		"display_name": "Arcane Study",
+		"help_text": "Spell shapes, focus, and channeling—best for magic growth and a touch of mobility.",
 		"gold_cost": 150,
 		"happiness_loss": 6,
 		"fatigue_gain": 11,
@@ -455,6 +468,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"guard": {
 		"display_name": "Guard Formation",
+		"help_text": "Shields, braces, and disciplined positioning—specializes in Defense with support to HP and Resistance.",
 		"gold_cost": 130,
 		"happiness_loss": 6,
 		"fatigue_gain": 12,
@@ -466,6 +480,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"resistance": {
 		"display_name": "Meditative Ward",
+		"help_text": "Wards, breath work, and mental calm—raises Resistance first, with Magic and Defense as secondary growth.",
 		"gold_cost": 130,
 		"happiness_loss": 5,
 		"fatigue_gain": 10,
@@ -477,6 +492,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"speed": {
 		"display_name": "Wind Sprint",
+		"help_text": "Bursts, pacing, and chase drills—pushes Speed and Agility, with a small chance at Max HP.",
 		"gold_cost": 135,
 		"happiness_loss": 7,
 		"fatigue_gain": 13,
@@ -488,6 +504,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"agility": {
 		"display_name": "Sky Reflex Course",
+		"help_text": "Evasion ladders, aerial cues, and reaction games—favors Agility and Speed with a hint of Magic.",
 		"gold_cost": 135,
 		"happiness_loss": 7,
 		"fatigue_gain": 13,
@@ -499,6 +516,7 @@ const DRAGON_TRAINING_PROGRAMS: Dictionary = {
 	},
 	"balanced": {
 		"display_name": "Balanced Training",
+		"help_text": "Mixed circuits touching every area—each core stat has equal weight, ideal when you do not want to specialize yet.",
 		"gold_cost": 125,
 		"happiness_loss": 5,
 		"fatigue_gain": 10,
@@ -565,6 +583,95 @@ func get_training_program_list() -> Array[Dictionary]:
 			programs.append(program)
 
 	return programs
+
+
+func get_training_stat_display_name(stat_key: String) -> String:
+	return str(TRAINING_STAT_DISPLAY_NAMES.get(stat_key, str(stat_key).capitalize()))
+
+
+func _format_training_stat_focus_line(program: Dictionary, wrap_muted_bbcode: bool) -> String:
+	var weights: Dictionary = program.get("stat_weights", {})
+	if weights.is_empty():
+		return ""
+
+	var pairs: Array = []
+	for k in weights.keys():
+		pairs.append({"k": str(k), "w": float(weights[k])})
+	pairs.sort_custom(func(a, b) -> bool: return a.w > b.w)
+
+	var names: PackedStringArray = PackedStringArray()
+	for p in pairs:
+		names.append(get_training_stat_display_name(p.k))
+
+	var joined: String = ", ".join(names)
+	var line: String = "Weighted rolls favor: %s (each pick grants +1)." % joined
+	if wrap_muted_bbcode:
+		return "[color=#c9b8a0]%s[/color]" % line
+	return line
+
+
+func get_training_program_player_help_bbcode(program_id: String) -> String:
+	var program: Dictionary = get_training_program(program_id)
+	if program.is_empty():
+		return ""
+
+	var parts: PackedStringArray = PackedStringArray()
+	var ht: String = str(program.get("help_text", "")).strip_edges()
+	if ht != "":
+		parts.append(ht)
+
+	var focus: String = _format_training_stat_focus_line(program, true)
+	if focus != "":
+		parts.append(focus)
+
+	return "\n".join(parts)
+
+
+func get_training_program_tooltip_plain(program_id: String) -> String:
+	var program: Dictionary = get_training_program(program_id)
+	if program.is_empty():
+		return ""
+
+	var parts: PackedStringArray = PackedStringArray()
+	var ht: String = str(program.get("help_text", "")).strip_edges()
+	if ht != "":
+		parts.append(ht)
+
+	var focus: String = _format_training_stat_focus_line(program, false)
+	if focus != "":
+		parts.append(focus)
+
+	return "\n".join(parts)
+
+
+func get_training_intensity_player_help_bbcode(intensity: int) -> String:
+	match clampi(intensity, TRAINING_INTENSITY_LIGHT, TRAINING_INTENSITY_INTENSE):
+		TRAINING_INTENSITY_LIGHT:
+			return (
+				"[color=#d4a74a]Intensity · Light[/color]\n"
+				+ "Roughly 70% gold and gentler happiness loss and fatigue; one weighted stat roll. Easiest on tired or moody dragons."
+			)
+		TRAINING_INTENSITY_INTENSE:
+			return (
+				"[color=#d4a74a]Intensity · Intense[/color]\n"
+				+ "Roughly 160% gold and heavier strain; three rolls and better breakthrough odds. Requires a happier dragon with more fatigue room than Normal allows."
+			)
+		_:
+			return (
+				"[color=#d4a74a]Intensity · Normal[/color]\n"
+				+ "Costs match the values on this card; two weighted rolls per session."
+			)
+
+
+func get_training_intensity_tooltip_plain(intensity: int) -> String:
+	match clampi(intensity, TRAINING_INTENSITY_LIGHT, TRAINING_INTENSITY_INTENSE):
+		TRAINING_INTENSITY_LIGHT:
+			return "Light: ~70% gold, milder strain, 1 stat roll."
+		TRAINING_INTENSITY_INTENSE:
+			return "Intense: ~160% gold, heavy strain, 3 rolls, better breakthroughs. Stricter fatigue/happiness gates."
+		_:
+			return "Normal: listed costs, 2 stat rolls."
+
 
 func get_training_preview(index: int, program_id: String, intensity: int = TRAINING_INTENSITY_NORMAL) -> Dictionary:
 	var result: Dictionary = {
@@ -2006,7 +2113,50 @@ func throw_rabbit_for_hunt(index: int) -> Dictionary:
 	result["float_text"] = "+%d Happy" % happiness_gain
 
 	return result
-	
+
+
+func get_ranch_care_tooltip_feed() -> String:
+	return (
+		"Uses 1 Meat consumable from inventory (name must contain “Meat”). "
+		+ "Adds growth points (food value 25, scaled by current happiness and feed-related traits) toward the next stage. "
+		+ "Also raises happiness by a small amount plus any trait bonuses. Adults are fully grown—this action is unavailable for them."
+	)
+
+
+func get_ranch_care_tooltip_hunt(gold_cost: int) -> String:
+	return (
+		"Costs %d gold. Starts a short chase for a large happiness boost (base 10, plus stage, element, and hunt traits; capped). "
+		% gold_cost
+		+ "If happiness reaches 75 or higher afterward, you gain +1 bond. Does not add growth points. Eggs cannot hunt."
+	)
+
+
+func get_ranch_care_help_feed_bbcode(dragon_stage: int) -> String:
+	if dragon_stage >= int(DragonStage.ADULT):
+		return (
+			"[color=#d4a74a]Feed[/color]\n"
+			+ "[color=#9a8f82]Fully grown—this dragon no longer gains growth from meals.[/color]"
+		)
+	return (
+		"[color=#d4a74a]Feed (Meat)[/color]\n"
+		+ "Spends one Meat item. Adds growth points (scaled from food value 25 by happiness and traits) toward evolution. "
+		+ "Small happiness bump. Hover the button for full detail."
+	)
+
+
+func get_ranch_care_help_hunt_bbcode(dragon_stage: int, gold_cost: int) -> String:
+	if dragon_stage <= int(DragonStage.EGG):
+		return (
+			"[color=#d4a74a]Throw rabbit[/color]\n"
+			+ "[color=#9a8f82]Eggs cannot hunt yet.[/color]"
+		)
+	return (
+		"[color=#d4a74a]Throw rabbit · %d gold[/color]\n" % gold_cost
+		+ "Fun chase: big happiness gain (varies by stage, element, hunt traits). Possible +1 bond if happiness is high after. "
+		+ "No growth points. Hover the button for numbers."
+	)
+
+
 func _get_shared_traits(p1: Dictionary, p2: Dictionary) -> Array:
 	var shared: Array = []
 	var traits_a: Array = _get_unique_trait_array(p1)

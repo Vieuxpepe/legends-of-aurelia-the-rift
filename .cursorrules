@@ -1,6 +1,16 @@
+---
+description: 
+alwaysApply: true
+---
+
+---
+description: Godot 4.x SRPG Development with MCP Integration
+alwaysApply: true
+---
+
 # Godot 4.x SRPG Coding & Documentation Standards
 
-You are an expert Godot 4.x developer. For all code generation, modification, and refactoring, you MUST adhere strictly to valid Godot 4.x GDScript syntax and the following rules:
+You are an expert Godot 4.x developer with access to the Godot MCP suite. For all code generation, modification, and refactoring, you MUST adhere strictly to valid Godot 4.x GDScript syntax and the following rules:
 
 1. Scope-Aware Documentation
 - Include a file-level header only when creating a new file or rewriting a substantial portion of an existing file.
@@ -9,42 +19,32 @@ You are an expert Godot 4.x developer. For all code generation, modification, an
 
 2. Function/Class Documentation
 - Add concise docstrings for new or significantly changed functions and classes when they improve maintainability.
-- Document:
-  - purpose
-  - key inputs
-  - return value (if any)
-  - notable side effects
+- Document: purpose, key inputs, return value, and notable side effects.
 - Avoid redundant documentation of obvious code.
 
 3. Inline Comments
-- Add inline comments only for:
-  - non-obvious logic
-  - branching decisions
-  - data normalization
-  - engine/workflow caveats
-  - extension points
+- Add inline comments only for: non-obvious logic, branching decisions, data normalization, engine/workflow caveats, and extension points.
 - Do not comment self-explanatory assignments or trivial control flow.
 
 4. AI/Reviewer Guidance
-- For complex or architecture-relevant code, include short guidance comments identifying:
-  - entry points
-  - extension points
-  - assumptions
-  - dependency expectations
-- Skip reviewer guidance for trivial edits unless explicitly requested.
+- For complex or architecture-relevant code, include short guidance comments identifying: entry points, extension points, assumptions, and dependency expectations.
 
 5. Godot / GDScript Conventions
 - Use valid Godot 4.x GDScript only.
-- Prefer typed variables, typed parameters, and typed return values where practical.
+- Prefer typed variables, parameters, and return values (`var x: int = 0`).
 - Use snake_case for functions and variables.
-- Preserve scene compatibility, node paths, exported properties, and signal wiring unless explicitly asked to refactor them.
-- Keep refactors narrowly scoped; do not rewrite unrelated logic.
-- Avoid introducing unnecessary autoload dependencies or global state.
+- Preserve scene compatibility, node paths, and signal wiring.
 - When editing UI/theme code, avoid mutating shared style resources unintentionally; duplicate style resources when necessary.
 
 6. Refactoring Behavior
-- Preserve existing gameplay behavior unless the prompt explicitly requests a behavior change.
+- Preserve existing gameplay behavior unless the prompt explicitly requests a change.
 - Prefer minimal, surgical edits over broad rewrites.
-- When behavior depends on project-specific data fields or resources, infer from the existing file/project code instead of inventing new fields.
+- Infer project-specific data fields from existing code instead of inventing new ones.
 
-Write comments so both humans and AI systems can quickly understand architecture and maintenance intent without overwhelming the code.
+7. MCP & Engine Integration (NEW)
+- **Verify, Don't Guess:** Before suggesting UI layout changes or node path logic, use `@godot` tools (like `list_nodes` or `get_project_info`) to verify the actual scene structure.
+- **Runtime Debugging:** If a user reports a crash or UI overlap, use `get_debug_output` and `run_project` to diagnose the issue before offering a code fix.
+- **Structural Edits:** Prefer using `create_scene` or `add_node` via MCP for new UI components to ensure valid `.tscn` formatting.
+- **Visual Polish:** Use `launch_editor` to help the user navigate to specific UI scenes that require visual adjustment.
+
+Write code and comments so both humans and AI systems can quickly understand architecture and maintenance intent without overwhelming the code.

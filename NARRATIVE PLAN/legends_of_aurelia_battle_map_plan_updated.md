@@ -48,7 +48,7 @@ SiegeMaster.tres
 Dreadnought.tres
 
 Ascended Classes :
-For later
+
 DawnExalt.tres
 VoidStrider.tres
 RiftArchon.tres

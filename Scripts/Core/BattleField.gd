@@ -37,7 +37,7 @@ signal loot_window_closed
 # =============================================================================
 
 enum Objective { ROUT_ENEMY, SURVIVE_TURNS, DEFEND_TARGET }
-enum UISfx { MOVE_OK, TARGET_OK, INVALID }
+enum UISfx { MOVE_OK, TARGET_OK, INVALID, INVENTORY_EQUIP, INVENTORY_USE }
 
 const CELL_SIZE = Vector2i(64, 64)
 ## Co-op: wire schema for [method coop_net_build_authoritative_combat_snapshot] / peer apply (no second combat sim).
@@ -51,6 +51,14 @@ const LEVELUP_ROW_REVEAL_DELAY := 0.50
 const PATH_ALPHA_MIN := 0.55
 const PATH_ALPHA_MAX := 1.00
 const PATH_PULSE_TIME := 0.35
+const PATH_PREVIEW_Z := 100
+const PATH_PREVIEW_FG_WIDTH := 4.0
+const PATH_PREVIEW_UNDER_WIDTH := 11.0
+const PATH_PREVIEW_PULSE_W_FG := 1.35
+const PATH_PREVIEW_PULSE_W_UNDER := 2.2
+const PATH_PREVIEW_CORNER_INSET_LOW := 10.0
+const PATH_PREVIEW_CORNER_INSET_HIGH := 16.0
+const PATH_PREVIEW_DASH_SHADER := preload("res://path_preview_dash.gdshader")
 
 const UI_SFX_COOLDOWN_MS := 45
 
@@ -144,6 +152,27 @@ const TACTICAL_UI_HUD_SCALE := 1.5
 const TACTICAL_UI_BOTTOM_PANEL_SCALE_MULT := 0.85
 const TACTICAL_UI_LOG_HEIGHT_RATIO := 0.75
 const TACTICAL_UI_BOTTOM_EDGE_MARGIN := 8.0
+## End Turn nudge when all local units have acted: stronger modulate + scale breathing (see _update_skip_button_visual_modulate).
+const END_TURN_PULSE_TIME_SCALE := 0.0046
+const END_TURN_PULSE_MOD_DEPTH := 0.32
+const END_TURN_PULSE_SCALE_CENTER := 1.072
+const END_TURN_PULSE_SCALE_DEPTH := 0.062
+## Runtime inventory grid / description padding (applied once from [method _apply_inventory_panel_spacing]; scenes keep canonical node names).
+const INVENTORY_UI_SCROLL_CONTENT_PAD := 12
+const INVENTORY_UI_GRID_SEP := 10
+const INVENTORY_UI_VBOX_SEP := 12
+const INVENTORY_UI_INFO_PANEL_OUTER_PAD := 10
+const INVENTORY_UI_DESC_TEXT_PAD := 12
+const INVENTORY_UI_ITEMLIST_EXTRA_MARGIN := 8
+const META_INVENTORY_UI_SPACING_APPLIED := "_inv_ui_spacing_v1"
+const LOOT_INFO_BACKDROP_OUTER_PAD := 12
+const LOOT_INFO_DESC_INNER_PAD := 14
+const META_LOOT_DESC_LAYOUT_BASE := "_loot_desc_layout_base_rect"
+const ITEM_DESC_RICHTEXT_MIN_H := 72.0
+const ITEM_DESC_RICHTEXT_MAX_H := 620.0
+const ITEM_DESC_RICHTEXT_EXTRA_PAD := 12.0
+const INVENTORY_DESC_PANEL_MIN_H := 52.0
+const INVENTORY_DESC_PANEL_PAD := 14.0
 const UNIT_INFO_STAT_BAR_CAP := 50.0
 const UNIT_INFO_STAT_TIER_CYAN := Color(0.28, 0.88, 1.0, 1.0)
 const UNIT_INFO_STAT_TIER_PURPLE := Color(0.76, 0.48, 1.0, 1.0)
@@ -156,6 +185,9 @@ const BossDialogueDB = preload("res://Scripts/Narrative/BossPersonalDialogueDB.g
 const SupportRescueDialogueDB = preload("res://Scripts/Narrative/SupportRescueDialogueDB.gd")
 
 const FloatingTextScene = preload("res://Scenes/FloatingText.tscn")
+
+## Consecutive floaters on the same unit within ~0.4s stack upward for readability.
+var _floater_stack_by_unit: Dictionary = {}
 
 
 var detailed_unit_info_layer: CanvasLayer
@@ -253,7 +285,10 @@ var field_log_toggle_tween: Tween
 @onready var cursor_sprite = $Cursor/Sprite2D
 @onready var target_cursor = $TargetCursor
 @onready var target_cursor_sprite: Sprite2D = get_node_or_null("TargetCursor/Sprite2D") as Sprite2D
+@onready var path_line_under: Line2D = get_node_or_null("PathLineUnder") as Line2D
 @onready var path_line: Line2D = $PathLine
+@onready var path_end_marker: Node2D = get_node_or_null("PathEndMarker") as Node2D
+@onready var path_preview_ticks: Node2D = get_node_or_null("PathPreviewTicks") as Node2D
 @onready var hover_glow = $HoverGlow
 
 @onready var minimap_container: Control = %MiniMapContainer
@@ -368,10 +403,10 @@ var _unit_info_stat_animating: bool = false
 # =============================================================================
 
 @onready var inventory_panel = $UI/InventoryPanel
-@onready var inv_scroll = $UI/InventoryPanel/InventoryScroll
-@onready var unit_grid = $UI/InventoryPanel/InventoryScroll/InventoryVBox/UnitGrid
-@onready var convoy_grid = $UI/InventoryPanel/InventoryScroll/InventoryVBox/ConvoyGrid
-@onready var inv_desc_label = $UI/InventoryPanel/ItemDescLabel
+var inv_scroll: ScrollContainer
+var unit_grid: GridContainer
+var convoy_grid: GridContainer
+var inv_desc_label: RichTextLabel
 @onready var equip_button = $UI/InventoryPanel/EquipButton
 @onready var use_button = $UI/InventoryPanel/UseButton
 
@@ -383,7 +418,8 @@ var _unit_info_stat_animating: bool = false
 @onready var loot_window = $UI/LootWindow
 @onready var loot_item_list = $UI/LootWindow/ItemList
 @onready var close_loot_button = $UI/LootWindow/CloseLootButton
-@onready var loot_desc_label = $UI/LootWindow/ItemDescLabel
+var loot_desc_label: RichTextLabel
+var loot_item_info_panel: Panel
 
 
 # =============================================================================
@@ -498,6 +534,9 @@ var _impact_restore_tween: Tween
 
 var _path_pulse_tween: Tween
 var _path_pulse_active := false
+var _path_fg_dash_material: ShaderMaterial = null
+## World-space centers for MP tick overlay (see [member path_preview_ticks]).
+var _path_preview_tick_world: Array[Vector2] = []
 
 var crit_flash_tween: Tween
 var atk_double_origin: Vector2
@@ -564,6 +603,8 @@ var trade_selected_side: String = ""
 var trade_selected_index: int = -1
 
 var selected_inventory_meta: Dictionary = {}
+## After equip, flash this item's slot once the unit grid is rebuilt ([method _populate_unit_inventory_list]).
+var _battle_inv_flash_item: Resource = null
 var unit_managing_inventory: Node2D = null
 
 var pending_loot: Array[Resource] = []
@@ -594,7 +635,6 @@ var _mock_coop_prebattle_transition_pending: bool = false
 var _mock_coop_local_player_phase_ready: bool = false
 var _mock_coop_remote_player_phase_ready: bool = false
 var _mock_coop_player_phase_transition_pending: bool = false
-var _mock_coop_skip_button_glow_active: bool = false
 var _skip_button_base_modulate: Color = Color.WHITE
 var _skip_button_base_modulate_captured: bool = false
 var _mock_partner_placeholder_combat_log_done: bool = false
@@ -1572,6 +1612,45 @@ func coop_enet_sync_after_host_authority_enemy_turn_end() -> void:
 	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "enemy_turn_end"})
 
 
+func coop_enet_sync_enemy_turn_batch_move(entries: Array) -> void:
+	if not coop_enet_is_host_authority_enemy_turn_host():
+		return
+	var payload: Array = []
+	for entry: Dictionary in entries:
+		var unit: Node2D = entry.get("unit") as Node2D
+		var path: Array = entry.get("move_path", [])
+		if unit == null or not is_instance_valid(unit):
+			continue
+		var uid: String = _get_mock_coop_command_id(unit)
+		if uid == "":
+			continue
+		var serial: Array = []
+		var typed_path: Array[Vector2i] = []
+		for p in path:
+			var v := Vector2i.ZERO
+			if p is Vector2i:
+				v = p as Vector2i
+			elif typeof(p) == TYPE_VECTOR2I:
+				v = p as Vector2i
+			else:
+				continue
+			serial.append([v.x, v.y])
+			typed_path.append(v)
+		if serial.size() < 2:
+			continue
+		payload.append({
+			"unit_id": uid,
+			"path": serial,
+			"path_cost": float(get_path_move_cost(typed_path, unit)),
+		})
+	if payload.is_empty():
+		return
+	CoopExpeditionSessionManager.send_runtime_coop_action({
+		"action": "enemy_turn_batch_move",
+		"entries": payload,
+	})
+
+
 func coop_enet_sync_after_host_authority_enemy_phase_setup() -> void:
 	if not coop_enet_is_host_authority_enemy_turn_host():
 		return
@@ -2440,6 +2519,8 @@ func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
 			await _coop_remote_sync_enemy_turn_escape(body)
 		"enemy_turn_end":
 			_coop_remote_sync_enemy_turn_end(body)
+		"enemy_turn_batch_move":
+			await _coop_remote_sync_enemy_turn_batch_move(body)
 		"prebattle_layout":
 			_coop_remote_sync_prebattle_layout(body)
 		"prebattle_ready":
@@ -2652,6 +2733,55 @@ func _coop_remote_sync_enemy_turn_escape(body: Dictionary) -> void:
 func _coop_remote_sync_enemy_turn_end(_body: Dictionary) -> void:
 	_coop_remote_enemy_turn_completed = true
 	coop_remote_enemy_turn_finished.emit()
+
+
+func _coop_remote_sync_enemy_turn_batch_move(body: Dictionary) -> void:
+	await _coop_wait_for_enemy_state_ready()
+	var entries_raw: Variant = body.get("entries", [])
+	if not (entries_raw is Array):
+		return
+	var entries: Array = entries_raw as Array
+	# GDScript lambdas capture int locals by value — Array is a mutable box for the pending count.
+	var pending_left: Array = [0]
+
+	for entry in entries:
+		if not (entry is Dictionary):
+			continue
+		var uid: String = str((entry as Dictionary).get("unit_id", "")).strip_edges()
+		var path_raw: Variant = (entry as Dictionary).get("path", [])
+		var path_typed: Array[Vector2i] = []
+		if path_raw is Array:
+			for item in path_raw as Array:
+				if item is Array:
+					var a: Array = item as Array
+					if a.size() >= 2:
+						path_typed.append(Vector2i(int(a[0]), int(a[1])))
+				elif item is Dictionary:
+					var d: Dictionary = item as Dictionary
+					path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
+		if path_typed.size() < 2:
+			continue
+		var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
+		if unit == null or not is_instance_valid(unit):
+			continue
+		pending_left[0] = int(pending_left[0]) + 1
+		_coop_do_batch_unit_move_async(unit, path_typed, (entry as Dictionary).get("path_cost", 0), func(): pending_left[0] = int(pending_left[0]) - 1)
+
+	if int(pending_left[0]) > 0:
+		while int(pending_left[0]) > 0:
+			await get_tree().process_frame
+	rebuild_grid()
+	update_fog_of_war()
+
+
+func _coop_do_batch_unit_move_async(unit: Node2D, path: Array[Vector2i], path_cost: Variant, on_done: Callable) -> void:
+	if not is_instance_valid(unit) or path.size() < 2:
+		on_done.call()
+		return
+	await unit.move_along_path(path)
+	if is_instance_valid(unit):
+		unit.move_points_used_this_turn = float(path_cost) if path_cost != null else get_path_move_cost(path, unit)
+	on_done.call()
 
 
 func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
@@ -2889,6 +3019,203 @@ func _style_tactical_item_list(item_list: ItemList) -> void:
 	item_list.add_theme_stylebox_override("cursor_unfocused", _make_tactical_panel_style(Color(0.45, 0.37, 0.15, 0.20), TACTICAL_UI_BORDER_MUTED, 1, 8))
 	item_list.add_theme_color_override("font_color", TACTICAL_UI_TEXT)
 	item_list.add_theme_color_override("font_selected_color", Color.WHITE)
+
+func _resolve_inventory_ui_nodes() -> void:
+	if inventory_panel == null:
+		return
+	inv_desc_label = inventory_panel.get_node_or_null("ItemDescLabel") as RichTextLabel
+	inv_scroll = inventory_panel.get_node_or_null("InventoryScroll") as ScrollContainer
+	unit_grid = null
+	convoy_grid = null
+	if inv_scroll != null:
+		var vbox_node := inv_scroll.get_node_or_null("InventoryVBox")
+		if vbox_node != null:
+			unit_grid = vbox_node.get_node_or_null("UnitGrid") as GridContainer
+			convoy_grid = vbox_node.get_node_or_null("ConvoyGrid") as GridContainer
+
+func _stylebox_bump_all_content_margins(sb: StyleBox, delta: float) -> void:
+	if sb == null:
+		return
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		sb.set_content_margin(side, sb.get_content_margin(side) + delta)
+
+func _inventory_scroll_apply_content_padding(scroll: ScrollContainer, pad: int) -> void:
+	var sb: StyleBox = scroll.get_theme_stylebox("panel")
+	if sb != null:
+		sb = sb.duplicate() as StyleBox
+	else:
+		var flat := StyleBoxFlat.new()
+		flat.bg_color = Color(0, 0, 0, 0)
+		sb = flat
+	_stylebox_bump_all_content_margins(sb, float(pad))
+	scroll.add_theme_stylebox_override("panel", sb)
+
+func _style_inventory_item_info_backdrop(info_bg: Panel) -> void:
+	if info_bg == null:
+		return
+	_style_tactical_panel(info_bg, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	info_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info_bg.z_index = -1
+
+func _apply_inventory_panel_spacing() -> void:
+	if inventory_panel == null:
+		return
+	if inventory_panel.get_meta(META_INVENTORY_UI_SPACING_APPLIED, false):
+		return
+	_resolve_inventory_ui_nodes()
+	if inv_scroll != null:
+		_inventory_scroll_apply_content_padding(inv_scroll, INVENTORY_UI_SCROLL_CONTENT_PAD)
+		var vbox := inv_scroll.get_node_or_null("InventoryVBox") as VBoxContainer
+		if vbox != null:
+			vbox.add_theme_constant_override("separation", INVENTORY_UI_VBOX_SEP)
+	if unit_grid != null:
+		unit_grid.add_theme_constant_override("h_separation", INVENTORY_UI_GRID_SEP)
+		unit_grid.add_theme_constant_override("v_separation", INVENTORY_UI_GRID_SEP)
+	if convoy_grid != null:
+		convoy_grid.add_theme_constant_override("h_separation", INVENTORY_UI_GRID_SEP)
+		convoy_grid.add_theme_constant_override("v_separation", INVENTORY_UI_GRID_SEP)
+	var info_bg := inventory_panel.get_node_or_null("Panel") as Panel
+	var outer := float(INVENTORY_UI_INFO_PANEL_OUTER_PAD)
+	if info_bg != null:
+		info_bg.offset_left += outer
+		info_bg.offset_top += outer
+		info_bg.offset_right -= outer
+		info_bg.offset_bottom -= outer
+		_style_inventory_item_info_backdrop(info_bg)
+	var dpad := float(INVENTORY_UI_DESC_TEXT_PAD)
+	if inv_desc_label != null:
+		inv_desc_label.offset_left += dpad
+		inv_desc_label.offset_top += dpad
+		inv_desc_label.offset_right -= dpad
+		inv_desc_label.offset_bottom -= dpad
+	inventory_panel.set_meta(META_INVENTORY_UI_SPACING_APPLIED, true)
+
+func _apply_inventory_panel_item_list_extra_margins(inv_item_list: ItemList) -> void:
+	if inv_item_list == null or inventory_panel == null:
+		return
+	if inventory_panel.get_meta("_inv_itemlist_extra_margin", false):
+		return
+	inventory_panel.set_meta("_inv_itemlist_extra_margin", true)
+	var sb := inv_item_list.get_theme_stylebox("panel")
+	if sb == null:
+		return
+	var d := sb.duplicate() as StyleBox
+	_stylebox_bump_all_content_margins(d, float(INVENTORY_UI_ITEMLIST_EXTRA_MARGIN))
+	inv_item_list.add_theme_stylebox_override("panel", d)
+
+func _resolve_loot_ui_nodes() -> void:
+	if loot_window == null:
+		return
+	loot_desc_label = loot_window.get_node_or_null("ItemDescLabel") as RichTextLabel
+	loot_item_info_panel = loot_window.get_node_or_null("LootItemInfoBackdrop") as Panel
+
+func _layout_loot_item_info_backdrop() -> void:
+	if loot_window == null or loot_item_info_panel == null or loot_desc_label == null:
+		return
+	if not loot_desc_label.has_meta(META_LOOT_DESC_LAYOUT_BASE):
+		loot_desc_label.set_meta(META_LOOT_DESC_LAYOUT_BASE, Rect2(loot_desc_label.position, loot_desc_label.size))
+	var base_rect: Rect2 = loot_desc_label.get_meta(META_LOOT_DESC_LAYOUT_BASE)
+	var outer := float(LOOT_INFO_BACKDROP_OUTER_PAD)
+	var inner := float(LOOT_INFO_DESC_INNER_PAD)
+	loot_item_info_panel.position = base_rect.position - Vector2(outer, outer)
+	loot_item_info_panel.size = base_rect.size + Vector2(outer * 2.0, outer * 2.0)
+	loot_item_info_panel.z_index = -1
+	loot_desc_label.position = base_rect.position + Vector2(inner, inner)
+	loot_desc_label.size = base_rect.size - Vector2(inner * 2.0, inner * 2.0)
+	loot_desc_label.z_index = 2
+
+func _ensure_loot_item_info_ui() -> void:
+	if loot_window == null:
+		return
+	_resolve_loot_ui_nodes()
+	if loot_desc_label == null:
+		var rtl := RichTextLabel.new()
+		rtl.name = "ItemDescLabel"
+		rtl.layout_mode = 0
+		rtl.offset_left = 770.0
+		rtl.offset_top = 100.0
+		rtl.offset_right = 1248.0
+		rtl.offset_bottom = 392.0
+		rtl.bbcode_enabled = true
+		rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rtl.scroll_active = false
+		rtl.fit_content = false
+		rtl.mouse_filter = Control.MOUSE_FILTER_STOP
+		rtl.process_mode = Node.PROCESS_MODE_ALWAYS
+		loot_window.add_child(rtl)
+		loot_desc_label = rtl
+	if loot_item_info_panel == null:
+		var bp := Panel.new()
+		bp.name = "LootItemInfoBackdrop"
+		bp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		loot_window.add_child(bp)
+		loot_item_info_panel = bp
+		loot_window.move_child(loot_item_info_panel, 0)
+	_style_tactical_panel(loot_item_info_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+	loot_item_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_layout_loot_item_info_backdrop()
+	var loot_title := loot_window.get_node_or_null("Label") as Label
+	if loot_title != null:
+		_style_tactical_label(loot_title, TACTICAL_UI_ACCENT, 22, 4)
+		loot_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if loot_desc_label != null:
+		loot_desc_label.focus_mode = Control.FOCUS_NONE
+		loot_desc_label.remove_theme_stylebox_override("focus")
+		loot_desc_label.scroll_active = false
+		loot_desc_label.process_mode = Node.PROCESS_MODE_ALWAYS
+
+func _queue_refit_item_description_panels() -> void:
+	var t := Timer.new()
+	t.wait_time = 0.03
+	t.one_shot = true
+	t.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(t)
+	t.timeout.connect(func():
+		_refit_loot_description_panel_height()
+		_refit_inventory_description_panel_height()
+		t.queue_free()
+	, CONNECT_ONE_SHOT)
+	t.start()
+
+func _refit_loot_description_panel_height() -> void:
+	if loot_desc_label == null or loot_item_info_panel == null:
+		return
+	if not loot_desc_label.has_meta(META_LOOT_DESC_LAYOUT_BASE):
+		return
+	loot_desc_label.scroll_active = false
+	var base_rect: Rect2 = loot_desc_label.get_meta(META_LOOT_DESC_LAYOUT_BASE)
+	var inner := float(LOOT_INFO_DESC_INNER_PAD)
+	var outer := float(LOOT_INFO_BACKDROP_OUTER_PAD)
+	var text_w: float = maxf(48.0, base_rect.size.x - inner * 2.0)
+	loot_desc_label.position = base_rect.position + Vector2(inner, inner)
+	loot_desc_label.size.x = text_w
+	loot_desc_label.size.y = maxf(ITEM_DESC_RICHTEXT_MIN_H, 32.0)
+	var ch: float = loot_desc_label.get_content_height()
+	var th: float = clampf(ch + ITEM_DESC_RICHTEXT_EXTRA_PAD, ITEM_DESC_RICHTEXT_MIN_H, ITEM_DESC_RICHTEXT_MAX_H)
+	loot_desc_label.size.y = th
+	var block_h: float = th + inner * 2.0
+	loot_item_info_panel.position = base_rect.position - Vector2(outer, outer)
+	loot_item_info_panel.size = Vector2(base_rect.size.x + outer * 2.0, block_h + outer * 2.0)
+
+func _refit_inventory_description_panel_height() -> void:
+	if inv_desc_label == null or inventory_panel == null:
+		return
+	if not inventory_panel.visible:
+		return
+	inv_desc_label.scroll_active = false
+	var w := inv_desc_label.size.x
+	if w < 8.0:
+		return
+	var ch := inv_desc_label.get_content_height()
+	var th := clampf(ch + ITEM_DESC_RICHTEXT_EXTRA_PAD, INVENTORY_DESC_PANEL_MIN_H, ITEM_DESC_RICHTEXT_MAX_H)
+	inv_desc_label.offset_top = inv_desc_label.offset_bottom - th
+	var bg := inventory_panel.get_node_or_null("Panel") as Panel
+	if bg != null:
+		var pad := INVENTORY_DESC_PANEL_PAD
+		var r := inv_desc_label.get_rect()
+		bg.position = r.position - Vector2(pad, pad)
+		bg.size = r.size + Vector2(2.0 * pad, 2.0 * pad)
+		_style_inventory_item_info_backdrop(bg)
 
 func _unit_info_primary_bar_definitions() -> Array[Dictionary]:
 	return [
@@ -4658,21 +4985,30 @@ func _apply_tactical_ui_overhaul() -> void:
 
 	if inventory_panel != null:
 		_style_tactical_panel(inventory_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+		var inv_item_info := inventory_panel.get_node_or_null("Panel") as Panel
+		_style_inventory_item_info_backdrop(inv_item_info)
 	if inv_desc_label != null:
-		_style_tactical_richtext(inv_desc_label, 17, 19)
+		_style_tactical_richtext(inv_desc_label, 21, 26)
+		inv_desc_label.add_theme_constant_override("line_separation", 7)
+		inv_desc_label.scroll_active = false
+		inv_desc_label.z_index = 2
 	_style_tactical_button(equip_button, "EQUIP", false, 18)
 	_style_tactical_button(use_button, "USE", false, 18)
 	var inv_close := get_node_or_null("UI/InventoryPanel/CloseButton") as Button
 	if inv_close != null:
 		_style_tactical_button(inv_close, "CLOSE", false, 18)
-	_style_tactical_item_list(get_node_or_null("UI/InventoryPanel/ItemList") as ItemList)
+	var inv_item_list := get_node_or_null("UI/InventoryPanel/ItemList") as ItemList
+	_style_tactical_item_list(inv_item_list)
+	_apply_inventory_panel_item_list_extra_margins(inv_item_list)
 	_style_tactical_item_list(get_node_or_null("UI/RosterPanel/RosterList") as ItemList)
 	_style_tactical_item_list(loot_item_list)
 
 	if loot_window != null:
 		_style_tactical_panel(loot_window, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+		_ensure_loot_item_info_ui()
 	if loot_desc_label != null:
-		_style_tactical_richtext(loot_desc_label, 17, 19)
+		_style_tactical_richtext(loot_desc_label, 21, 26)
+		loot_desc_label.add_theme_constant_override("line_separation", 7)
 	if close_loot_button != null:
 		_style_tactical_button(close_loot_button, "CLAIM ALL", true, 20)
 
@@ -5041,6 +5377,32 @@ func is_mock_partner_placeholder_active() -> bool:
 	return lt > 0 and lr == 0 and pf > 0
 
 
+## Player phase: true when at least one local-commandable player unit is fielded and alive, and every such unit has finished acting (is_exhausted).
+func _local_player_fielded_commandable_units_all_exhausted() -> bool:
+	if player_container == null:
+		return false
+	var any_eligible: bool = false
+	for u in player_container.get_children():
+		if not is_instance_valid(u) or u.is_queued_for_deletion():
+			continue
+		if u.get("current_hp") == null or int(u.current_hp) <= 0:
+			continue
+		if is_local_player_command_blocked_for_mock_coop_unit(u):
+			continue
+		any_eligible = true
+		if u.get("is_exhausted") == false:
+			return false
+	return any_eligible
+
+
+func _should_pulse_skip_button_end_turn_nudge() -> bool:
+	if current_state != player_state:
+		return false
+	if _mock_coop_player_phase_ready_sync_active() and _mock_coop_local_player_phase_ready:
+		return false
+	return _local_player_fielded_commandable_units_all_exhausted()
+
+
 func _mock_coop_set_local_prebattle_ready(send_sync: bool = true) -> void:
 	if not _mock_coop_prebattle_ready_sync_active():
 		return
@@ -5167,21 +5529,30 @@ func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
 	return s + "\n"
 
 
-func _update_mock_coop_skip_button_highlight() -> void:
+func _update_skip_button_visual_modulate() -> void:
 	var btn: Button = get_node_or_null("UI/SkipButton") as Button
-	if btn == null:
+	if btn == null or not btn.visible:
 		return
 	if not _skip_button_base_modulate_captured:
 		_skip_button_base_modulate = btn.modulate
 		_skip_button_base_modulate_captured = true
-	var want: bool = is_mock_partner_placeholder_active()
-	if want == _mock_coop_skip_button_glow_active:
-		return
-	_mock_coop_skip_button_glow_active = want
-	if want:
-		btn.modulate = _skip_button_base_modulate * Color(1.14, 1.12, 0.96, 1.0)
+	var m: Color = _skip_button_base_modulate
+	if is_mock_partner_placeholder_active():
+		m *= Color(1.14, 1.12, 0.96, 1.0)
+	var pulse_active: bool = _should_pulse_skip_button_end_turn_nudge()
+	if pulse_active:
+		var t: float = float(Time.get_ticks_msec()) * END_TURN_PULSE_TIME_SCALE
+		var wave: float = 0.5 + 0.5 * sin(t)
+		var wave_scale: float = 0.5 + 0.5 * sin(t * 1.19 + 0.85)
+		var boost: float = 1.0 + END_TURN_PULSE_MOD_DEPTH * wave
+		m *= Color(boost * 1.12, boost * 1.04, boost * 0.78, 1.0)
+		var s: float = END_TURN_PULSE_SCALE_CENTER + END_TURN_PULSE_SCALE_DEPTH * (wave_scale - 0.5) * 2.0
+		btn.pivot_offset = btn.size * 0.5
+		btn.scale = Vector2(s, s)
 	else:
-		btn.modulate = _skip_button_base_modulate
+		btn.scale = Vector2.ONE
+		btn.pivot_offset = Vector2.ZERO
+	btn.modulate = m
 
 
 func _is_mock_coop_deployed_player_side_unit(unit: Node) -> bool:
@@ -5372,6 +5743,10 @@ var _ui_sfx_block_until_msec := 0
 var _tactical_ui_resize_hooked: bool = false
 
 func _ready() -> void:
+	if has_node("LevelMusic"):
+		var level_music := get_node("LevelMusic") as AudioStreamPlayer
+		if level_music != null:
+			level_music.bus = "Music"
 	# 1. SETUP ASTAR GRID
 	astar.region = Rect2i(0, 0, GRID_SIZE.x, GRID_SIZE.y)
 	astar.cell_size = CELL_SIZE
@@ -5442,6 +5817,7 @@ func _ready() -> void:
 		_camera_zoom_target = main_camera.zoom.x
 		
 	_ensure_forecast_support_labels()
+	_apply_inventory_panel_spacing()
 
 	# 4B. Phase 2 support reactions: reset battle-local Defy Death tracking (once per unit per battle).
 	_defy_death_used.clear()
@@ -5481,6 +5857,7 @@ func _ready() -> void:
 
 	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
 	load_campaign_data()
+	_init_path_preview_nodes()
 	apply_campaign_settings()
 	_seed_mock_coop_command_ids_for_live_battle_nodes()
 
@@ -5727,7 +6104,7 @@ func _process(delta: float) -> void:
 	if is_mock_coop_unit_ownership_active() and current_state == player_state:
 		update_objective_ui(true)
 	_process_mock_partner_placeholder_frame()
-	_update_mock_coop_skip_button_highlight()
+	_update_skip_button_visual_modulate()
 	_handle_camera_panning(delta)
 	
 	# === ADD THIS LINE ===
@@ -6632,50 +7009,277 @@ func _is_neutral_inspect_unit(unit: Node2D) -> bool:
 	return false
 
 func draw_preview_path() -> void:
+	if not CampaignManager.battle_show_path_preview:
+		_hide_path_preview_visuals()
+		return
 	if path_line == null:
 		return
-		
-	if not CampaignManager.battle_show_path_preview:
-		path_line.visible = false
-		return
 
-	path_line.visible = true
-	path_line.clear_points()
-	_set_path_pulse(false) # par défaut
+	_path_preview_tick_world.clear()
+	_set_path_pulse(false)
 
 	if current_state != player_state or player_state == null or player_state.active_unit == null:
+		_hide_path_preview_visuals()
 		return
 
-	var active = player_state.active_unit
+	var active: Node2D = player_state.active_unit
 	if active.has_moved and active.get("in_canto_phase") != true:
+		_hide_path_preview_visuals()
 		return
 
-	var start = get_grid_pos(active)
-	
-	# Use our new helper to get the path from the correct AStar grid (Flying vs Walking)
-	var path = get_unit_path(active, start, cursor_grid_pos)
+	var start: Vector2i = get_grid_pos(active)
+	var path: Array = get_unit_path(active, start, cursor_grid_pos)
+	if path.size() <= 1:
+		_hide_path_preview_visuals()
+		return
+
 	var move_range: float = float(active.canto_move_budget) if active.get("in_canto_phase") == true else float(active.move_range)
+	var path_cost: float = get_path_move_cost(path, active)
+	var valid_path: bool = (path_cost <= move_range) and reachable_tiles.has(cursor_grid_pos)
+	var ghost: bool = (not valid_path) and CampaignManager.battle_path_invalid_ghost
 
-	# 1. Path must exist
-	# 2. Total terrain cost must be within unit's move range
-	# 3. The target tile MUST be a valid blue tile (stops them from landing on allies or walls)
-	var valid_path: bool = (path.size() > 1) and (get_path_move_cost(path, active) <= move_range) and reachable_tiles.has(cursor_grid_pos)
-	
-	if not valid_path:
+	if not valid_path and not ghost:
+		_hide_path_preview_visuals()
 		return
 
-	# Draw the line through the center of each cell (32, 32 offset based on 64x64 cell size)
-	for p in path:
-		path_line.add_point(Vector2(p.x * CELL_SIZE.x + 32, p.y * CELL_SIZE.y + 32))
+	var poly: PackedVector2Array = _grid_path_to_world_polyline(path, active)
+	if path_line_under != null:
+		path_line_under.clear_points()
+		for pt in poly:
+			path_line_under.add_point(pt)
+	path_line.clear_points()
+	for pt in poly:
+		path_line.add_point(pt)
 
 	path_line.joint_mode = Line2D.LINE_JOINT_ROUND
 	path_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	path_line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	if path_line_under != null:
+		path_line_under.joint_mode = path_line.joint_mode
+		path_line_under.begin_cap_mode = path_line.begin_cap_mode
+		path_line_under.end_cap_mode = path_line.end_cap_mode
+
+	_gather_path_cost_ticks(path, active)
+
+	var canto_move: bool = active.get("in_canto_phase") == true
+	_apply_path_preview_style(ghost, canto_move)
+
+	path_line.visible = true
+	if path_line_under != null:
+		path_line_under.visible = (CampaignManager.battle_path_style != CampaignManager.BATTLE_PATH_STYLE_MINIMAL)
+
+	_update_path_endpoint_marker(path, ghost, canto_move)
 
 	if CampaignManager.battle_path_preview_pulse:
 		_set_path_pulse(true)
+
+	if path_preview_ticks != null:
+		path_preview_ticks.queue_redraw()
+
+	queue_redraw()
+
+
+func get_path_preview_tick_positions_for_draw() -> Array[Vector2]:
+	if not CampaignManager.battle_show_path_preview or not CampaignManager.battle_path_cost_ticks:
+		return []
+	return _path_preview_tick_world.duplicate()
+
+
+func _init_path_preview_nodes() -> void:
+	for ln in [path_line_under, path_line]:
+		if ln == null:
+			continue
+		ln.z_as_relative = false
+		ln.joint_mode = Line2D.LINE_JOINT_ROUND
+		ln.begin_cap_mode = Line2D.LINE_CAP_ROUND
+		ln.end_cap_mode = Line2D.LINE_CAP_ROUND
+		ln.antialiased = true
+	if path_line_under != null:
+		path_line_under.z_index = PATH_PREVIEW_Z
+		path_line_under.width = PATH_PREVIEW_UNDER_WIDTH
+	if path_line != null:
+		path_line.z_index = PATH_PREVIEW_Z + 1
+		path_line.width = PATH_PREVIEW_FG_WIDTH
+	if path_preview_ticks != null:
+		path_preview_ticks.z_as_relative = false
+		path_preview_ticks.z_index = PATH_PREVIEW_Z + 3
+	if path_end_marker != null:
+		path_end_marker.z_as_relative = false
+		path_end_marker.z_index = PATH_PREVIEW_Z + 2
+		var diamond: Polygon2D = path_end_marker.get_node_or_null("Diamond") as Polygon2D
+		if diamond == null:
+			for c in path_end_marker.get_children():
+				if c is Polygon2D:
+					diamond = c as Polygon2D
+					break
+		if diamond != null:
+			diamond.polygon = PackedVector2Array([Vector2(0, -9), Vector2(11, 0), Vector2(0, 9), Vector2(-11, 0)])
+
+
+func _hide_path_preview_visuals() -> void:
+	_path_preview_tick_world.clear()
+	_set_path_pulse(false)
+	if path_line_under != null:
+		path_line_under.clear_points()
+		path_line_under.visible = false
+	if path_line != null:
+		path_line.clear_points()
+		path_line.visible = false
+		path_line.material = null
+	if path_preview_ticks != null:
+		path_preview_ticks.queue_redraw()
+	if path_end_marker != null:
+		path_end_marker.visible = false
+
+
+func _cell_center_world(cell: Vector2i) -> Vector2:
+	return Vector2(
+		float(cell.x * CELL_SIZE.x) + float(CELL_SIZE.x) * 0.5,
+		float(cell.y * CELL_SIZE.y) + float(CELL_SIZE.y) * 0.5
+	)
+
+
+func _single_step_enter_cost(unit: Node2D, cell: Vector2i) -> float:
+	if unit == null:
+		return 1.0
+	if unit.get("move_type") == 2:
+		return 1.0
+	var base_cost: float = astar.get_point_weight_scale(cell)
+	if unit.get("move_type") == 1 and base_cost > 1.0:
+		base_cost += 1.0
+	return base_cost
+
+
+func _chamfer_world_polyline(pts: PackedVector2Array, inset: float) -> PackedVector2Array:
+	if pts.size() < 3 or inset <= 0.0:
+		return pts
+	var out: PackedVector2Array = PackedVector2Array()
+	out.append(pts[0])
+	for i in range(1, pts.size() - 1):
+		var prev: Vector2 = pts[i - 1]
+		var curr: Vector2 = pts[i]
+		var next: Vector2 = pts[i + 1]
+		var v1: Vector2 = curr - prev
+		var v2: Vector2 = next - curr
+		var len1: float = v1.length()
+		var len2: float = v2.length()
+		if len1 < 0.001 or len2 < 0.001:
+			out.append(curr)
+			continue
+		v1 /= len1
+		v2 /= len2
+		if absf(v1.dot(v2)) > 0.995:
+			out.append(curr)
+			continue
+		var r: float = minf(inset, minf(len1 * 0.48, len2 * 0.48))
+		out.append(curr - v1 * r)
+		out.append(curr + v2 * r)
+	out.append(pts[pts.size() - 1])
+	return out
+
+
+func _grid_path_to_world_polyline(path: Array, unit: Node2D) -> PackedVector2Array:
+	var raw: PackedVector2Array = PackedVector2Array()
+	for i in range(path.size()):
+		raw.append(_cell_center_world(path[i] as Vector2i))
+	var smooth_level: int = CampaignManager.battle_path_corner_smoothing
+	var inset: float = 0.0
+	if smooth_level == 1:
+		inset = PATH_PREVIEW_CORNER_INSET_LOW * (float(CELL_SIZE.x) / 64.0)
+	elif smooth_level >= 2:
+		inset = PATH_PREVIEW_CORNER_INSET_HIGH * (float(CELL_SIZE.x) / 64.0)
+	return _chamfer_world_polyline(raw, inset)
+
+
+func _gather_path_cost_ticks(path: Array, unit: Node2D) -> void:
+	_path_preview_tick_world.clear()
+	if not CampaignManager.battle_path_cost_ticks or path.size() < 2:
+		return
+	var cum: float = 0.0
+	var next_tick_threshold: int = 1
+	for i in range(1, path.size()):
+		var cell: Vector2i = path[i] as Vector2i
+		var prev_cell: Vector2i = path[i - 1] as Vector2i
+		var step_cost: float = _single_step_enter_cost(unit, cell)
+		var prev_cum: float = cum
+		cum += step_cost
+		var p0: Vector2 = _cell_center_world(prev_cell)
+		var p1: Vector2 = _cell_center_world(cell)
+		while float(next_tick_threshold) <= cum + 0.001:
+			var denom: float = cum - prev_cum
+			var t: float = 1.0 if denom <= 0.0001 else clampf((float(next_tick_threshold) - prev_cum) / denom, 0.0, 1.0)
+			_path_preview_tick_world.append(p0.lerp(p1, t))
+			next_tick_threshold += 1
+
+
+func _ensure_path_fg_dash_material() -> ShaderMaterial:
+	if _path_fg_dash_material == null:
+		_path_fg_dash_material = ShaderMaterial.new()
+		_path_fg_dash_material.shader = PATH_PREVIEW_DASH_SHADER
+	return _path_fg_dash_material
+
+
+func _apply_path_preview_style(ghost: bool, canto: bool) -> void:
+	var style: int = CampaignManager.battle_path_style
+	var minimal: bool = style == CampaignManager.BATTLE_PATH_STYLE_MINIMAL
+	var dashed: bool = style == CampaignManager.BATTLE_PATH_STYLE_DASHED
+
+	var fg := Color(0.82, 0.96, 1.0, 1.0)
+	var under := Color(0.03, 0.05, 0.12, 0.92)
+	var scroll_mult: float = 1.0
+	if canto:
+		fg = Color(1.0, 0.92, 0.55, 1.0)
+		under = Color(0.14, 0.09, 0.02, 0.9)
+		scroll_mult = 1.45
+	if ghost:
+		fg = Color(1.0, 0.45, 0.42, 0.55)
+		under = Color(0.22, 0.04, 0.04, 0.6)
+		scroll_mult = 1.65
+
+	if path_line_under != null:
+		path_line_under.default_color = under
+		path_line_under.width = PATH_PREVIEW_UNDER_WIDTH
+	if path_line == null:
+		return
+
+	if minimal:
+		path_line.width = maxf(PATH_PREVIEW_FG_WIDTH, 5.5)
 	else:
-		_set_path_pulse(false)
+		path_line.width = PATH_PREVIEW_FG_WIDTH
+
+	if dashed and not minimal:
+		path_line.default_color = Color.WHITE
+		var smat: ShaderMaterial = _ensure_path_fg_dash_material()
+		smat.set_shader_parameter("line_color", fg)
+		smat.set_shader_parameter("scroll_speed", 1.15 * scroll_mult)
+		smat.set_shader_parameter("dash_repeat", 12.0 * (1.1 if canto else 1.0))
+		path_line.material = smat
+	else:
+		path_line.material = null
+		path_line.default_color = fg
+
+
+func _update_path_endpoint_marker(path: Array, ghost: bool, canto: bool) -> void:
+	if path_end_marker == null:
+		return
+	if not CampaignManager.battle_path_endpoint_marker:
+		path_end_marker.visible = false
+		return
+	var diamond: Polygon2D = path_end_marker.get_node_or_null("Diamond") as Polygon2D
+	if diamond == null:
+		for c in path_end_marker.get_children():
+			if c is Polygon2D:
+				diamond = c as Polygon2D
+				break
+	path_end_marker.visible = true
+	path_end_marker.position = _cell_center_world(path[path.size() - 1] as Vector2i)
+	var col := Color(0.9, 0.98, 1.0, 0.92)
+	if canto:
+		col = Color(1.0, 0.95, 0.55, 0.95)
+	if ghost:
+		col = Color(1.0, 0.5, 0.48, 0.65)
+	if diamond != null:
+		diamond.color = col
 
 func _draw() -> void:
 	if current_state == pre_battle_state:
@@ -8232,7 +8836,11 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				defender.current_hp = min(defender.current_hp + heal_amount, defender.max_hp)
 				if defender.get("health_bar") != null:
 					var bar_tween: Tween = create_tween()
-					bar_tween.tween_property(defender.health_bar, "value", defender.current_hp, 0.2)
+					bar_tween.tween_property(defender.health_bar, "value", defender.current_hp, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+					bar_tween.finished.connect(func ():
+						if is_instance_valid(defender) and defender.has_method("snap_health_delay_to_main"):
+							defender.snap_health_delay_to_main()
+					, CONNECT_ONE_SHOT)
 				popup_text = "+" + str(heal_amount)
 				text_color = Color(0.2, 1.0, 0.2)
 				add_combat_log(attacker.unit_name + " healed " + defender.unit_name + ".", "lime")
@@ -8262,11 +8870,7 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 			
 			if level_up_sound.stream != null: level_up_sound.play() 
 			
-			var f_text = FloatingTextScene.instantiate()
-			f_text.text_to_show = popup_text
-			f_text.text_color = text_color
-			add_child(f_text)
-			f_text.global_position = defender.global_position + Vector2(32, -16)
+			spawn_loot_text(popup_text, text_color, defender.global_position + Vector2(32, -16), {"stack_anchor": defender})
 			
 			var return_tween: Tween = create_tween()
 			return_tween.tween_property(attacker, "global_position", staff_orig_pos, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -8738,7 +9342,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					if attacker.get("health_bar") != null:
 						attacker.health_bar.value = attacker.current_hp
 			
-					spawn_loot_text("+" + str(heal_amount) + " HP", Color(0.35, 1.0, 0.35), attacker.global_position + Vector2(32, -30))
+					var chakra_hr: float = -1.0
+					if attacker.max_hp > 0:
+						chakra_hr = clampf(float(heal_amount) / float(attacker.max_hp), 0.0, 1.0)
+					spawn_loot_text("+" + str(heal_amount) + " HP", Color(0.35, 1.0, 0.35), attacker.global_position + Vector2(32, -30), {
+						"tier": FloatingCombatText.Tier.HEAL,
+						"hp_chunk_ratio": chakra_hr,
+						"stack_anchor": attacker,
+					})
 				else:
 					add_combat_log("Chakra faltered. The Monk failed to center their breathing.", "gray")
 
@@ -9635,9 +10246,18 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					defender.current_hp = min(defender.current_hp + heal_amt, defender.max_hp)
 					if defender.get("health_bar") != null:
 						defender.health_bar.value = defender.current_hp
+					if is_instance_valid(defender) and defender.has_method("snap_health_delay_to_main"):
+						defender.snap_health_delay_to_main()
 		
 					spawn_loot_text("BARRIER!", Color(1.0, 0.9, 0.4), defender.global_position + Vector2(32, -32))
-					spawn_loot_text("+" + str(heal_amt) + " HP", Color(0.2, 1.0, 0.2), defender.global_position + Vector2(32, -56))
+					var barrier_hr: float = -1.0
+					if defender.max_hp > 0:
+						barrier_hr = clampf(float(heal_amt) / float(defender.max_hp), 0.0, 1.0)
+					spawn_loot_text("+" + str(heal_amt) + " HP", Color(0.2, 1.0, 0.2), defender.global_position + Vector2(32, -56), {
+						"tier": FloatingCombatText.Tier.HEAL,
+						"hp_chunk_ratio": barrier_hr,
+						"stack_anchor": defender,
+					})
 					add_combat_log("PERFECT DIVINE PROTECTION! The attack is completely warded off!", "gold")
 				elif result == 1:
 					ability_triggers_count += 1
@@ -9845,7 +10465,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 					var heal_amt = int(defender.max_hp * 0.25)
 					defender.current_hp = min(defender.current_hp + heal_amt, defender.max_hp)
 					if defender.get("health_bar") != null: defender.health_bar.value = defender.current_hp
-					spawn_loot_text("+" + str(heal_amt) + " HP", Color(0.2, 1.0, 0.2), defender.global_position + Vector2(32, -32))
+					var clash_hr: float = -1.0
+					if defender.max_hp > 0:
+						clash_hr = clampf(float(heal_amt) / float(defender.max_hp), 0.0, 1.0)
+					spawn_loot_text("+" + str(heal_amt) + " HP", Color(0.2, 1.0, 0.2), defender.global_position + Vector2(32, -32), {
+						"tier": FloatingCombatText.Tier.HEAL,
+						"hp_chunk_ratio": clash_hr,
+						"stack_anchor": defender,
+					})
 					
 					if clash_result == 2:
 						add_combat_log("PERFECT CLASH! Devastating Counter!", "gold")
@@ -9856,7 +10483,14 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 						screen_shake(15.0, 0.4)
 						if crit_sound.stream != null: crit_sound.play()
 						attacker.take_damage(final_counter_dmg, defender)
-						spawn_loot_text(str(final_counter_dmg) + " CRIT!", Color(1.0, 0.2, 0.2), attacker.global_position + Vector2(32, -16))
+						var sc_chunk: float = -1.0
+						if attacker.max_hp > 0:
+							sc_chunk = clampf(float(final_counter_dmg) / float(attacker.max_hp), 0.0, 1.0)
+						spawn_loot_text(str(final_counter_dmg) + " CRIT!", Color(1.0, 0.2, 0.2), attacker.global_position + Vector2(32, -16), {
+							"tier": FloatingCombatText.Tier.CRIT,
+							"hp_chunk_ratio": sc_chunk,
+							"stack_anchor": attacker,
+						})
 					else:
 						add_combat_log("SHIELD CLASH WON! Attack deflected.", "lime")
 				else:
@@ -10041,7 +10675,15 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 							add_combat_log(attacker.unit_name + " hit " + defender.unit_name + " for " + str(final_dmg) + (" (CRIT)" if is_crit else ""), "gold" if is_crit else "white")
 							if is_crit and atk_rel.get("crit_bonus", 0) > 0 and attacker.get("unit_name") != null:
 								add_combat_log("Rivalry sharpens " + str(attacker.unit_name) + "'s strike!", "yellow")
-							spawn_loot_text(str(final_dmg) + (" CRIT" if is_crit else ""), Color(1.0, 0.2, 0.2) if is_crit else Color.WHITE, defender.global_position + Vector2(32, -16))
+							var chunk_r: float = -1.0
+							if defender.max_hp > 0:
+								chunk_r = clampf(float(final_dmg) / float(defender.max_hp), 0.0, 1.0)
+							var floater_tier: int = FloatingCombatText.Tier.CRIT if is_crit else FloatingCombatText.Tier.NORMAL
+							spawn_loot_text(str(final_dmg) + (" CRIT" if is_crit else ""), Color(1.0, 0.2, 0.2) if is_crit else Color.WHITE, defender.global_position + Vector2(32, -16), {
+								"tier": floater_tier,
+								"hp_chunk_ratio": chunk_r,
+								"stack_anchor": defender,
+							})
 							spawn_slash_effect(defender.global_position, attacker.global_position, is_crit)
 							spawn_blood_splatter(defender, attacker.global_position, is_crit)
 							
@@ -10372,7 +11014,10 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 				# --- MISS LOGIC ---
 				if miss_sound.stream != null: miss_sound.play()
 				add_combat_log(attacker.unit_name + " missed " + defender.unit_name, "gray")
-				spawn_loot_text("Miss", Color(0.7, 0.7, 0.7), defender.global_position + Vector2(32, -16))
+				spawn_loot_text("Miss", Color(0.7, 0.7, 0.7), defender.global_position + Vector2(32, -16), {
+					"tier": FloatingCombatText.Tier.MISS,
+					"stack_anchor": defender,
+				})
 		
 		# ==========================================
 		# PHASE F: DURABILITY & RETURN
@@ -10587,6 +11232,8 @@ func update_gold_display() -> void:
 
 func _on_convoy_pressed() -> void:
 	if current_state != player_state or player_state.is_forecasting: return
+	if convoy_grid == null or inv_scroll == null:
+		return
 		
 	unit_managing_inventory = null
 	player_state.is_forecasting = true 
@@ -10599,6 +11246,8 @@ func _on_convoy_pressed() -> void:
 
 func _on_open_inv_pressed() -> void:
 	if current_state != player_state or player_state.active_unit == null: return
+	if unit_grid == null:
+		return
 		
 	unit_managing_inventory = player_state.active_unit
 	player_state.is_forecasting = true 
@@ -10610,14 +11259,20 @@ func _on_open_inv_pressed() -> void:
 	inventory_panel.visible = true
 
 func _populate_convoy_list() -> void:
+	if convoy_grid == null or inv_scroll == null:
+		return
 	_clear_grids()
-	if inv_desc_label: inv_desc_label.text = "Select an item to view details." 
+	if inv_desc_label:
+		inv_desc_label.text = "Select an item to view details."
+		_queue_refit_item_description_panels()
 	
 	# 1. Build the Main Convoy Grid
 	_build_grid_items(convoy_grid, player_inventory, "convoy", null)
 	
 	# 2. Dynamically build a mini-grid for EVERY unit on the board!
-	var vbox = inv_scroll.get_node("InventoryVBox")
+	var vbox = inv_scroll.get_node_or_null("InventoryVBox")
+	if vbox == null:
+		return
 	
 	for unit in player_container.get_children():
 		if unit.is_queued_for_deletion() or unit.current_hp <= 0: continue
@@ -10634,6 +11289,8 @@ func _populate_convoy_list() -> void:
 		# Create a new 5-column grid just for this unit
 		var u_grid = GridContainer.new()
 		u_grid.columns = 5
+		u_grid.add_theme_constant_override("h_separation", INVENTORY_UI_GRID_SEP)
+		u_grid.add_theme_constant_override("v_separation", INVENTORY_UI_GRID_SEP)
 		u_grid.set_meta("is_dynamic", true) # Tag it so we can delete it later
 		vbox.add_child(u_grid)
 		
@@ -10644,20 +11301,33 @@ func _populate_convoy_list() -> void:
 		_build_grid_items(u_grid, inv, "unit_personal", unit, 5)
 
 func _populate_unit_inventory_list() -> void:
+	if unit_grid == null:
+		return
 	_clear_grids()
-	if inv_desc_label: inv_desc_label.text = "Select an item to view details." 
+	if inv_desc_label:
+		inv_desc_label.text = "Select an item to view details."
+		_queue_refit_item_description_panels()
 	var inv = []
 	if "inventory" in unit_managing_inventory:
 		inv = unit_managing_inventory.inventory
 	_build_grid_items(unit_grid, inv, "unit_personal", unit_managing_inventory, 5)
+	_battle_try_flash_pending_inv_slot(unit_grid)
 
 func _clear_grids() -> void:
 	# 1. Clear static grids
-	for child in unit_grid.get_children(): child.queue_free()
-	for child in convoy_grid.get_children(): child.queue_free()
+	if unit_grid != null:
+		for child in unit_grid.get_children():
+			child.queue_free()
+	if convoy_grid != null:
+		for child in convoy_grid.get_children():
+			child.queue_free()
 	
 	# 2. Clear dynamically generated unit grids
-	var vbox = inv_scroll.get_node("InventoryVBox")
+	if inv_scroll == null:
+		return
+	var vbox = inv_scroll.get_node_or_null("InventoryVBox")
+	if vbox == null:
+		return
 	for child in vbox.get_children():
 		if child.has_meta("is_dynamic"):
 			child.queue_free()
@@ -10771,7 +11441,8 @@ func _build_grid_items(grid: GridContainer, item_array: Array, source_type: Stri
 				eq_style.border_width_top = 2
 				eq_style.border_width_right = 2
 				btn.add_theme_stylebox_override("normal", eq_style)
-				
+				_add_equipped_badge_to_inv_button(btn)
+
 			btn.pressed.connect(func(): _on_grid_item_clicked(btn, meta))
 		else:
 			btn.disabled = true
@@ -10786,14 +11457,21 @@ func _on_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 		
 	selected_inventory_meta = meta
 	
-	for child in unit_grid.get_children() + convoy_grid.get_children():
+	var grid_children: Array[Node] = []
+	if unit_grid != null:
+		grid_children.append_array(unit_grid.get_children())
+	if convoy_grid != null:
+		grid_children.append_array(convoy_grid.get_children())
+	for child in grid_children:
 		child.modulate = Color.WHITE
 	btn.modulate = Color(1.5, 1.5, 1.5)
 	
 	var item = meta["item"]
 	var count = meta.get("count", 1)
 	var viewer_unit = meta.get("unit", null)
-	inv_desc_label.text = _get_item_detailed_info(item, count, viewer_unit)
+	if inv_desc_label != null:
+		inv_desc_label.text = _get_item_detailed_info(item, count, viewer_unit)
+		_queue_refit_item_description_panels()
 	
 	equip_button.disabled = false
 	use_button.disabled = false
@@ -10809,16 +11487,15 @@ func _on_equip_pressed() -> void:
 	var item = meta["item"]
 	if item is WeaponData:
 		if not _unit_can_equip_weapon(unit_managing_inventory, item):
-			if invalid_sound.stream != null:
-				invalid_sound.play()
+			play_ui_sfx(UISfx.INVALID)
 			return
 
 		unit_managing_inventory.equipped_weapon = item
+		_battle_inv_flash_item = item
 		calculate_ranges(unit_managing_inventory)
 		update_unit_info_panel()
 		_populate_unit_inventory_list()
-		if select_sound.stream != null:
-			select_sound.play()
+		play_ui_sfx(UISfx.INVENTORY_EQUIP)
 
 func _on_close_inv_pressed() -> void:
 	inventory_panel.visible = false
@@ -10840,6 +11517,7 @@ func _on_use_pressed() -> void:
 			var current_class = unit.get("active_class_data")
 			if unit.level >= 1 and current_class != null and current_class.get("promotion_options") != null and current_class.promotion_options.size() > 0:
 				unit.inventory.remove_at(real_index)
+				play_ui_sfx(UISfx.INVENTORY_USE)
 				_on_close_inv_pressed()
 				var chosen_advanced_class = await _ask_for_promotion_choice(current_class.promotion_options)
 				if chosen_advanced_class != null:
@@ -10853,7 +11531,7 @@ func _on_use_pressed() -> void:
 					unit.inventory.insert(real_index, item)
 					_on_open_inv_pressed()
 			else:
-				if invalid_sound and invalid_sound.stream != null: invalid_sound.play()
+				play_ui_sfx(UISfx.INVALID)
 				spawn_loot_text("Cannot Promote!", Color.RED, unit.global_position + Vector2(32, -32))
 			return 
 			
@@ -10866,6 +11544,7 @@ func _on_use_pressed() -> void:
 			unit.current_hp = min(unit.current_hp + item.heal_amount, unit.max_hp)
 			if unit.get("health_bar") != null: unit.health_bar.value = unit.current_hp
 		unit.inventory.remove_at(real_index)
+		play_ui_sfx(UISfx.INVENTORY_USE)
 		_on_close_inv_pressed()
 		var is_permanent = false
 		for val in gains.values():
@@ -10891,120 +11570,341 @@ func _get_item_display_text(item: Resource) -> String:
 			
 	return "%s%s%s" % [broken_tag, i_name, dur_str]
 
+func _bbcode_escape_user_text(s: String) -> String:
+	return str(s).replace("[", "[lb]")
+
+func _item_detail_soft_rule() -> String:
+	return "[color=#5c4f41] · · · · · · · · · · · · · · · ·[/color]"
+
+func _item_detail_section_heading(title: String) -> String:
+	return "[font_size=20][color=#c4943a]▍ [/color][b][color=#f2d680]" + str(title).to_upper() + "[/color][/b][/font_size]"
+
+func _item_detail_callout(accent_hex: String, body_hex: String, escaped_msg: String) -> String:
+	return "[font_size=19][color=%s]▸ [/color][color=%s]%s[/color][/font_size]" % [accent_hex, body_hex, escaped_msg]
+
+func _item_detail_line(lbl: String, value_bb: String) -> String:
+	return "[font_size=19][color=#c4bba8][b]" + lbl + "[/b][/color][color=#5a5248]   [/color]" + value_bb + "[/font_size]"
+
+func _item_detail_effect_row(body_color: String, escaped_inner: String) -> String:
+	return "[font_size=19]   [color=#e0b858]◆[/color][color=#5a5248]   [/color][color=%s]%s[/color][/font_size]" % [body_color, escaped_inner]
+
+
+func _weapon_compare_delta_fragments_bbcode(sel: WeaponData, equipped: WeaponData) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if sel.damage_type != equipped.damage_type:
+		return out
+	const C_UP: String = "#a8e8b8"
+	const C_DN: String = "#ffa898"
+	var md: int = int(sel.might) - int(equipped.might)
+	var hd: int = int(sel.hit_bonus) - int(equipped.hit_bonus)
+	if md != 0:
+		var c: String = C_UP if md > 0 else C_DN
+		out.append("[color=%s][b]%s Might[/b][/color]" % [c, "%+d" % md])
+	if hd != 0:
+		var c2: String = C_UP if hd > 0 else C_DN
+		out.append("[color=%s][b]%s Hit[/b][/color]" % [c2, "%+d" % hd])
+	return out
+
+
+func _weapon_stat_compare_line_bbcode(sel: WeaponData, equipped: WeaponData) -> String:
+	var frags: PackedStringArray = _weapon_compare_delta_fragments_bbcode(sel, equipped)
+	if frags.is_empty():
+		return ""
+	var sep: String = "[color=#5a5248] · [/color]"
+	return (
+		"[font_size=19][color=#b8a890]vs equipped[/color]%s%s[/font_size]"
+		% [sep, sep.join(frags)]
+	)
+
+
+func _add_equipped_badge_to_inv_button(btn: Button) -> void:
+	if btn == null:
+		return
+	if btn.get_node_or_null("EquippedBadge") != null:
+		return
+	var badge := Label.new()
+	badge.name = "EquippedBadge"
+	badge.text = "E"
+	badge.add_theme_font_size_override("font_size", 15)
+	badge.add_theme_color_override("font_color", Color(1.0, 0.92, 0.45))
+	badge.add_theme_constant_override("outline_size", 4)
+	badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(badge)
+	badge.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	badge.offset_left = 4
+	badge.offset_bottom = -2
+	badge.grow_horizontal = Control.GROW_DIRECTION_END
+
+
+func _play_inv_slot_flash(btn: Button) -> void:
+	if btn == null or not is_instance_valid(btn):
+		return
+	btn.pivot_offset = btn.size * 0.5
+	var peak: Vector2 = Vector2(1.11, 1.11)
+	var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(btn, "scale", peak, 0.085)
+	tw.tween_property(btn, "scale", Vector2.ONE, 0.11)
+	var base_col: Color = Color.WHITE
+	if btn is Control and btn.has_meta("hover_base_modulate"):
+		base_col = btn.get_meta("hover_base_modulate") as Color
+	var tw2 := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw2.tween_property(btn, "modulate", base_col * Color(1.32, 1.22, 1.05), 0.07)
+	tw2.tween_property(btn, "modulate", base_col, 0.13)
+
+
+func _battle_try_flash_pending_inv_slot(grid: GridContainer) -> void:
+	if _battle_inv_flash_item == null or grid == null:
+		return
+	var want: Resource = _battle_inv_flash_item
+	_battle_inv_flash_item = null
+	for c in grid.get_children():
+		if c is Button and (c as Button).has_meta("inv_data"):
+			var d: Dictionary = (c as Button).get_meta("inv_data") as Dictionary
+			if d.get("item") == want:
+				_play_inv_slot_flash(c as Button)
+				return
+
 func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: Node2D = null) -> String:
-	var info = ""
-	
-	# 1. HEADER (Rarity, Value & Quantity)
-	var rarity = item.get("rarity") if item.get("rarity") != null else "Common"
-	var cost = item.get("gold_cost") if item.get("gold_cost") != null else 0
-	
-	var rarity_color = "white"
+	var lines: PackedStringArray = []
+	const C_MUTED: String = "#c4bba8"
+	const C_BODY: String = "#faf6eb"
+	const C_DIM: String = "#8a8274"
+	const C_VALUE: String = "#f0d78c"
+	const C_OK: String = "#a8e8b8"
+	const C_BAD: String = "#ffa898"
+	const C_STAT: String = "#ffd4b8"
+
+	var rarity: String = item.get("rarity") if item.get("rarity") != null else "Common"
+	var cost: int = item.get("gold_cost") if item.get("gold_cost") != null else 0
+
+	var rarity_hex: String = "#f2ede0"
 	match rarity:
 		"Uncommon":
-			rarity_color = "lime"
+			rarity_hex = "#8ae89e"
 		"Rare":
-			rarity_color = "deepskyblue"
+			rarity_hex = "#8ed4ff"
 		"Epic":
-			rarity_color = "mediumorchid"
+			rarity_hex = "#d4a8ff"
 		"Legendary":
-			rarity_color = "gold"
-		
-	var stack_text = ""
-	if stack_count > 1:
-		stack_text = "   |   [color=white]Owned: x" + str(stack_count) + "[/color]"
-		
-	info += "[ [color=" + rarity_color + "]" + rarity + "[/color] ]   |   Value: [color=khaki]" + str(cost) + "G[/color]" + stack_text + "\n"
-	info += "[color=gray]------------------------------------[/color]\n"
+			rarity_hex = "#ffe090"
 
-	# 2. WEAPON SPECIFIC STATS
+	lines.append("[font_size=28][b][color=%s]%s[/color][/b][/font_size]" % [rarity_hex, str(rarity).to_upper()])
+	var meta: String = (
+		"[font_size=20][color=#d4a85c]⬥ [/color][color=%s]Value[/color][color=#5a5248]   [/color][color=%s][b]%d[/b][/color][color=%s]g[/color]"
+		% [C_MUTED, C_VALUE, cost, C_DIM]
+	)
+	if stack_count > 1:
+		meta += "[color=#5a5248]        [/color][color=#b89858]⬧ [/color][color=%s]Stack[/color][color=#5a5248]   [/color][color=%s][b]×%d[/b][/color]" % [C_MUTED, C_BODY, stack_count]
+	meta += "[/font_size]"
+	lines.append(meta)
+	lines.append(_item_detail_soft_rule())
+	lines.append("")
+
 	if item is WeaponData:
 		if item.get("current_durability") != null and item.current_durability <= 0:
-			info += "[color=red]BROKEN! Effectiveness halved. Needs repair.[/color]\n\n"
-			
-		var w_type_str = "Unknown"
+			lines.append("[font_size=20][b][color=%s]Broken — half effectiveness. Repair to restore full power.[/color][/b][/font_size]" % C_BAD)
+			lines.append("")
+
+		lines.append(_item_detail_section_heading("Combat stats"))
+		lines.append("")
+
+		var w_type_str: String = "Unknown"
 		if item.get("weapon_type") != null:
 			w_type_str = _weapon_type_name_safe(int(item.weapon_type))
-		var d_type_str = "Physical" if item.get("damage_type") != null and item.damage_type == 0 else "Magical"
-		
-		info += "[color=gray]Type:[/color] " + w_type_str + " (" + d_type_str + ")\n"
-		info += "[color=coral]Might:[/color] " + str(item.might) + "\n"
-		info += "[color=khaki]Hit:[/color] +" + str(item.hit_bonus) + "\n"
-		info += "[color=palegreen]Range:[/color] " + str(item.min_range) + "-" + str(item.max_range) + "\n"
-		
+		var d_type_str: String = "Physical" if item.get("damage_type") != null and item.damage_type == 0 else "Magical"
+
+		lines.append(
+			_item_detail_line(
+				"Weapon",
+				"[color=%s]%s[/color][color=%s]   ·   [/color][color=%s]%s[/color]"
+				% [C_BODY, w_type_str, C_DIM, C_DIM, d_type_str]
+			)
+		)
+		lines.append(
+			_item_detail_line("Might", "[color=%s]%d[/color]" % [C_STAT, int(item.might)])
+		)
+		lines.append(
+			_item_detail_line("Hit", "[color=%s]+%d[/color]" % [C_VALUE, int(item.hit_bonus)])
+		)
+		lines.append(
+			_item_detail_line(
+				"Range",
+				"[color=%s]%d[/color][color=%s]–[/color][color=%s]%d[/color]"
+				% [C_BODY, int(item.min_range), C_DIM, C_BODY, int(item.max_range)]
+			)
+		)
+
 		if item.get("current_durability") != null:
-			info += "[color=lightskyblue]Durability:[/color] " + str(item.current_durability) + " / " + str(item.max_durability) + "\n"
-		
+			lines.append(
+				_item_detail_line(
+					"Durability",
+					"[color=%s]%d[/color][color=%s] / [/color][color=%s]%d[/color]"
+					% [C_BODY, int(item.current_durability), C_DIM, C_BODY, int(item.max_durability)]
+				)
+			)
+
+		var eq_weapon: Resource = viewer_unit.get("equipped_weapon") if viewer_unit != null else null
+		if (
+				eq_weapon != null
+				and eq_weapon is WeaponData
+				and item != eq_weapon
+		):
+			var cmp_line: String = _weapon_stat_compare_line_bbcode(item as WeaponData, eq_weapon as WeaponData)
+			if cmp_line != "":
+				lines.append("")
+				lines.append(cmp_line)
+
 		if viewer_unit != null:
+			lines.append("")
 			var usable: bool = _unit_can_use_item_for_ui(viewer_unit, item)
 			if usable:
-				info += "[color=lime]Usable by this unit[/color]\n"
+				lines.append("[font_size=20][color=%s][b]Equippable[/b][/color][color=#5a5248] — [/color][color=%s]This unit can use this weapon.[/color][/font_size]" % [C_OK, C_BODY])
 			else:
-				info += "[color=red]Cannot be equipped by this unit[/color]\n"
-		
-		var effects = []
+				lines.append("[font_size=20][color=%s][b]Locked[/b][/color][color=#5a5248] — [/color][color=%s]This unit cannot equip this weapon.[/color][/font_size]" % [C_BAD, C_MUTED])
+
+		var effects: Array = []
 		if item.get("is_healing_staff") == true:
-			effects.append("Restores " + str(item.effect_amount) + " HP")
-			
+			effects.append("Restores %d HP" % int(item.effect_amount))
+
 		if item.get("is_buff_staff") == true or item.get("is_debuff_staff") == true:
-			var word = "Grants +" if item.get("is_buff_staff") == true else "Inflicts -"
+			var word: String = "Grants +" if item.get("is_buff_staff") == true else "Inflicts -"
 			if item.get("affected_stat") != null and str(item.affected_stat) != "":
-				var stats = str(item.affected_stat).split(",")
-				var formatted_stats = []
+				var stats: PackedStringArray = str(item.affected_stat).split(",")
+				var formatted_stats: PackedStringArray = []
 				for s in stats:
 					formatted_stats.append(s.strip_edges().capitalize())
 				effects.append(word + str(item.effect_amount) + " to " + ", ".join(formatted_stats))
-			
-		if effects.size() > 0:
-			info += "[color=plum]Effect:[/color] " + " & ".join(effects) + "\n"
-			
-	# 3. CONSUMABLE SPECIFIC STATS
-	elif item is ConsumableData:
-		info += "[color=gray]Type:[/color] Consumable\n"
-		
-		var effects = []
-		if item.heal_amount > 0:
-			effects.append("Restores " + str(item.heal_amount) + " HP")
-			
-		var boosts = []
-		if item.hp_boost > 0: boosts.append("+" + str(item.hp_boost) + " HP")
-		if item.str_boost > 0: boosts.append("+" + str(item.str_boost) + " STR")
-		if item.mag_boost > 0: boosts.append("+" + str(item.mag_boost) + " MAG")
-		if item.def_boost > 0: boosts.append("+" + str(item.def_boost) + " DEF")
-		if item.res_boost > 0: boosts.append("+" + str(item.res_boost) + " RES")
-		if item.spd_boost > 0: boosts.append("+" + str(item.spd_boost) + " SPD")
-		if item.agi_boost > 0: boosts.append("+" + str(item.agi_boost) + " AGI")
-		
-		if boosts.size() > 0:
-			effects.append("Permanent Boost: " + ", ".join(boosts))
-			
-		if effects.size() > 0:
-			info += "[color=plum]Effect:[/color]\n" + "\n".join(effects) + "\n"
-			
-	# 4. MATERIAL SPECIFIC STATS
-	elif item is MaterialData:
-		info += "[color=gray]Type:[/color] Crafting Material\n"
-	else:
-		info += "A mysterious item.\n"
 
-	# 5. CUSTOM DESCRIPTION / LORE
-	info += "[color=gray]------------------------------------[/color]\n"
-	if item.get("description") != null and item.description.strip_edges() != "":
-		info += "[color=silver][i]\"" + item.description + "\"[/i][/color]"
+		if effects.size() > 0:
+			lines.append("")
+			lines.append(_item_detail_section_heading("Effects"))
+			lines.append("")
+			for e in effects:
+				lines.append(_item_detail_effect_row(C_BODY, _bbcode_escape_user_text(str(e))))
+
+	elif item is ConsumableData:
+		lines.append(_item_detail_section_heading("Overview"))
+		lines.append(_item_detail_line("Kind", "[color=%s]Consumable[/color]" % C_BODY))
+
+		var effects: Array = []
+		if item.heal_amount > 0:
+			effects.append("Restores %d HP" % int(item.heal_amount))
+
+		var boosts: PackedStringArray = []
+		if item.hp_boost > 0:
+			boosts.append("+%d HP" % int(item.hp_boost))
+		if item.str_boost > 0:
+			boosts.append("+%d STR" % int(item.str_boost))
+		if item.mag_boost > 0:
+			boosts.append("+%d MAG" % int(item.mag_boost))
+		if item.def_boost > 0:
+			boosts.append("+%d DEF" % int(item.def_boost))
+		if item.res_boost > 0:
+			boosts.append("+%d RES" % int(item.res_boost))
+		if item.spd_boost > 0:
+			boosts.append("+%d SPD" % int(item.spd_boost))
+		if item.agi_boost > 0:
+			boosts.append("+%d AGI" % int(item.agi_boost))
+
+		if boosts.size() > 0:
+			effects.append("Permanent stat boost: " + ", ".join(boosts))
+
+		if effects.size() > 0:
+			lines.append("")
+			lines.append(_item_detail_section_heading("Effects"))
+			lines.append("")
+			for e in effects:
+				lines.append(_item_detail_effect_row(C_BODY, _bbcode_escape_user_text(str(e))))
+
+	elif item is MaterialData:
+		lines.append(_item_detail_section_heading("Overview"))
+		lines.append(_item_detail_line("Kind", "[color=%s]Crafting material[/color]" % C_BODY))
 	else:
-		info += "[color=dimgray][i]No description available.[/i][/color]"
-		
-	return info
-	
-func spawn_loot_text(text: String, color: Color, pos: Vector2) -> void:
+		lines.append(_item_detail_section_heading("Overview"))
+		lines.append(
+			_item_detail_callout(
+				"#a89878",
+				"#e8dfd4",
+				"Unclassified treasure — still worth its weight on the market."
+			)
+		)
+
+	lines.append("")
+	lines.append(_item_detail_soft_rule())
+	lines.append(_item_detail_section_heading("Details"))
+	lines.append("")
+	if item.get("description") != null and item.description.strip_edges() != "":
+		var raw_desc: String = item.description.strip_edges()
+		for piece: String in raw_desc.split("\n"):
+			var row: String = piece.strip_edges()
+			if row == "":
+				lines.append("")
+				continue
+			lines.append(
+				"[font_size=19][color=#b8a890]▸[/color][color=#5a5248]  [/color][color=%s]%s[/color][/font_size]"
+				% [C_BODY, _bbcode_escape_user_text(row)]
+			)
+	else:
+		lines.append(
+			_item_detail_callout(
+				"#7a7064",
+				"#c8beb2",
+				"No written notes for this entry — check its name in the list or try it in battle."
+			)
+		)
+
+	return "\n".join(lines)
+
+
+## Units/terrain live under the level root as [ BattleField ] siblings; parenting floaters there + last index keeps them above map actors.
+func _mount_floating_combat_text(node: Node) -> void:
+	var mount: Node = get_parent() if get_parent() != null else self
+	mount.add_child(node)
+	mount.move_child(node, -1)
+
+
+func _floater_stack_nudge_for_anchor(anchor: Node) -> float:
+	if anchor == null or not is_instance_valid(anchor):
+		return 0.0
+	var id: int = anchor.get_instance_id()
+	var depth: int = int(_floater_stack_by_unit.get(id, 0))
+	_floater_stack_by_unit[id] = depth + 1
+	var timer := get_tree().create_timer(0.4)
+	var captured_id: int = id
+	timer.timeout.connect(func() -> void:
+		if not is_instance_valid(self):
+			return
+		var d: int = int(_floater_stack_by_unit.get(captured_id, 0))
+		d = maxi(0, d - 1)
+		if d <= 0:
+			_floater_stack_by_unit.erase(captured_id)
+		else:
+			_floater_stack_by_unit[captured_id] = d
+	)
+	return -14.0 * float(depth)
+
+
+## meta keys: tier (FloatingCombatText.Tier), hp_chunk_ratio (0..1), stack_anchor (Node).
+func spawn_loot_text(text: String, color: Color, pos: Vector2, meta = null) -> void:
+	var md: Dictionary = meta if meta is Dictionary else {}
 	var f_text = FloatingTextScene.instantiate()
 	f_text.text_to_show = text
 	f_text.text_color = color
-	add_child(f_text)
-	f_text.global_position = pos
-	
+	if md.has("tier"):
+		f_text.tier = md["tier"]
+	if md.has("hp_chunk_ratio"):
+		f_text.hp_chunk_ratio = md["hp_chunk_ratio"]
+	var anchor: Node = md.get("stack_anchor", null)
+	var nudge: float = _floater_stack_nudge_for_anchor(anchor)
+	_mount_floating_combat_text(f_text)
+	f_text.global_position = pos + Vector2(0.0, nudge)
+
 func show_loot_window() -> void:
+	_ensure_loot_item_info_ui()
 	loot_item_list.clear()
-	if loot_desc_label: loot_desc_label.text = "Select an item to view details."	
+	if loot_desc_label:
+		loot_desc_label.text = "Select an item to view details."
 	# Lock the map
 	if player_state: player_state.is_forecasting = true
 	get_tree().paused = true 
@@ -11108,6 +12008,12 @@ func show_loot_window() -> void:
 		
 	if close_loot_button: close_loot_button.disabled = false
 	
+	if loot_item_list.item_count > 0:
+		loot_item_list.select(0)
+		_on_loot_item_selected(0)
+	else:
+		_queue_refit_item_description_panels()
+	
 func _on_close_loot_pressed() -> void:
 	# 1. Immediately hide the popup UI to clear the screen
 	var close_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
@@ -11157,11 +12063,14 @@ func _on_close_loot_pressed() -> void:
 	var target_buttons = []
 	var available_buttons = []
 	
-	var all_grids = [convoy_grid]
-	var vbox = inv_scroll.get_node("InventoryVBox")
-	for child in vbox.get_children():
-		if child is GridContainer:
-			all_grids.append(child)
+	var all_grids: Array = []
+	if convoy_grid != null:
+		all_grids.append(convoy_grid)
+	var vbox = inv_scroll.get_node_or_null("InventoryVBox") if inv_scroll != null else null
+	if vbox != null:
+		for child in vbox.get_children():
+			if child is GridContainer:
+				all_grids.append(child)
 			
 	for grid in all_grids:
 		for btn in grid.get_children():
@@ -11932,37 +12841,60 @@ func get_terrain_data(grid_pos: Vector2i) -> Dictionary:
 				break # Found one, stop looking
 				
 	return terrain
-	
-func _set_path_pulse(active: bool) -> void:
-	if _path_pulse_active == active:
-		return
-	_path_pulse_active = active
 
-	if _path_pulse_tween and _path_pulse_tween.is_running():
-		_path_pulse_tween.kill()
 
-	if not path_line:
-		return
-
-	if not active:
-		# reset propre
+func _reset_path_pulse_visuals() -> void:
+	if path_line != null:
 		var c: Color = path_line.modulate
 		c.a = 1.0
 		path_line.modulate = c
+	if path_line_under != null:
+		var cu: Color = path_line_under.modulate
+		cu.a = 1.0
+		path_line_under.modulate = cu
+
+
+func _set_path_pulse(active: bool) -> void:
+	if not active:
+		if _path_pulse_tween != null and _path_pulse_tween.is_valid():
+			_path_pulse_tween.kill()
+		_path_pulse_active = false
+		_reset_path_pulse_visuals()
 		return
 
-	# démarre au min
-	var path_mod: Color = path_line.modulate
-	path_mod.a = PATH_ALPHA_MIN
-	path_line.modulate = path_mod
+	if path_line == null:
+		return
+	if _path_pulse_active:
+		return
+	_path_pulse_active = true
+	if _path_pulse_tween != null and _path_pulse_tween.is_valid():
+		_path_pulse_tween.kill()
+
+	var fg_w_base: float = path_line.width
+	var un_w_base: float = path_line_under.width if path_line_under != null else fg_w_base
+
+	var pm: Color = path_line.modulate
+	pm.a = PATH_ALPHA_MIN
+	path_line.modulate = pm
+	if path_line_under != null:
+		var pu: Color = path_line_under.modulate
+		pu.a = PATH_ALPHA_MIN
+		path_line_under.modulate = pu
+
+	var apply_pulse: Callable = func(alpha: float) -> void:
+		path_line.modulate.a = alpha
+		if path_line_under != null:
+			path_line_under.modulate.a = alpha
+		var span: float = PATH_ALPHA_MAX - PATH_ALPHA_MIN
+		var u: float = 0.0 if span <= 0.0001 else clampf((alpha - PATH_ALPHA_MIN) / span, 0.0, 1.0)
+		path_line.width = fg_w_base + PATH_PREVIEW_PULSE_W_FG * u
+		if path_line_under != null:
+			path_line_under.width = un_w_base + PATH_PREVIEW_PULSE_W_UNDER * u
 
 	_path_pulse_tween = create_tween()
-	_path_pulse_tween.set_loops() # loop infini
-
-	_path_pulse_tween.tween_property(path_line, "modulate:a", PATH_ALPHA_MAX, PATH_PULSE_TIME)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_path_pulse_tween.tween_property(path_line, "modulate:a", PATH_ALPHA_MIN, PATH_PULSE_TIME)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_path_pulse_tween.set_loops()
+	_path_pulse_tween.tween_method(apply_pulse, PATH_ALPHA_MIN, PATH_ALPHA_MAX, PATH_PULSE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_path_pulse_tween.tween_method(apply_pulse, PATH_ALPHA_MAX, PATH_ALPHA_MIN, PATH_PULSE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func play_ui_sfx(kind: int) -> void:
 	var now := Time.get_ticks_msec()
@@ -11984,6 +12916,12 @@ func play_ui_sfx(kind: int) -> void:
 			# buzzer soft, sinon fallback sur miss_sound
 			player = invalid_sound if (invalid_sound and invalid_sound.stream) else miss_sound
 			p = randf_range(0.82, 0.92)
+		UISfx.INVENTORY_EQUIP:
+			player = select_sound
+			p = randf_range(0.86, 0.97)
+		UISfx.INVENTORY_USE:
+			player = select_sound
+			p = randf_range(1.14, 1.30)
 
 	if player == null or player.stream == null:
 		return
@@ -12063,11 +13001,7 @@ func _run_parry_minigame(defender: Node2D) -> bool:
 		clang.pitch_scale = randf_range(0.85, 0.95)
 		clang.play()
 
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "PARRY!"
-	f_text.text_color = Color(1.0, 0.8, 0.2)
-	add_child(f_text)
-	f_text.global_position = defender.global_position + Vector2(32, -48)
+	spawn_loot_text("PARRY!", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
 
 	screen_shake(6.0, 0.2)
 	await get_tree().create_timer(0.45).timeout
@@ -12281,11 +13215,7 @@ func _run_shield_clash_minigame(defender: Node2D, attacker: Node2D) -> int:
 		get_node("ShieldBashSound").pitch_scale = randf_range(0.85, 0.95)
 		get_node("ShieldBashSound").play()
 		
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "SHIELD CLASH!"
-	f_text.text_color = Color(0.8, 0.9, 1.0)
-	add_child(f_text)
-	f_text.global_position = defender.global_position + Vector2(32, -48)
+	spawn_loot_text("SHIELD CLASH!", Color(0.8, 0.9, 1.0), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
 	
 	await get_tree().create_timer(1.2).timeout 
 	
@@ -12410,11 +13340,7 @@ func _run_focused_strike_minigame(attacker: Node2D) -> int:
 		clang.pitch_scale = 0.5 # Deep wind-up sound
 		clang.play()
 		
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "FOCUS STRIKE!"
-	f_text.text_color = Color(1.0, 0.5, 0.0)
-	add_child(f_text)
-	f_text.global_position = attacker.global_position + Vector2(32, -48)
+	spawn_loot_text("FOCUS STRIKE!", Color(1.0, 0.5, 0.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
 	
 	await get_tree().create_timer(0.6).timeout
 	
@@ -12624,11 +13550,7 @@ func _run_bloodthirster_minigame(attacker: Node2D) -> int:
 		clang.pitch_scale = 0.6 # Deep, sinister thud
 		clang.play()
 		
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "BLOODTHIRSTER!"
-	f_text.text_color = Color(0.8, 0.1, 0.1) # Crimson Red
-	add_child(f_text)
-	f_text.global_position = attacker.global_position + Vector2(32, -48)
+	spawn_loot_text("BLOODTHIRSTER!", Color(0.8, 0.1, 0.1), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
 	
 	await get_tree().create_timer(0.6).timeout
 	
@@ -12807,11 +13729,7 @@ func _run_hundred_point_strike_minigame(attacker: Node2D) -> int:
 		get_node("ClangSound").pitch_scale = 1.5 # Fast, sharp ring
 		get_node("ClangSound").play()
 		
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "HUNDRED POINT STRIKE!"
-	f_text.text_color = Color(0.9, 0.2, 1.0) # Vibrant Purple
-	add_child(f_text)
-	f_text.global_position = attacker.global_position + Vector2(32, -48)
+	spawn_loot_text("HUNDRED POINT STRIKE!", Color(0.9, 0.2, 1.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
 	
 	await get_tree().create_timer(0.7).timeout
 	
@@ -12993,11 +13911,7 @@ func _run_last_stand_minigame(defender: Node2D) -> bool:
 		clang.pitch_scale = 0.4
 		clang.play()
 	
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "LETHAL BLOW!"
-	f_text.text_color = Color(1.0, 0.1, 0.1)
-	add_child(f_text)
-	f_text.global_position = defender.global_position + Vector2(32, -48)
+	spawn_loot_text("LETHAL BLOW!", Color(1.0, 0.1, 0.1), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
 	
 	await get_tree().create_timer(0.6).timeout
 
@@ -13007,11 +13921,7 @@ func _run_last_stand_minigame(defender: Node2D) -> bool:
 		clang.pitch_scale = 0.6
 		clang.play()
 		
-	var f_text2 = FloatingTextScene.instantiate()
-	f_text2.text_to_show = "GET READY..."
-	f_text2.text_color = Color(1.0, 0.8, 0.2) # Gold warning
-	add_child(f_text2)
-	f_text2.global_position = defender.global_position + Vector2(32, -80)
+	spawn_loot_text("GET READY...", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -80), {"stack_anchor": defender})
 
 	# Final pause to let the player focus
 	await get_tree().create_timer(0.7).timeout
@@ -13253,6 +14163,7 @@ func _on_loot_item_selected(index: int) -> void:
 	
 	var stack_amt = meta.get("count", 1)
 	loot_desc_label.text = _get_item_detailed_info(meta["item"], stack_amt)
+	_queue_refit_item_description_panels()
 	
 	if select_sound and select_sound.stream != null:
 		select_sound.pitch_scale = 1.2
@@ -15678,11 +16589,7 @@ func _run_tactical_action_minigame(attacker: Node2D, ability_name: String) -> bo
 		clang.pitch_scale = 1.8 # High-pitched windup
 		clang.play()
 
-	var f_text = FloatingTextScene.instantiate()
-	f_text.text_to_show = "MOMENTUM!"
-	f_text.text_color = Color(0.2, 1.0, 1.0)
-	add_child(f_text)
-	f_text.global_position = attacker.global_position + Vector2(32, -48)
+	spawn_loot_text("MOMENTUM!", Color(0.2, 1.0, 1.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
 
 	await get_tree().create_timer(0.45).timeout
 
@@ -17449,8 +18356,7 @@ func apply_campaign_settings() -> void:
 	if battle_log:
 		battle_log.visible = CampaignManager.battle_show_log
 
-	if path_line:
-		path_line.visible = CampaignManager.battle_show_path_preview
+	draw_preview_path()
 
 	show_danger_zone = CampaignManager.battle_show_danger_zone_default
 	if show_danger_zone:

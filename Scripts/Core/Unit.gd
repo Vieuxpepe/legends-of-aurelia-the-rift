@@ -27,10 +27,19 @@ class_name Unit
 # Constants (match BattleField cell size when converting grid <-> world)
 # ------------------------------------------------------------------------------
 const DEFAULT_CELL_SIZE: int = 64
-const HEALTH_BAR_TWEEN_DURATION: float = 0.2
+## Main HP fill: snappy ease-out. Trail bar drains slower so damage reads as a chunk.
+const HEALTH_BAR_LOSS_DURATION: float = 0.22
+const HEALTH_BAR_DELAY_TRAIL_DURATION: float = 0.62
 const DAMAGE_FLASH_DURATION: float = 0.1
+## Multiplier on [member base_color] when the unit has ended their turn (keeps enemy scene tints).
+const EXHAUSTED_MODULATE: Color = Color(0.3, 0.3, 0.3, 1.0)
+## After multiply, per-channel floor so strong scene tints (e.g. dark red enemies) do not crush G/B to ~0 → black silhouettes.
+const EXHAUSTED_CHANNEL_FLOOR: float = 0.08
 const EXP_BAR_TWEEN_DURATION: float = 0.2
 const POISE_BAR_TWEEN_DURATION: float = 0.2
+## Matches HealthBar width in `Unit.tscn` when `size` is not yet laid out (offset_right − offset_left).
+const POISE_BAR_FALLBACK_WIDTH_PX: float = 85.0
+const POISE_BAR_HEIGHT_PX: float = 6.0
 
 # ------------------------------------------------------------------------------
 # Signals
@@ -140,13 +149,20 @@ var trade_selected_index: int = -1
 # ------------------------------------------------------------------------------
 @onready var health_bar: ProgressBar = $HealthBar
 @onready var exp_bar: ProgressBar = $ExpBar
+@onready var level_badge: Label = get_node_or_null("LevelBadge") as Label
 @onready var team_glow: ColorRect = $TeamGlow
 @onready var defend_icon: Node = get_node_or_null("DefendIcon")
+
+## Drawn under [member health_bar]; lags behind on damage so hits feel heavier.
+var health_bar_delay: ProgressBar
+var _hp_damage_tween: Tween
 
 func _ready() -> void:
 	if data == null:
 		push_warning("Unit has no UnitData assigned; stats and visuals will not initialize.")
 		return
+	# Scene tint (e.g. enemies modulate red) must be restored after hit-flash / UI resets.
+	base_color = modulate
 	if data.unit_sprite != null and sprite != null:
 		sprite.texture = data.unit_sprite
 		var texture_size: Vector2 = sprite.texture.get_size()
@@ -243,7 +259,146 @@ func _ready() -> void:
 	if equipped_weapon != null and inventory.is_empty():
 		inventory.append(equipped_weapon)
 
+	_apply_overhead_bar_visuals()
+	_refresh_level_badge()
+	call_deferred("_refresh_level_badge")
 	refresh_standard_team_glow()
+
+
+func _ensure_level_badge_node() -> void:
+	if level_badge != null and is_instance_valid(level_badge):
+		return
+	level_badge = get_node_or_null("LevelBadge") as Label
+	if level_badge != null:
+		return
+	var lb := Label.new()
+	lb.name = "LevelBadge"
+	lb.z_index = 12
+	lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lb.text = "Lv. 1"
+	lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	add_child(lb)
+	level_badge = lb
+	if health_bar != null:
+		move_child(level_badge, health_bar.get_index() + 1)
+
+
+func _apply_overhead_bar_visuals() -> void:
+	_ensure_level_badge_node()
+	if health_bar != null:
+		health_bar.clip_contents = false
+		health_bar.show_percentage = false
+		# Layered bars: back = track + trailing damage fill; front = transparent + green only
+		# (an opaque track on the front bar would hide the entire trail underneath).
+		_ensure_health_bar_delay()
+		if health_bar_delay != null:
+			_sync_health_bar_delay_layout()
+			call_deferred("_sync_health_bar_delay_layout")
+	if exp_bar != null:
+		exp_bar.add_theme_stylebox_override("background", UnitBarVisuals.exp_track())
+		exp_bar.add_theme_stylebox_override("fill", UnitBarVisuals.exp_fill())
+	_style_level_badge()
+
+
+func _style_level_badge() -> void:
+	if level_badge == null:
+		return
+	level_badge.add_theme_font_size_override("font_size", 13)
+	level_badge.add_theme_color_override("font_color", Color(0.98, 0.96, 0.92, 1.0))
+	level_badge.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.04, 1.0))
+	level_badge.add_theme_constant_override("outline_size", 3)
+	level_badge.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.45))
+	level_badge.add_theme_constant_override("shadow_offset_x", 0)
+	level_badge.add_theme_constant_override("shadow_offset_y", 1)
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(0.07, 0.08, 0.11, 0.92)
+	plate.border_color = Color(0.42, 0.46, 0.52, 0.95)
+	plate.set_border_width_all(1)
+	plate.set_corner_radius_all(4)
+	plate.content_margin_left = 5
+	plate.content_margin_right = 5
+	plate.content_margin_top = 2
+	plate.content_margin_bottom = 2
+	plate.shadow_color = Color(0, 0, 0, 0.35)
+	plate.shadow_size = 2
+	plate.shadow_offset = Vector2(0, 1)
+	level_badge.add_theme_stylebox_override("normal", plate)
+
+
+func _ensure_health_bar_delay() -> void:
+	if health_bar == null:
+		return
+	if health_bar_delay == null or not is_instance_valid(health_bar_delay):
+		health_bar_delay = get_node_or_null("HealthBarDelay") as ProgressBar
+		if health_bar_delay == null:
+			var d := ProgressBar.new()
+			d.name = "HealthBarDelay"
+			d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			d.show_percentage = false
+			d.clip_contents = false
+			add_child(d)
+			move_child(d, health_bar.get_index())
+			health_bar_delay = d
+	_apply_layered_health_bar_styles()
+
+
+## Back bar draws the dark track + [i]trailing[/i] coral/red fill; front bar draws only green fill on a clear background so the lagging strip is visible between the two fills.
+func _apply_layered_health_bar_styles() -> void:
+	if health_bar == null:
+		return
+	if health_bar_delay != null:
+		health_bar_delay.add_theme_stylebox_override("background", UnitBarVisuals.hp_track())
+		health_bar_delay.add_theme_stylebox_override("fill", UnitBarVisuals.hp_delay_fill())
+	health_bar.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	health_bar.add_theme_stylebox_override("fill", UnitBarVisuals.hp_fill())
+
+
+func _sync_health_bar_delay_layout(align_trail_to_main: bool = true) -> void:
+	if health_bar == null or health_bar_delay == null:
+		return
+	health_bar_delay.scale = health_bar.scale
+	health_bar_delay.position = health_bar.position
+	health_bar_delay.size = health_bar.size
+	health_bar_delay.offset_left = health_bar.offset_left
+	health_bar_delay.offset_top = health_bar.offset_top
+	health_bar_delay.offset_right = health_bar.offset_right
+	health_bar_delay.offset_bottom = health_bar.offset_bottom
+	health_bar_delay.custom_minimum_size = health_bar.custom_minimum_size
+	health_bar_delay.z_index = maxi(health_bar.z_index - 1, 0)
+	health_bar_delay.max_value = health_bar.max_value
+	if align_trail_to_main:
+		health_bar_delay.value = health_bar.value
+
+
+## Call after tweens or direct [member health_bar] writes outside [method take_damage] so the trail stays aligned.
+func snap_health_delay_to_main() -> void:
+	if health_bar == null or health_bar_delay == null:
+		return
+	health_bar_delay.max_value = health_bar.max_value
+	health_bar_delay.value = health_bar.value
+
+
+func _refresh_level_badge() -> void:
+	_ensure_level_badge_node()
+	if level_badge == null or health_bar == null:
+		return
+	if not is_inside_tree():
+		return
+	level_badge.visible = true
+	level_badge.text = "Lv. %d" % level
+	level_badge.reset_size()
+	level_badge.scale = health_bar.scale
+	var hp_gr: Rect2 = health_bar.get_global_rect()
+	if hp_gr.size.y < 1.0 or hp_gr.size.x < 1.0:
+		call_deferred("_refresh_level_badge")
+		return
+	## Sibling of HealthBar: world top-left of the full bar, converted to unit space — full badge above the bar.
+	var inset_x: float = 2.0
+	var gap: float = 2.0
+	var hp_tl_unit: Vector2 = to_local(hp_gr.position)
+	var badge_h: float = level_badge.size.y * absf(level_badge.scale.y)
+	level_badge.position = Vector2(hp_tl_unit.x + inset_x, hp_tl_unit.y - badge_h - gap)
 
 
 ## Default under-tile ring color from parent container (PlayerUnits / EnemyUnits / other).
@@ -300,12 +455,16 @@ func _set_remote_coop_pending_death_visual() -> void:
 		sprite.visible = false
 	if health_bar != null:
 		health_bar.visible = false
+	if health_bar_delay != null:
+		health_bar_delay.visible = false
 	if exp_bar != null:
 		exp_bar.visible = false
 	if team_glow != null:
 		team_glow.visible = false
 	if defend_icon != null:
 		defend_icon.visible = false
+	if level_badge != null:
+		level_badge.visible = false
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 
@@ -319,12 +478,18 @@ func clear_remote_coop_pending_death_visual() -> void:
 		sprite.self_modulate = _mock_coop_owner_sprite_tint
 	if health_bar != null:
 		health_bar.visible = true
+	if health_bar_delay != null:
+		health_bar_delay.visible = true
 	if exp_bar != null:
 		exp_bar.visible = true
 	if team_glow != null:
 		team_glow.visible = true
 	if defend_icon != null:
 		defend_icon.visible = is_defending
+	if level_badge != null:
+		level_badge.visible = true
+		_refresh_level_badge()
+	snap_health_delay_to_main()
 	process_mode = Node.PROCESS_MODE_INHERIT
 
 
@@ -417,6 +582,7 @@ func level_up() -> void:
 		
 	# BattleField.gd will automatically read the +2 and display it correctly!
 	emit_signal("leveled_up", self, gains)
+	_refresh_level_badge()
 
 func move_along_path(path: Array[Vector2i]) -> void:
 	# We check <= 1 so the wind doesn't spawn if they just click themselves to wait
@@ -469,26 +635,48 @@ func die(killer: Node2D = null) -> void:
 		sprite.visible = false
 	if health_bar != null:
 		health_bar.visible = false
+	if health_bar_delay != null:
+		health_bar_delay.visible = false
 	if exp_bar != null:
 		exp_bar.visible = false
 	if team_glow != null:
 		team_glow.visible = false
 	if defend_icon != null:
 		defend_icon.visible = false
+	if level_badge != null:
+		level_badge.visible = false
 	if death_sound_player != null and death_sound_player.stream != null:
 		await death_sound_player.finished
 	queue_free()
 
 ## Reduces current_hp by [amount], plays bar/flash tweens, grants EXP to [attacker]. Calls [method die] if HP reaches 0.
 func take_damage(amount: int, attacker: Node2D = null) -> void:
+	var hp_before := current_hp
 	current_hp -= amount
 	if current_hp < 0:
 		current_hp = 0
-		
+
+	if _hp_damage_tween != null and _hp_damage_tween.is_valid():
+		_hp_damage_tween.kill()
+	_hp_damage_tween = null
+
 	var bar_tween: Tween = null
 	if health_bar != null:
+		_ensure_health_bar_delay()
+		_sync_health_bar_delay_layout(false)
+		health_bar.max_value = max_hp
+		if health_bar_delay != null:
+			health_bar_delay.max_value = max_hp
+		health_bar.value = float(hp_before)
+		if health_bar_delay != null:
+			health_bar_delay.value = maxf(health_bar_delay.value, float(hp_before))
+
 		bar_tween = create_tween()
-		bar_tween.tween_property(health_bar, "value", current_hp, HEALTH_BAR_TWEEN_DURATION)
+		bar_tween.set_parallel(true)
+		bar_tween.tween_property(health_bar, "value", float(current_hp), HEALTH_BAR_LOSS_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		if health_bar_delay != null:
+			bar_tween.tween_property(health_bar_delay, "value", float(current_hp), HEALTH_BAR_DELAY_TRAIL_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		_hp_damage_tween = bar_tween
 	var flash: Tween = create_tween()
 	flash.tween_property(self, "modulate", Color.RED, DAMAGE_FLASH_DURATION)
 	flash.tween_property(self, "modulate", base_color, DAMAGE_FLASH_DURATION)
@@ -509,6 +697,16 @@ func take_damage(amount: int, attacker: Node2D = null) -> void:
 		emit_signal("damaged", current_hp)
 
 ## Clears has_moved, is_exhausted, is_defending; resets poise meta and stagger visuals.
+func _exhausted_root_modulate() -> Color:
+	var m: Color = base_color * EXHAUSTED_MODULATE
+	return Color(
+		maxf(m.r, EXHAUSTED_CHANNEL_FLOOR),
+		maxf(m.g, EXHAUSTED_CHANNEL_FLOOR),
+		maxf(m.b, EXHAUSTED_CHANNEL_FLOOR),
+		m.a
+	)
+
+
 func reset_turn() -> void:
 	has_moved = false
 	move_points_used_this_turn = 0.0
@@ -541,9 +739,9 @@ func finish_turn() -> void:
 	set_selected(false) 
 	set_selected_glow(false) # <--- ADD THIS LINE
 	
-	# Force the sprite color to update immediately
+	# Force the sprite color to update immediately (preserve scene tint on enemies)
 	if is_exhausted:
-		modulate = Color(0.3, 0.3, 0.3)
+		modulate = _exhausted_root_modulate()
 	
 	emit_signal("finished_turn", self)
 
@@ -564,7 +762,7 @@ func set_selected(is_selected: bool) -> void:
 		selection_tween.tween_property(team_glow, "color:a", 0.3, 0.5)
 	else:
 		team_glow.color.a = maxf(team_glow.color.a, 0.3)
-		modulate = Color(0.3, 0.3, 0.3) if is_exhausted else Color.WHITE
+		modulate = _exhausted_root_modulate() if is_exhausted else base_color
 
 # Call this function with true to start glowing, false to stop.
 func set_selected_glow(is_selected: bool) -> void:
@@ -625,6 +823,9 @@ func setup_from_save_data(save_dict: Dictionary) -> void:
 	if exp_bar:
 		exp_bar.max_value = get_exp_required()
 		exp_bar.value = experience
+	snap_health_delay_to_main()
+	_refresh_level_badge()
+	call_deferred("_refresh_level_badge")
 	# 5. Restore Skill Tree Data
 	if save_dict.has("skill_points"):
 		skill_points = save_dict["skill_points"]
@@ -770,6 +971,20 @@ func get_max_poise() -> int:
 func get_current_poise() -> int:
 	return get_meta("current_poise", get_max_poise())
 
+
+func _sync_poise_bar_layout(p_bar: ProgressBar) -> void:
+	if health_bar == null or p_bar == null:
+		return
+	var w: float = health_bar.size.x
+	if w < 2.0:
+		w = POISE_BAR_FALLBACK_WIDTH_PX
+	p_bar.custom_minimum_size = Vector2(w, POISE_BAR_HEIGHT_PX)
+	p_bar.scale = health_bar.scale
+	var dy: float = health_bar.size.y * absf(health_bar.scale.y) + 2.0
+	p_bar.position = health_bar.position + Vector2(0.0, dy)
+	p_bar.z_index = maxi(health_bar.z_index - 1, 0)
+
+
 func update_poise_visuals() -> void:
 	var max_p := get_max_poise()
 	var cur_p := get_current_poise()
@@ -779,17 +994,20 @@ func update_poise_visuals() -> void:
 		p_bar = ProgressBar.new()
 		p_bar.name = "DynamicPoiseBar"
 		p_bar.show_percentage = false
-		p_bar.custom_minimum_size = Vector2(health_bar.size.x, 4)
-		p_bar.position = health_bar.position + Vector2(0, health_bar.size.y + 1)
-		var bg = StyleBoxFlat.new()
-		bg.bg_color = Color(0.1, 0.1, 0.1, 0.8)
-		var fill = StyleBoxFlat.new()
-		fill.bg_color = Color(1.0, 0.7, 0.0, 1.0)
-		p_bar.add_theme_stylebox_override("background", bg)
-		p_bar.add_theme_stylebox_override("fill", fill)
+		p_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p_bar.add_theme_stylebox_override("background", UnitBarVisuals.poise_track())
+		p_bar.add_theme_stylebox_override("fill", UnitBarVisuals.poise_fill())
 		add_child(p_bar)
+		p_bar.set_meta("_unit_bar_visuals_v1", true)
+		_sync_poise_bar_layout(p_bar)
+		call_deferred("_sync_poise_bar_layout", p_bar)
 
 	if p_bar != null:
+		if not p_bar.has_meta("_unit_bar_visuals_v1"):
+			p_bar.add_theme_stylebox_override("background", UnitBarVisuals.poise_track())
+			p_bar.add_theme_stylebox_override("fill", UnitBarVisuals.poise_fill())
+			p_bar.set_meta("_unit_bar_visuals_v1", true)
+		_sync_poise_bar_layout(p_bar)
 		p_bar.max_value = maxf(1, max_p)
 		if _poise_bar_tween != null and _poise_bar_tween.is_valid():
 			_poise_bar_tween.kill()
@@ -814,13 +1032,17 @@ func set_staggered_visuals(is_staggered: bool) -> void:
 # ARENA GHOST UI SYNC
 # ==========================================
 func setup_ghost_ui() -> void:
+	_apply_overhead_bar_visuals()
+	_refresh_level_badge()
+	call_deferred("_refresh_level_badge")
 	if health_bar:
 		health_bar.max_value = max_hp
 		health_bar.value = current_hp
 	if exp_bar:
 		exp_bar.max_value = get_exp_required()
 		exp_bar.value = experience
-		
+	snap_health_delay_to_main()
+
 	# Optional: Give the ghosts an intimidating purple Arena aura!
 	if team_glow:
 		team_glow.color = Color(0.8, 0.1, 1.0, 0.4)

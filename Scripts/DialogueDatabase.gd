@@ -249,6 +249,26 @@ var merchant_lines: Dictionary = {
 		"I would rather throw it in the river than sell it for that, %s.",
 		"A tragic attempt at bartering, %s. Stick to swinging your weapon."
 	],
+	"haggle_mid": [
+		"You are warming up, %s. My patience is not infinite, but it is theatrical.",
+		"Halfway there, %s. The donkey is taking notes.",
+		"Steady, %s. I respect a buyer who can hover.",
+		"Interesting rhythm, %s. Are you negotiating or conducting an orchestra?",
+		"You have focus, %s. That is almost as valuable as coin.",
+	],
+	"haggle_concede": [
+		"Fine, %s. Walk away. I will pretend this never tested my nerves.",
+		"Go, %s. My ledger will not mourn what you did not buy.",
+		"As you wish, %s. The price remains, and my opinion of you is merely confused.",
+		"Leaving mid-dance, %s. How very diplomatic.",
+		"No harm done, %s. Next time bring steadier hands or heavier coin.",
+	],
+	"haggle_win_extra": [
+		"And %s — I will mark a second shelf item down before I regret it. Do not make me say it twice.",
+		"You broke me twice today, %s. Another piece joins the half-price pile. Happy?",
+		"Fine, %s. Two discounts. The guild will assume I was hit on the head.",
+		"Take your victory lap, %s. A second trinket goes on sale before I come to my senses.",
+	],
 	"idle": [
 		"Are you going to buy something, %s, or just stare at my magnificent beard.",
 		"I once sold a half-eaten apple to a king. True story, %s.",

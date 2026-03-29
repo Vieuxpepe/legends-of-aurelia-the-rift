@@ -1,0 +1,84 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://cj7t2jer3od7o"]
+
+[ext_resource type="Texture2D" uid="uid://dxuct7agsk0jx" path="res://Resources/Music Discs/Music Disc.png" id="1_40qxb"]
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="2_r30pk"]
+[ext_resource type="AudioStream" uid="uid://wqvitxw0xyuk" path="res://Resources/Music Discs/Sergeant Kilro's Theme.mp3" id="3_40qxb"]
+
+[resource]
+script = ExtResource("2_r30pk")
+rarity = "Rare"
+item_name = "Mysterious Disc"
+icon = ExtResource("1_40qxb")
+gold_cost = 100
+unlocked_music_track = ExtResource("3_40qxb")
+track_title = "Sergeant Kilro's Theme"
+track_lyrics = "[INTRO - INSTRUMENTAL (fast build)]
+(Orchestra hits → guitars enter → double-kick ramps. Heroic motif.)
+
+[VERSE 1 (driving, lower phrasing)]
+When the roof turns coal and the night runs hot,
+I hear the call—then I move, I don’t stop.
+No throne to chase, no gold to hold—
+Only the oath, and the iron cold.
+
+[PRE-CHORUS (rising, chant-like)]
+Step by step—hold the ground.
+Shields up high—feel the sound.
+If fear comes close, let it show—
+I don’t break. I don’t go.
+
+[CHORUS (HUGE, baritone chant)]
+SERGEANT KILRO—IRON WALL!
+I take the fire before you fall!
+Hear the drum in my heartbeat pound,
+I’m the vow that holds this ground!
+SERGEANT KILRO—HOLD THE LINE!
+Till the black turns out to light!
+Through the storm, through the smoke, through the blows—
+You live… if I say so!
+
+[VERSE 2 (more intense)]
+They come like wolves on a blood-wet road,
+But I’m the shield—so the weak can hold.
+Steel on steel, and the world turns loud,
+I stand in front—like stone, like proud.
+
+[PRE-CHORUS 2 (higher, still low-register)]
+Lock it in—don’t let it bend,
+Shoulder to shoulder—end to end.
+If fate wants in, let it try—
+It pays in full… tonight.
+
+[CHORUS (repeat, choir punches)]
+SERGEANT KILRO—IRON WALL!
+I take the fire before you fall!
+Hear the drum in my heartbeat pound,
+I’m the vow that holds this ground!
+SERGEANT KILRO—HOLD THE LINE!
+Till the black turns out to light!
+Through the storm, through the smoke, through the blows—
+You live… if I say so!
+
+[BRIDGE (half-time → explosive lift)]
+(Brief drop: orchestra + choir, then guitars.)
+I was forged where hope ran thin,
+I learned what grit is born within:
+Not “no fear” in my blood—
+But “not one more” in the mud.
+
+[SOLO (shred lead over orchestra)]
+(Guitar solo, then drum fill back into final chorus.)
+
+[FINAL CHORUS (VERY HUGE)]
+SERGEANT KILRO—IRON WALL!
+I take the fire before you fall!
+Raise the horns, let the war-drums roll,
+I guard the flame, I guard the soul!
+SERGEANT KILRO—HOLD THE LINE!
+Till the dawn cuts clean and bright!
+Through the storm, through the smoke, through the blows—
+You live… if I say so!
+
+[OUTRO - INSTRUMENTAL (victory sprint)]
+(Orchestra + guitars hit the motif, hard final chord.)"
+metadata/_custom_type_script = "uid://67xkte2k6sun"

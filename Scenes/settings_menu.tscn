@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://ys66hj6lpj2k" path="res://settings_menu.gd" id="1_ufg0w"]
 
 [node name="SettingsMenu" type="Control" unique_id=1584989396]
+visible = false
 process_mode = 3
 z_index = 100
 layout_mode = 3
@@ -15,6 +16,7 @@ script = ExtResource("1_ufg0w")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=248251516]
 unique_name_in_owner = true
+visible = false
 layer = 128
 
 [node name="Backdrop" type="ColorRect" parent="CanvasLayer"]
@@ -35,28 +37,16 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="ModalPanel" type="Panel" parent="CanvasLayer/ModalRoot"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -760.0
-offset_top = -430.0
-offset_right = 760.0
-offset_bottom = 430.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = 0
 clip_contents = true
 
 [node name="HeaderControls" type="HBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel"]
-offset_left = 28.0
-offset_top = 24.0
-offset_right = 1492.0
-offset_bottom = 106.0
+anchors_preset = 0
+clip_contents = true
 theme_override_constants/separation = 20
 
 [node name="TitleBlock" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/HeaderControls"]
-custom_minimum_size = Vector2(640, 0)
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
@@ -102,11 +92,81 @@ custom_minimum_size = Vector2(180, 52)
 layout_mode = 2
 text = "RESUME"
 
+[node name="PauseRoot" type="Control" parent="CanvasLayer/ModalRoot/ModalPanel"]
+visible = false
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="PauseCenter" type="CenterContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PauseCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter"]
+custom_minimum_size = Vector2(440, 472)
+layout_mode = 2
+
+[node name="PauseVBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PauseTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+layout_mode = 2
+text = "GAME MENU"
+horizontal_alignment = 1
+
+[node name="PauseResumeButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "RESUME"
+
+[node name="PauseSettingsButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SETTINGS"
+
+[node name="PauseAudioButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "AUDIO"
+
+[node name="PausePerformanceButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PERFORMANCE"
+
+[node name="PauseInterfaceButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "INTERFACE"
+
+[node name="PauseQuitButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/PauseRoot/PauseCenter/PauseCard/PauseVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "QUIT TO TITLE"
+
 [node name="ContentMargin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel"]
-offset_left = 24.0
-offset_top = 118.0
-offset_right = 1496.0
-offset_bottom = 836.0
+anchors_preset = 0
 clip_contents = true
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
@@ -121,14 +181,14 @@ clip_contents = true
 theme_override_constants/separation = 24
 
 [node name="SettingsScroll" type="ScrollContainer" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox" unique_id=1993941047]
-custom_minimum_size = Vector2(840, 0)
+custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.8
 size_flags_vertical = 3
 
 [node name="SettingsVBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(840, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -150,39 +210,17 @@ theme_override_constants/separation = 14
 
 [node name="AudioCameraTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
 layout_mode = 2
-text = "AUDIO & CAMERA"
+text = "CAMERA & PACING"
 
 [node name="AudioCameraSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
 layout_mode = 2
-text = "Comfort and battle pacing controls that affect every map immediately."
+text = "Camera movement, unit animation speed, and global time scale on the battlefield."
 autowrap_mode = 3
 
 [node name="AudioCameraRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 color = Color(0.745098, 0.619608, 0.258824, 0.5)
-
-[node name="VolumeLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
-layout_mode = 2
-text = "MASTER VOLUME"
-
-[node name="VolumeControlRow" type="HBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="VolumeSlider" type="HSlider" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox/VolumeControlRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 26)
-layout_mode = 2
-size_flags_horizontal = 3
-max_value = 1.0
-step = 0.01
-value = 1.0
-
-[node name="VolumeValue" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox/VolumeControlRow"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-horizontal_alignment = 2
 
 [node name="CameraLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
 layout_mode = 2
@@ -229,6 +267,14 @@ value = 0.15
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 horizontal_alignment = 2
+
+[node name="GameSpeedLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
+layout_mode = 2
+text = "GAME SPEED"
+
+[node name="GameSpeedOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="FollowEnemyToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/AudioCameraCard/Margin/VBox"]
 unique_name_in_owner = true
@@ -287,6 +333,32 @@ text = "SHOW PATH PREVIEW"
 layout_mode = 2
 text = "PATH PREVIEW PULSE"
 
+[node name="PathStyleLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "PATH LINE STYLE"
+
+[node name="PathStyleOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+
+[node name="PathCornerLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "PATH CORNER SMOOTHING"
+
+[node name="PathCornerOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+
+[node name="PathEndpointToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "PATH ENDPOINT MARKER"
+
+[node name="PathCostTicksToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "PATH MP TICK MARKS"
+
+[node name="PathInvalidGhostToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "PREVIEW PATH TO INVALID TILES"
+
 [node name="ShowBattleLogToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
 layout_mode = 2
 text = "SHOW FIELD LOG"
@@ -294,6 +366,11 @@ text = "SHOW FIELD LOG"
 [node name="AllowFogToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
 layout_mode = 2
 text = "ALLOW FOG OF WAR ON DESIGNED MAPS"
+
+[node name="AiRoleBatchToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "AI ROLE BATCH TURNS (BUFF → FIGHT → HEAL)"
 
 [node name="ZoomCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox"]
 layout_mode = 2
@@ -528,7 +605,7 @@ placeholder_text = "Subject of the feedback"
 [node name="FeedbackBody" type="TextEdit" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SideColumn/FeedbackCard/Margin/VBox"]
 custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 1
 placeholder_text = "Write your feedback here. Tell us what felt strong, weak, unclear, or exciting."
 
 [node name="FeedbackStatusLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SideColumn/FeedbackCard/Margin/VBox"]
@@ -546,6 +623,388 @@ text = "SUBMIT REPORT"
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 text = "VIEW COMMUNITY REPORTS"
+
+[node name="PerformanceMargin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel"]
+anchors_preset = 0
+visible = false
+clip_contents = true
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="PerformanceVBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 22
+
+[node name="PerformanceCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PerformanceCardTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+layout_mode = 2
+text = "DISPLAY"
+
+[node name="PerformanceCardSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+layout_mode = 2
+text = "Window, frame pacing, and sync. Changes apply immediately."
+autowrap_mode = 3
+
+[node name="PerformanceCardRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.745098, 0.619608, 0.258824, 0.5)
+
+[node name="WindowModeLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+layout_mode = 2
+text = "WINDOW MODE"
+
+[node name="PerfWindowModeOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ResolutionLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+layout_mode = 2
+text = "RESOLUTION (WINDOWED)"
+
+[node name="PerfResolutionOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PerfVsyncToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "VERTICAL SYNC (VSYNC)"
+
+[node name="MaxFpsLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+layout_mode = 2
+text = "MAX FRAME RATE"
+
+[node name="PerfMaxFpsOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PerfShowFpsToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/PerformanceCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SHOW FPS COUNTER"
+
+[node name="RenderingCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="RenderingCardTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin/VBox"]
+layout_mode = 2
+text = "RENDERING"
+
+[node name="RenderingCardSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin/VBox"]
+layout_mode = 2
+text = "Anti-aliasing and visual effects. Higher quality costs more GPU time."
+autowrap_mode = 3
+
+[node name="RenderingCardRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.384314, 0.819608, 0.980392, 0.45)
+
+[node name="MsaaLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin/VBox"]
+layout_mode = 2
+text = "ANTI-ALIASING (MSAA)"
+
+[node name="PerfMsaaOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PerfScreenShakeToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/PerformanceMargin/PerformanceVBox/RenderingCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SCREEN SHAKE EFFECTS"
+
+[node name="AudioMargin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel"]
+anchors_preset = 0
+visible = false
+clip_contents = true
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="AudioVBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 22
+
+[node name="AudioLevelsCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="AudioLevelsTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+text = "LEVELS"
+
+[node name="AudioLevelsSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+text = "Master output plus separate music and effects buses. Music routes through the Music bus where scenes use it."
+autowrap_mode = 3
+
+[node name="AudioLevelsRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.745098, 0.619608, 0.258824, 0.5)
+
+[node name="AudioMasterLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+text = "MASTER VOLUME"
+
+[node name="AudioMasterRow" type="HBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AudioMasterSlider" type="HSlider" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox/AudioMasterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="AudioMasterValue" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox/AudioMasterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="AudioMusicLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+text = "MUSIC VOLUME"
+
+[node name="AudioMusicRow" type="HBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AudioMusicSlider" type="HSlider" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox/AudioMusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="AudioMusicValue" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox/AudioMusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="AudioSfxLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+text = "SOUND EFFECTS"
+
+[node name="AudioSfxRow" type="HBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AudioSfxSlider" type="HSlider" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox/AudioSfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="AudioSfxValue" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioLevelsCard/Margin/VBox/AudioSfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="AudioBehaviorCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioBehaviorCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioBehaviorCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="AudioBehaviorTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioBehaviorCard/Margin/VBox"]
+layout_mode = 2
+text = "BEHAVIOR"
+
+[node name="AudioBehaviorSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioBehaviorCard/Margin/VBox"]
+layout_mode = 2
+text = "Optional quality-of-life rules for when the game is not in focus."
+autowrap_mode = 3
+
+[node name="AudioBehaviorRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioBehaviorCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.384314, 0.819608, 0.980392, 0.45)
+
+[node name="AudioMuteUnfocusedToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/AudioMargin/AudioVBox/AudioBehaviorCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "MUTE ALL AUDIO WHEN GAME IS UNFOCUSED"
+
+[node name="InterfaceMargin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel"]
+anchors_preset = 0
+visible = false
+clip_contents = true
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="InterfaceHBox" type="HBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 24
+
+[node name="HudOverlaysCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="HudOverlaysCardTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+layout_mode = 2
+text = "HUD & OVERLAYS"
+
+[node name="HudOverlaysCardSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+layout_mode = 2
+text = "Toggle and scale the heads-up display elements visible during battle."
+autowrap_mode = 3
+
+[node name="HudOverlaysCardRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.745098, 0.619608, 0.258824, 0.5)
+
+[node name="HudScaleLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+layout_mode = 2
+text = "HUD SCALE"
+
+[node name="UiHudScaleOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="UiShowDamageNumbersToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SHOW DAMAGE NUMBERS"
+
+[node name="UiShowHealthBarsToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SHOW UNIT HEALTH BARS"
+
+[node name="UiShowPhaseBannerToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SHOW PHASE BANNER"
+
+[node name="UiShowStatusEffectsToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SHOW STATUS EFFECTS ON UNITS"
+
+[node name="CombatTextCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CombatTextCardTitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+layout_mode = 2
+text = "COMBAT TEXT"
+
+[node name="CombatTextCardSubtitle" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+layout_mode = 2
+text = "Control the size of floating damage numbers and the combat log font."
+autowrap_mode = 3
+
+[node name="CombatTextCardRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.384314, 0.819608, 0.980392, 0.45)
+
+[node name="DamageTextSizeLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+layout_mode = 2
+text = "DAMAGE TEXT SIZE"
+
+[node name="UiDamageTextSizeOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CombatLogFontLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+layout_mode = 2
+text = "COMBAT LOG FONT SIZE"
+
+[node name="UiCombatLogFontOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/CombatTextCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="FeedbackBoard" type="Control" parent="CanvasLayer" unique_id=1980899199]
 visible = false
@@ -566,17 +1025,7 @@ mouse_filter = 2
 color = Color(0, 0, 0, 0.68)
 
 [node name="FeedbackModal" type="Panel" parent="CanvasLayer/FeedbackBoard"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -520.0
-offset_top = -340.0
-offset_right = 520.0
-offset_bottom = 340.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = 0
 clip_contents = true
 
 [node name="FeedbackModalMargin" type="MarginContainer" parent="CanvasLayer/FeedbackBoard/FeedbackModal"]

@@ -37,8 +37,7 @@ static func build_ordered_command_unit_ids_from_campaign() -> PackedStringArray:
 static func display_label_for_command_unit_id(command_id: String) -> String:
 	var key: String = str(command_id).strip_edges()
 	if key == "Avatar":
-		var s: String = str(CampaignManager.custom_avatar.get("unit_name", CampaignManager.custom_avatar.get("name", "Commander"))).strip_edges()
-		return s if s != "" else "Commander"
+		return CampaignManager.get_player_display_name("Commander")
 	return key
 
 

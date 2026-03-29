@@ -233,8 +233,7 @@ func _resolve_local_display_name() -> String:
 	var sw_name: String = CoopOnlineServiceConfig.get_logged_in_player_name()
 	if sw_name != "":
 		return sw_name
-	var avatar_name: String = str(CampaignManager.custom_avatar.get("unit_name", CampaignManager.custom_avatar.get("name", "Commander"))).strip_edges()
-	return avatar_name if avatar_name != "" else "Commander"
+	return CampaignManager.get_player_display_name("Commander")
 
 
 func _generate_room_code() -> String:

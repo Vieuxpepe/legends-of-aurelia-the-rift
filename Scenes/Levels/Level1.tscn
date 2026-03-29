@@ -41,6 +41,7 @@
 [ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="24_nful3"]
 [ext_resource type="Resource" uid="uid://bl8fighi5vacc" path="res://Resources/Music Discs/Disc_EpicTheme.tres" id="24_q63fc"]
 [ext_resource type="AudioStream" uid="uid://c1l68wat5t453" path="res://SoundEffects/attacking_a_unit_in__#3-1771002816393.wav" id="25_l0b4w"]
+[ext_resource type="Resource" uid="uid://cj7t2jer3od7o" path="res://Resources/Music Discs/Disc_SergeantKilroTheme.tres" id="26_sx0kx"]
 [ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="26_y7lbt"]
 [ext_resource type="AudioStream" uid="uid://7tprk5jnxe44" path="res://SoundEffects/Epic_Level_up_sound.wav" id="27_eqf7l"]
 [ext_resource type="Texture2D" uid="uid://dc5tksv7qa76g" path="res://Assets/Backgrounds/Default Background.png" id="28_fpeun"]
@@ -108,6 +109,7 @@
 [ext_resource type="PackedScene" uid="uid://c80ef0dbdtjjb" path="res://Scenes/fire_glow.tscn" id="83_8a6bc"]
 [ext_resource type="Texture2D" uid="uid://cx81cte88pqya" path="res://Assets/Backgrounds/BackgroundParallax.jpeg" id="85_0blb5"]
 [ext_resource type="AudioStream" uid="uid://de37yeicxyt1h" path="res://SoundEffects/Sound For Invalid Action, Dungeon Game, 16 Bit.mp3" id="106_be25e"]
+[ext_resource type="Script" uid="uid://5kh2jrl0vld8" path="res://Scripts/UI/PathPreviewTicks.gd" id="path_preview_ticks"]
 
 [sub_resource type="Resource" id="Resource_8a6bc"]
 script = ExtResource("6_dm0ry")
@@ -163,6 +165,11 @@ metadata/_custom_type_script = "uid://qmryjywc3ivm"
 [sub_resource type="Resource" id="Resource_lfvqy"]
 script = ExtResource("14_yppqf")
 item = ExtResource("24_q63fc")
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_kr0j2"]
+script = ExtResource("14_yppqf")
+item = ExtResource("26_sx0kx")
 metadata/_custom_type_script = "uid://qmryjywc3ivm"
 
 [sub_resource type="Resource" id="Resource_qmkwy"]
@@ -612,23 +619,9 @@ dash_fx_scene = ExtResource("7_dp7rq")
 slash_fx_scene = ExtResource("8_4k0yu")
 level_up_fx_scene = ExtResource("9_qy62q")
 fire_tile_loop_vfx_scene = ExtResource("9_314h1")
-default_fire_tile_damage = null
-fire_tile_extinguish_shrink_sec = null
-GRID_SIZE = null
-zoom_step = null
-min_zoom = null
-max_zoom = null
-zoom_to_cursor = null
-camera_speed = null
-edge_margin = null
-use_fog_of_war = null
-default_vision_range = null
-vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_dm0ry")]([SubResource("Resource_8a6bc")])
-outro_dialogue = null
 map_objective = 1
-custom_objective_text = null
-turn_limit = 7
+turn_limit = 1
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
 
@@ -794,7 +787,7 @@ drop_loot = Array[Resource]([SubResource("Resource_a308f"), SubResource("Resourc
 position = Vector2(384, 192)
 min_gold_drop = 5
 max_gold_drop = 25
-drop_loot = Array[Resource]([SubResource("Resource_15pab"), SubResource("Resource_7ddr4"), SubResource("Resource_kgw6u"), SubResource("Resource_lfvqy")])
+drop_loot = Array[Resource]([SubResource("Resource_15pab"), SubResource("Resource_7ddr4"), SubResource("Resource_kgw6u"), SubResource("Resource_lfvqy"), SubResource("Resource_kr0j2")])
 
 [node name="DestructibleCrate5" parent="Destructibles" unique_id=1176764654 instance=ExtResource("9_u5p01")]
 position = Vector2(320, 256)
@@ -2202,8 +2195,33 @@ stream = ExtResource("25_l0b4w")
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("26_y7lbt")
 
+[node name="PathLineUnder" type="Line2D" parent="." unique_id=271209551]
+z_index = 100
+z_as_relative = false
+width = 11.0
+default_color = Color(0.03, 0.05, 0.12, 0.92)
+antialiased = true
+
 [node name="PathLine" type="Line2D" parent="." unique_id=271209550]
+z_index = 101
+z_as_relative = false
 width = 4.0
+default_color = Color(0.82, 0.96, 1, 1)
+antialiased = true
+
+[node name="PathEndMarker" type="Node2D" parent="." unique_id=271209552]
+visible = false
+z_index = 102
+z_as_relative = false
+
+[node name="Diamond" type="Polygon2D" parent="PathEndMarker" unique_id=942018156]
+color = Color(0.9, 0.98, 1, 0.92)
+polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
+
+[node name="PathPreviewTicks" type="Node2D" parent="." unique_id=1264041622]
+z_index = 103
+z_as_relative = false
+script = ExtResource("path_preview_ticks")
 
 [node name="HoverGlow" type="ColorRect" parent="." unique_id=990792456]
 z_index = -1

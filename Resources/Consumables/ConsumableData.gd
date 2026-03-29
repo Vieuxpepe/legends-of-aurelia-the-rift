@@ -35,3 +35,4 @@ class_name ConsumableData
 @export_category("Jukebox Unlock")
 @export var unlocked_music_track: AudioStream
 @export var track_title: String = ""
+@export_multiline var track_lyrics: String = ""

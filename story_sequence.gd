@@ -1,13 +1,35 @@
+# ==============================================================================
+# Purpose / Dependencies / AI Guidance
+# ==============================================================================
+# Purpose
+# Controls the prologue + dialogue playback for the story sequence modal UI,
+# including music/volume transitions, portrait/background animations, and the
+# typewriter text reveal.
+#
+# Dependencies
+# - Scene nodes:
+#   - $Background (TextureRect), $PortraitLeft (TextureRect), $PortraitRight (TextureRect)
+#   - $DialoguePanel/SpeakerLabel (Label), $DialoguePanel/DialogueText (RichTextLabel)
+#   - $DialoguePanel/NextIndicator (TextureButton), $TextBlip (AudioStreamPlayer), $SkipButton (TextureButton)
+# - Autoload/singletons:
+#   - CampaignManager.player_roster (used to replace {hero_name}/{weapon_name} and resolve HERO_PORTRAIT).
+#
+# AI/Reviewer Guidance
+# - Entry points: _ready() starts the first line; _process() advances/finishes typing; _play_line() renders one dictionary entry.
+# - Data contract: each `story_sequence` element is a Dictionary supporting keys like:
+#   `speaker`, `text`, `portrait_left`, `portrait_right`, `background`, `music`, `volume`,
+#   `shake`, `active_side`, `flip_left`, `flip_right`, `fit_background`.
+# ==============================================================================
 extends Control
 
-@onready var background = $Background
-@onready var portrait_left = $PortraitLeft
-@onready var portrait_right = $PortraitRight
-@onready var speaker_label = $DialoguePanel/SpeakerLabel
-@onready var dialogue_text = $DialoguePanel/DialogueText
-@onready var next_indicator = $DialoguePanel/NextIndicator
-@onready var text_blip = $TextBlip
-@onready var skip_button = $SkipButton
+@onready var background: TextureRect = $Background
+@onready var portrait_left: TextureRect = $PortraitLeft
+@onready var portrait_right: TextureRect = $PortraitRight
+@onready var speaker_label: Label = $DialoguePanel/SpeakerLabel
+@onready var dialogue_text: RichTextLabel = $DialoguePanel/DialogueText
+@onready var next_indicator: TextureButton = $DialoguePanel/NextIndicator
+@onready var text_blip: AudioStreamPlayer = $TextBlip
+@onready var skip_button: TextureButton = $SkipButton
 
 # --- MUSIC LOGIC ---
 @onready var bg_music: AudioStreamPlayer = $BackgroundMusic
@@ -22,33 +44,33 @@ var current_volume_target: float = base_volume
 
 # --- ASSETS ---
 # Existing
-var bg_peaceful_village = preload("res://Assets/Backgrounds/peaceful_village.jpeg")
-var bg_attacked_village = preload("res://Assets/Backgrounds/attacked_village.png")
-var bg_vespera_descent = preload("res://Assets/Backgrounds/vespera_descent.png")
-var bg_burning_village = preload("res://Assets/Backgrounds/burning_village.png")
+var bg_peaceful_village: Texture2D = preload("res://Assets/Backgrounds/peaceful_village.jpeg")
+var bg_attacked_village: Texture2D = preload("res://Assets/Backgrounds/attacked_village.png")
+var bg_vespera_descent: Texture2D = preload("res://Assets/Backgrounds/vespera_descent.png")
+var bg_burning_village: Texture2D = preload("res://Assets/Backgrounds/burning_village.png")
 
 # NEW (Prologue slides) - create these files and place them in this folder.
 # If you want different names/paths, just update these 4 lines.
-var bg_prologue_void = preload("res://Assets/Backgrounds/prologue_void.png")
-var bg_prologue_shattering_war = preload("res://Assets/Backgrounds/prologue_shattering_war.png")
-var bg_prologue_catalyst_mark = preload("res://Assets/Backgrounds/prologue_catalyst_mark.png")
-var bg_prologue_map = preload("res://Assets/Backgrounds/prologue_map.png")
+var bg_prologue_void: Texture2D = preload("res://Assets/Backgrounds/prologue_void.png")
+var bg_prologue_shattering_war: Texture2D = preload("res://Assets/Backgrounds/prologue_shattering_war.png")
+var bg_prologue_catalyst_mark: Texture2D = preload("res://Assets/Backgrounds/prologue_catalyst_mark.png")
+var bg_prologue_map: Texture2D = preload("res://Assets/Backgrounds/prologue_map.png")
 
 # Base Portraits
-var tex_vespera = preload("res://Assets/Portraits/vespera.png")
-var tex_elder = preload("res://Assets/Portraits/elder.png")
-var tex_kaelen_front = preload("res://Assets/Portraits/kaelen_front.png")
-var tex_kaelen_front_yell = preload("res://Assets/Portraits/kaelen_front_yell.png")
-var tex_kaelen_side = preload("res://Assets/Portraits/kaelen_side.png")
-var tex_kaelen_side_yell = preload("res://Assets/Portraits/kaelen_side_yell.png")
+var tex_vespera: Texture2D = preload("res://Assets/Portraits/vespera.png")
+var tex_elder: Texture2D = preload("res://Assets/Portraits/elder.png")
+var tex_kaelen_front: Texture2D = preload("res://Assets/Portraits/kaelen_front.png")
+var tex_kaelen_front_yell: Texture2D = preload("res://Assets/Portraits/kaelen_front_yell.png")
+var tex_kaelen_side: Texture2D = preload("res://Assets/Portraits/kaelen_side.png")
+var tex_kaelen_side_yell: Texture2D = preload("res://Assets/Portraits/kaelen_side_yell.png")
 
 # Vespera Expressions & Blink
-var tex_vespera_smirk = preload("res://Assets/Portraits/vespera_smirk.png")
-var tex_vespera_intrigued = preload("res://Assets/Portraits/vespera_intrigued.png")
-var tex_vespera_disgusted = preload("res://Assets/Portraits/vespera_disgusted.png")
-var tex_vespera_angry = preload("res://Assets/Portraits/vespera_angry.png")
-var tex_vespera_blink = preload("res://Assets/Portraits/vespera_blink.png")
-var tex_acolyte = preload("res://Assets/Portraits/shadow_acolyte.png")
+var tex_vespera_smirk: Texture2D = preload("res://Assets/Portraits/vespera_smirk.png")
+var tex_vespera_intrigued: Texture2D = preload("res://Assets/Portraits/vespera_intrigued.png")
+var tex_vespera_disgusted: Texture2D = preload("res://Assets/Portraits/vespera_disgusted.png")
+var tex_vespera_angry: Texture2D = preload("res://Assets/Portraits/vespera_angry.png")
+var tex_vespera_blink: Texture2D = preload("res://Assets/Portraits/vespera_blink.png")
+var tex_acolyte: Texture2D = preload("res://Assets/Portraits/shadow_acolyte.png")
 
 var bg_tween: Tween
 var blink_tween: Tween
@@ -60,7 +82,7 @@ var cooldown_duration: float = 0.35
 # --- STORY SEQUENCE ---
 # Added a Wind-Waker-style prologue (4 slides) + the extra bridge line.
 # Then your existing Oakhaven lines start unchanged.
-var story_sequence = [
+var story_sequence: Array[Dictionary] = [
 	# --- PROLOGUE SLIDES ---
 	{
 		"speaker": "",
@@ -316,6 +338,8 @@ var type_speed: float = 0.03
 var is_ending: bool = false
 
 func _ready() -> void:
+	if bg_music != null:
+		bg_music.bus = "Music"
 	next_indicator.visible = false
 
 	# --- SKIP BUTTON LOGIC ---
@@ -367,8 +391,7 @@ func _play_line(index: int) -> void:
 	if index >= story_sequence.size():
 		_end_sequence()
 		return
-
-	var line_data = story_sequence[index]
+	var line_data: Dictionary = story_sequence[index]
 
 	if line_data.has("volume"):
 		current_volume_target = line_data["volume"]
@@ -381,9 +404,9 @@ func _play_line(index: int) -> void:
 		var vol_tween = create_tween()
 		vol_tween.tween_property(bg_music, "volume_db", current_volume_target, 2.5)
 
-	var mc_name = "Hero"
-	var mc_portrait = null
-	var mc_weapon = "blade"
+	var mc_name: String = "Hero"
+	var mc_portrait: Texture2D = null
+	var mc_weapon: String = "blade"
 
 	if CampaignManager.player_roster.size() > 0:
 		var hero = CampaignManager.player_roster[0]
@@ -392,8 +415,8 @@ func _play_line(index: int) -> void:
 		if hero.get("weapon") != null:
 			mc_weapon = hero.weapon.weapon_name
 
-	var final_text = line_data["text"].replace("{hero_name}", mc_name).replace("{weapon_name}", mc_weapon)
-	var final_speaker = line_data["speaker"].replace("{hero_name}", mc_name)
+	var final_text: String = line_data["text"].replace("{hero_name}", mc_name).replace("{weapon_name}", mc_weapon)
+	var final_speaker: String = line_data["speaker"].replace("{hero_name}", mc_name)
 
 	if final_speaker == "":
 		speaker_label.text = ""

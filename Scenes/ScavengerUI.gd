@@ -556,7 +556,7 @@ func _on_action_btn_pressed() -> void:
 	if selected_meta.is_empty(): return
 
 	var item = selected_meta["item"]
-	var player_name: String = str(CampaignManager.custom_avatar.get("name", CampaignManager.custom_avatar.get("unit_name", ""))).strip_edges()
+	var player_name: String = CampaignManager.resolve_player_display_name(CampaignManager.player_profile_display_override, "")
 	if player_name.is_empty() and CampaignManager.player_roster.size() > 0:
 		player_name = str(CampaignManager.player_roster[0].get("unit_name", "Hero"))
 	if player_name.is_empty():

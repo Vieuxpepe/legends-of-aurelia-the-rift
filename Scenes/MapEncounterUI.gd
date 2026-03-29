@@ -131,8 +131,7 @@ func load_encounter(encounter_data: Dictionary) -> void:
 		var has_preferred = preferred_unit != "" and _is_unit_in_roster(preferred_unit)
 		var bonus_display_name: String = ""
 		if has_bonus_unit and bonus_unit == EncounterDatabase.AVATAR_SENTINEL:
-			var avatar_display: String = str(CampaignManager.custom_avatar.get("name", CampaignManager.custom_avatar.get("unit_name", ""))).strip_edges()
-			bonus_display_name = avatar_display if not avatar_display.is_empty() else "You"
+			bonus_display_name = CampaignManager.get_player_display_name("You")
 		elif has_bonus_unit:
 			bonus_display_name = bonus_unit
 		elif has_preferred:
@@ -357,8 +356,7 @@ func _on_choice_made(option: Dictionary) -> void:
 	if canonical_bonus != "" and _roster_has_bonus_unit(canonical_bonus):
 		bonus_unit_name = canonical_bonus
 		if canonical_bonus == EncounterDatabase.AVATAR_SENTINEL:
-			var avatar_display: String = str(CampaignManager.custom_avatar.get("name", CampaignManager.custom_avatar.get("unit_name", ""))).strip_edges()
-			bonus_unit_name = avatar_display if not avatar_display.is_empty() else "You"
+			bonus_unit_name = CampaignManager.get_player_display_name("You")
 	elif EncounterDatabase.get_option_preferred_unit(option) != "" and _is_unit_in_roster(EncounterDatabase.get_option_preferred_unit(option)):
 		bonus_unit_name = EncounterDatabase.get_option_preferred_unit(option)
 	var bonus_applied: bool = bonus_unit_name != "" and EncounterDatabase.has_bonus_outcome(option)

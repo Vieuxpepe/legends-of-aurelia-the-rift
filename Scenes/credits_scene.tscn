@@ -1,0 +1,251 @@
+[gd_scene format=3 uid="uid://csny6lgpe1hqs"]
+
+[ext_resource type="Script" uid="uid://dvtjklky1vp6s" path="res://Scripts/UI/CreditsScene.gd" id="1_credits"]
+[ext_resource type="Script" uid="uid://bussvxctctvnj" path="res://Scripts/UI/Credits/CreditsContributorData.gd" id="2_c8n8s"]
+[ext_resource type="Texture2D" uid="uid://souo7l4cvmne" path="res://GRAPHIQUES/Korvain Games - Logo (1).png" id="2_iin1p"]
+[ext_resource type="Script" uid="uid://dng6jr560srai" path="res://Scripts/UI/Credits/CreditsSectionData.gd" id="3_5a4fm"]
+
+[sub_resource type="Resource" id="Resource_iin1p"]
+script = ExtResource("2_c8n8s")
+display_name = "Marc-Antoine Authier"
+details = "Creator & Lead Developer. Designs and implements the core gameplay systems, UI/UX, progression, tools, and overall production direction."
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_v22qd"]
+script = ExtResource("3_5a4fm")
+title = "Core Development"
+details = "The command center behind Legends of Aurelia. From tactical systems to progression architecture, this pillar turns vision into playable reality and keeps every feature battle-ready."
+members = Array[Resource]([SubResource("Resource_iin1p")])
+metadata/_custom_type_script = "uid://dng6jr560srai"
+
+[sub_resource type="Resource" id="Resource_nepx7"]
+script = ExtResource("2_c8n8s")
+display_name = "Emie Lefebvre"
+details = "Art Direction and Music Direction. Defines visual tone, mood language, and musical identity across menus, camp, and battlefield moments."
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_l7w5s"]
+script = ExtResource("3_5a4fm")
+title = "Art + Music Direction"
+details = "The soul of Aurelia. This direction shapes the game’s visual identity, emotional tone, and musical pulse so every scene feels cinematic, readable, and unforgettable."
+members = Array[Resource]([SubResource("Resource_nepx7")])
+metadata/_custom_type_script = "uid://dng6jr560srai"
+
+[sub_resource type="Resource" id="Resource_u7lnj"]
+script = ExtResource("2_c8n8s")
+display_name = "Codex & Cursor"
+details = "Development copilots used for implementation support, iteration speed, UI polishing, debugging passes, and workflow acceleration."
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_m2jcn"]
+script = ExtResource("3_5a4fm")
+title = "Tools + Pipeline"
+details = "The acceleration engine of production. Advanced co-development workflows, rapid iteration loops, and precision debugging support that keep quality high while momentum stays relentless."
+members = Array[Resource]([SubResource("Resource_u7lnj")])
+metadata/_custom_type_script = "uid://dng6jr560srai"
+
+[sub_resource type="Resource" id="Resource_tswuc"]
+script = ExtResource("2_c8n8s")
+display_name = "Maxime Beauchamp"
+details = "Playtester"
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_aykyg"]
+script = ExtResource("2_c8n8s")
+display_name = "Somegoodbud"
+details = "Playtester"
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_omi35"]
+script = ExtResource("2_c8n8s")
+display_name = "Nicolas Champion"
+details = "Playtester"
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_nr65u"]
+script = ExtResource("2_c8n8s")
+display_name = "Chasseur Indien"
+details = "Playtester"
+metadata/_custom_type_script = "uid://bussvxctctvnj"
+
+[sub_resource type="Resource" id="Resource_6w6au"]
+script = ExtResource("3_5a4fm")
+title = "Playtest Command"
+details = "The frontline validation squad. Real players stress-test systems, challenge balance, expose edge cases, and sharpen the experience into something worthy of long-term mastery."
+members = Array[Resource]([SubResource("Resource_tswuc"), SubResource("Resource_aykyg"), SubResource("Resource_omi35"), SubResource("Resource_nr65u")])
+metadata/_custom_type_script = "uid://dng6jr560srai"
+
+[node name="CreditsScene" type="Control" unique_id=1192861916]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_credits")
+scroll_speed = 50.0
+opener_text = "Presented by Korvain Games"
+finale_hold_seconds = 5.0
+finale_logo_texture = ExtResource("2_iin1p")
+finale_logo_max_size = Vector2(1120, 560)
+finale_center_y_ratio = 0.46
+finale_center_offset_y = -300.0
+credits_sections = Array[Resource]([SubResource("Resource_v22qd"), SubResource("Resource_l7w5s"), SubResource("Resource_m2jcn"), SubResource("Resource_6w6au")])
+studio_section_title = "Studio"
+studio_name = "Korvain Games"
+
+[node name="CreditsMusicPlayer" type="AudioStreamPlayer" parent="." unique_id=2060828791]
+volume_db = -8.0
+
+[node name="AmbientAura" type="ColorRect" parent="." unique_id=1999054011]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.42, 0.28, 0.1, 0.16)
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=787048428]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.02, 0.03, 0.92)
+
+[node name="Center" type="Control" parent="." unique_id=1253940136]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Card" type="Control" parent="Center" unique_id=1598287281]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 220.0
+offset_top = 110.0
+offset_right = -220.0
+offset_bottom = -110.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopFade" type="ColorRect" parent="Center/Card" unique_id=1975612128]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 92.0
+offset_bottom = 198.0
+grow_horizontal = 2
+mouse_filter = 2
+color = Color(0.08, 0.06, 0.04, 0.88)
+
+[node name="BottomFade" type="ColorRect" parent="Center/Card" unique_id=377616555]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -184.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0.08, 0.06, 0.04, 0.94)
+
+[node name="Margin" type="MarginContainer" parent="Center/Card" unique_id=112426837]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="Root" type="VBoxContainer" parent="Center/Card/Margin" unique_id=1092398737]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="VBoxContainer" parent="Center/Card/Margin/Root" unique_id=1700250816]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Overline" type="Label" parent="Center/Card/Margin/Root/Header" unique_id=1193180713]
+layout_mode = 2
+text = "AURELIA ARCHIVE"
+
+[node name="Title" type="Label" parent="Center/Card/Margin/Root/Header" unique_id=320798075]
+layout_mode = 2
+text = "CREDITS"
+
+[node name="Hint" type="Label" parent="Center/Card/Margin/Root/Header" unique_id=692619363]
+layout_mode = 2
+text = "Contributors scroll continuously from the lower field. Press ESC, Enter, or Return to Entry at any time."
+autowrap_mode = 3
+
+[node name="CreditsScroll" type="ScrollContainer" parent="Center/Card/Margin/Root" unique_id=1183203527]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 0
+
+[node name="CreditsVBox" type="VBoxContainer" parent="Center/Card/Margin/Root/CreditsScroll" unique_id=1775727354]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ButtonRow" type="HBoxContainer" parent="Center/Card/Margin/Root" unique_id=1859075764]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Spacer" type="Control" parent="Center/Card/Margin/Root/ButtonRow" unique_id=581169795]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BackButton" type="Button" parent="Center/Card/Margin/Root/ButtonRow" unique_id=1231028832]
+custom_minimum_size = Vector2(280, 56)
+layout_mode = 2
+text = "RETURN TO ENTRY"
+
+[node name="OpenerOverlay" type="ColorRect" parent="." unique_id=1445918870]
+z_index = 20
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.01, 0.01, 0.02, 0.88)
+
+[node name="OpenerLabel" type="Label" parent="OpenerOverlay" unique_id=203226063]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Presented by Legends of Aurelia"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TransitionFlash" type="ColorRect" parent="." unique_id=2005835332]
+z_index = 19
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.95, 0.79, 0.28, 0)

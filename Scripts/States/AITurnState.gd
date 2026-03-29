@@ -1076,10 +1076,767 @@ func _get_backup_plan_for(unit: Node2D, failed_plan: Dictionary) -> Dictionary:
 # -----------------------------------------------------------------------------
 # Execution loop
 # -----------------------------------------------------------------------------
+func _ordered_ai_turn_units(my_container: Node) -> Array:
+	var raw: Array = my_container.get_children()
+	if not CampaignManager.battle_ai_role_batch_turns:
+		return raw
+	# Ally AI executes on every peer in online coop; mismatched local toggles would diverge RNG/state.
+	# Enemy AI is host-only here, so the host's setting still applies for the enemy phase.
+	if (
+		faction == "ally"
+		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
+		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	):
+		return raw
+	var buffers: Array = []
+	var fighters: Array = []
+	var healers: Array = []
+	for unit_node in raw:
+		if not is_instance_valid(unit_node) or unit_node.get_parent() != my_container:
+			continue
+		var unit := unit_node as Node2D
+		if not is_instance_valid(unit) or unit.is_queued_for_deletion():
+			continue
+		if _i(unit, "current_hp") <= 0:
+			continue
+		if unit.has_method("process_escort_turn"):
+			continue
+		var w: Resource = _weapon(unit)
+		if w != null and _b(w, "is_buff_staff"):
+			buffers.append(unit_node)
+		elif w != null and _b(w, "is_healing_staff"):
+			healers.append(unit_node)
+		else:
+			fighters.append(unit_node)
+	var out: Array = []
+	out.append_array(buffers)
+	out.append_array(fighters)
+	out.append_array(healers)
+	return out
+
+
+# =============================================================================
+# BATCHED AI TURNS — role-phased execution with tile reservations
+# When enabled, each role group (buff → fight → heal) plans all moves with
+# destination reservations, executes movement in parallel, then resolves
+# actions sequentially.  Off by default; toggled in Settings.
+# =============================================================================
+
+const BATCH_CAMERA_TWEEN_TIME: float = 0.50
+
+func _use_batched_ai_turns() -> bool:
+	if not CampaignManager.battle_ai_role_batch_turns:
+		return false
+	if (
+		faction == "ally"
+		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
+		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
+	):
+		return false
+	return true
+
+
+func _classify_role_batches(my_container: Node) -> Array:
+	var buffers: Array = []
+	var fighters: Array = []
+	var healers: Array = []
+	for unit_node in my_container.get_children():
+		if not is_instance_valid(unit_node) or unit_node.get_parent() != my_container:
+			continue
+		var unit := unit_node as Node2D
+		if not is_instance_valid(unit) or unit.is_queued_for_deletion():
+			continue
+		if _i(unit, "current_hp") <= 0:
+			continue
+		if unit.has_method("process_escort_turn"):
+			continue
+		var w: Resource = _weapon(unit)
+		if w != null and _b(w, "is_buff_staff"):
+			buffers.append(unit_node)
+		elif w != null and _b(w, "is_healing_staff"):
+			healers.append(unit_node)
+		else:
+			fighters.append(unit_node)
+	return [buffers, fighters, healers]
+
+
+func _score_move_spot(
+	unit: Node2D, spot: Vector2i, target: Node2D, target_type: String,
+	start_pos: Vector2i, target_pos: Vector2i,
+	enemies: Array[Node2D], friendlies: Array[Node2D],
+	guard_anchor: Node2D, ignore_retaliation_from: Node2D,
+	rough_damage: int, is_ranged: bool, is_flying: bool,
+	my_beh: int, intel_risk_scale: float, danger_mult: float,
+	archetype: String, min_r: int, max_r: int
+) -> float:
+	var dist_to_target: int = _grid_dist_to_target_tiles(spot, target)
+	var score: float = 0.0
+	var danger: int = _incoming_damage_at(spot, unit, enemies, ignore_retaliation_from)
+	var nearest_enemy_dist: int = _distance_to_nearest_unit_from(spot, enemies)
+	var nearby_friends: int = _count_units_within_distance(spot, friendlies, 2, unit)
+	var danger_weight: float = DANGER_WEIGHT_RANGED if is_ranged else DANGER_WEIGHT_MELEE
+	var is_aggressive: bool = (my_beh == 4)
+
+	if is_ranged:
+		score += dist_to_target * 10
+		if dist_to_target == max_r:
+			score += 18
+		elif dist_to_target < max_r:
+			score -= float(max_r - dist_to_target) * 8.0
+	else:
+		score -= dist_to_target * 10
+		if dist_to_target == 1:
+			score += 8
+
+	if spot == start_pos:
+		score += 5
+
+	if is_aggressive:
+		danger_weight = 0.0
+	else:
+		score -= float(danger) * danger_weight * danger_mult * intel_risk_scale
+		if danger >= _i(unit, "current_hp"):
+			score -= DANGER_DEATH_PENALTY
+
+	match target_type:
+		TYPE_HOSTILE:
+			if is_ranged:
+				score += min(nearest_enemy_dist, 6) * 4
+				score += nearby_friends * 3
+			else:
+				score += nearby_friends * 8
+		TYPE_ALLY_HEAL, TYPE_ALLY_BUFF:
+			score += nearby_friends * 10
+			score += min(nearest_enemy_dist, 5) * 5
+			if is_ranged and dist_to_target == max_r:
+				score += 10
+		TYPE_ALLY_FOLLOW:
+			var desired_follow_dist: int = 1
+			if my_beh == 3:
+				desired_follow_dist = 4
+			elif my_beh == 5:
+				desired_follow_dist = 3
+			score -= abs(dist_to_target - desired_follow_dist) * 12
+			score += nearby_friends * 8
+			score += min(nearest_enemy_dist, 5) * 6
+			if target != null and is_instance_valid(target):
+				var danger_on_ally: int = _incoming_damage_at(target_pos, target, enemies)
+				if danger_on_ally > 0 and (_is_leader(target) or _is_support_unit(target) or (_weapon(target) != null and _i(_weapon(target), "max_range", 1) > 1)):
+					score += 15
+		TYPE_CHEST:
+			score += min(nearest_enemy_dist, 6) * 3
+		TYPE_ESCAPE:
+			score += min(nearest_enemy_dist, 6) * 6
+
+	match archetype:
+		ARCHETYPE_ASSASSIN:
+			score += min(nearest_enemy_dist, 6) * 4
+			score += nearby_friends * 2
+		ARCHETYPE_GUARDIAN:
+			if is_instance_valid(guard_anchor):
+				var dist_to_anchor: int = _grid_dist(spot, battlefield.get_grid_pos(guard_anchor))
+				score -= dist_to_anchor * 6
+				score += nearby_friends * 5
+		ARCHETYPE_PACK_HUNTER:
+			score += nearby_friends * 10
+		ARCHETYPE_OPPORTUNIST:
+			if target != null and is_instance_valid(target):
+				if target.get_meta("is_staggered_this_combat", false):
+					score += 40
+				if _i(target, "current_hp") <= rough_damage + 3:
+					score += 35
+
+	if is_flying and target_type == TYPE_HOSTILE and target != null and is_instance_valid(target):
+		if _is_leader(target) or _is_support_unit(target):
+			score += 35
+		var target_cover: int = _count_adjacent_solid_tiles(target_pos)
+		score += target_cover * 6
+		var threats_at_spot: int = 0
+		for e: Node2D in enemies:
+			if e == ignore_retaliation_from or not is_instance_valid(e) or _i(e, "current_hp") <= 0:
+				continue
+			if _enemy_threatens_pos(e, spot):
+				threats_at_spot += 1
+		if not is_aggressive and threats_at_spot >= 2:
+			score -= 45
+
+	score -= _ai_fire_path_penalty(unit, start_pos, spot)
+	return score
+
+
+func _score_progress_spot(
+	unit: Node2D, step_pos: Vector2i, target: Node2D, target_type: String,
+	target_pos: Vector2i,
+	enemies: Array[Node2D], friendlies: Array[Node2D],
+	guard_anchor: Node2D, ignore_retaliation_from: Node2D,
+	rough_damage: int, is_ranged: bool, is_flying: bool,
+	my_beh: int, intel_risk_scale: float, danger_mult: float,
+	archetype: String
+) -> float:
+	var step_dist_to_target: int = _grid_dist_to_target_tiles(step_pos, target)
+	var step_danger: int = _incoming_damage_at(step_pos, unit, enemies, ignore_retaliation_from)
+	var step_nearest_enemy: int = _distance_to_nearest_unit_from(step_pos, enemies)
+	var step_nearby_friends: int = _count_units_within_distance(step_pos, friendlies, 2, unit)
+	var is_aggressive: bool = (my_beh == 4)
+	var danger_weight: float = DANGER_WEIGHT_RANGED if is_ranged else DANGER_WEIGHT_MELEE
+	var score: float = 0.0
+
+	score -= step_dist_to_target * 8.0
+
+	if not is_aggressive:
+		score -= float(step_danger) * danger_weight * danger_mult * intel_risk_scale
+		if step_danger >= _i(unit, "current_hp"):
+			score -= DANGER_DEATH_PENALTY
+
+	match target_type:
+		TYPE_HOSTILE:
+			if is_ranged:
+				score += min(step_nearest_enemy, 6) * 3
+			else:
+				score += step_nearby_friends * 6
+		TYPE_ALLY_HEAL, TYPE_ALLY_BUFF, TYPE_ALLY_FOLLOW:
+			score += step_nearby_friends * 8
+			score += min(step_nearest_enemy, 5) * 4
+		TYPE_CHEST:
+			score += min(step_nearest_enemy, 6) * 3
+		TYPE_ESCAPE:
+			score -= step_dist_to_target * 4.0
+			score += min(step_nearest_enemy, 6) * 6
+
+	match archetype:
+		ARCHETYPE_ASSASSIN:
+			score += min(step_nearest_enemy, 6) * 3
+		ARCHETYPE_GUARDIAN:
+			if is_instance_valid(guard_anchor):
+				var step_to_anchor: int = _grid_dist(step_pos, battlefield.get_grid_pos(guard_anchor))
+				score -= step_to_anchor * 5.0
+				score += step_nearby_friends * 4.0
+		ARCHETYPE_PACK_HUNTER:
+			score += step_nearby_friends * 7.0
+		ARCHETYPE_OPPORTUNIST:
+			if target != null and is_instance_valid(target):
+				if target.get_meta("is_staggered_this_combat", false):
+					score += 25.0
+				if _i(target, "current_hp") <= rough_damage + 3:
+					score += 20.0
+
+	if is_flying and target_type == TYPE_HOSTILE and target != null and is_instance_valid(target):
+		if _is_leader(target) or _is_support_unit(target):
+			score += 24.0
+		score += _count_adjacent_solid_tiles(target_pos) * 5.0
+		var step_threats: int = 0
+		for e2: Node2D in enemies:
+			if e2 == ignore_retaliation_from or not is_instance_valid(e2) or _i(e2, "current_hp") <= 0:
+				continue
+			if _enemy_threatens_pos(e2, step_pos):
+				step_threats += 1
+		if not is_aggressive and step_threats >= 2:
+			score -= 35.0
+
+	if battlefield.is_fire_tile(step_pos):
+		score -= AI_FIRE_TILE_STEP_PENALTY
+
+	return score
+
+
+func _compute_move_for_plan(
+	unit: Node2D,
+	target: Node2D,
+	target_type: String,
+	reserved_destinations: Dictionary
+) -> Dictionary:
+	var start_pos: Vector2i = battlefield.get_grid_pos(unit)
+	var target_pos: Vector2i = _best_target_tile_for_pathing(start_pos, target)
+
+	var action_range: Dictionary = _get_action_range_for(unit, target_type)
+	var min_r: int = int(action_range["min"])
+	var max_r: int = int(action_range["max"])
+	var is_ranged: bool = max_r > 1
+	var is_flying: bool = _is_flying_unit(unit)
+
+	var my_beh: int = _i(unit, "ai_behavior")
+	var intel: int = _i(unit, "ai_intelligence", 1)
+	var archetype: String = _get_ai_archetype(unit)
+
+	var enemies: Array[Node2D] = _get_live_units_in(_hostile_parents())
+	var friendlies: Array[Node2D] = _get_live_units_in(_friendly_parents())
+	var guard_anchor: Node2D = null
+	if archetype == ARCHETYPE_GUARDIAN:
+		guard_anchor = _get_guard_anchor(friendlies, unit)
+
+	var intel_risk_scale: float = clamp(0.4 + (float(intel - 1) * 0.15), 0.4, 1.0)
+	if my_beh == 3:
+		intel_risk_scale *= 5.0
+
+	var ignore_retaliation_from: Node2D = null
+	var rough_damage: int = 0
+	if target_type == TYPE_HOSTILE and target != null:
+		rough_damage = _estimate_raw_damage(unit, target)
+	if target_type == TYPE_HOSTILE and _i(target, "current_hp") > 0 and _i(target, "current_hp") <= rough_damage:
+		ignore_retaliation_from = target
+
+	var hp_ratio_val: float = _hp_ratio(unit)
+	var danger_mult: float = 1.0
+	if hp_ratio_val <= 0.35:
+		danger_mult = 1.5
+
+	# Mark reserved destination tiles as solid so this unit routes around them.
+	var reserved_restore: Dictionary = {}
+	for res_tile: Vector2i in reserved_destinations:
+		if res_tile == start_pos:
+			continue
+		reserved_restore[res_tile] = {
+			"a": battlefield.astar.is_point_solid(res_tile),
+			"f": battlefield.flying_astar.is_point_solid(res_tile),
+		}
+		battlefield.astar.set_point_solid(res_tile, true)
+		battlefield.flying_astar.set_point_solid(res_tile, true)
+
+	battlefield.astar.set_point_solid(start_pos, false)
+	battlefield.calculate_ranges(unit)
+	var reachable: Array[Vector2i] = battlefield.reachable_tiles.duplicate()
+	if not reachable.has(start_pos):
+		reachable.append(start_pos)
+	battlefield.clear_ranges()
+
+	var valid_firing_spots: Array[Vector2i] = []
+	for pos: Vector2i in reachable:
+		if reserved_destinations.has(pos) and pos != start_pos:
+			continue
+		if _can_act_from_tile(unit, pos, target, target_type):
+			valid_firing_spots.append(pos)
+
+	var move_path: Array[Vector2i] = []
+	var targeted_crate: Node2D = null
+	var took_crate_shortcut: bool = false
+	var can_fire: bool = valid_firing_spots.size() > 0
+
+	if can_fire:
+		var best_spot: Vector2i = start_pos
+		var best_spot_score: float = -999999.0
+		for spot: Vector2i in valid_firing_spots:
+			var s: float = _score_move_spot(
+				unit, spot, target, target_type, start_pos, target_pos,
+				enemies, friendlies, guard_anchor, ignore_retaliation_from,
+				rough_damage, is_ranged, is_flying, my_beh, intel_risk_scale,
+				danger_mult, archetype, min_r, max_r
+			)
+			if s > best_spot_score:
+				best_spot_score = s
+				best_spot = spot
+		battlefield.astar.set_point_solid(best_spot, false)
+		move_path = _get_ai_path(unit, start_pos, best_spot)
+		battlefield.astar.set_point_solid(best_spot, true)
+	else:
+		battlefield.astar.set_point_solid(target_pos, false)
+		var full_path: Array[Vector2i] = _get_ai_path(unit, start_pos, target_pos)
+		battlefield.astar.set_point_solid(target_pos, true)
+
+		took_crate_shortcut = false
+		var can_break_crates: bool = (my_beh != 3 and my_beh != 5)
+
+		if battlefield.destructibles_container != null and can_break_crates:
+			for dnode: Node in battlefield.destructibles_container.get_children():
+				var d := dnode as Node2D
+				if is_instance_valid(d) and not _is_friendly_destructible(d):
+					var d_pos: Vector2i = battlefield.get_grid_pos(d)
+					if not reserved_destinations.has(d_pos):
+						battlefield.astar.set_point_solid(d_pos, false)
+
+			battlefield.astar.set_point_solid(target_pos, false)
+			var crate_path: Array[Vector2i] = _get_ai_path(unit, start_pos, target_pos)
+			battlefield.astar.set_point_solid(target_pos, true)
+
+			for dnode2: Node in battlefield.destructibles_container.get_children():
+				var d2 := dnode2 as Node2D
+				if is_instance_valid(d2) and not _is_friendly_destructible(d2):
+					var d2_pos: Vector2i = battlefield.get_grid_pos(d2)
+					if not reserved_destinations.has(d2_pos):
+						battlefield.astar.set_point_solid(d2_pos, true)
+
+			if not crate_path.is_empty() and (full_path.is_empty() or full_path.size() > crate_path.size() + 3):
+				for i: int in range(crate_path.size()):
+					var step_pos: Vector2i = crate_path[i] as Vector2i
+					var check_crate := _get_crate_at(step_pos)
+					if check_crate != null:
+						targeted_crate = check_crate
+						took_crate_shortcut = true
+						var safe_target_index: int = i - 1
+						if safe_target_index <= 0:
+							move_path = [start_pos]
+						else:
+							var max_reachable_index: int = min(safe_target_index, _i(unit, "move_range"))
+							move_path = crate_path.slice(0, max_reachable_index + 1)
+						break
+
+		if not took_crate_shortcut and full_path.size() > 1:
+			var max_steps: int = min(full_path.size() - 1, _i(unit, "move_range"))
+			var best_progress_score: float = -999999.0
+			var best_progress_index: int = 0
+			for i: int in range(1, max_steps + 1):
+				var step_pos: Vector2i = full_path[i] as Vector2i
+				if reserved_destinations.has(step_pos):
+					continue
+				var progress_score: float = _score_progress_spot(
+					unit, step_pos, target, target_type, target_pos,
+					enemies, friendlies, guard_anchor, ignore_retaliation_from,
+					rough_damage, is_ranged, is_flying, my_beh, intel_risk_scale,
+					danger_mult, archetype
+				)
+				if progress_score > best_progress_score:
+					best_progress_score = progress_score
+					best_progress_index = i
+			if best_progress_index > 0:
+				move_path = full_path.slice(0, best_progress_index + 1)
+
+	battlefield.astar.set_point_solid(start_pos, true)
+
+	# Restore reserved tile solidity to original state.
+	for res_tile: Vector2i in reserved_restore:
+		var saved: Dictionary = reserved_restore[res_tile]
+		battlefield.astar.set_point_solid(res_tile, bool(saved["a"]))
+		battlefield.flying_astar.set_point_solid(res_tile, bool(saved["f"]))
+
+	return {
+		"move_path": move_path,
+		"targeted_crate": targeted_crate,
+		"took_crate_shortcut": took_crate_shortcut,
+		"can_fire": can_fire,
+	}
+
+
+func _plan_unit_turn(unit: Node2D, reserved_destinations: Dictionary = {}) -> Dictionary:
+	var hold := {
+		"unit": unit, "hold": true,
+		"target": null, "target_type": "",
+		"move_path": [], "targeted_crate": null,
+		"took_crate_shortcut": false, "can_fire": false,
+	}
+
+	var _gbp_restore: Dictionary = {}
+	for _rt: Vector2i in reserved_destinations:
+		if _rt == battlefield.get_grid_pos(unit):
+			continue
+		_gbp_restore[_rt] = {
+			"a": battlefield.astar.is_point_solid(_rt),
+			"f": battlefield.flying_astar.is_point_solid(_rt),
+		}
+		battlefield.astar.set_point_solid(_rt, true)
+		battlefield.flying_astar.set_point_solid(_rt, true)
+
+	var plan: Dictionary = get_best_plan_for(unit)
+
+	for _rt: Vector2i in _gbp_restore:
+		var _sv: Dictionary = _gbp_restore[_rt]
+		battlefield.astar.set_point_solid(_rt, bool(_sv["a"]))
+		battlefield.flying_astar.set_point_solid(_rt, bool(_sv["f"]))
+
+	if plan.is_empty():
+		return hold
+
+	var target := plan.get("node") as Node2D
+	var target_type: String = String(plan.get("type"))
+
+	if target == null or not is_instance_valid(target) or not _is_valid_ai_target(target):
+		return hold
+
+	var move_result: Dictionary = _compute_move_for_plan(unit, target, target_type, reserved_destinations)
+	var move_path: Array[Vector2i] = move_result["move_path"]
+	var can_fire: bool = move_result["can_fire"]
+	var targeted_crate: Node2D = move_result["targeted_crate"]
+	var took_crate_shortcut: bool = move_result["took_crate_shortcut"]
+
+	if not can_fire and (move_path.is_empty() or move_path.size() <= 1) and not took_crate_shortcut:
+		var backup_result: Dictionary = _get_backup_plan_for(unit, plan)
+		if not backup_result.is_empty():
+			var backup_plan: Dictionary = backup_result.get("plan", {})
+			var backup_target: Node2D = backup_plan.get("node") as Node2D
+			if backup_target != null and is_instance_valid(backup_target) and _is_valid_ai_target(backup_target):
+				var backup_type: String = String(backup_plan.get("type"))
+				var backup_move: Dictionary = _compute_move_for_plan(unit, backup_target, backup_type, reserved_destinations)
+				var backup_tier: String = String(backup_result.get("tier", ""))
+				var bm_path: Array[Vector2i] = backup_move["move_path"]
+				if backup_tier == "follow" and (bm_path.is_empty() or bm_path.size() <= 1):
+					pass
+				else:
+					target = backup_target
+					target_type = backup_type
+					move_path = bm_path
+					can_fire = backup_move["can_fire"]
+					targeted_crate = backup_move["targeted_crate"]
+					took_crate_shortcut = backup_move["took_crate_shortcut"]
+
+	if not can_fire and (move_path.is_empty() or move_path.size() <= 1) and not took_crate_shortcut:
+		return hold
+
+	return {
+		"unit": unit, "hold": false,
+		"target": target, "target_type": target_type,
+		"move_path": move_path, "targeted_crate": targeted_crate,
+		"took_crate_shortcut": took_crate_shortcut, "can_fire": can_fire,
+	}
+
+
+func _execute_unit_post_move_action(p: Dictionary) -> void:
+	var unit: Node2D = p["unit"]
+	var target: Node2D = p["target"]
+	var target_type: String = p["target_type"]
+	var targeted_crate: Node2D = p["targeted_crate"]
+
+	if not is_instance_valid(unit) or _i(unit, "current_hp") <= 0:
+		return
+	if not is_instance_valid(battlefield):
+		return
+
+	active_unit = unit
+
+	await _focus_camera_on_ai_unit(unit, AI_CAMERA_TWEEN_TIME_PREMOVE)
+	if not is_instance_valid(battlefield):
+		return
+
+	if targeted_crate != null and is_instance_valid(targeted_crate):
+		await _focus_camera_on_ai_action(unit, targeted_crate, AI_CAMERA_TWEEN_TIME_POSTMOVE)
+	elif target != null and is_instance_valid(target):
+		await _focus_camera_on_ai_action(unit, target, AI_CAMERA_TWEEN_TIME_POSTMOVE)
+
+	var performed_attack_action: bool = false
+
+	if targeted_crate != null:
+		if is_instance_valid(targeted_crate) and battlefield.is_in_range(unit, targeted_crate):
+			unit.look_at_pos(battlefield.get_grid_pos(targeted_crate))
+			await _ai_execute_combat(battlefield, unit, targeted_crate, false)
+			performed_attack_action = true
+	else:
+		if target_type == TYPE_ESCAPE and is_instance_valid(target) and battlefield.get_distance(unit, target) <= 1:
+			battlefield.add_combat_log(unit.unit_name + " escaped the map with the loot!", "tomato")
+			var tween = create_tween()
+			tween.tween_property(unit, "modulate:a", 0.0, 0.3)
+			await tween.finished
+			_sync_host_authority_enemy_escape(unit)
+			unit.queue_free()
+			return
+
+		if target != null and is_instance_valid(target) and (battlefield.is_in_range(unit, target) or target_type == TYPE_CHEST):
+			match target_type:
+				TYPE_CHEST:
+					if battlefield.get_distance(unit, target) <= 1:
+						var pre_stolen_count: int = 0
+						if unit.get("stolen_loot") != null:
+							pre_stolen_count = (unit.stolen_loot as Array).size()
+						unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
+						if battlefield.has_method("_on_chest_opened"):
+							battlefield._on_chest_opened(target, unit)
+						var stolen_items: Array = []
+						if unit.get("stolen_loot") != null:
+							var loot_arr: Array = unit.stolen_loot as Array
+							for i in range(pre_stolen_count, loot_arr.size()):
+								stolen_items.append(loot_arr[i])
+						_sync_host_authority_enemy_chest_open(unit, target, stolen_items)
+				TYPE_HOSTILE:
+					unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
+					await _ai_execute_combat(battlefield, unit, target, false)
+					_focus_target = target
+					performed_attack_action = true
+				TYPE_CRATE:
+					unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
+					await _ai_execute_combat(battlefield, unit, target, false)
+					performed_attack_action = true
+				TYPE_ALLY_HEAL:
+					if _i(target, "current_hp") < _i(target, "max_hp"):
+						unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
+						await _ai_execute_combat(battlefield, unit, target, false)
+						performed_attack_action = true
+				TYPE_ALLY_BUFF:
+					unit.look_at_pos(_best_target_tile_for_pathing(battlefield.get_grid_pos(unit), target))
+					await _ai_execute_combat(battlefield, unit, target, false)
+					performed_attack_action = true
+				TYPE_ALLY_FOLLOW:
+					pass
+
+	if not is_instance_valid(battlefield):
+		return
+
+	if is_instance_valid(unit) and _i(unit, "current_hp") > 0:
+		if performed_attack_action and battlefield.unit_supports_canto(unit):
+			var mpu_v: Variant = unit.get("move_points_used_this_turn")
+			var mpu_f: float = 0.0 if mpu_v == null else float(mpu_v)
+			var rem_c: float = float(_i(unit, "move_range")) - mpu_f
+			if rem_c > 0.001:
+				await _ai_try_canto_move(unit, rem_c)
+		if unit.has_method("finish_turn"):
+			unit.finish_turn()
+			_sync_host_authority_enemy_finish_turn(unit)
+
+	battlefield.rebuild_grid()
+	await battlefield.get_tree().create_timer(0.2).timeout
+
+
+func _do_batch_unit_move(unit: Node2D, path: Array, on_done: Callable) -> void:
+	if not is_instance_valid(unit) or path.size() <= 1:
+		on_done.call()
+		return
+	var typed_path: Array[Vector2i] = []
+	for p in path:
+		typed_path.append(p as Vector2i)
+	await unit.move_along_path(typed_path)
+	on_done.call()
+
+
+func _batch_move_units(plans: Array) -> void:
+	var movers: Array = []
+	for p: Dictionary in plans:
+		if p["hold"]:
+			continue
+		if (p["move_path"] as Array).size() <= 1:
+			continue
+		movers.append(p)
+
+	if movers.is_empty():
+		return
+
+	if battlefield.camera_follows_enemies and battlefield.main_camera:
+		var centroid := Vector2.ZERO
+		var count: int = 0
+		for p: Dictionary in movers:
+			var u: Node2D = p["unit"]
+			if is_instance_valid(u):
+				centroid += u.global_position + Vector2(32, 32)
+				count += 1
+		if count > 0:
+			centroid /= float(count)
+		var cam_pos: Vector2 = centroid + Vector2(0, AI_CAMERA_OFFSET_Y)
+		var cam: Camera2D = battlefield.main_camera
+		if cam.anchor_mode == Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT:
+			var half_vp_world: Vector2 = (battlefield.get_viewport_rect().size * 0.5) / cam.zoom
+			cam_pos -= half_vp_world
+		var map_lx: float = float(battlefield.GRID_SIZE.x * battlefield.CELL_SIZE.x)
+		var map_ly: float = float(battlefield.GRID_SIZE.y * battlefield.CELL_SIZE.y)
+		cam_pos.x = clamp(cam_pos.x, AI_CAMERA_LEFT_MARGIN, map_lx + AI_CAMERA_RIGHT_MARGIN)
+		cam_pos.y = clamp(cam_pos.y, AI_CAMERA_TOP_MARGIN, map_ly + AI_CAMERA_BOTTOM_MARGIN)
+		var camera_tween: Tween = battlefield.create_tween()
+		camera_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		camera_tween.tween_property(cam, "global_position", cam_pos, BATCH_CAMERA_TWEEN_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		await camera_tween.finished
+		if not is_instance_valid(battlefield):
+			return
+
+	# Send batch-move coop packet before starting movement so the guest can mirror parallel moves.
+	if _is_host_authority_enemy_turn_host() and battlefield.has_method("coop_enet_sync_enemy_turn_batch_move"):
+		var batch_entries: Array = []
+		for p: Dictionary in movers:
+			var u: Node2D = p["unit"]
+			var path: Array = p["move_path"]
+			if is_instance_valid(u) and path.size() > 1:
+				batch_entries.append({"unit": u, "move_path": path})
+		if not batch_entries.is_empty():
+			battlefield.coop_enet_sync_enemy_turn_batch_move(batch_entries)
+
+	# Fire all movement coroutines with a slight stagger to reduce visual overlap.
+	# GDScript lambdas capture int locals by value — use Array as a mutable box so on_done decrements work.
+	var pending_left: Array = [movers.size()]
+	var _launch_idx: int = 0
+	for p: Dictionary in movers:
+		var u: Node2D = p["unit"]
+		var path: Array = p["move_path"]
+		if not is_instance_valid(u):
+			pending_left[0] = int(pending_left[0]) - 1
+			continue
+		if _launch_idx > 0 and is_instance_valid(battlefield):
+			await battlefield.get_tree().create_timer(0.06).timeout
+		_do_batch_unit_move(u, path, func(): pending_left[0] = int(pending_left[0]) - 1)
+		_launch_idx += 1
+
+	while int(pending_left[0]) > 0:
+		if not is_instance_valid(battlefield):
+			return
+		await battlefield.get_tree().process_frame
+
+	# Set move costs and sync after all movement is done.
+	for p: Dictionary in movers:
+		var u: Node2D = p["unit"]
+		var path: Array = p["move_path"]
+		if is_instance_valid(u) and path.size() > 1:
+			var typed_path: Array[Vector2i] = []
+			for step in path:
+				typed_path.append(step as Vector2i)
+			u.move_points_used_this_turn = battlefield.get_path_move_cost(typed_path, u)
+
+	battlefield.rebuild_grid()
+	battlefield.update_fog_of_war()
+
+
+func _execute_ai_turn_batched(my_container: Node) -> void:
+	var batches: Array = _classify_role_batches(my_container)
+
+	for batch: Array in batches:
+		if batch.is_empty():
+			continue
+
+		battlefield.rebuild_grid()
+
+		var reserved_destinations: Dictionary = {}
+		var plans: Array = []
+
+		for unit_node in batch:
+			var unit := unit_node as Node2D
+			if not is_instance_valid(unit) or unit.is_queued_for_deletion() or _i(unit, "current_hp") <= 0:
+				continue
+			if unit.has_method("process_escort_turn"):
+				continue
+
+			var p: Dictionary = _plan_unit_turn(unit, reserved_destinations)
+			plans.append(p)
+
+			if not p["hold"]:
+				var move_path: Array = p["move_path"]
+				if move_path.size() > 1:
+					reserved_destinations[move_path[-1] as Vector2i] = unit
+				else:
+					reserved_destinations[battlefield.get_grid_pos(unit)] = unit
+
+		if plans.is_empty():
+			continue
+
+		# Phase 2: parallel movement for the entire batch.
+		await _batch_move_units(plans)
+
+		if not is_instance_valid(battlefield):
+			return
+
+		# Hold units: finish turn after movement so coop packets are ordered correctly.
+		for p: Dictionary in plans:
+			if p["hold"]:
+				var u: Node2D = p["unit"]
+				if is_instance_valid(u):
+					if u.has_method("finish_turn"):
+						u.finish_turn()
+						_sync_host_authority_enemy_finish_turn(u)
+
+		# Phase 3: sequential actions (combat / heal / buff / chest / escape).
+		for p: Dictionary in plans:
+			if p["hold"]:
+				continue
+			if not is_instance_valid(battlefield):
+				return
+			await _execute_unit_post_move_action(p)
+
+
+# =============================================================================
+# Original sequential loop (unchanged when batched mode is off)
+# =============================================================================
 func execute_ai_turn(my_container: Node) -> void:
 	await battlefield.get_tree().create_timer(0.5).timeout
 
-	var units_to_process = my_container.get_children()
+	if _use_batched_ai_turns():
+		await _execute_ai_turn_batched(my_container)
+		active_unit = null
+		await battlefield.get_tree().create_timer(0.35).timeout
+		if _is_host_authority_enemy_turn_host() and battlefield.has_method("coop_enet_sync_after_host_authority_enemy_turn_end"):
+			battlefield.coop_enet_sync_after_host_authority_enemy_turn_end()
+		turn_finished.emit()
+		return
+
+	var units_to_process: Array = _ordered_ai_turn_units(my_container)
 
 	for unit_node in units_to_process:
 		if not is_instance_valid(unit_node) or unit_node.get_parent() != my_container:

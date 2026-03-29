@@ -37,15 +37,23 @@ extends Node
 
 const SETTINGS_FILE_PATH: String = "user://settings.cfg"
 const CAMP_PAIR_SCENE_DB = preload("res://Scripts/Narrative/CampPairSceneDB.gd")
+const BATTLE_PATH_STYLE_MINIMAL := 0
+const BATTLE_PATH_STYLE_OUTLINED := 1
+const BATTLE_PATH_STYLE_DASHED := 2
 
 # --- GLOBAL PLAYER SETTINGS (runtime cache; persisted separately from campaign saves) ---
 var audio_master_volume: float = 1.0
+var audio_music_volume: float = 1.0
+var audio_sfx_volume: float = 1.0
+var audio_mute_when_unfocused: bool = false
 
 # KEEP your existing vars:
 # var camera_pan_speed: float = 600.0
 # var unit_move_speed: float = 0.15
 
 var battle_follow_enemy_camera: bool = true
+## When true, AI turns process units in weapon-role order (buff staff, then others, then heal staff). Off by default; can change tactics vs scene order.
+var battle_ai_role_batch_turns: bool = false
 var battle_show_danger_zone_default: bool = false
 var battle_show_minimap_default: bool = false
 var battle_minimap_opacity: float = 0.90
@@ -61,6 +69,14 @@ var battle_show_enemy_threat: bool = true
 var battle_show_faction_tiles: bool = true
 var battle_show_path_preview: bool = true
 var battle_path_preview_pulse: bool = true
+## See BATTLE_PATH_STYLE_* : minimal / outlined / dashed foreground.
+var battle_path_style: int = BATTLE_PATH_STYLE_OUTLINED
+var battle_path_endpoint_marker: bool = true
+## 0 = sharp corners, 1 = low chamfer, 2 = stronger chamfer (world px scales with cell size).
+var battle_path_corner_smoothing: int = 1
+var battle_path_cost_ticks: bool = false
+## When the route exists but the cursor tile is not a legal end (cost / blue tile), show muted preview.
+var battle_path_invalid_ghost: bool = true
 var battle_show_log: bool = true
 
 # Important: this is a PLAYER OVERRIDE.
@@ -85,6 +101,62 @@ func get_save_path(slot: int, is_auto: bool = false) -> String:
 	if is_auto:
 		return "user://auto_save_" + str(slot) + ".dat"
 	return "user://save_slot_" + str(slot) + ".dat"
+
+
+## Read one save file without mutating campaign state. Empty `{}` if missing or unreadable.
+func peek_save_file_summary(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var save_variant: Variant = file.get_var()
+	file.close()
+	if typeof(save_variant) != TYPE_DICTIONARY:
+		return {}
+	var save_data: Dictionary = save_variant
+	var roster: Array = save_data.get("player_roster", [])
+	var leader_name: String = ""
+	if roster.size() > 0:
+		var first: Variant = roster[0]
+		if first is Dictionary:
+			leader_name = str(first.get("unit_name", "")).strip_edges()
+	return {
+		"global_gold": int(save_data.get("global_gold", 0)),
+		"map_display_index": int(save_data.get("current_level_index", 0)) + 1,
+		"leader_name": leader_name,
+		"playtime_seconds": int(save_data.get("total_playtime_seconds", 0)),
+	}
+
+
+## Newest manual or auto save among slots 1–3 (by file mtime). Empty if none.
+func get_newest_save_snapshot() -> Dictionary:
+	var best_time: int = 0
+	var best_slot: int = 0
+	var best_auto: bool = false
+	var best_path: String = ""
+	for slot in range(1, 4):
+		for use_auto in [false, true]:
+			var p: String = get_save_path(slot, use_auto)
+			if not FileAccess.file_exists(p):
+				continue
+			var t: int = int(FileAccess.get_modified_time(p))
+			if t > best_time:
+				best_time = t
+				best_slot = slot
+				best_auto = use_auto
+				best_path = p
+	if best_path == "":
+		return {}
+	var sum: Dictionary = peek_save_file_summary(best_path)
+	if sum.is_empty():
+		return {}
+	sum["save_slot"] = best_slot
+	sum["save_is_auto"] = best_auto
+	sum["modified_unix"] = best_time
+	sum["path"] = best_path
+	return sum
+
 
 # --- NPC RELATIONSHIP STATE ---
 # Generic persistent relationship store for narrative NPCs.
@@ -144,10 +216,21 @@ var active_save_slot: int = -1
 var global_gold: int = 0
 var global_fame: int = 0
 var global_inventory: Array[Resource] = []
+## listing_id -> escrowed gold currently locked for the local player in live auction bids.
+var auction_gold_escrow_by_listing: Dictionary = {}
+## listing_action key -> true once local payout/item application has been consumed.
+## Example keys: "<listing_id>:seller_paid", "<listing_id>:winner_item".
+var auction_applied_receipts: Dictionary = {}
+## listing_id -> listing payload for local auction entries not yet confirmed to cloud.
+var auction_pending_local_listings_by_id: Dictionary = {}
 
 # --- CAMP PERSISTENCE ---
 var camp_shop_stock: Array[Resource] = []
 var camp_discount_item: Resource = null
+## Extra fraction (0–0.15) shaved off the spotlight deal after successful haggles this stock; reset when shop stock refreshes.
+var camp_haggle_extra_off: float = 0.0
+## Optional second half-price slot from a lucky haggle win; cleared with shop refresh / purchase.
+var camp_second_discount_item: Resource = null
 var camp_has_haggled: bool = false
 var blacksmith_unlocked: bool = false
 var owned_expedition_maps: Array[String] = []
@@ -198,6 +281,34 @@ var is_base_defense_active: bool = false
 
 var camera_pan_speed: float = 600.0
 var unit_move_speed: float = 0.15
+## Whole-game speed via Engine.time_scale; only 1.0, 1.5, and 2.0 are offered in settings.
+var game_speed_scale: float = 1.0
+var performance_vsync: bool = true
+## 0 = unlimited; otherwise Engine.max_fps (common presets from settings menu).
+var performance_max_fps: int = 0
+## 0 = Fullscreen, 1 = Windowed, 2 = Borderless Fullscreen
+var performance_window_mode: int = 0
+## Index into RESOLUTION_OPTIONS; default 3 = 1920×1080.
+var performance_resolution: int = 3
+## 0 = Disabled, 1 = 2X, 2 = 4X, 3 = 8X
+var performance_msaa: int = 0
+var performance_show_fps: bool = false
+var performance_screen_shake: bool = true
+
+## --- INTERFACE SETTINGS ---
+## 0 = 1.0x, 1 = 1.25x, 2 = 1.5x, 3 = 1.75x, 4 = 2.0x
+var interface_hud_scale: int = 2
+var interface_show_damage_numbers: bool = true
+var interface_show_health_bars: bool = true
+var interface_show_phase_banner: bool = true
+var interface_show_status_effects: bool = true
+## 0 = Small, 1 = Medium, 2 = Large
+var interface_damage_text_size: int = 1
+## 0 = Small, 1 = Medium, 2 = Large
+var interface_combat_log_font_size: int = 1
+## In-game display name override (menus, co-op label, feedback). Empty = Steam (if any), then avatar, then fallback.
+var player_profile_display_override: String = ""
+const PLAYER_PROFILE_DISPLAY_NAME_MAX_LEN := 48
 var merchant_reputation: int = 0
 
 var merchant_quests_completed: int = 0
@@ -260,6 +371,9 @@ var jukebox_last_mode: String = "default"
 var jukebox_last_track_path: String = ""
 var jukebox_last_playlist_name: String = ""
 var favorite_music_paths: Array[String] = []
+var jukebox_last_selected_list_item: int = 0
+var jukebox_favorites_only: bool = false
+var jukebox_sort_mode: String = "unlock"
 
 # --- ARENA STREAK & TOKENS (session/campaign; not in save_data — ArenaManager/SilentWolf may hold authoritative state) ---
 var arena_win_streak: int = 0
@@ -458,6 +572,9 @@ func reset_campaign_data() -> void:
 	global_inventory.clear()
 	global_gold = 0
 	global_fame = 0
+	auction_gold_escrow_by_listing.clear()
+	auction_applied_receipts.clear()
+	auction_pending_local_listings_by_id.clear()
 	merchant_reputation = 0
 	current_level_index = 0
 	max_unlocked_index = 0
@@ -515,6 +632,9 @@ func reset_campaign_data() -> void:
 	jukebox_last_track_path = ""
 	jukebox_last_playlist_name = ""
 	favorite_music_paths.clear()
+	jukebox_last_selected_list_item = 0
+	jukebox_favorites_only = false
+	jukebox_sort_mode = "unlock"
 	DragonManager.player_dragons.clear()
 	active_shop_inventory.clear()
 	base_last_harvest_report.clear()
@@ -548,6 +668,8 @@ func reset_campaign_data() -> void:
 func reset_camp_shop() -> void:
 	camp_shop_stock.clear()
 	camp_discount_item = null
+	camp_second_discount_item = null
+	camp_haggle_extra_off = 0.0
 	camp_has_haggled = false
 
 func delete_game(slot: int) -> void:
@@ -793,6 +915,13 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		if camp_discount_item.has_meta("uid"):
 			discount_uid = str(camp_discount_item.get_meta("uid"))
 
+	var second_discount_saved: Dictionary = {}
+	var second_discount_uid: String = ""
+	if camp_second_discount_item != null:
+		second_discount_saved = _serialize_item(camp_second_discount_item)
+		if camp_second_discount_item.has_meta("uid"):
+			second_discount_uid = str(camp_second_discount_item.get_meta("uid"))
+
 	# 3) Roster
 	var roster_to_save: Array = []
 	for unit in player_roster:
@@ -844,6 +973,9 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"global_gold": global_gold,
 		"global_fame": global_fame,
 		"global_inventory": inventory_saved,
+		"auction_gold_escrow_by_listing": auction_gold_escrow_by_listing.duplicate(),
+		"auction_applied_receipts": auction_applied_receipts.duplicate(),
+		"auction_pending_local_listings_by_id": auction_pending_local_listings_by_id.duplicate(true),
 		"merchant_reputation": merchant_reputation,
 		"current_level_index": current_level_index,
 		"max_unlocked_index": max_unlocked_index,
@@ -877,6 +1009,9 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"active_shop_inventory": active_shop_saved,
 		"camp_discount_item": discount_saved,
 		"camp_discount_uid": discount_uid,
+		"camp_second_discount_item": second_discount_saved,
+		"camp_second_discount_uid": second_discount_uid,
+		"camp_haggle_extra_off": camp_haggle_extra_off,
 		"camp_has_haggled": camp_has_haggled,
 		"blacksmith_unlocked": blacksmith_unlocked,
 		"owned_expedition_maps": owned_expedition_maps.duplicate(),
@@ -893,6 +1028,9 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"jukebox_last_track_path": jukebox_last_track_path,
 		"jukebox_last_playlist_name": jukebox_last_playlist_name,
 		"favorite_music_paths": favorite_music_paths.duplicate(),
+		"jukebox_last_selected_list_item": jukebox_last_selected_list_item,
+		"jukebox_favorites_only": jukebox_favorites_only,
+		"jukebox_sort_mode": jukebox_sort_mode,
 		"unlocked_recipes": unlocked_recipes,
 		"player_structures": player_structures.duplicate(true),
 		"claimed_rank_rewards": claimed_rank_rewards.duplicate(),
@@ -949,6 +1087,41 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	clear_pending_mock_coop_battle_handoff()
 	global_gold = save_data.get("global_gold", 0)
 	global_fame = save_data.get("global_fame", 0)
+	auction_gold_escrow_by_listing.clear()
+	var raw_auction_escrow: Variant = save_data.get("auction_gold_escrow_by_listing", {})
+	if raw_auction_escrow is Dictionary:
+		var escrow_dict: Dictionary = raw_auction_escrow
+		for listing_id_variant in escrow_dict.keys():
+			var listing_id: String = str(listing_id_variant).strip_edges()
+			if listing_id == "":
+				continue
+			var escrow_amount: int = maxi(int(escrow_dict.get(listing_id_variant, 0)), 0)
+			if escrow_amount > 0:
+				auction_gold_escrow_by_listing[listing_id] = escrow_amount
+	auction_applied_receipts.clear()
+	var raw_receipts: Variant = save_data.get("auction_applied_receipts", {})
+	if raw_receipts is Dictionary:
+		var receipts_dict: Dictionary = raw_receipts
+		for receipt_key_variant in receipts_dict.keys():
+			var receipt_key: String = str(receipt_key_variant).strip_edges()
+			if receipt_key == "":
+				continue
+			if bool(receipts_dict.get(receipt_key_variant, false)):
+				auction_applied_receipts[receipt_key] = true
+	auction_pending_local_listings_by_id.clear()
+	var raw_pending_listings: Variant = save_data.get("auction_pending_local_listings_by_id", {})
+	if raw_pending_listings is Dictionary:
+		var pending_dict: Dictionary = raw_pending_listings
+		for listing_id_variant in pending_dict.keys():
+			var listing_id: String = str(listing_id_variant).strip_edges()
+			if listing_id == "":
+				continue
+			var payload_variant: Variant = pending_dict.get(listing_id_variant, {})
+			if payload_variant is Dictionary:
+				var payload: Dictionary = (payload_variant as Dictionary).duplicate(true)
+				payload["pending_local"] = true
+				payload["listing_id"] = listing_id
+				auction_pending_local_listings_by_id[listing_id] = payload
 	merchant_reputation = save_data.get("merchant_reputation", 0)
 	
 	active_base_level_index = save_data.get("active_base_level_index", -1)
@@ -1100,6 +1273,11 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	favorite_music_paths.clear()
 	for p in save_data.get("favorite_music_paths", []):
 		favorite_music_paths.append(str(p))
+	jukebox_last_selected_list_item = maxi(0, int(save_data.get("jukebox_last_selected_list_item", 0)))
+	jukebox_favorites_only = bool(save_data.get("jukebox_favorites_only", false))
+	jukebox_sort_mode = str(save_data.get("jukebox_sort_mode", "unlock")).to_lower()
+	if jukebox_sort_mode != "alpha":
+		jukebox_sort_mode = "unlock"
 
 	has_recipe_book = save_data.get("has_recipe_book", false)
 	unlocked_recipes.clear()
@@ -1164,6 +1342,27 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 				elif it.has_meta("original_path"): it_path = str(it.get_meta("original_path"))
 				if it_path == discount_path:
 					camp_discount_item = it
+					break
+
+	camp_haggle_extra_off = clampf(float(save_data.get("camp_haggle_extra_off", 0.0)), 0.0, 0.2)
+	camp_second_discount_item = null
+	var second_uid: String = str(save_data.get("camp_second_discount_uid", ""))
+	if second_uid != "":
+		for it in camp_shop_stock:
+			if it != null and it.has_meta("uid") and str(it.get_meta("uid")) == second_uid:
+				camp_second_discount_item = it
+				break
+	if camp_second_discount_item == null:
+		var second_data = save_data.get("camp_second_discount_item", {})
+		if typeof(second_data) == TYPE_DICTIONARY and not second_data.is_empty():
+			var second_path: String = str(second_data.get("path", ""))
+			for it in camp_shop_stock:
+				if it == null: continue
+				var it_path2: String = ""
+				if it.resource_path != "": it_path2 = it.resource_path
+				elif it.has_meta("original_path"): it_path2 = str(it.get_meta("original_path"))
+				if it_path2 == second_path:
+					camp_second_discount_item = it
 					break
 
 	player_roster.clear()
@@ -1733,14 +1932,14 @@ func save_party(battlefield: Node2D) -> void:
 				"portrait": actual_portrait,
 				"battle_sprite": actual_sprite,
 				"ability": u_ability,
-				"skill_points": unit.get("skill_points") if unit.get("skill_points") != null else 0,
-				"unlocked_skills": unit.get("unlocked_skills").duplicate() if unit.get("unlocked_skills") != null else [],
-				"unlocked_abilities": unit.get("unlocked_abilities").duplicate() if unit.get("unlocked_abilities") != null else [],
-				"unit_tags": unit.get("unit_tags", []).duplicate(),
-				"traits": unit.get("traits").duplicate() if unit.get("traits") != null else [],
-				"rookie_legacies": unit.get("rookie_legacies").duplicate() if unit.get("rookie_legacies") != null else [],
-				"base_class_legacies": unit.get("base_class_legacies").duplicate() if unit.get("base_class_legacies") != null else [],
-				"promoted_class_legacies": unit.get("promoted_class_legacies").duplicate() if unit.get("promoted_class_legacies") != null else []
+				"skill_points": int(unit.get("skill_points")) if unit.get("skill_points") != null else 0,
+				"unlocked_skills": (unit.get("unlocked_skills") as Array).duplicate() if unit.get("unlocked_skills") is Array else [],
+				"unlocked_abilities": (unit.get("unlocked_abilities") as Array).duplicate() if unit.get("unlocked_abilities") is Array else [],
+				"unit_tags": (unit.get("unit_tags") as Array).duplicate() if unit.get("unit_tags") is Array else [],
+				"traits": (unit.get("traits") as Array).duplicate() if unit.get("traits") is Array else [],
+				"rookie_legacies": (unit.get("rookie_legacies") as Array).duplicate() if unit.get("rookie_legacies") is Array else [],
+				"base_class_legacies": (unit.get("base_class_legacies") as Array).duplicate() if unit.get("base_class_legacies") is Array else [],
+				"promoted_class_legacies": (unit.get("promoted_class_legacies") as Array).duplicate() if unit.get("promoted_class_legacies") is Array else []
 			}
 
 			player_roster.append(unit_dict)
@@ -3337,9 +3536,7 @@ func build_mock_coop_player_party_payload(selected_companion_unit_id: String, ro
 	var avatar_entry: Dictionary = _build_mock_coop_avatar_roster_entry()
 	if not avatar_entry.is_empty():
 		var avatar_snapshot: Dictionary = _serialize_mock_coop_battle_roster_unit(avatar_entry)
-		var avatar_display_name: String = str(avatar_entry.get("unit_name", avatar_entry.get("name", custom_avatar.get("unit_name", "Commander")))).strip_edges()
-		if avatar_display_name == "":
-			avatar_display_name = str(custom_avatar.get("unit_name", custom_avatar.get("name", "Commander"))).strip_edges()
+		var avatar_display_name: String = get_player_display_name("Commander")
 		avatar_snapshot["is_custom_avatar"] = false
 		avatar_snapshot["mock_coop_command_id"] = _mock_coop_party_command_id(role_key, "Avatar")
 		avatar_snapshot["mock_coop_raw_unit_id"] = "Avatar"
@@ -3653,6 +3850,54 @@ func get_highest_garrison_level() -> int:
 
 func _ready() -> void:
 	load_global_settings()
+	var w := get_window()
+	if w != null:
+		if not w.focus_entered.is_connected(_on_window_focus_in_for_audio):
+			w.focus_entered.connect(_on_window_focus_in_for_audio)
+		if not w.focus_exited.is_connected(_on_window_focus_out_for_audio):
+			w.focus_exited.connect(_on_window_focus_out_for_audio)
+
+
+func _on_window_focus_out_for_audio() -> void:
+	if not audio_mute_when_unfocused:
+		return
+	var b := AudioServer.get_bus_index("Master")
+	if b >= 0:
+		AudioServer.set_bus_mute(b, true)
+
+
+func _on_window_focus_in_for_audio() -> void:
+	if not audio_mute_when_unfocused:
+		return
+	apply_audio_settings()
+
+func sanitize_player_display_name(raw: String) -> String:
+	var s: String = str(raw).strip_edges()
+	s = s.replace("\n", " ").replace("\r", "")
+	if s.length() > PLAYER_PROFILE_DISPLAY_NAME_MAX_LEN:
+		s = s.substr(0, PLAYER_PROFILE_DISPLAY_NAME_MAX_LEN)
+	return s
+
+
+## Resolves the name shown in UI / online tags. `override_line` is typically the profile LineEdit text or stored override.
+func resolve_player_display_name(override_line: String, fallback_label: String = "Commander") -> String:
+	var o: String = sanitize_player_display_name(override_line)
+	if o != "":
+		return o
+	var steam_name: String = ""
+	if SteamService != null and SteamService.has_method("get_steam_persona_name") and SteamService.is_steam_ready():
+		steam_name = str(SteamService.get_steam_persona_name()).strip_edges()
+	if steam_name != "":
+		return steam_name
+	var av: String = str(custom_avatar.get("name", custom_avatar.get("unit_name", ""))).strip_edges()
+	if av != "":
+		return av
+	return fallback_label
+
+
+func get_player_display_name(fallback_label: String = "Commander") -> String:
+	return resolve_player_display_name(player_profile_display_override, fallback_label)
+
 
 func load_global_settings() -> void:
 	var cfg := ConfigFile.new()
@@ -3660,14 +3905,21 @@ func load_global_settings() -> void:
 
 	if err != OK:
 		apply_audio_settings()
+		apply_game_speed_scale()
+		apply_performance_settings()
 		return
 
 	audio_master_volume = clampf(float(cfg.get_value("audio", "master_volume", audio_master_volume)), 0.0, 1.0)
+	audio_music_volume = clampf(float(cfg.get_value("audio", "music_volume", audio_music_volume)), 0.0, 1.0)
+	audio_sfx_volume = clampf(float(cfg.get_value("audio", "sfx_volume", audio_sfx_volume)), 0.0, 1.0)
+	audio_mute_when_unfocused = bool(cfg.get_value("audio", "mute_when_unfocused", audio_mute_when_unfocused))
 
 	camera_pan_speed = clampf(float(cfg.get_value("battle", "camera_pan_speed", camera_pan_speed)), 100.0, 2500.0)
 	unit_move_speed = clampf(float(cfg.get_value("battle", "unit_move_speed", unit_move_speed)), 0.03, 1.0)
+	game_speed_scale = sanitize_game_speed_scale(float(cfg.get_value("battle", "game_speed_scale", game_speed_scale)))
 
 	battle_follow_enemy_camera = bool(cfg.get_value("battle", "follow_enemy_camera", battle_follow_enemy_camera))
+	battle_ai_role_batch_turns = bool(cfg.get_value("battle", "ai_role_batch_turns", battle_ai_role_batch_turns))
 	battle_show_danger_zone_default = bool(cfg.get_value("battle", "show_danger_zone_default", battle_show_danger_zone_default))
 	battle_show_minimap_default = bool(cfg.get_value("battle", "show_minimap_default", battle_show_minimap_default))
 	battle_minimap_opacity = clampf(float(cfg.get_value("battle", "minimap_opacity", battle_minimap_opacity)), 0.15, 1.0)
@@ -3686,20 +3938,51 @@ func load_global_settings() -> void:
 	battle_show_faction_tiles = bool(cfg.get_value("battle", "show_faction_tiles", battle_show_faction_tiles))
 	battle_show_path_preview = bool(cfg.get_value("battle", "show_path_preview", battle_show_path_preview))
 	battle_path_preview_pulse = bool(cfg.get_value("battle", "path_preview_pulse", battle_path_preview_pulse))
+	battle_path_style = clampi(int(cfg.get_value("battle", "path_style", battle_path_style)), BATTLE_PATH_STYLE_MINIMAL, BATTLE_PATH_STYLE_DASHED)
+	battle_path_endpoint_marker = bool(cfg.get_value("battle", "path_endpoint_marker", battle_path_endpoint_marker))
+	battle_path_corner_smoothing = clampi(int(cfg.get_value("battle", "path_corner_smoothing", battle_path_corner_smoothing)), 0, 2)
+	battle_path_cost_ticks = bool(cfg.get_value("battle", "path_cost_ticks", battle_path_cost_ticks))
+	battle_path_invalid_ghost = bool(cfg.get_value("battle", "path_invalid_ghost", battle_path_invalid_ghost))
 	battle_show_log = bool(cfg.get_value("battle", "show_log", battle_show_log))
 	battle_allow_fog_of_war = bool(cfg.get_value("battle", "allow_fog_of_war", battle_allow_fog_of_war))
 
+	performance_vsync = bool(cfg.get_value("performance", "vsync", performance_vsync))
+	performance_max_fps = sanitize_performance_max_fps(int(cfg.get_value("performance", "max_fps", performance_max_fps)))
+	performance_window_mode = clampi(int(cfg.get_value("performance", "window_mode", performance_window_mode)), 0, 2)
+	performance_resolution = clampi(int(cfg.get_value("performance", "resolution", performance_resolution)), 0, RESOLUTION_OPTIONS.size() - 1)
+	performance_msaa = clampi(int(cfg.get_value("performance", "msaa", performance_msaa)), 0, 3)
+	performance_show_fps = bool(cfg.get_value("performance", "show_fps", performance_show_fps))
+	performance_screen_shake = bool(cfg.get_value("performance", "screen_shake", performance_screen_shake))
+
+	interface_hud_scale = clampi(int(cfg.get_value("interface", "hud_scale", interface_hud_scale)), 0, 4)
+	interface_show_damage_numbers = bool(cfg.get_value("interface", "show_damage_numbers", interface_show_damage_numbers))
+	interface_show_health_bars = bool(cfg.get_value("interface", "show_health_bars", interface_show_health_bars))
+	interface_show_phase_banner = bool(cfg.get_value("interface", "show_phase_banner", interface_show_phase_banner))
+	interface_show_status_effects = bool(cfg.get_value("interface", "show_status_effects", interface_show_status_effects))
+	interface_damage_text_size = clampi(int(cfg.get_value("interface", "damage_text_size", interface_damage_text_size)), 0, 2)
+	interface_combat_log_font_size = clampi(int(cfg.get_value("interface", "combat_log_font_size", interface_combat_log_font_size)), 0, 2)
+
+	player_profile_display_override = str(cfg.get_value("profile", "display_name_override", player_profile_display_override))
+	player_profile_display_override = sanitize_player_display_name(player_profile_display_override)
+
 	apply_audio_settings()
+	apply_game_speed_scale()
+	apply_performance_settings()
 
 func save_global_settings() -> void:
 	var cfg := ConfigFile.new()
 
 	cfg.set_value("audio", "master_volume", audio_master_volume)
+	cfg.set_value("audio", "music_volume", audio_music_volume)
+	cfg.set_value("audio", "sfx_volume", audio_sfx_volume)
+	cfg.set_value("audio", "mute_when_unfocused", audio_mute_when_unfocused)
 
 	cfg.set_value("battle", "camera_pan_speed", camera_pan_speed)
 	cfg.set_value("battle", "unit_move_speed", unit_move_speed)
+	cfg.set_value("battle", "game_speed_scale", game_speed_scale)
 
 	cfg.set_value("battle", "follow_enemy_camera", battle_follow_enemy_camera)
+	cfg.set_value("battle", "ai_role_batch_turns", battle_ai_role_batch_turns)
 	cfg.set_value("battle", "show_danger_zone_default", battle_show_danger_zone_default)
 	cfg.set_value("battle", "show_minimap_default", battle_show_minimap_default)
 	cfg.set_value("battle", "minimap_opacity", battle_minimap_opacity)
@@ -3715,21 +3998,142 @@ func save_global_settings() -> void:
 	cfg.set_value("battle", "show_faction_tiles", battle_show_faction_tiles)
 	cfg.set_value("battle", "show_path_preview", battle_show_path_preview)
 	cfg.set_value("battle", "path_preview_pulse", battle_path_preview_pulse)
+	cfg.set_value("battle", "path_style", battle_path_style)
+	cfg.set_value("battle", "path_endpoint_marker", battle_path_endpoint_marker)
+	cfg.set_value("battle", "path_corner_smoothing", battle_path_corner_smoothing)
+	cfg.set_value("battle", "path_cost_ticks", battle_path_cost_ticks)
+	cfg.set_value("battle", "path_invalid_ghost", battle_path_invalid_ghost)
 	cfg.set_value("battle", "show_log", battle_show_log)
 	cfg.set_value("battle", "allow_fog_of_war", battle_allow_fog_of_war)
+
+	cfg.set_value("performance", "vsync", performance_vsync)
+	cfg.set_value("performance", "max_fps", performance_max_fps)
+	cfg.set_value("performance", "window_mode", performance_window_mode)
+	cfg.set_value("performance", "resolution", performance_resolution)
+	cfg.set_value("performance", "msaa", performance_msaa)
+	cfg.set_value("performance", "show_fps", performance_show_fps)
+	cfg.set_value("performance", "screen_shake", performance_screen_shake)
+
+	cfg.set_value("interface", "hud_scale", interface_hud_scale)
+	cfg.set_value("interface", "show_damage_numbers", interface_show_damage_numbers)
+	cfg.set_value("interface", "show_health_bars", interface_show_health_bars)
+	cfg.set_value("interface", "show_phase_banner", interface_show_phase_banner)
+	cfg.set_value("interface", "show_status_effects", interface_show_status_effects)
+	cfg.set_value("interface", "damage_text_size", interface_damage_text_size)
+	cfg.set_value("interface", "combat_log_font_size", interface_combat_log_font_size)
+
+	cfg.set_value("profile", "display_name_override", player_profile_display_override)
 
 	var err := cfg.save(SETTINGS_FILE_PATH)
 	if err != OK:
 		push_warning("Could not save global settings. Error code: %s" % err)
 
-func apply_audio_settings() -> void:
-	var master_bus := AudioServer.get_bus_index("Master")
-	if master_bus == -1:
-		return
+func sanitize_game_speed_scale(v: float) -> float:
+	if v <= 1.24:
+		return 1.0
+	if v <= 1.74:
+		return 1.5
+	return 2.0
 
-	var v := clampf(audio_master_volume, 0.0, 1.0)
-	if v <= 0.001:
-		AudioServer.set_bus_mute(master_bus, true)
+
+func apply_game_speed_scale() -> void:
+	game_speed_scale = sanitize_game_speed_scale(game_speed_scale)
+	Engine.time_scale = game_speed_scale
+
+
+func sanitize_performance_max_fps(v: int) -> int:
+	var choices: Array[int] = [0, 30, 60, 90, 120, 144, 240]
+	var vv: int = clampi(int(v), 0, 360)
+	var best: int = choices[0]
+	var best_d: int = absi(vv - best)
+	for o in choices:
+		var oi: int = int(o)
+		var d: int = absi(vv - oi)
+		if d < best_d:
+			best_d = d
+			best = oi
+	return best
+
+
+func apply_performance_settings() -> void:
+	performance_max_fps = sanitize_performance_max_fps(performance_max_fps)
+	if performance_vsync:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	else:
-		AudioServer.set_bus_mute(master_bus, false)
-		AudioServer.set_bus_volume_db(master_bus, linear_to_db(v))
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = performance_max_fps
+
+	performance_window_mode = clampi(performance_window_mode, 0, 2)
+	match performance_window_mode:
+		0:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+		1:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			_apply_windowed_resolution()
+		2:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+	performance_msaa = clampi(performance_msaa, 0, 3)
+	var vp := get_viewport()
+	if vp != null:
+		var msaa_map: Array[int] = [
+			Viewport.MSAA_DISABLED,
+			Viewport.MSAA_2X,
+			Viewport.MSAA_4X,
+			Viewport.MSAA_8X,
+		]
+		vp.msaa_2d = msaa_map[performance_msaa] as Viewport.MSAA
+
+
+const RESOLUTION_OPTIONS: Array[Vector2i] = [
+	Vector2i(1280, 720),
+	Vector2i(1366, 768),
+	Vector2i(1600, 900),
+	Vector2i(1920, 1080),
+	Vector2i(2560, 1440),
+	Vector2i(3840, 2160),
+]
+
+
+func _apply_windowed_resolution() -> void:
+	performance_resolution = clampi(performance_resolution, 0, RESOLUTION_OPTIONS.size() - 1)
+	var res := RESOLUTION_OPTIONS[performance_resolution]
+	DisplayServer.window_set_size(res)
+	var screen_sz := DisplayServer.screen_get_size()
+	var win_pos := (screen_sz - res) / 2
+	DisplayServer.window_set_position(Vector2i(maxi(win_pos.x, 0), maxi(win_pos.y, 0)))
+
+
+const INTERFACE_HUD_SCALE_VALUES: Array[float] = [1.0, 1.25, 1.5, 1.75, 2.0]
+const INTERFACE_DAMAGE_TEXT_SIZES: Array[int] = [16, 22, 30]
+const INTERFACE_LOG_FONT_SIZES: Array[int] = [14, 18, 24]
+
+
+func get_hud_scale_float() -> float:
+	return INTERFACE_HUD_SCALE_VALUES[clampi(interface_hud_scale, 0, INTERFACE_HUD_SCALE_VALUES.size() - 1)]
+
+
+func get_damage_text_font_size() -> int:
+	return INTERFACE_DAMAGE_TEXT_SIZES[clampi(interface_damage_text_size, 0, INTERFACE_DAMAGE_TEXT_SIZES.size() - 1)]
+
+
+func get_combat_log_font_size() -> int:
+	return INTERFACE_LOG_FONT_SIZES[clampi(interface_combat_log_font_size, 0, INTERFACE_LOG_FONT_SIZES.size() - 1)]
+
+
+func _set_bus_volume_linear(bus_name: String, linear_vol: float) -> void:
+	var bus_idx := AudioServer.get_bus_index(bus_name)
+	if bus_idx < 0:
+		return
+	var v := clampf(linear_vol, 0.0, 1.0)
+	if v <= 0.001:
+		AudioServer.set_bus_mute(bus_idx, true)
+	else:
+		AudioServer.set_bus_mute(bus_idx, false)
+		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(v))
+
+
+func apply_audio_settings() -> void:
+	_set_bus_volume_linear("Master", audio_master_volume)
+	_set_bus_volume_linear("Music", audio_music_volume)
+	_set_bus_volume_linear("SFX", audio_sfx_volume)

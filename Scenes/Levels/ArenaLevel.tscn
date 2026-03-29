@@ -1,6 +1,7 @@
 [gd_scene format=4 uid="uid://dkt2vl6wuo4l5"]
 
 [ext_resource type="Script" uid="uid://cnyqke0qc3nky" path="res://Scripts/Core/BattleField.gd" id="1_frrfb"]
+[ext_resource type="Script" path="res://Scripts/UI/PathPreviewTicks.gd" id="path_preview_ticks"]
 [ext_resource type="PackedScene" uid="uid://b0e8x5ik3udyx" path="res://Resources/Unit.tscn" id="2_of5bi"]
 [ext_resource type="PackedScene" uid="uid://btlrorrpwhiot" path="res://Resources/Destructibles/DestructibleCrate.tscn" id="3_pspjn"]
 [ext_resource type="PackedScene" uid="uid://eumvd3goriu8" path="res://Scenes/DashEffect.tscn" id="8_whup6"]
@@ -1893,8 +1894,33 @@ stream = ExtResource("71_j44sx")
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("72_ohgdx")
 
+[node name="PathLineUnder" type="Line2D" parent="." unique_id=271209551]
+z_index = 100
+z_as_relative = false
+width = 11.0
+default_color = Color(0.03, 0.05, 0.12, 0.92)
+antialiased = true
+
 [node name="PathLine" type="Line2D" parent="." unique_id=271209550]
+z_index = 101
+z_as_relative = false
 width = 4.0
+default_color = Color(0.82, 0.96, 1, 1)
+antialiased = true
+
+[node name="PathEndMarker" type="Node2D" parent="." unique_id=271209552]
+z_index = 102
+z_as_relative = false
+visible = false
+
+[node name="Diamond" type="Polygon2D" parent="PathEndMarker"]
+polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
+color = Color(0.9, 0.98, 1, 0.92)
+
+[node name="PathPreviewTicks" type="Node2D" parent="."]
+z_index = 103
+z_as_relative = false
+script = ExtResource("path_preview_ticks")
 
 [node name="HoverGlow" type="ColorRect" parent="." unique_id=990792456]
 z_index = -1

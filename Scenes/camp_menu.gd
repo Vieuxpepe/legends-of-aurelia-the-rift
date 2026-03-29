@@ -1,3 +1,29 @@
+ # ==============================================================================
+ # Purpose / Dependencies / AI Guidance
+ # ==============================================================================
+ # Purpose
+ # Camp / hub controller between battles. Owns the camp UI flow: save/load,
+ # shop (buy/sell/haggle), blacksmith crafting/recipes, dragon ranch, skill tree,
+ # jukebox, inventory/convoy + equip, quest/dialogue panels, and navigation to
+ # World Map / next battle.
+ #
+ # Dependencies
+ # - Autoloads/singletons:
+ #   - CampaignManager: player_roster, global_inventory, save/load, progression gates,
+ #     shop stock, unlocks, settings/state used across camp subsystems.
+ #   - PlayerStats / Inventory (if present as autoloads in this project): camp UI reads/writes
+ #     player stats and item ownership via the project’s global state layer.
+ #   - DragonManager: dragon roster + hatch/ownership flows used by the ranch panel.
+ #   - DialogueDatabase: merchant/herder/blacksmith talk lines + selection helpers.
+ #   - SceneTransition: scene changes to map/levels/arena.
+ #
+ # AI/Reviewer Guidance
+ # - Entry point: `_ready()` wires signals and performs initial population.
+ # - Core UI refresh: `_populate_*` helpers rebuild labels/grids and panel content.
+ # - Signal callbacks: `_on_*` methods are the primary UI event handlers.
+ # - Node access convention: this script primarily uses `%UniqueName` via `get_node_or_null`
+ #   to avoid brittle paths; keep Unique Names in the scene in sync with these references.
+ # ==============================================================================
 extends Control
 
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
@@ -17,6 +43,11 @@ const CAMP_UNIT_INFO_STAT_TIER_CYAN := Color(0.28, 0.88, 1.0, 1.0)
 const CAMP_UNIT_INFO_STAT_TIER_PURPLE := Color(0.76, 0.48, 1.0, 1.0)
 const CAMP_UNIT_INFO_STAT_TIER_ORANGE := Color(1.0, 0.64, 0.22, 1.0)
 const CAMP_UNIT_INFO_STAT_TIER_WHITE := Color(0.96, 0.96, 0.98, 1.0)
+const CAMP_QM_DESC_FONT_SIZE := 23
+const CAMP_QM_DESC_STYLE_MARGIN_H := 18
+const CAMP_QM_DESC_STYLE_MARGIN_V := 14
+## Debug: show the camp Blacksmith button without clearing level 3+. Set to false for release / real progression tests.
+const DEBUG_CAMP_ALWAYS_SHOW_BLACKSMITH := true
 
 # =============================================================================
 # camp_menu.gd – Camp / Hub Scene Controller
@@ -56,69 +87,69 @@ const CAMP_UNIT_INFO_STAT_TIER_WHITE := Color(0.96, 0.96, 0.98, 1.0)
 @onready var shop_buy_sound: AudioStreamPlayer = get_node_or_null("%ShopBuySound")
 @onready var shop_sell_sound: AudioStreamPlayer = get_node_or_null("%ShopSellSound")
 @export var campfire_ambient: AudioStream # Drag your fire crackling sound here!
-@onready var masterwork_sound = $MasterworkSound
+@onready var masterwork_sound: AudioStreamPlayer = $MasterworkSound
 @onready var select_sound: AudioStreamPlayer = get_node_or_null("%SelectSound") 
 @onready var save_popup: Panel = get_node_or_null("%SavePopup") # The new wrapper
-@onready var blacksmith_portrait = get_node_or_null("%BlacksmithPortrait")
-@onready var blacksmith_label = get_node_or_null("%BlacksmithDialogue")
+@onready var blacksmith_portrait: TextureRect = get_node_or_null("%BlacksmithPortrait")
+@onready var blacksmith_label: Label = get_node_or_null("%BlacksmithDialogue")
 @onready var open_save_menu_btn: Button = get_node_or_null("%OpenSaveMenuButton")
 @onready var close_save_btn: Button = get_node_or_null("%CloseSaveButton")
-@onready var use_button = $UseButton # Adjust path if it's inside a container
-@onready var use_item_sound = get_node_or_null("%UseItemSound") # Make sure to add this AudioStreamPlayer in the editor!
-@onready var refresh_shop_btn = get_node_or_null("%RefreshShopButton")
+@onready var use_button: Button = $UseButton # Adjust path if it's inside a container
+@onready var use_item_sound: AudioStreamPlayer = get_node_or_null("%UseItemSound") # Make sure to add this AudioStreamPlayer in the editor!
+@onready var refresh_shop_btn: Button = get_node_or_null("%RefreshShopButton")
 
 # Track which item is currently "highlighted"
 var selected_shop_resource: Resource = null
 
-@onready var dragon_ranch_panel = $DragonRanchPanel
-@onready var open_ranch_btn = $OpenRanchButton
+@onready var dragon_ranch_panel: Control = $DragonRanchPanel
+@onready var open_ranch_btn: Button = $OpenRanchButton
 
 
 # --- DRAGON HERDER (MORGRA) REFERENCES ---
-@onready var herder_portrait = get_node_or_null("%HerderPortrait")
-@onready var herder_label = get_node_or_null("%HerderDialogue")
-@onready var herder_blip = get_node_or_null("%HerderBlip")
+@onready var herder_portrait: TextureRect = get_node_or_null("%HerderPortrait")
+@onready var herder_label: Label = get_node_or_null("%HerderDialogue")
+@onready var herder_blip: AudioStreamPlayer = get_node_or_null("%HerderBlip")
 var herder_tween: Tween
 var herder_idle_timer: Timer
 
 
 # --- SKILL TREE REFERENCES ---
-@onready var open_skills_btn = get_node_or_null("%OpenSkillsButton")
-@onready var skill_tree_panel = get_node_or_null("%SkillTreePanel")
-@onready var skill_title_label = get_node_or_null("%SkillTitleLabel")
-@onready var skill_points_label = get_node_or_null("%SkillPointsLabel")
-@onready var tree_canvas = get_node_or_null("%TreeCanvas")
-@onready var close_skills_btn = get_node_or_null("%CloseSkillsButton")
+@onready var open_skills_btn: Button = get_node_or_null("%OpenSkillsButton")
+@onready var skill_tree_panel: Control = get_node_or_null("%SkillTreePanel")
+@onready var skill_title_label: Label = get_node_or_null("%SkillTitleLabel")
+@onready var skill_points_label: Label = get_node_or_null("%SkillPointsLabel")
+@onready var tree_canvas: Control = get_node_or_null("%TreeCanvas")
+@onready var close_skills_btn: Button = get_node_or_null("%CloseSkillsButton")
 
-@onready var skill_info_panel = get_node_or_null("%SkillInfoPanel")
-@onready var skill_name_label = get_node_or_null("%SkillNameLabel")
-@onready var skill_desc_label = get_node_or_null("%SkillDescLabel")
-@onready var unlock_skill_btn = get_node_or_null("%UnlockSkillButton")
+@onready var skill_info_panel: Control = get_node_or_null("%SkillInfoPanel")
+@onready var skill_name_label: Label = get_node_or_null("%SkillNameLabel")
+@onready var skill_desc_label: RichTextLabel = get_node_or_null("%SkillDescLabel")
+@onready var unlock_skill_btn: Button = get_node_or_null("%UnlockSkillButton")
 
 var selected_skill_node: Resource = null
 
-@onready var swap_ability_btn = get_node_or_null("%SwapAbilityButton")
+@onready var swap_ability_btn: Button = get_node_or_null("%SwapAbilityButton")
 
 # --- QUANTITY POPUP REFERENCES ---
-@onready var quantity_popup = get_node_or_null("%QuantityPopup")
-@onready var qty_item_name = get_node_or_null("%ItemNameLabel")
-@onready var qty_price_label = get_node_or_null("%PriceLabel")
-@onready var qty_slider = get_node_or_null("%AmountSlider")
-@onready var qty_amount_label = get_node_or_null("%AmountLabel")
-@onready var qty_confirm_btn = get_node_or_null("%ConfirmButton")
-@onready var qty_cancel_btn = get_node_or_null("%CancelButton")
+@onready var quantity_popup: Control = get_node_or_null("%QuantityPopup")
+@onready var qty_item_name: Label = get_node_or_null("%ItemNameLabel")
+@onready var qty_price_label: Label = get_node_or_null("%PriceLabel")
+@onready var qty_slider: HSlider = get_node_or_null("%AmountSlider")
+@onready var qty_amount_label: Label = get_node_or_null("%AmountLabel")
+@onready var qty_confirm_btn: Button = get_node_or_null("%ConfirmButton")
+@onready var qty_cancel_btn: Button = get_node_or_null("%CancelButton")
 
 # --- JUKEBOX REFERENCES ---
-@onready var jukebox_btn = get_node_or_null("%JukeboxButton")
-@onready var jukebox_panel = get_node_or_null("%JukeboxPanel")
-@onready var jukebox_list = get_node_or_null("%JukeboxList")
-@onready var close_jukebox_btn = get_node_or_null("%CloseJukeboxButton")
+@onready var jukebox_btn: Button = get_node_or_null("%JukeboxButton")
+@onready var jukebox_panel: Control = get_node_or_null("%JukeboxPanel")
+@onready var jukebox_list: ItemList = get_node_or_null("%JukeboxList")
+@onready var close_jukebox_btn: Button = get_node_or_null("%CloseJukeboxButton")
 
 # NEW CONTROLS
-@onready var jukebox_now_playing = get_node_or_null("%JukeboxNowPlaying")
-@onready var jukebox_volume_slider = get_node_or_null("%JukeboxVolumeSlider")
-@onready var jukebox_skip_btn = get_node_or_null("%JukeboxSkipButton")
-@onready var jukebox_stop_btn = get_node_or_null("%JukeboxStopButton")
+@onready var jukebox_now_playing: RichTextLabel = get_node_or_null("%JukeboxNowPlaying")
+@onready var jukebox_volume_slider: HSlider = get_node_or_null("%JukeboxVolumeSlider")
+@onready var jukebox_skip_btn: Button = get_node_or_null("%JukeboxSkipButton")
+@onready var jukebox_stop_btn: Button = get_node_or_null("%JukeboxStopButton")
 
 # Playback modes (persisted as string in CampaignManager.jukebox_last_mode).
 const JUKEBOX_MODE_DEFAULT: String = "default"
@@ -149,9 +180,27 @@ var _jukebox_move_down_btn: Button = null
 var _jukebox_favorite_btn: Button = null
 var _jukebox_favorites_only_cb: CheckButton = null
 var _jukebox_track_sort_option: OptionButton = null
+var _jukebox_duplicate_playlist_btn: Button = null
+var _jukebox_add_favorites_btn: Button = null
+var _jukebox_add_source_btn: Button = null
+var _jukebox_meta_row: HBoxContainer = null
+var _jukebox_chip_source: Label = null
+var _jukebox_chip_mood: Label = null
+var _jukebox_chip_length: Label = null
+var _jukebox_chip_favorite: Label = null
+var _jukebox_up_next_label: RichTextLabel = null
+var _jukebox_show_lyrics_btn: Button = null
+var _jukebox_status_line: String = ""
+var _jukebox_status_serial: int = 0
+## Runtime track browser (ItemList text contrast is unreliable with project theme). Same indices as legacy list.
+var _jukebox_tracks_scroll: ScrollContainer = null
+var _jukebox_tracks_vbox: VBoxContainer = null
+var _jukebox_runtime_rows: Array[Button] = []
 const JUKEBOX_SORT_UNLOCK: String = "unlock"
 const JUKEBOX_SORT_ALPHA: String = "alpha"
+const JUKEBOX_DISC_RESOURCE_DIR: String = "res://Resources/Music Discs"
 var _jukebox_track_sort_mode: String = JUKEBOX_SORT_UNLOCK
+var _jukebox_disc_data_cache: Dictionary = {}
 
 var qty_mode: String = "" # Tracks if we are "buy"ing or "sell"ing
 var qty_base_price: int = 0
@@ -161,29 +210,45 @@ var merchant_tween: Tween
 var blacksmith_tween: Tween
 
 # --- NEW BLACKSMITH REFERENCES ---
-@onready var blueprint_stock_label = get_node_or_null("BlacksmithPanel/BlueprintStockPanel/StockLabel")
-@onready var blacksmith_panel = $BlacksmithPanel
-@onready var material_scroll = $BlacksmithPanel/MaterialScroll
-@onready var material_grid = $BlacksmithPanel/MaterialScroll/MaterialGrid
-@onready var open_blacksmith_btn = get_node_or_null("%OpenBlacksmithButton")
-@onready var close_blacksmith_btn = get_node_or_null("%CloseBlacksmithButton")
+@onready var blueprint_stock_label: RichTextLabel = get_node_or_null("BlacksmithPanel/BlueprintStockPanel/StockLabel")
+@onready var blueprint_stock_panel: Panel = get_node_or_null("BlacksmithPanel/BlueprintStockPanel") as Panel
+@onready var blacksmith_panel: Control = $BlacksmithPanel
+@onready var material_scroll: ScrollContainer = $BlacksmithPanel/MaterialScroll
+@onready var material_grid: GridContainer = $BlacksmithPanel/MaterialScroll/MaterialGrid
+@onready var anvil_row: HBoxContainer = get_node_or_null("BlacksmithPanel/Anvil") as HBoxContainer
+@onready var blacksmith_talk_button: Button = get_node_or_null("%BlacksmithTalkButton")
+@onready var open_blacksmith_btn: Button = get_node_or_null("%OpenBlacksmithButton")
+@onready var close_blacksmith_btn: Button = get_node_or_null("%CloseBlacksmithButton")
 @export var haldor_normal: Texture2D
 @export var haldor_impressed: Texture2D
 signal name_confirmed(new_name: String)
 var last_blacksmith_lore_index: int = -1 # Tracks the last line to prevent repeats
 
-@onready var slot1 = $BlacksmithPanel/Anvil/Slot1
-@onready var slot2 = $BlacksmithPanel/Anvil/Slot2
-@onready var slot3 = $BlacksmithPanel/Anvil/Slot3
-@onready var craft_button = $BlacksmithPanel/CraftButton
-@onready var recipe_result_label = $BlacksmithPanel/RecipeResultLabel
-@onready var result_icon = $BlacksmithPanel/ResultIcon
+@onready var slot1: Control = $BlacksmithPanel/Anvil/Slot1
+@onready var slot2: Control = $BlacksmithPanel/Anvil/Slot2
+@onready var slot3: Control = $BlacksmithPanel/Anvil/Slot3
+@onready var craft_button: Button = $BlacksmithPanel/CraftButton
+@onready var recipe_result_label: RichTextLabel = $BlacksmithPanel/RecipeResultLabel
+@onready var result_icon: TextureRect = $BlacksmithPanel/ResultIcon
 
 # --- RECIPE BOOK REFERENCES ---
-@onready var recipe_book_btn = get_node_or_null("%RecipeBookButton")
-@onready var recipe_book_panel = get_node_or_null("%RecipeBookPanel")
-@onready var recipe_list_text = get_node_or_null("%RecipeListText")
-@onready var close_book_btn = get_node_or_null("%CloseBookButton")
+@onready var recipe_book_btn: Button = get_node_or_null("%RecipeBookButton")
+@onready var recipe_book_panel: Panel = get_node_or_null("%RecipeBookPanel")
+@onready var recipe_list_text: RichTextLabel = get_node_or_null("%RecipeListText")
+@onready var close_book_btn: Button = get_node_or_null("%CloseBookButton")
+
+var _blacksmith_dimmer: ColorRect = null
+var _blacksmith_title_lbl: Label = null
+var _blacksmith_hdr_materials: Label = null
+var _blacksmith_hdr_deployment: Label = null
+var _blacksmith_hdr_preview: Label = null
+var _blacksmith_anvil_plate: Panel = null
+var _blacksmith_anvil_hint_lbl: Label = null
+var _blacksmith_anvil_hint_strip: Panel = null
+var _blacksmith_workbench_divider: Panel = null
+var _blacksmith_socket_labels: Array[Label] = []
+var _blacksmith_craft_ready_tween: Tween = null
+var _blacksmith_was_craft_ready: bool = false
 
 var last_monologue_text: String = ""
 
@@ -201,48 +266,52 @@ var current_recipe: Dictionary = {}
 @onready var save_slot_3: Button = get_node_or_null("%SaveSlot3")
 @onready var save_button: Button = get_node_or_null("%SaveButton")
 @onready var back_button: Button = get_node_or_null("%BackButton")
-@onready var inventory_desc = $InventoryDescLabel
-@onready var roster_scroll = $RosterScroll
-@onready var roster_grid = $RosterScroll/RosterGrid
+@onready var inventory_desc: RichTextLabel = $InventoryDescLabel
+@onready var roster_scroll: ScrollContainer = $RosterScroll
+@onready var roster_grid: GridContainer = $RosterScroll/RosterGrid
 var selected_roster_index: int = 0
-@onready var stats_label = get_node_or_null("%StatsLabel")
+## Set in `_camp_apply_ui_overhaul` so commander stats/portrait can relayout after roster text changes without a full UI pass.
+var _camp_commander_card: Rect2 = Rect2()
+@onready var stats_label: RichTextLabel = get_node_or_null("%StatsLabel")
 @onready var inspect_unit_btn: Button = get_node_or_null("%InspectUnitButton")
 @onready var unit_info_panel: Panel = get_node_or_null("%UnitInfoPanel")
-@onready var next_battle_button = $NextBattleButton
-@onready var gold_label = $GoldLabel
-@onready var portrait_rect = $PortraitRect
-@onready var warning_dialog = $WarningDialog
-@onready var rep_popup = $RepPopupLabel
+@onready var next_battle_button: Button = $NextBattleButton
+@onready var gold_label: Label = $GoldLabel
+@onready var portrait_rect: TextureRect = $PortraitRect
+@onready var warning_dialog: AcceptDialog = $WarningDialog
+@onready var rep_popup: Label = $RepPopupLabel
 var idle_timer: Timer
 # --- NEW GRID INVENTORY REFERENCES ---
-@onready var inv_scroll = $InventoryScroll
-@onready var unit_grid = $InventoryScroll/InventoryVBox/UnitGrid
-@onready var convoy_grid = $InventoryScroll/InventoryVBox/ConvoyGrid
-@onready var equip_button = $EquipButton
-@onready var unequip_button = $UnequipButton
-@onready var category_tabs = $CategoryTabs
+@onready var inv_scroll: ScrollContainer = $InventoryScroll
+@onready var unit_grid: GridContainer = $InventoryScroll/InventoryVBox/UnitGrid
+@onready var convoy_grid: GridContainer = $InventoryScroll/InventoryVBox/ConvoyGrid
+@onready var equip_button: Button = $EquipButton
+@onready var unequip_button: Button = $UnequipButton
+@onready var category_tabs: Control = $CategoryTabs
 
 var selected_inventory_meta: Dictionary = {}
+## After equip/give/store, flash this item's button once grids rebuild.
+var _camp_inv_flash_item: Resource = null
 var inventory_mapping: Array[Dictionary] = []
 
 # --- NEW SHOP REFERENCES ---
-@onready var shop_scroll = $ShopScroll
-@onready var shop_grid = $ShopScroll/ShopGrid
+@onready var shop_scroll: ScrollContainer = $ShopScroll
+@onready var shop_grid: GridContainer = $ShopScroll/ShopGrid
 var selected_shop_meta: Dictionary = {}
 
-@onready var buy_button = $BuyButton
-@onready var shop_desc = $ShopDescriptionLabel
-@onready var sort_button = $SortButton
+@onready var buy_button: Button = $BuyButton
+@onready var shop_desc: RichTextLabel = $ShopDescriptionLabel
+@onready var sort_button: Button = $SortButton
 
-@onready var merchant_portrait = $MerchantPortrait
-@onready var merchant_label = $MerchantDialogue
+@onready var merchant_portrait: TextureRect = $MerchantPortrait
+@onready var merchant_label: RichTextLabel = $MerchantDialogue
 
-@onready var sell_button = $SellButton
-@onready var sell_confirmation = $SellConfirmation
+@onready var sell_button: Button = $SellButton
+@onready var sell_confirmation: ConfirmationDialog = $SellConfirmation
 
-@onready var buy_confirmation = $BuyConfirmation
-@onready var merchant_blip = $MerchantBlip
-@onready var talk_sound = $TalkSound
+@onready var buy_confirmation: ConfirmationDialog = $BuyConfirmation
+@onready var merchant_blip: AudioStreamPlayer = $MerchantBlip
+@onready var talk_sound: AudioStreamPlayer = $TalkSound
 
 
 
@@ -252,26 +321,26 @@ var shop_stock: Array[Resource] = []
 var discounted_item: Resource = null
 
 # --- NEW HAGGLE REFERENCES ---
-@onready var haggle_button = $HaggleButton
-@onready var haggle_confirmation = $HaggleConfirmation
-@onready var haggle_panel = $HagglePanel
-@onready var haggle_target_zone = $HagglePanel/TargetZone
-@onready var haggle_player_bar = $HagglePanel/PlayerBar
-@onready var haggle_progress = $HagglePanel/HaggleProgress
-@onready var camp_music = $CampMusic
-@onready var minigame_music = $MinigameMusic
+@onready var haggle_button: Button = $HaggleButton
+@onready var haggle_confirmation: ConfirmationDialog = $HaggleConfirmation
+@onready var haggle_panel: Panel = $HagglePanel
+@onready var haggle_target_zone: Control = $HagglePanel/TargetZone
+@onready var haggle_player_bar: Control = $HagglePanel/PlayerBar
+@onready var haggle_progress: ProgressBar = $HagglePanel/HaggleProgress
+@onready var camp_music: AudioStreamPlayer = $CampMusic
+@onready var minigame_music: AudioStreamPlayer = $MinigameMusic
 
 
 @export var minigame_music_tracks: Array[AudioStream] = []
 @export var camp_music_tracks: Array[AudioStream] = []
 
-@onready var talk_button = $TalkButton
-@onready var talk_panel = $TalkPanel
-@onready var talk_text = $TalkPanel/HBoxContainer/TalkText
-@onready var quest_item_icon = $TalkPanel/HBoxContainer/QuestItemIcon
-@onready var option1 = $TalkPanel/VBoxContainer/Option1
-@onready var option2 = $TalkPanel/VBoxContainer/Option2
-@onready var option3 = $TalkPanel/VBoxContainer/Option3
+@onready var talk_button: Button = $TalkButton
+@onready var talk_panel: Panel = $TalkPanel
+@onready var talk_text: Label = $TalkPanel/TalkContentVBox/TalkText
+@onready var quest_item_icon: TextureRect = $TalkPanel/TalkContentVBox/QuestItemIcon
+@onready var option1: Button = $TalkPanel/VBoxContainer/Option1
+@onready var option2: Button = $TalkPanel/VBoxContainer/Option2
+@onready var option3: Button = $TalkPanel/VBoxContainer/Option3
 @onready var roster_header_button: Button = get_node_or_null("Roster")
 @onready var inventory_header_button: Button = get_node_or_null("Button")
 @onready var merchant_header_button: Button = get_node_or_null("Button2")
@@ -280,7 +349,7 @@ var discounted_item: Resource = null
 @onready var background_texture: TextureRect = get_node_or_null("ColorRect")
 
 # World Map / Explore Camp
-@onready var world_map_button = get_node_or_null("%WorldMapButton")
+@onready var world_map_button: Button = get_node_or_null("%WorldMapButton")
 @onready var explore_camp_btn: Button = get_node_or_null("%ExploreCampButton")
 
 var _task_log: TaskLog = null
@@ -289,7 +358,22 @@ var _camp_cards_layer: Control = null
 var _camp_cards: Dictionary = {}
 var _inventory_desc_scroll: ScrollContainer = null
 var _shop_desc_scroll: ScrollContainer = null
+## Quartermaster item panel layout (set in `_camp_apply_ui_overhaul`; used by `_refit_quartermaster_item_panel`).
+var _camp_qm_detail_x: float = 0.0
+var _camp_qm_detail_w: float = 0.0
+var _camp_qm_desc_y: float = 0.0
+var _camp_qm_desc_max_h: float = 300.0
+var _camp_qm_desc_min_h: float = 72.0
 var _camp_unit_info_dimmer: ColorRect = null
+var _merchant_talk_modal: Control = null
+var _merchant_talk_dimmer: ColorRect = null
+var _merchant_talk_open_close_tween: Tween = null
+var _merchant_talk_stagger_tween: Tween = null
+var _merchant_talk_header_label: Label = null
+var _merchant_abandon_confirm: ConfirmationDialog = null
+var _merchant_talk_quest_bar: ProgressBar = null
+const MERCHANT_TALK_HEADER_H := 26.0
+const MERCHANT_TALK_QUEST_BAR_H := 22.0
 var _camp_unit_info_root: VBoxContainer = null
 var _camp_unit_info_portrait: TextureRect = null
 var _camp_unit_info_name: Label = null
@@ -324,8 +408,10 @@ var _camp_jukebox_control_scroll: ScrollContainer = null
 var _camp_jukebox_control_root: VBoxContainer = null
 var _camp_jukebox_mode_row: HBoxContainer = null
 var _camp_jukebox_playlist_row: HBoxContainer = null
+var _camp_jukebox_playlist_tools_row: GridContainer = null
 var _camp_jukebox_manage_row: GridContainer = null
 var _camp_jukebox_filter_row: HBoxContainer = null
+var _camp_jukebox_filter_tools_row: GridContainer = null
 var _camp_jukebox_transport_row: HBoxContainer = null
 var _camp_jukebox_library_badge: Label = null
 var _camp_jukebox_deck_badge: Label = null
@@ -333,6 +419,12 @@ var _camp_jukebox_volume_label: Label = null
 var _camp_jukebox_list_hint: Label = null
 var _camp_jukebox_title: Label = null
 var _camp_jukebox_subtitle: Label = null
+var _camp_jukebox_lyrics_dimmer: ColorRect = null
+var _camp_jukebox_lyrics_modal: Panel = null
+var _camp_jukebox_lyrics_title: Label = null
+var _camp_jukebox_lyrics_track_label: Label = null
+var _camp_jukebox_lyrics_body: RichTextLabel = null
+var _camp_jukebox_lyrics_close_btn: Button = null
 
 var current_talk_state: String = "idle"
 
@@ -343,6 +435,18 @@ var player_velocity: float = 0.0
 var target_velocity: float = 0.0
 var target_timer: float = 0.0
 var base_target_height: float = 0.0
+var haggle_grace_timer: float = 0.0
+var haggle_mid_line_fired: bool = false
+var haggle_last_overlap: bool = false
+var _haggle_playfield_top: float = 0.0
+var _haggle_playfield_h: float = 0.0
+var _haggle_playfield_global_rect: Rect2 = Rect2()
+var _haggle_walk_away_btn: Button = null
+var _haggle_bar_w: float = 76.0
+var _haggle_target_neutral_color: Color = Color(0.58, 0.48, 0.22, 0.95)
+var _haggle_progress_pulse_tween: Tween = null
+const HAGGLE_GRACE_SEC := 0.85
+const HAGGLE_TARGET_BASE_H := 72.0
 var pending_save_slot: int = 0
 
 func _pick_line(key: String) -> String:
@@ -412,6 +516,42 @@ func _camp_make_panel_style(
 	style.shadow_offset = Vector2(0, 6)
 	return style
 
+func _camp_style_merchant_talk_option(btn: Button, dangerous: bool, font_size: int = 16, min_h: float = 38.0) -> void:
+	if btn == null:
+		return
+	btn.focus_mode = Control.FOCUS_ALL
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn.custom_minimum_size.y = min_h
+	btn.add_theme_font_size_override("font_size", font_size)
+	btn.add_theme_color_override("font_color", CAMP_TEXT)
+	btn.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	btn.add_theme_color_override("font_pressed_color", CAMP_TEXT)
+	btn.add_theme_color_override("font_focus_color", CAMP_TEXT)
+	var fill: Color = CAMP_ACTION_SECONDARY
+	var border_n: Color = CAMP_BORDER_SOFT
+	var border_h: Color = CAMP_BORDER
+	var border_f: Color = Color(0.96, 0.84, 0.42, 1.0)
+	if dangerous:
+		border_n = Color(0.68, 0.30, 0.26, 1.0)
+		border_h = Color(0.88, 0.40, 0.34, 1.0)
+		border_f = Color(1.0, 0.52, 0.42, 1.0)
+	btn.add_theme_stylebox_override("normal", _camp_make_button_style(fill, border_n))
+	btn.add_theme_stylebox_override("hover", _camp_make_button_style(fill.lightened(0.12), border_h))
+	btn.add_theme_stylebox_override("pressed", _camp_make_button_style(fill.darkened(0.08), border_h))
+	var focus_st := _camp_make_button_style(fill.lightened(0.06), border_f, 18, 8)
+	focus_st.border_width_left = 3
+	focus_st.border_width_top = 3
+	focus_st.border_width_right = 3
+	focus_st.border_width_bottom = 3
+	btn.add_theme_stylebox_override("focus", focus_st)
+	btn.add_theme_stylebox_override(
+		"disabled",
+		_camp_make_button_style(fill.darkened(0.10), border_n.darkened(0.15), 18, 0)
+	)
+
+
 func _camp_make_button_style(
 	fill: Color,
 	border: Color,
@@ -446,6 +586,66 @@ func _camp_set_rect(control: Control, pos: Vector2, size: Vector2) -> void:
 	control.offset_top = pos.y
 	control.offset_right = pos.x + size.x
 	control.offset_bottom = pos.y + size.y
+
+
+func _camp_inventory_desc_set_text(bbcode: String) -> void:
+	if inventory_desc == null:
+		return
+	inventory_desc.text = bbcode
+	_queue_refit_quartermaster_item_panel()
+
+
+func _queue_refit_quartermaster_item_panel() -> void:
+	if not is_inside_tree():
+		return
+	call_deferred("_refit_quartermaster_item_panel")
+
+
+func _refit_quartermaster_item_panel() -> void:
+	if inventory_desc == null or _inventory_desc_scroll == null:
+		return
+	if equip_button == null or unequip_button == null or use_button == null or sell_button == null:
+		return
+	if _camp_qm_detail_w < 48.0:
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if inventory_desc == null or not is_instance_valid(inventory_desc):
+		return
+	var iw: float = _camp_qm_detail_w
+	var ix: float = _camp_qm_detail_x
+	var iy: float = _camp_qm_desc_y
+	inventory_desc.custom_minimum_size = Vector2.ZERO
+	var ch: float = inventory_desc.get_content_height()
+	# StyleBox content margins are inside the label; height floor includes a little slack for rounding.
+	var want_h: float = ch + float(CAMP_QM_DESC_STYLE_MARGIN_V) * 2.0 + 12.0
+	var scroll_h: float = clampf(want_h, _camp_qm_desc_min_h, _camp_qm_desc_max_h)
+	# Snug fit when everything fits — avoids a pointless scrollbar / dead air.
+	if scroll_h >= want_h - 2.0:
+		scroll_h = want_h
+	_camp_set_rect(_inventory_desc_scroll, Vector2(ix, iy), Vector2(iw, scroll_h))
+	var action_gap := 12.0
+	var row_step := 54.0
+	var btn_h := 44.0
+	var action_y1 := iy + scroll_h + action_gap
+	var action_y2 := action_y1 + row_step
+	var action_button_w := (iw - 12.0) * 0.5
+	_camp_set_rect(equip_button, Vector2(ix, action_y1), Vector2(action_button_w, btn_h))
+	_camp_set_rect(unequip_button, Vector2(ix + action_button_w + 12.0, action_y1), Vector2(action_button_w, btn_h))
+	_camp_set_rect(use_button, Vector2(ix, action_y2), Vector2(action_button_w, btn_h))
+	_camp_set_rect(sell_button, Vector2(ix + action_button_w + 12.0, action_y2), Vector2(action_button_w, btn_h))
+
+func _camp_prepare_for_container(control: Control, expand_horizontal: bool = true) -> void:
+	if control == null:
+		return
+	control.layout_mode = 2
+	control.position = Vector2.ZERO
+	control.offset_left = 0.0
+	control.offset_top = 0.0
+	control.offset_right = 0.0
+	control.offset_bottom = 0.0
+	if expand_horizontal:
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func _camp_style_button(button: Button, primary: bool = false, font_size: int = 22, min_height: float = 52.0) -> void:
 	if button == null:
@@ -494,7 +694,7 @@ func _camp_style_section_badge(button: Button, text_value: String, font_color: C
 	button.add_theme_stylebox_override("disabled", clear_style)
 
 func _camp_style_rich_label(
-	label: RichTextLabel,
+	label: Control,
 	font_size: int = 18,
 	panel_bg: Color = CAMP_PANEL_BG_SOFT,
 	border: Color = CAMP_BORDER_SOFT,
@@ -502,14 +702,25 @@ func _camp_style_rich_label(
 ) -> void:
 	if label == null:
 		return
-	label.fit_content = false
-	label.scroll_active = scrollable
-	label.scroll_following = false
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.mouse_filter = Control.MOUSE_FILTER_STOP if scrollable else Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_size_override("normal_font_size", font_size)
-	label.add_theme_color_override("default_color", CAMP_TEXT)
-	label.add_theme_stylebox_override("normal", _camp_make_panel_style(panel_bg, border, 18, 0))
+	if label is RichTextLabel:
+		var rtl: RichTextLabel = label as RichTextLabel
+		rtl.fit_content = false
+		rtl.scroll_active = scrollable
+		rtl.scroll_following = false
+		rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rtl.mouse_filter = Control.MOUSE_FILTER_STOP if scrollable else Control.MOUSE_FILTER_IGNORE
+		rtl.add_theme_font_size_override("normal_font_size", font_size)
+		rtl.add_theme_color_override("default_color", CAMP_TEXT)
+		rtl.add_theme_stylebox_override("normal", _camp_make_panel_style(panel_bg, border, 18, 0))
+		return
+	if label is Label:
+		var plain: Label = label as Label
+		plain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		plain.add_theme_font_size_override("font_size", font_size)
+		plain.add_theme_color_override("font_color", CAMP_TEXT)
+		plain.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
+		plain.add_theme_constant_override("outline_size", 2)
+		plain.add_theme_stylebox_override("normal", _camp_make_panel_style(panel_bg, border, 18, 0))
 
 func _camp_style_scroll(scroll: ScrollContainer) -> void:
 	if scroll == null:
@@ -601,18 +812,400 @@ func _camp_style_item_list(list: ItemList) -> void:
 		return
 	list.mouse_filter = Control.MOUSE_FILTER_STOP
 	list.focus_mode = Control.FOCUS_ALL
-	list.select_mode = ItemList.SELECT_SINGLE
+	list.select_mode = ItemList.SELECT_MULTI
 	list.add_theme_font_size_override("font_size", 18)
 	list.add_theme_color_override("font_color", CAMP_TEXT)
-	list.add_theme_color_override("font_selected_color", Color(0.10, 0.08, 0.04, 1.0))
+	list.add_theme_color_override("font_selected_color", CAMP_TEXT)
+	list.add_theme_color_override("font_hovered_color", Color(1, 1, 1, 1))
+	list.add_theme_color_override("font_hovered_selected_color", Color(1, 1, 1, 1))
+	list.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
+	list.add_theme_constant_override("outline_size", 2)
 	list.add_theme_color_override("guide_color", CAMP_BORDER_SOFT)
-	list.add_theme_stylebox_override("panel", _camp_make_panel_style(Color(0.08, 0.06, 0.04, 0.94), CAMP_BORDER_SOFT, 16, 0))
-	list.add_theme_stylebox_override("cursor", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 12, 0))
-	list.add_theme_stylebox_override("cursor_unfocused", _camp_make_button_style(Color(0.22, 0.16, 0.09, 0.96), CAMP_BORDER, 12, 0))
-	list.add_theme_stylebox_override("selected", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_BORDER, 12, 0))
-	list.add_theme_stylebox_override("selected_focus", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 12, 0))
+	var panel_style := _camp_make_panel_style(Color(0.08, 0.06, 0.04, 0.94), CAMP_BORDER_SOFT, 16, 0)
+	panel_style.content_margin_left = 10.0
+	panel_style.content_margin_top = 20.0
+	panel_style.content_margin_right = 10.0
+	panel_style.content_margin_bottom = 8.0
+	list.add_theme_stylebox_override("panel", panel_style)
+	list.add_theme_stylebox_override("cursor", _camp_make_button_style(Color(0.13, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 12, 0))
+	list.add_theme_stylebox_override("cursor_unfocused", _camp_make_button_style(Color(0.10, 0.08, 0.06, 0.96), CAMP_BORDER, 12, 0))
+	list.add_theme_stylebox_override("selected", _camp_make_button_style(Color(0.12, 0.09, 0.06, 0.98), CAMP_BORDER, 12, 0))
+	list.add_theme_stylebox_override("selected_focus", _camp_make_button_style(Color(0.14, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 12, 0))
+
+func _jukebox_make_meta_chip(text_value: String, accent: Color = CAMP_ACCENT_CYAN) -> Label:
+	var chip := Label.new()
+	chip.text = text_value
+	chip.clip_text = true
+	chip.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	chip.custom_minimum_size = Vector2(0.0, 28.0)
+	chip.add_theme_stylebox_override("normal", _camp_make_button_style(Color(0.13, 0.10, 0.07, 0.95), accent.lerp(CAMP_BORDER_SOFT, 0.35), 10, 2))
+	_camp_style_label(chip, CAMP_MUTED, 13, 1)
+	return chip
+
+func _jukebox_make_section_shell(title_text: String, accent: Color = CAMP_BORDER) -> Dictionary:
+	var panel := Panel.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_camp_style_panel(panel, Color(0.11, 0.09, 0.06, 0.94), accent.lerp(CAMP_BORDER_SOFT, 0.35), 14, 5)
+
+	var root := VBoxContainer.new()
+	root.name = "SectionRoot"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_theme_constant_override("margin_left", 12)
+	root.add_theme_constant_override("margin_top", 12)
+	root.add_theme_constant_override("margin_right", 12)
+	root.add_theme_constant_override("margin_bottom", 12)
+	root.add_theme_constant_override("separation", 8)
+	panel.add_child(root)
+
+	var title := Label.new()
+	title.name = "SectionTitle"
+	_camp_style_label(title, accent, 18, 2)
+	title.text = title_text
+	root.add_child(title)
+
+	var divider := Panel.new()
+	divider.custom_minimum_size = Vector2(0.0, 2.0)
+	divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	divider.add_theme_stylebox_override("panel", _camp_make_panel_style(accent.lerp(Color(1, 1, 1, 1), 0.18), Color(0, 0, 0, 0), 3, 0))
+	root.add_child(divider)
+
+	var body := VBoxContainer.new()
+	body.name = "SectionBody"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	body.add_theme_constant_override("separation", 8)
+	root.add_child(body)
+
+	return {
+		"panel": panel,
+		"root": root,
+		"title": title,
+		"body": body,
+	}
+
+func _refresh_camp_jukebox_section_heights() -> void:
+	if _camp_jukebox_control_root == null:
+		return
+	var min_by_section := {
+		"OverviewSection": 260.0,
+		"PlaylistSection": 286.0,
+		"FilterSection": 196.0,
+		"TransportSection": 176.0,
+	}
+	for section_name in min_by_section.keys():
+		var panel := _camp_jukebox_control_root.get_node_or_null(section_name) as Panel
+		if panel == null:
+			continue
+		var body := panel.get_node_or_null("SectionRoot/SectionBody") as VBoxContainer
+		var fallback_min := float(min_by_section[section_name])
+		if body == null:
+			panel.custom_minimum_size.y = fallback_min
+			continue
+		panel.custom_minimum_size.y = maxf(fallback_min, body.get_combined_minimum_size().y + 52.0)
+
+func _jukebox_infer_source(display_name: String, path: String) -> String:
+	var upper_name := display_name.to_upper()
+	if upper_name.find("THEME") != -1:
+		return "Theme"
+	if upper_name.find("OVERWORLD") != -1:
+		return "Overworld"
+	if upper_name.find("CREDITS") != -1:
+		return "Credits"
+	if upper_name.find("VILLAGE") != -1:
+		return "Village"
+	if upper_name.find("BOSS") != -1 or upper_name.find("VILLAIN") != -1:
+		return "Boss"
+	if path.find("/Music Discs/") != -1:
+		return "Music Disc"
+	return "Archive"
+
+func _jukebox_collect_disc_resource_paths(root_path: String, out_paths: Array[String]) -> void:
+	var dir := DirAccess.open(root_path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	while true:
+		var name := dir.get_next()
+		if name == "":
+			break
+		if name.begins_with("."):
+			continue
+		var full_path := root_path.path_join(name)
+		if dir.current_is_dir():
+			_jukebox_collect_disc_resource_paths(full_path, out_paths)
+		else:
+			var extension := full_path.get_extension().to_lower()
+			if extension == "tres" or extension == "res":
+				out_paths.append(full_path)
+	dir.list_dir_end()
+
+func _jukebox_find_disc_data_for_track_path(track_path: String) -> ConsumableData:
+	var clean_path := track_path.strip_edges()
+	if clean_path.is_empty():
+		return null
+	var cached_variant: Variant = _jukebox_disc_data_cache.get(clean_path)
+	if cached_variant is ConsumableData:
+		return cached_variant as ConsumableData
+	var disc_paths: Array[String] = []
+	_jukebox_collect_disc_resource_paths(JUKEBOX_DISC_RESOURCE_DIR, disc_paths)
+	for disc_path in disc_paths:
+		var disc_data := load(disc_path) as ConsumableData
+		if disc_data == null or disc_data.unlocked_music_track == null:
+			continue
+		if disc_data.unlocked_music_track.resource_path == clean_path:
+			_jukebox_disc_data_cache[clean_path] = disc_data
+			return disc_data
+	return null
+
+func _jukebox_current_track_path() -> String:
+	if not jukebox_active_playlist_name.is_empty() and jukebox_active_playlist_tracks.size() > 0:
+		var idx: int = jukebox_playlist_index
+		if jukebox_playback_mode == JUKEBOX_MODE_SHUFFLE_PLAYLIST and idx < jukebox_shuffled_indices.size():
+			idx = jukebox_shuffled_indices[idx]
+		if idx >= 0 and idx < jukebox_active_playlist_tracks.size():
+			return str(jukebox_active_playlist_tracks[idx])
+	if is_playing_custom_track and CampaignManager.jukebox_last_track_path != "":
+		return CampaignManager.jukebox_last_track_path
+	return ""
+
+func _jukebox_current_track_name() -> String:
+	var track_path := _jukebox_current_track_path()
+	if track_path.is_empty():
+		return "Camp Ambiance"
+	return _get_display_name_for_path(track_path)
+
+func _jukebox_refresh_lyrics_button() -> void:
+	if _jukebox_show_lyrics_btn == null:
+		return
+	var track_path := _jukebox_current_track_path()
+	_jukebox_show_lyrics_btn.disabled = track_path.is_empty()
+	_jukebox_show_lyrics_btn.text = "Show Lyrics" if not track_path.is_empty() else "No Lyrics"
+
+func _jukebox_infer_mood(display_name: String) -> String:
+	var upper_name := display_name.to_upper()
+	if upper_name.find("EPIC") != -1 or upper_name.find("BOSS") != -1:
+		return "Intense"
+	if upper_name.find("HERO") != -1:
+		return "Resolute"
+	if upper_name.find("VILLAIN") != -1 or upper_name.find("CRAZY") != -1:
+		return "Uneasy"
+	if upper_name.find("VILLAGE") != -1:
+		return "Calm"
+	if upper_name.find("OVERWORLD") != -1:
+		return "Travel"
+	return "Atmospheric"
+
+func _jukebox_estimated_length_label(display_name: String) -> String:
+	var seed := maxi(0, display_name.length())
+	var minutes := 2 + int(seed % 3)
+	var seconds := 18 + int((seed * 13) % 40)
+	return "%d:%02d" % [minutes, seconds]
+
+func _jukebox_selected_track_paths() -> Array[String]:
+	var paths: Array[String] = []
+	for i in range(_jukebox_runtime_rows.size()):
+		var b: Button = _jukebox_runtime_rows[i]
+		if not b.toggle_mode or not b.button_pressed:
+			continue
+		var meta_str := str(b.get_meta("jb_meta", ""))
+		if meta_str == "DEFAULT" or meta_str.begins_with("PLAYLIST|"):
+			continue
+		if not ResourceLoader.exists(meta_str):
+			continue
+		if meta_str not in paths:
+			paths.append(meta_str)
+	return paths
+
+func _jukebox_set_status(msg: String, seconds: float = 2.2) -> void:
+	_jukebox_status_line = msg
+	_jukebox_status_serial += 1
+	var serial := _jukebox_status_serial
+	_update_now_playing_ui()
+	if seconds <= 0.0:
+		return
+	await get_tree().create_timer(seconds).timeout
+	if serial != _jukebox_status_serial:
+		return
+	_jukebox_status_line = ""
+	_update_now_playing_ui()
+
+func _jukebox_ensure_control_deck_scroll_margins() -> void:
+	if _camp_jukebox_control_scroll == null or _camp_jukebox_control_root == null:
+		return
+	if _camp_jukebox_control_scroll.get_child_count() != 1:
+		return
+	var only: Control = _camp_jukebox_control_scroll.get_child(0) as Control
+	if only != _camp_jukebox_control_root:
+		return
+	var deck_inner := MarginContainer.new()
+	deck_inner.name = "ControlDeckInnerMargins"
+	deck_inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_inner.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	deck_inner.add_theme_constant_override("margin_left", 2)
+	deck_inner.add_theme_constant_override("margin_right", 28)
+	deck_inner.add_theme_constant_override("margin_bottom", 28)
+	_camp_jukebox_control_scroll.remove_child(_camp_jukebox_control_root)
+	_camp_jukebox_control_scroll.add_child(deck_inner)
+	deck_inner.add_child(_camp_jukebox_control_root)
+
+func _jukebox_migrate_library_to_runtime_list() -> void:
+	if _camp_jukebox_library_panel == null:
+		return
+	var library_root := _camp_jukebox_library_panel.get_node_or_null("LibraryRoot") as VBoxContainer
+	if library_root == null:
+		return
+	if _jukebox_tracks_scroll != null and is_instance_valid(_jukebox_tracks_scroll) and _jukebox_tracks_scroll.get_parent() == library_root:
+		return
+	if jukebox_list != null and jukebox_list.get_parent() == library_root:
+		library_root.remove_child(jukebox_list)
+		jukebox_panel.add_child(jukebox_list)
+		jukebox_list.visible = false
+		jukebox_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		jukebox_list.custom_minimum_size = Vector2.ZERO
+	_jukebox_tracks_scroll = ScrollContainer.new()
+	_jukebox_tracks_scroll.name = "JukeboxTracksScroll"
+	_jukebox_tracks_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_jukebox_tracks_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_jukebox_tracks_scroll.clip_contents = true
+	_jukebox_tracks_vbox = VBoxContainer.new()
+	_jukebox_tracks_vbox.name = "JukeboxTracksVBox"
+	_jukebox_tracks_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_jukebox_tracks_vbox.add_theme_constant_override("separation", 6)
+	_jukebox_tracks_scroll.add_child(_jukebox_tracks_vbox)
+	library_root.add_child(_jukebox_tracks_scroll)
+	var hint_node := library_root.get_node_or_null("ListHint")
+	if hint_node != null:
+		library_root.move_child(_jukebox_tracks_scroll, hint_node.get_index())
+	else:
+		library_root.move_child(_jukebox_tracks_scroll, mini(1, library_root.get_child_count() - 1))
+	_camp_style_scroll(_jukebox_tracks_scroll)
+
+func _jukebox_is_track_meta(meta: String) -> bool:
+	return meta != "DEFAULT" and not meta.begins_with("PLAYLIST|")
+
+func _jukebox_library_row_stylebox(fill: Color, border: Color, radius: int = 10) -> StyleBoxFlat:
+	var s := _camp_make_button_style(fill, border, radius, 0)
+	s.shadow_size = 0
+	s.shadow_offset = Vector2.ZERO
+	s.content_margin_left = 14.0
+	s.content_margin_right = 12.0
+	s.content_margin_top = 10.0
+	s.content_margin_bottom = 10.0
+	return s
+
+func _jukebox_apply_runtime_row_theme(btn: Button, meta: String) -> void:
+	btn.theme_type_variation = &""
+	var fill := Color(0.22, 0.17, 0.11, 1.0)
+	var border := CAMP_BORDER
+	var hover := Color(0.30, 0.24, 0.15, 1.0)
+	var accent := CAMP_ACCENT_CYAN
+	var fg := Color(1.0, 0.97, 0.88, 1.0)
+	if meta == "DEFAULT":
+		fill = Color(0.12, 0.14, 0.09, 0.98)
+		border = CAMP_ACCENT_GREEN
+		hover = Color(0.15, 0.18, 0.11, 0.98)
+		accent = CAMP_ACCENT_GREEN
+		fg = Color(0.78, 1.0, 0.88, 1.0)
+	elif meta.begins_with("PLAYLIST|"):
+		fill = Color(0.10, 0.12, 0.15, 0.98)
+		border = CAMP_ACCENT_CYAN
+		hover = Color(0.14, 0.17, 0.21, 0.98)
+		fg = Color(0.82, 0.95, 1.0, 1.0)
+	elif _jukebox_is_track_meta(meta) and meta in CampaignManager.favorite_music_paths:
+		border = Color(0.96, 0.81, 0.34, 1.0)
+		hover = Color(0.33, 0.24, 0.11, 0.98)
+		accent = Color(1.0, 0.85, 0.34, 1.0)
+	var pressed_fill := hover.lerp(accent, 0.18)
+	var outline := Color(0.0, 0.0, 0.0, 0.97)
+	btn.add_theme_font_size_override("font_size", 19)
+	btn.add_theme_color_override("font_color", fg)
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0, 1.0))
+	btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 1.0, 1.0))
+	btn.add_theme_color_override("font_hover_pressed_color", Color(1.0, 1.0, 1.0, 1.0))
+	btn.add_theme_color_override("font_disabled_color", CAMP_MUTED)
+	btn.add_theme_color_override("font_focus_color", fg)
+	btn.add_theme_color_override("font_outline_color", outline)
+	btn.add_theme_constant_override("outline_size", 3)
+	var normal_sb := _jukebox_library_row_stylebox(fill, border)
+	var hover_sb := _jukebox_library_row_stylebox(hover, CAMP_BORDER)
+	var pressed_sb := _jukebox_library_row_stylebox(pressed_fill, accent)
+	btn.add_theme_stylebox_override("normal", normal_sb)
+	btn.add_theme_stylebox_override("hover", hover_sb)
+	btn.add_theme_stylebox_override("pressed", pressed_sb)
+	btn.add_theme_stylebox_override("focus", hover_sb)
+	btn.add_theme_stylebox_override("disabled", normal_sb)
+
+func _jukebox_clear_runtime_rows() -> void:
+	_jukebox_runtime_rows.clear()
+	if _jukebox_tracks_vbox == null:
+		return
+	while _jukebox_tracks_vbox.get_child_count() > 0:
+		var c: Node = _jukebox_tracks_vbox.get_child(0)
+		_jukebox_tracks_vbox.remove_child(c)
+		c.free()
+
+func _jukebox_runtime_row_count() -> int:
+	return _jukebox_runtime_rows.size()
+
+func _jukebox_rebuild_runtime_rows(entries: Array[Dictionary]) -> void:
+	_jukebox_clear_runtime_rows()
+	for i in range(entries.size()):
+		var entry: Dictionary = entries[i]
+		var label_text: String = str(entry.get("text", ""))
+		var meta: String = str(entry.get("meta", ""))
+		var btn := Button.new()
+		btn.text = label_text
+		btn.toggle_mode = _jukebox_is_track_meta(meta)
+		btn.focus_mode = Control.FOCUS_ALL
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.clip_text = true
+		btn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		btn.custom_minimum_size.y = 54.0
+		_jukebox_apply_runtime_row_theme(btn, meta)
+		btn.set_meta("jb_meta", meta)
+		btn.set_meta("jb_idx", i)
+		if btn.toggle_mode:
+			btn.toggled.connect(_on_jukebox_runtime_track_row_toggled.bind(i))
+		else:
+			btn.pressed.connect(_on_jukebox_runtime_special_row_pressed.bind(i))
+		_jukebox_tracks_vbox.add_child(btn)
+		_jukebox_runtime_rows.append(btn)
+
+func _on_jukebox_runtime_special_row_pressed(list_index: int) -> void:
+	for j in range(_jukebox_runtime_rows.size()):
+		var other: Button = _jukebox_runtime_rows[j]
+		if other.toggle_mode:
+			other.set_pressed_no_signal(false)
+	_on_jukebox_track_selected(list_index)
+
+func _on_jukebox_runtime_track_row_toggled(pressed: bool, list_index: int) -> void:
+	if pressed:
+		_on_jukebox_track_selected(list_index)
+
+func _jukebox_get_selected_row_indices() -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for i in range(_jukebox_runtime_rows.size()):
+		var b: Button = _jukebox_runtime_rows[i]
+		if b.button_pressed:
+			out.append(i)
+	return out
+
+func _jukebox_first_selected_track_meta() -> String:
+	for b in _jukebox_runtime_rows:
+		if not b.toggle_mode or not b.button_pressed:
+			continue
+		var m: String = str(b.get_meta("jb_meta", ""))
+		if _jukebox_is_track_meta(m):
+			return m
+	return ""
 
 func _close_jukebox() -> void:
+	_close_jukebox_lyrics()
 	if _camp_jukebox_dimmer != null:
 		_camp_jukebox_dimmer.visible = false
 	if jukebox_panel != null:
@@ -672,6 +1265,7 @@ func _ensure_camp_jukebox_modal() -> void:
 		if close_jukebox_btn != null and close_jukebox_btn.get_parent() != header_row:
 			if close_jukebox_btn.get_parent() != null:
 				close_jukebox_btn.get_parent().remove_child(close_jukebox_btn)
+			_camp_prepare_for_container(close_jukebox_btn, false)
 			header_row.add_child(close_jukebox_btn)
 
 		var divider := Panel.new()
@@ -700,6 +1294,7 @@ func _ensure_camp_jukebox_modal() -> void:
 		_camp_jukebox_control_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_camp_jukebox_control_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_camp_jukebox_control_panel.size_flags_stretch_ratio = 0.92
+		_camp_jukebox_control_panel.clip_contents = true
 		_camp_style_panel(_camp_jukebox_control_panel, Color(0.09, 0.07, 0.05, 0.92), CAMP_BORDER_SOFT, 16, 6)
 		body.add_child(_camp_jukebox_control_panel)
 
@@ -713,10 +1308,13 @@ func _ensure_camp_jukebox_modal() -> void:
 		_camp_jukebox_library_badge.name = "LibraryBadge"
 		library_root.add_child(_camp_jukebox_library_badge)
 
-		if jukebox_list != null and jukebox_list.get_parent() != library_root:
+		if jukebox_list != null:
 			if jukebox_list.get_parent() != null:
 				jukebox_list.get_parent().remove_child(jukebox_list)
-			library_root.add_child(jukebox_list)
+			jukebox_panel.add_child(jukebox_list)
+			jukebox_list.visible = false
+			jukebox_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			jukebox_list.custom_minimum_size = Vector2.ZERO
 
 		_camp_jukebox_list_hint = Label.new()
 		_camp_jukebox_list_hint.name = "ListHint"
@@ -725,71 +1323,176 @@ func _ensure_camp_jukebox_modal() -> void:
 
 		_camp_jukebox_control_scroll = ScrollContainer.new()
 		_camp_jukebox_control_scroll.name = "ControlScroll"
-		_camp_jukebox_control_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 16)
+		_camp_jukebox_control_scroll.clip_contents = true
+		_camp_jukebox_control_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 14)
 		_camp_jukebox_control_panel.add_child(_camp_jukebox_control_scroll)
+
+		var deck_inner := MarginContainer.new()
+		deck_inner.name = "ControlDeckInnerMargins"
+		deck_inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		deck_inner.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		deck_inner.add_theme_constant_override("margin_left", 2)
+		deck_inner.add_theme_constant_override("margin_right", 28)
+		deck_inner.add_theme_constant_override("margin_bottom", 28)
+		_camp_jukebox_control_scroll.add_child(deck_inner)
 
 		_camp_jukebox_control_root = VBoxContainer.new()
 		_camp_jukebox_control_root.name = "ControlRoot"
 		_camp_jukebox_control_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_control_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_camp_jukebox_control_root.add_theme_constant_override("separation", 12)
-		_camp_jukebox_control_scroll.add_child(_camp_jukebox_control_root)
+		deck_inner.add_child(_camp_jukebox_control_root)
 
 		_camp_jukebox_deck_badge = Label.new()
 		_camp_jukebox_deck_badge.name = "DeckBadge"
 		_camp_jukebox_control_root.add_child(_camp_jukebox_deck_badge)
 
-		if jukebox_now_playing != null and jukebox_now_playing.get_parent() != _camp_jukebox_control_root:
+		var overview_section: Dictionary = _jukebox_make_section_shell("NOW PLAYING", CAMP_ACCENT_CYAN)
+		var overview_panel := overview_section["panel"] as Panel
+		overview_panel.name = "OverviewSection"
+		var overview_body := overview_section["body"] as VBoxContainer
+		_camp_jukebox_control_root.add_child(overview_panel)
+
+		if jukebox_now_playing != null and jukebox_now_playing.get_parent() != overview_body:
 			if jukebox_now_playing.get_parent() != null:
 				jukebox_now_playing.get_parent().remove_child(jukebox_now_playing)
-			_camp_jukebox_control_root.add_child(jukebox_now_playing)
+			_camp_prepare_for_container(jukebox_now_playing, true)
+			overview_body.add_child(jukebox_now_playing)
+		if _jukebox_meta_row == null or not is_instance_valid(_jukebox_meta_row):
+			_jukebox_meta_row = HBoxContainer.new()
+			_jukebox_meta_row.name = "MetaRow"
+			_jukebox_meta_row.add_theme_constant_override("separation", 8)
+			_jukebox_chip_source = _jukebox_make_meta_chip("SOURCE")
+			_jukebox_chip_mood = _jukebox_make_meta_chip("MOOD")
+			_jukebox_chip_length = _jukebox_make_meta_chip("LENGTH")
+			_jukebox_chip_favorite = _jukebox_make_meta_chip("FAVORITE")
+			_jukebox_meta_row.add_child(_jukebox_chip_source)
+			_jukebox_meta_row.add_child(_jukebox_chip_mood)
+			_jukebox_meta_row.add_child(_jukebox_chip_length)
+			_jukebox_meta_row.add_child(_jukebox_chip_favorite)
+		if _jukebox_meta_row.get_parent() != overview_body:
+			if _jukebox_meta_row.get_parent() != null:
+				_jukebox_meta_row.get_parent().remove_child(_jukebox_meta_row)
+			_camp_prepare_for_container(_jukebox_meta_row, true)
+			overview_body.add_child(_jukebox_meta_row)
+		_jukebox_show_lyrics_btn = Button.new()
+		_jukebox_show_lyrics_btn.name = "ShowLyricsButton"
+		_jukebox_show_lyrics_btn.text = "Show Lyrics"
+		_jukebox_show_lyrics_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_jukebox_show_lyrics_btn.pressed.connect(_on_jukebox_show_lyrics_pressed)
+		_camp_style_button(_jukebox_show_lyrics_btn, false, 15, 38.0)
+		overview_body.add_child(_jukebox_show_lyrics_btn)
+		if _jukebox_up_next_label == null or not is_instance_valid(_jukebox_up_next_label):
+			_jukebox_up_next_label = RichTextLabel.new()
+			_jukebox_up_next_label.name = "UpNextLabel"
+			_jukebox_up_next_label.bbcode_enabled = true
+			_jukebox_up_next_label.scroll_active = false
+			_jukebox_up_next_label.fit_content = true
+			_jukebox_up_next_label.custom_minimum_size = Vector2(0.0, 92.0)
+			_camp_style_rich_label(_jukebox_up_next_label, 14, Color(0.09, 0.07, 0.05, 0.94), CAMP_BORDER_SOFT)
+		if _jukebox_up_next_label.get_parent() != overview_body:
+			if _jukebox_up_next_label.get_parent() != null:
+				_jukebox_up_next_label.get_parent().remove_child(_jukebox_up_next_label)
+			_camp_prepare_for_container(_jukebox_up_next_label, true)
+			overview_body.add_child(_jukebox_up_next_label)
+
+		var playlist_section: Dictionary = _jukebox_make_section_shell("PLAYLIST COMMAND", CAMP_BORDER)
+		var playlist_panel := playlist_section["panel"] as Panel
+		playlist_panel.name = "PlaylistSection"
+		var playlist_body := playlist_section["body"] as VBoxContainer
+		_camp_jukebox_control_root.add_child(playlist_panel)
 
 		_camp_jukebox_mode_row = HBoxContainer.new()
 		_camp_jukebox_mode_row.name = "ModeRow"
 		_camp_jukebox_mode_row.add_theme_constant_override("separation", 10)
-		_camp_jukebox_control_root.add_child(_camp_jukebox_mode_row)
+		playlist_body.add_child(_camp_jukebox_mode_row)
 
 		_camp_jukebox_playlist_row = HBoxContainer.new()
 		_camp_jukebox_playlist_row.name = "PlaylistRow"
 		_camp_jukebox_playlist_row.add_theme_constant_override("separation", 10)
-		_camp_jukebox_control_root.add_child(_camp_jukebox_playlist_row)
+		playlist_body.add_child(_camp_jukebox_playlist_row)
+		_camp_jukebox_playlist_tools_row = GridContainer.new()
+		_camp_jukebox_playlist_tools_row.name = "PlaylistToolsRow"
+		_camp_jukebox_playlist_tools_row.columns = 2
+		_camp_jukebox_playlist_tools_row.add_theme_constant_override("h_separation", 8)
+		_camp_jukebox_playlist_tools_row.add_theme_constant_override("v_separation", 8)
+		playlist_body.add_child(_camp_jukebox_playlist_tools_row)
 
 		_camp_jukebox_manage_row = GridContainer.new()
 		_camp_jukebox_manage_row.name = "ManageRow"
 		_camp_jukebox_manage_row.columns = 2
 		_camp_jukebox_manage_row.add_theme_constant_override("h_separation", 10)
 		_camp_jukebox_manage_row.add_theme_constant_override("v_separation", 10)
-		_camp_jukebox_control_root.add_child(_camp_jukebox_manage_row)
+		playlist_body.add_child(_camp_jukebox_manage_row)
+
+		var filter_section: Dictionary = _jukebox_make_section_shell("CURATION TOOLS", CAMP_ACCENT_GREEN)
+		var filter_panel := filter_section["panel"] as Panel
+		filter_panel.name = "FilterSection"
+		var filter_body := filter_section["body"] as VBoxContainer
+		_camp_jukebox_control_root.add_child(filter_panel)
 
 		_camp_jukebox_filter_row = HBoxContainer.new()
 		_camp_jukebox_filter_row.name = "FilterRow"
 		_camp_jukebox_filter_row.add_theme_constant_override("separation", 10)
-		_camp_jukebox_control_root.add_child(_camp_jukebox_filter_row)
+		filter_body.add_child(_camp_jukebox_filter_row)
+		_camp_jukebox_filter_tools_row = GridContainer.new()
+		_camp_jukebox_filter_tools_row.name = "FilterToolsRow"
+		_camp_jukebox_filter_tools_row.columns = 2
+		_camp_jukebox_filter_tools_row.add_theme_constant_override("h_separation", 8)
+		_camp_jukebox_filter_tools_row.add_theme_constant_override("v_separation", 8)
+		_camp_jukebox_filter_tools_row.add_theme_constant_override("separation", 10)
+		filter_body.add_child(_camp_jukebox_filter_tools_row)
+
+		var transport_section: Dictionary = _jukebox_make_section_shell("TRANSPORT & VOLUME", CAMP_BORDER)
+		var transport_panel := transport_section["panel"] as Panel
+		transport_panel.name = "TransportSection"
+		var transport_body := transport_section["body"] as VBoxContainer
+		_camp_jukebox_control_root.add_child(transport_panel)
 
 		_camp_jukebox_volume_label = Label.new()
 		_camp_jukebox_volume_label.name = "VolumeLabel"
-		_camp_jukebox_control_root.add_child(_camp_jukebox_volume_label)
+		transport_body.add_child(_camp_jukebox_volume_label)
 
-		if jukebox_volume_slider != null and jukebox_volume_slider.get_parent() != _camp_jukebox_control_root:
+		if jukebox_volume_slider != null and jukebox_volume_slider.get_parent() != transport_body:
 			if jukebox_volume_slider.get_parent() != null:
 				jukebox_volume_slider.get_parent().remove_child(jukebox_volume_slider)
-			_camp_jukebox_control_root.add_child(jukebox_volume_slider)
+			_camp_prepare_for_container(jukebox_volume_slider, true)
+			transport_body.add_child(jukebox_volume_slider)
 
 		_camp_jukebox_transport_row = HBoxContainer.new()
 		_camp_jukebox_transport_row.name = "TransportRow"
 		_camp_jukebox_transport_row.add_theme_constant_override("separation", 10)
-		_camp_jukebox_control_root.add_child(_camp_jukebox_transport_row)
+		transport_body.add_child(_camp_jukebox_transport_row)
 
 		if jukebox_skip_btn != null and jukebox_skip_btn.get_parent() != _camp_jukebox_transport_row:
 			if jukebox_skip_btn.get_parent() != null:
 				jukebox_skip_btn.get_parent().remove_child(jukebox_skip_btn)
+			_camp_prepare_for_container(jukebox_skip_btn, true)
 			_camp_jukebox_transport_row.add_child(jukebox_skip_btn)
 		if jukebox_stop_btn != null and jukebox_stop_btn.get_parent() != _camp_jukebox_transport_row:
 			if jukebox_stop_btn.get_parent() != null:
 				jukebox_stop_btn.get_parent().remove_child(jukebox_stop_btn)
+			_camp_prepare_for_container(jukebox_stop_btn, true)
 			_camp_jukebox_transport_row.add_child(jukebox_stop_btn)
 
-	if not _jukebox_playlist_ui_created:
-		_create_jukebox_playlist_ui()
+		# Prevent section collapse in the scroll deck: each section keeps enough
+		# vertical space to contain its controls cleanly.
+		if overview_panel != null:
+			overview_panel.custom_minimum_size.y = maxf(260.0, overview_body.get_combined_minimum_size().y + 52.0)
+		if playlist_panel != null:
+			playlist_panel.custom_minimum_size.y = maxf(286.0, playlist_body.get_combined_minimum_size().y + 52.0)
+		if filter_panel != null:
+			filter_panel.custom_minimum_size.y = maxf(196.0, filter_body.get_combined_minimum_size().y + 52.0)
+		if transport_panel != null:
+			transport_panel.custom_minimum_size.y = maxf(176.0, transport_body.get_combined_minimum_size().y + 52.0)
+
+	_rebuild_jukebox_playlist_ui()
+	_refresh_camp_jukebox_section_heights()
+
+	_jukebox_ensure_control_deck_scroll_margins()
+	if _camp_jukebox_playlist_tools_row != null:
+		_camp_jukebox_playlist_tools_row.columns = 2
+	_jukebox_migrate_library_to_runtime_list()
 
 	_camp_style_label(_camp_jukebox_title, CAMP_BORDER, 32, 2)
 	_camp_style_label(_camp_jukebox_subtitle, CAMP_MUTED, 17, 1)
@@ -797,6 +1500,7 @@ func _ensure_camp_jukebox_modal() -> void:
 		_camp_jukebox_title.text = "CAMP JUKEBOX"
 	if _camp_jukebox_subtitle != null:
 		_camp_jukebox_subtitle.text = "Review unlocked camp tracks, curate playlists, and control the war-table ambiance without leaving camp."
+		_camp_jukebox_subtitle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var header_badge := _camp_jukebox_root.get_node_or_null("JukeboxHeaderRow/HeaderLeft/HeaderBadge") as Label
 	_camp_style_label(header_badge, CAMP_MUTED, 15, 1)
 	if header_badge != null:
@@ -809,10 +1513,10 @@ func _ensure_camp_jukebox_modal() -> void:
 		_camp_jukebox_deck_badge.text = "CONTROL DECK"
 	_camp_style_label(_camp_jukebox_list_hint, CAMP_MUTED, 14, 1)
 	if _camp_jukebox_list_hint != null:
-		_camp_jukebox_list_hint.text = "Select ambience, playlists, or unlocked tracks to preview them here."
+		_camp_jukebox_list_hint.text = "Click a track to play it. Toggle-select unlocked tracks to file them into playlists, favorites, or reorder actions."
 	_camp_style_label(_camp_jukebox_volume_label, CAMP_MUTED, 15, 1)
 	if _camp_jukebox_volume_label != null:
-		_camp_jukebox_volume_label.text = "VOLUME"
+		_camp_jukebox_volume_label.text = "MASTER VOLUME"
 	if close_jukebox_btn != null:
 		close_jukebox_btn.text = "Close"
 		_camp_style_button(close_jukebox_btn, false, 18, 42.0)
@@ -822,10 +1526,14 @@ func _ensure_camp_jukebox_modal() -> void:
 		jukebox_now_playing.fit_content = false
 		jukebox_now_playing.custom_minimum_size = Vector2(0.0, 128.0)
 		jukebox_now_playing.bbcode_enabled = true
-	if jukebox_list != null:
-		_camp_style_item_list(jukebox_list)
-		jukebox_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		jukebox_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if _jukebox_chip_source != null:
+		_jukebox_chip_source.text = "SOURCE"
+	if _jukebox_chip_mood != null:
+		_jukebox_chip_mood.text = "MOOD"
+	if _jukebox_chip_length != null:
+		_jukebox_chip_length.text = "LENGTH"
+	if _jukebox_chip_favorite != null:
+		_jukebox_chip_favorite.text = "FAVORITE"
 	if jukebox_volume_slider != null:
 		_camp_style_slider(jukebox_volume_slider)
 		jukebox_volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -837,7 +1545,10 @@ func _ensure_camp_jukebox_modal() -> void:
 		jukebox_stop_btn.text = "Stop Music"
 		_camp_style_button(jukebox_stop_btn, false, 16, 40.0)
 		jukebox_stop_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_refresh_camp_jukebox_section_heights()
 	_camp_style_scroll(_camp_jukebox_control_scroll)
+	_ensure_camp_jukebox_lyrics_modal()
+	_layout_camp_jukebox_lyrics_modal()
 
 func _layout_camp_jukebox_panel() -> void:
 	if jukebox_panel == null or _camp_jukebox_root == null:
@@ -853,8 +1564,125 @@ func _layout_camp_jukebox_panel() -> void:
 	var panel_pos := (view_size - panel_size) * 0.5
 	_camp_set_rect(jukebox_panel, panel_pos, panel_size)
 	_camp_jukebox_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 24)
-	if _camp_jukebox_control_root != null and _camp_jukebox_control_scroll != null:
-		_camp_jukebox_control_root.custom_minimum_size.x = maxf(0.0, _camp_jukebox_control_scroll.size.x - 18.0)
+	_layout_camp_jukebox_lyrics_modal()
+
+func _ensure_camp_jukebox_lyrics_modal() -> void:
+	if jukebox_panel == null:
+		return
+	if _camp_jukebox_lyrics_dimmer == null or not is_instance_valid(_camp_jukebox_lyrics_dimmer):
+		_camp_jukebox_lyrics_dimmer = ColorRect.new()
+		_camp_jukebox_lyrics_dimmer.name = "JukeboxLyricsDimmer"
+		_camp_jukebox_lyrics_dimmer.color = Color(0, 0, 0, 0.58)
+		_camp_jukebox_lyrics_dimmer.visible = false
+		_camp_jukebox_lyrics_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+		_camp_jukebox_lyrics_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		jukebox_panel.add_child(_camp_jukebox_lyrics_dimmer)
+	if _camp_jukebox_lyrics_modal == null or not is_instance_valid(_camp_jukebox_lyrics_modal):
+		_camp_jukebox_lyrics_modal = Panel.new()
+		_camp_jukebox_lyrics_modal.name = "JukeboxLyricsModal"
+		_camp_jukebox_lyrics_modal.visible = false
+		_camp_jukebox_lyrics_modal.mouse_filter = Control.MOUSE_FILTER_STOP
+		_camp_jukebox_lyrics_modal.z_index = 92
+		_camp_style_panel(_camp_jukebox_lyrics_modal, Color(0.09, 0.07, 0.05, 0.96), CAMP_BORDER, 20, 10)
+		jukebox_panel.add_child(_camp_jukebox_lyrics_modal)
+
+		var root := VBoxContainer.new()
+		root.name = "LyricsRoot"
+		root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 18)
+		root.add_theme_constant_override("separation", 12)
+		_camp_jukebox_lyrics_modal.add_child(root)
+
+		var header := HBoxContainer.new()
+		header.name = "LyricsHeader"
+		header.add_theme_constant_override("separation", 12)
+		root.add_child(header)
+
+		var title_stack := VBoxContainer.new()
+		title_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title_stack.add_theme_constant_override("separation", 4)
+		header.add_child(title_stack)
+
+		_camp_jukebox_lyrics_title = Label.new()
+		_camp_jukebox_lyrics_title.name = "LyricsTitle"
+		title_stack.add_child(_camp_jukebox_lyrics_title)
+
+		_camp_jukebox_lyrics_track_label = Label.new()
+		_camp_jukebox_lyrics_track_label.name = "LyricsTrack"
+		_camp_jukebox_lyrics_track_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		title_stack.add_child(_camp_jukebox_lyrics_track_label)
+
+		_camp_jukebox_lyrics_close_btn = Button.new()
+		_camp_jukebox_lyrics_close_btn.text = "Close"
+		_camp_jukebox_lyrics_close_btn.pressed.connect(_close_jukebox_lyrics)
+		_camp_style_button(_camp_jukebox_lyrics_close_btn, false, 15, 40.0)
+		header.add_child(_camp_jukebox_lyrics_close_btn)
+
+		var divider := Panel.new()
+		divider.custom_minimum_size = Vector2(0.0, 3.0)
+		divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		divider.add_theme_stylebox_override("panel", _camp_make_panel_style(Color(0.62, 0.48, 0.18, 0.92), Color(0, 0, 0, 0), 4, 0))
+		root.add_child(divider)
+
+		_camp_jukebox_lyrics_body = RichTextLabel.new()
+		_camp_jukebox_lyrics_body.name = "LyricsBody"
+		_camp_jukebox_lyrics_body.bbcode_enabled = false
+		_camp_jukebox_lyrics_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_lyrics_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_camp_jukebox_lyrics_body.custom_minimum_size = Vector2(0.0, 320.0)
+		_camp_style_rich_label(_camp_jukebox_lyrics_body, 18, Color(0.08, 0.06, 0.04, 0.95), CAMP_BORDER_SOFT, true)
+		root.add_child(_camp_jukebox_lyrics_body)
+
+	_camp_style_label(_camp_jukebox_lyrics_title, CAMP_BORDER, 24, 2)
+	_camp_style_label(_camp_jukebox_lyrics_track_label, CAMP_MUTED, 16, 1)
+	if _camp_jukebox_lyrics_title != null:
+		_camp_jukebox_lyrics_title.text = "TRACK LYRICS"
+	if _camp_jukebox_lyrics_track_label != null:
+		_camp_jukebox_lyrics_track_label.text = "No active lyrical track selected."
+
+func _layout_camp_jukebox_lyrics_modal() -> void:
+	if jukebox_panel == null:
+		return
+	if _camp_jukebox_lyrics_dimmer != null:
+		_camp_jukebox_lyrics_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if _camp_jukebox_lyrics_modal == null:
+		return
+	var modal_size := Vector2(minf(jukebox_panel.size.x * 0.62, 760.0), minf(jukebox_panel.size.y * 0.76, 620.0))
+	var modal_pos := (jukebox_panel.size - modal_size) * 0.5
+	_camp_set_rect(_camp_jukebox_lyrics_modal, modal_pos, modal_size)
+
+func _close_jukebox_lyrics() -> void:
+	if _camp_jukebox_lyrics_dimmer != null:
+		_camp_jukebox_lyrics_dimmer.visible = false
+	if _camp_jukebox_lyrics_modal != null:
+		_camp_jukebox_lyrics_modal.visible = false
+
+func _on_jukebox_show_lyrics_pressed() -> void:
+	_ensure_camp_jukebox_lyrics_modal()
+	_layout_camp_jukebox_lyrics_modal()
+	var track_path := _jukebox_current_track_path()
+	var track_name := _jukebox_current_track_name()
+	var lyrics_text := ""
+	if track_path.is_empty():
+		lyrics_text = "No lyrics are available while the default camp ambience is playing."
+	else:
+		var disc_data := _jukebox_find_disc_data_for_track_path(track_path)
+		if disc_data != null and not disc_data.track_lyrics.strip_edges().is_empty():
+			lyrics_text = disc_data.track_lyrics.strip_edges()
+			if not disc_data.track_title.strip_edges().is_empty():
+				track_name = disc_data.track_title.strip_edges()
+		else:
+			lyrics_text = "No lyrics are archived for this track yet.\n\nTo add them, open the matching music disc resource that uses ConsumableData and fill the track_lyrics field."
+	if _camp_jukebox_lyrics_track_label != null:
+		_camp_jukebox_lyrics_track_label.text = "TRACK // " + track_name
+	if _camp_jukebox_lyrics_body != null:
+		_camp_jukebox_lyrics_body.text = lyrics_text
+		_camp_jukebox_lyrics_body.scroll_to_line(0)
+	if _camp_jukebox_lyrics_dimmer != null:
+		_camp_jukebox_lyrics_dimmer.visible = true
+		jukebox_panel.move_child(_camp_jukebox_lyrics_dimmer, max(0, jukebox_panel.get_child_count() - 2))
+	if _camp_jukebox_lyrics_modal != null:
+		_camp_jukebox_lyrics_modal.visible = true
+		jukebox_panel.move_child(_camp_jukebox_lyrics_modal, jukebox_panel.get_child_count() - 1)
 
 func _format_camp_record_timestamp(unix_time: int) -> String:
 	if unix_time <= 0:
@@ -2207,6 +3035,82 @@ func _ensure_camp_detail_scroll_wrappers() -> void:
 			shop_desc.get_parent().remove_child(shop_desc)
 		_shop_desc_scroll.add_child(shop_desc)
 
+## Positions commander-column stats, mid-row buttons, portrait, and footer actions inside the commander card.
+## Stats height: `get_content_height()` often under-reports BBCode stacks; we blend it with a small floor and cap,
+## then shrink further if the portrait band would be shorter than `portrait_min_h`.
+## Portrait: `KEEP_ASPECT_CENTERED` keeps the full bust visible in a wide frame (no head-chop from COVERED crop).
+func _layout_camp_commander_column() -> void:
+	if _camp_commander_card.size.x < 10.0 or _camp_commander_card.size.y < 10.0:
+		return
+	var left_x: float = _camp_commander_card.position.x
+	var commander_y: float = _camp_commander_card.position.y
+	var left_w: float = _camp_commander_card.size.x
+	var commander_h: float = _camp_commander_card.size.y
+
+	var stats_pad_top := 10.0
+	var gap_after_stats := 8.0
+	var mid_row_h := 40.0
+	var gap_before_portrait := 8.0
+	var footer_reserve := 62.0
+	var footer_gap := 12.0
+	var portrait_min_h := 148.0
+	var stats_h_min := 88.0
+	var stats_h_max := 178.0
+	# Rough visual floor for name + Lv + HP + class + weapon (single-line weapon); avoids empty band when `get_content_height()` is low.
+	var stats_visual_floor := 136.0
+
+	var commander_bottom_y: float = commander_y + commander_h - footer_reserve
+	var portrait_max_bottom: float = commander_bottom_y - footer_gap
+
+	var stats_w := left_w - 44.0
+	var stats_h := 168.0
+	if stats_label != null:
+		# Wide temporary height so wrapped BBCode measures correctly at final width.
+		_camp_set_rect(stats_label, Vector2(left_x + 22.0, commander_y + stats_pad_top), Vector2(stats_w, 900.0))
+		var raw_content_h: float = stats_label.get_content_height()
+		stats_h = clampf(raw_content_h + 12.0, stats_h_min, stats_h_max)
+		if raw_content_h < 72.0:
+			stats_h = maxf(stats_h, stats_visual_floor)
+		var tentative_mid_y: float = commander_y + stats_pad_top + stats_h + gap_after_stats
+		var tentative_portrait_y: float = tentative_mid_y + mid_row_h + gap_before_portrait
+		var tentative_portrait_h: float = portrait_max_bottom - tentative_portrait_y
+		while tentative_portrait_h < portrait_min_h and stats_h > stats_h_min + 1.0:
+			stats_h -= 6.0
+			tentative_mid_y = commander_y + stats_pad_top + stats_h + gap_after_stats
+			tentative_portrait_y = tentative_mid_y + mid_row_h + gap_before_portrait
+			tentative_portrait_h = portrait_max_bottom - tentative_portrait_y
+		_camp_set_rect(stats_label, Vector2(left_x + 22.0, commander_y + stats_pad_top), Vector2(stats_w, stats_h))
+		stats_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+
+	var commander_top_button_y := commander_y + stats_pad_top + stats_h + gap_after_stats
+	var commander_top_button_w := (left_w - 56.0) / 2.0
+	if swap_ability_btn != null:
+		_camp_set_rect(swap_ability_btn, Vector2(left_x + 22.0, commander_top_button_y), Vector2(commander_top_button_w, mid_row_h))
+	if jukebox_btn != null:
+		_camp_set_rect(jukebox_btn, Vector2(left_x + 34.0 + commander_top_button_w, commander_top_button_y), Vector2(commander_top_button_w, mid_row_h))
+
+	var portrait_frame_y: float = commander_top_button_y + mid_row_h + gap_before_portrait
+	var portrait_frame_h: float = maxf(1.0, portrait_max_bottom - portrait_frame_y)
+
+	if portrait_panel != null:
+		_camp_set_rect(portrait_panel, Vector2(left_x + 44.0, portrait_frame_y), Vector2(left_w - 88.0, portrait_frame_h))
+	if portrait_rect != null:
+		portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var inset := 8.0
+		_camp_set_rect(
+			portrait_rect,
+			Vector2(left_x + 44.0 + inset, portrait_frame_y + inset),
+			Vector2(left_w - 88.0 - inset * 2.0, maxf(64.0, portrait_frame_h - inset * 2.0))
+		)
+
+	var commander_bottom_w := (left_w - 56.0) / 2.0
+	if inspect_unit_btn != null:
+		_camp_set_rect(inspect_unit_btn, Vector2(left_x + 22.0, commander_bottom_y), Vector2(commander_bottom_w, 44.0))
+	if open_save_menu_btn != null:
+		_camp_set_rect(open_save_menu_btn, Vector2(left_x + 34.0 + commander_bottom_w, commander_bottom_y), Vector2(commander_bottom_w, 44.0))
+
+
 func _camp_apply_ui_overhaul() -> void:
 	_ensure_camp_cards()
 	_ensure_camp_detail_scroll_wrappers()
@@ -2266,6 +3170,8 @@ func _camp_apply_ui_overhaul() -> void:
 		var rect: Rect2 = card_rects[card_name]
 		_camp_set_rect(card, rect.position, rect.size)
 
+	_camp_commander_card = Rect2(left_x, commander_y, left_w, commander_h)
+
 	if background_texture != null:
 		background_texture.modulate = Color(1, 1, 1, 0.32)
 
@@ -2274,7 +3180,22 @@ func _camp_apply_ui_overhaul() -> void:
 	_camp_style_section_badge(merchant_header_button, "MERCHANT STOCK", CAMP_ACCENT_GREEN)
 
 	_camp_style_rich_label(stats_label, 20, Color(0.07, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT)
-	_camp_style_rich_label(inventory_desc, 17, Color(0.08, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT, false)
+	_camp_style_rich_label(inventory_desc, CAMP_QM_DESC_FONT_SIZE, Color(0.08, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT, false)
+	if inventory_desc is RichTextLabel:
+		var inv_rtl: RichTextLabel = inventory_desc as RichTextLabel
+		var inv_panel: StyleBox = inv_rtl.get_theme_stylebox("normal")
+		if inv_panel != null and inv_panel is StyleBoxFlat:
+			var inv_st: StyleBoxFlat = (inv_panel as StyleBoxFlat).duplicate() as StyleBoxFlat
+			inv_st.content_margin_left = CAMP_QM_DESC_STYLE_MARGIN_H
+			inv_st.content_margin_right = CAMP_QM_DESC_STYLE_MARGIN_H
+			inv_st.content_margin_top = CAMP_QM_DESC_STYLE_MARGIN_V
+			inv_st.content_margin_bottom = CAMP_QM_DESC_STYLE_MARGIN_V
+			inv_rtl.add_theme_stylebox_override("normal", inv_st)
+		inv_rtl.add_theme_constant_override("line_separation", 3)
+		# Avoid heavy bold glyph (same face as body — easier to read on pixel fonts).
+		var inv_nf: Font = inv_rtl.get_theme_font("normal_font")
+		if inv_nf != null:
+			inv_rtl.add_theme_font_override("bold_font", inv_nf)
 	_camp_style_rich_label(shop_desc, 16, Color(0.08, 0.06, 0.04, 0.88), CAMP_BORDER_SOFT, false)
 	_camp_style_rich_label(merchant_label, 18, Color(0.08, 0.06, 0.04, 0.90), CAMP_BORDER)
 
@@ -2293,7 +3214,8 @@ func _camp_apply_ui_overhaul() -> void:
 
 	if gold_label != null:
 		gold_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.32, 1.0))
-		gold_label.add_theme_font_size_override("font_size", 28)
+		gold_label.add_theme_font_size_override("font_size", 22)
+		gold_label.add_theme_constant_override("outline_size", 2)
 		gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 	if roster_header_button != null:
@@ -2314,39 +3236,33 @@ func _camp_apply_ui_overhaul() -> void:
 	_camp_set_rect(open_ranch_btn, Vector2(left_x + 22.0, top_left_button_y), Vector2(top_left_button_w, 42.0))
 	_camp_set_rect(open_skills_btn, Vector2(left_x + 34.0 + top_left_button_w, top_left_button_y), Vector2(top_left_button_w, 42.0))
 
-	if stats_label != null:
-		_camp_set_rect(stats_label, Vector2(left_x + 22.0, commander_y + 18.0), Vector2(left_w - 44.0, 118.0))
 	if swap_ability_btn != null:
 		swap_ability_btn.text = "Swap Ability"
 		_camp_style_button(swap_ability_btn, false, 17, 40.0)
 	if jukebox_btn != null:
 		jukebox_btn.text = "Jukebox"
 		_camp_style_button(jukebox_btn, false, 17, 40.0)
-	var commander_top_button_y := commander_y + 148.0
-	var commander_top_button_w := (left_w - 56.0) / 2.0
-	_camp_set_rect(swap_ability_btn, Vector2(left_x + 22.0, commander_top_button_y), Vector2(commander_top_button_w, 40.0))
-	_camp_set_rect(jukebox_btn, Vector2(left_x + 34.0 + commander_top_button_w, commander_top_button_y), Vector2(commander_top_button_w, 40.0))
-
-	var portrait_frame_y := commander_y + 200.0
-	var portrait_frame_h := maxf(190.0, commander_h - 284.0)
-	_camp_set_rect(portrait_panel, Vector2(left_x + 44.0, portrait_frame_y), Vector2(left_w - 88.0, portrait_frame_h))
-	_camp_set_rect(portrait_rect, Vector2(left_x + 62.0, portrait_frame_y + 16.0), Vector2(left_w - 124.0, portrait_frame_h - 32.0))
-
 	if inspect_unit_btn != null:
 		inspect_unit_btn.text = "Unit Dossier"
 		_camp_style_button(inspect_unit_btn, false, 18, 44.0)
 	if open_save_menu_btn != null:
 		open_save_menu_btn.text = "Save Records"
 		_camp_style_button(open_save_menu_btn, false, 18, 44.0)
-	var commander_bottom_y := commander_y + commander_h - 62.0
-	var commander_bottom_w := (left_w - 56.0) / 2.0
-	_camp_set_rect(inspect_unit_btn, Vector2(left_x + 22.0, commander_bottom_y), Vector2(commander_bottom_w, 44.0))
-	_camp_set_rect(open_save_menu_btn, Vector2(left_x + 34.0 + commander_bottom_w, commander_bottom_y), Vector2(commander_bottom_w, 44.0))
+	_layout_camp_commander_column()
 
-	var inventory_detail_x := center_x + 22.0
-	var inventory_detail_w := 286.0
-	var inventory_grid_x := inventory_detail_x + inventory_detail_w + 24.0
-	var inventory_grid_w := center_w - (inventory_grid_x - center_x) - 22.0
+	var inv_card_pad := 22.0
+	var inv_col_gap := 20.0
+	var inv_content_w: float = center_w - inv_card_pad * 2.0
+	# Wide readout uses horizontal space; keep grid ≥ ~304px for five slots.
+	var inventory_detail_w: float = clampf(inv_content_w * 0.48, 352.0, 520.0)
+	var inventory_detail_x: float = center_x + inv_card_pad
+	var inventory_grid_x: float = inventory_detail_x + inventory_detail_w + inv_col_gap
+	var inventory_grid_w: float = center_x + center_w - inv_card_pad - inventory_grid_x
+	if inventory_grid_w < 304.0:
+		var grid_short: float = 304.0 - inventory_grid_w
+		inventory_detail_w = maxf(312.0, inventory_detail_w - grid_short)
+		inventory_grid_x = inventory_detail_x + inventory_detail_w + inv_col_gap
+		inventory_grid_w = center_x + center_w - inv_card_pad - inventory_grid_x
 	if inventory_header_button != null:
 		_camp_set_rect(inventory_header_button, Vector2(center_x + 22.0, top_y + 16.0), Vector2(240.0, 28.0))
 	if sort_button != null:
@@ -2356,13 +3272,27 @@ func _camp_apply_ui_overhaul() -> void:
 	if category_tabs != null:
 		_camp_set_rect(category_tabs, Vector2(inventory_grid_x + 92.0, top_y + 16.0), Vector2(inventory_grid_w - 92.0, 38.0))
 	var inventory_desc_y := top_y + 72.0
-	var inventory_desc_h := 248.0
+	var gold_row_y := top_y + inventory_h - 62.0
+	_camp_qm_detail_x = inventory_detail_x
+	_camp_qm_detail_w = inventory_detail_w
+	_camp_qm_desc_y = inventory_desc_y
+	# Leave room for two button rows + gaps before the gold strip.
+	_camp_qm_desc_max_h = maxf(96.0, gold_row_y - inventory_desc_y - 126.0)
 	if _inventory_desc_scroll != null:
-		_camp_set_rect(_inventory_desc_scroll, Vector2(inventory_detail_x, inventory_desc_y), Vector2(inventory_detail_w, inventory_desc_h))
+		_camp_set_rect(
+			_inventory_desc_scroll,
+			Vector2(inventory_detail_x, inventory_desc_y),
+			Vector2(inventory_detail_w, minf(200.0, _camp_qm_desc_max_h))
+		)
 	if inventory_desc != null and _inventory_desc_scroll != null:
-		_camp_set_rect(inventory_desc, Vector2.ZERO, Vector2(inventory_detail_w - 14.0, inventory_desc_h))
+		inventory_desc.layout_mode = 2
+		inventory_desc.position = Vector2.ZERO
+		inventory_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		inventory_desc.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		inventory_desc.custom_minimum_size = Vector2.ZERO
 		inventory_desc.fit_content = true
-		inventory_desc.custom_minimum_size = Vector2(inventory_detail_w - 14.0, 0.0)
+		inventory_desc.scroll_active = false
+		inventory_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if equip_button != null:
 		_camp_style_button(equip_button, false, 18, 44.0)
 	if unequip_button != null:
@@ -2371,14 +3301,7 @@ func _camp_apply_ui_overhaul() -> void:
 		_camp_style_button(use_button, false, 18, 44.0)
 	if sell_button != null:
 		_camp_style_button(sell_button, false, 18, 44.0)
-	var action_button_w := (inventory_detail_w - 12.0) / 2.0
-	var action_y1 := inventory_desc_y + inventory_desc_h + 18.0
-	var action_y2 := top_y + 336.0
-	action_y2 = action_y1 + 54.0
-	_camp_set_rect(equip_button, Vector2(inventory_detail_x, action_y1), Vector2(action_button_w, 44.0))
-	_camp_set_rect(unequip_button, Vector2(inventory_detail_x + action_button_w + 12.0, action_y1), Vector2(action_button_w, 44.0))
-	_camp_set_rect(use_button, Vector2(inventory_detail_x, action_y2), Vector2(action_button_w, 44.0))
-	_camp_set_rect(sell_button, Vector2(inventory_detail_x + action_button_w + 12.0, action_y2), Vector2(action_button_w, 44.0))
+	_queue_refit_quartermaster_item_panel()
 	if gold_label != null:
 		_camp_set_rect(gold_label, Vector2(inventory_detail_x, top_y + inventory_h - 62.0), Vector2(inventory_detail_w, 36.0))
 	if inv_scroll != null:
@@ -2463,6 +3386,963 @@ func _camp_apply_ui_overhaul() -> void:
 		_camp_set_rect(nav_button, Vector2(secondary_x, nav_y + 88.0), Vector2(secondary_width, 44.0))
 		secondary_x += secondary_width + secondary_gap
 
+	_ensure_haggle_walk_away_button()
+	_style_haggle_minigame_chrome()
+	if not haggle_active:
+		_camp_layout_haggle_panel()
+	_sync_haggle_button_availability()
+	_camp_layout_blacksmith_panel()
+	if _blacksmith_dimmer != null and _blacksmith_dimmer.visible:
+		_camp_layout_blacksmith_dimmer()
+	_camp_layout_merchant_talk_panel()
+	_sync_merchant_talk_button_state()
+
+
+func _ensure_blacksmith_dimmer() -> void:
+	if _blacksmith_dimmer != null and is_instance_valid(_blacksmith_dimmer):
+		return
+	_blacksmith_dimmer = ColorRect.new()
+	_blacksmith_dimmer.name = "BlacksmithCampDimmer"
+	_blacksmith_dimmer.color = Color(0.02, 0.014, 0.01, 0.82)
+	_blacksmith_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_blacksmith_dimmer.z_index = 70
+	_blacksmith_dimmer.visible = false
+	add_child(_blacksmith_dimmer)
+	if blacksmith_panel != null:
+		move_child(_blacksmith_dimmer, blacksmith_panel.get_index())
+
+
+func _camp_layout_blacksmith_dimmer() -> void:
+	if _blacksmith_dimmer == null or not is_instance_valid(_blacksmith_dimmer):
+		return
+	var vs: Vector2 = get_viewport_rect().size
+	_camp_set_rect(_blacksmith_dimmer, Vector2.ZERO, vs)
+
+
+func _ensure_blacksmith_chrome_labels() -> void:
+	if blacksmith_panel == null:
+		return
+	if _blacksmith_title_lbl == null:
+		_blacksmith_title_lbl = Label.new()
+		_blacksmith_title_lbl.name = "BlacksmithForgeTitle"
+		_blacksmith_title_lbl.text = "HALDOR'S FORGE"
+		_blacksmith_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		blacksmith_panel.add_child(_blacksmith_title_lbl)
+	if _blacksmith_hdr_materials == null:
+		_blacksmith_hdr_materials = Label.new()
+		_blacksmith_hdr_materials.name = "BlacksmithHdrMaterials"
+		_blacksmith_hdr_materials.text = "CONVOY MATERIALS"
+		blacksmith_panel.add_child(_blacksmith_hdr_materials)
+	if _blacksmith_hdr_deployment == null:
+		_blacksmith_hdr_deployment = Label.new()
+		_blacksmith_hdr_deployment.name = "BlacksmithHdrDeployment"
+		_blacksmith_hdr_deployment.text = "DEPLOYMENT STOCK"
+		_blacksmith_hdr_deployment.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		blacksmith_panel.add_child(_blacksmith_hdr_deployment)
+	if _blacksmith_hdr_preview == null:
+		_blacksmith_hdr_preview = Label.new()
+		_blacksmith_hdr_preview.name = "BlacksmithHdrPreview"
+		_blacksmith_hdr_preview.text = "OUTCOME"
+		_blacksmith_hdr_preview.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		blacksmith_panel.add_child(_blacksmith_hdr_preview)
+	_camp_style_label(_blacksmith_title_lbl, CAMP_BORDER, 28, 2)
+	_camp_style_label(_blacksmith_hdr_materials, CAMP_MUTED, 18, 1)
+	_camp_style_label(_blacksmith_hdr_deployment, CAMP_MUTED, 18, 1)
+	_camp_style_label(_blacksmith_hdr_preview, CAMP_MUTED, 18, 1)
+	for lbl in [_blacksmith_title_lbl, _blacksmith_hdr_materials, _blacksmith_hdr_deployment, _blacksmith_hdr_preview]:
+		if lbl != null:
+			lbl.z_index = 24
+
+
+func _ensure_blacksmith_anvil_plate() -> void:
+	if blacksmith_panel == null or anvil_row == null:
+		return
+	if _blacksmith_anvil_plate != null and is_instance_valid(_blacksmith_anvil_plate):
+		return
+	_blacksmith_anvil_plate = Panel.new()
+	_blacksmith_anvil_plate.name = "AnvilBackingPlate"
+	_blacksmith_anvil_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_blacksmith_anvil_plate.z_index = 3
+	blacksmith_panel.add_child(_blacksmith_anvil_plate)
+	move_child(_blacksmith_anvil_plate, anvil_row.get_index())
+
+
+func _camp_layout_blacksmith_panel() -> void:
+	if blacksmith_panel == null or not is_instance_valid(blacksmith_panel):
+		return
+	var view_size: Vector2 = get_viewport_rect().size
+	if view_size.x < 100.0 or view_size.y < 100.0:
+		return
+
+	_ensure_blacksmith_chrome_labels()
+	_ensure_blacksmith_anvil_plate()
+	_ensure_blacksmith_workbench_chrome()
+
+	blacksmith_panel.rotation = 0.0
+	blacksmith_panel.z_index = 80
+	var margin: float = 22.0
+	_camp_set_rect(blacksmith_panel, Vector2(margin, margin), Vector2(view_size.x - margin * 2.0, view_size.y - margin * 2.0))
+	if blacksmith_panel is Panel:
+		_camp_style_panel(blacksmith_panel as Panel, CAMP_PANEL_BG_ALT, CAMP_BORDER, 22, 12)
+
+	var pw: float = blacksmith_panel.size.x
+	var ph: float = blacksmith_panel.size.y
+	var pad: float = 18.0
+	var left_col_w: float = clampf(pw * 0.20, 268.0, 340.0)
+	var right_col_w: float = clampf(pw * 0.22, 260.0, 360.0)
+	var mid_x: float = pad + left_col_w + pad
+	var mid_w: float = maxf(320.0, pw - mid_x - right_col_w - pad * 2.0)
+
+	var title_y: float = 10.0
+	var title_h: float = 40.0
+	var row_top: float = title_y + title_h + 10.0
+	var sec_h: float = 26.0
+	var list_top: float = row_top + sec_h + 6.0
+	var bottom_reserve: float = 58.0
+	var bp_h: float = clampf(ph * 0.26, 168.0, 248.0)
+
+	if _blacksmith_title_lbl != null:
+		_camp_set_rect(_blacksmith_title_lbl, Vector2(pad, title_y), Vector2(pw - pad * 2.0, title_h))
+	if _blacksmith_hdr_materials != null:
+		_camp_set_rect(_blacksmith_hdr_materials, Vector2(pad, row_top), Vector2(left_col_w, sec_h))
+	if _blacksmith_hdr_deployment != null:
+		_camp_set_rect(
+			_blacksmith_hdr_deployment,
+			Vector2(pw - pad - right_col_w, row_top),
+			Vector2(right_col_w, sec_h)
+		)
+
+	if material_scroll != null:
+		_camp_style_scroll(material_scroll)
+		material_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+		material_scroll.z_index = 8
+		_camp_set_rect(
+			material_scroll,
+			Vector2(pad, list_top),
+			Vector2(left_col_w, maxf(160.0, ph - list_top - bottom_reserve))
+		)
+	if material_grid != null:
+		material_grid.columns = 4
+
+	if blueprint_stock_panel != null:
+		_camp_style_panel(blueprint_stock_panel, CAMP_PANEL_BG_SOFT, CAMP_BORDER_SOFT, 16, 4)
+		blueprint_stock_panel.z_index = 8
+		_camp_set_rect(
+			blueprint_stock_panel,
+			Vector2(pw - pad - right_col_w, list_top),
+			Vector2(right_col_w, bp_h)
+		)
+	if blueprint_stock_label != null:
+		_camp_style_rich_label(blueprint_stock_label, 20, Color(0.10, 0.074, 0.048, 0.92), CAMP_BORDER_SOFT, true)
+		_camp_set_rect(blueprint_stock_label, Vector2(10.0, 10.0), Vector2(right_col_w - 20.0, maxf(40.0, bp_h - 20.0)))
+
+	var portrait_w: float = clampf(mid_w * 0.70, 248.0, 400.0)
+	var portrait_h: float = clampf(portrait_w * 0.48, 132.0, 200.0)
+	var portrait_x: float = mid_x + (mid_w - portrait_w) * 0.5
+	if blacksmith_portrait != null:
+		blacksmith_portrait.z_index = 6
+		_camp_set_rect(blacksmith_portrait, Vector2(portrait_x, row_top), Vector2(portrait_w, portrait_h))
+
+	var dialogue_y: float = row_top + portrait_h + 10.0
+	var dialogue_h: float = clampf(ph * 0.14, 96.0, 148.0)
+	if blacksmith_label != null:
+		blacksmith_label.z_index = 7
+		_camp_style_label(blacksmith_label, CAMP_TEXT, 22, 2)
+		blacksmith_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_camp_set_rect(blacksmith_label, Vector2(mid_x + 6.0, dialogue_y), Vector2(mid_w - 12.0, dialogue_h))
+
+	var talk_w: float = 118.0
+	if blacksmith_talk_button != null:
+		blacksmith_talk_button.z_index = 12
+		_camp_style_button(blacksmith_talk_button, false, 19, 42.0)
+		_camp_set_rect(
+			blacksmith_talk_button,
+			Vector2(mid_x + mid_w - talk_w - 6.0, row_top + 2.0),
+			Vector2(talk_w, 42.0)
+		)
+
+	var anvil_slot: float = clampf(mid_w * 0.095, 84.0, 104.0)
+	var anvil_gap: float = 22.0
+	var anvil_total_w: float = anvil_slot * 3.0 + anvil_gap * 2.0
+	var craft_h: float = 46.0
+	var craft_y: float = dialogue_y + dialogue_h + 16.0
+	if _blacksmith_workbench_divider != null:
+		_blacksmith_workbench_divider.z_index = 5
+		_camp_style_panel(
+			_blacksmith_workbench_divider,
+			Color(0.14, 0.10, 0.065, 0.55),
+			Color(0.55, 0.44, 0.20, 0.65),
+			2,
+			0
+		)
+		_camp_set_rect(
+			_blacksmith_workbench_divider,
+			Vector2(mid_x + 10.0, craft_y - 10.0),
+			Vector2(mid_w - 20.0, 3.0)
+		)
+	if craft_button != null:
+		craft_button.z_index = 12
+		_camp_style_button(craft_button, true, 20, craft_h)
+		_camp_set_rect(craft_button, Vector2(mid_x + (mid_w - 172.0) * 0.5, craft_y), Vector2(172.0, craft_h))
+	var craft_bottom: float = craft_y + craft_h
+	var socket_lbl_gap_after_craft: float = 10.0
+	var socket_lbl_h: float = 24.0
+	var socket_lbl_y: float = craft_bottom + socket_lbl_gap_after_craft
+	var anvil_y: float = socket_lbl_y + socket_lbl_h + 8.0
+	if anvil_row != null:
+		anvil_row.z_index = 12
+		anvil_row.add_theme_constant_override("separation", int(anvil_gap))
+		_camp_set_rect(
+			anvil_row,
+			Vector2(mid_x + (mid_w - anvil_total_w) * 0.5, anvil_y),
+			Vector2(anvil_total_w, anvil_slot)
+		)
+	for s in [slot1, slot2, slot3]:
+		if s != null:
+			s.custom_minimum_size = Vector2(anvil_slot, anvil_slot)
+
+	var anvil_row_left: float = mid_x + (mid_w - anvil_total_w) * 0.5
+	for si in range(_blacksmith_socket_labels.size()):
+		var slbl: Label = _blacksmith_socket_labels[si]
+		if slbl != null:
+			slbl.z_index = 14
+			_camp_style_label(slbl, CAMP_BORDER, 18, 1)
+			var lbl_w: float = 28.0
+			var cx: float = anvil_row_left + si * (anvil_slot + anvil_gap) + anvil_slot * 0.5 - lbl_w * 0.5
+			_camp_set_rect(slbl, Vector2(cx, socket_lbl_y), Vector2(lbl_w, socket_lbl_h))
+	var hint_strip_pad_h: float = 8.0
+	var hint_inner_pad: float = 10.0
+	if _blacksmith_anvil_hint_strip != null:
+		_blacksmith_anvil_hint_strip.z_index = 11
+		_camp_style_panel(
+			_blacksmith_anvil_hint_strip,
+			Color(0.14, 0.108, 0.072, 0.88),
+			Color(0.42, 0.34, 0.18, 0.72),
+			12,
+			0
+		)
+		_camp_set_rect(
+			_blacksmith_anvil_hint_strip,
+			Vector2(mid_x + hint_strip_pad_h, anvil_y + anvil_slot + 4.0),
+			Vector2(mid_w - hint_strip_pad_h * 2.0, 72.0)
+		)
+	if _blacksmith_anvil_hint_lbl != null:
+		_blacksmith_anvil_hint_lbl.z_index = 15
+		_camp_style_label(_blacksmith_anvil_hint_lbl, CAMP_TEXT, 20, 1)
+		_camp_set_rect(
+			_blacksmith_anvil_hint_lbl,
+			Vector2(mid_x + hint_strip_pad_h + hint_inner_pad, anvil_y + anvil_slot + 10.0),
+			Vector2(mid_w - (hint_strip_pad_h + hint_inner_pad) * 2.0, 58.0)
+		)
+
+	var recipe_book_y: float = anvil_y + anvil_slot + 86.0
+	var recipe_book_btn_w: float = 240.0
+	if recipe_book_btn != null:
+		recipe_book_btn.z_index = 12
+		_camp_style_button(recipe_book_btn, false, 19, 42.0)
+		_camp_set_rect(
+			recipe_book_btn,
+			Vector2(mid_x + (mid_w - recipe_book_btn_w) * 0.5, recipe_book_y),
+			Vector2(recipe_book_btn_w, 42.0)
+		)
+		_sync_blacksmith_recipe_book_button_state()
+
+	var preview_hdr_y: float = list_top + bp_h + 12.0
+	if _blacksmith_hdr_preview != null:
+		_camp_set_rect(
+			_blacksmith_hdr_preview,
+			Vector2(pw - pad - right_col_w, preview_hdr_y),
+			Vector2(right_col_w, sec_h)
+		)
+	var icon_side: float = clampf(minf(136.0, right_col_w - 40.0), 100.0, 168.0)
+	var icon_x: float = pw - pad - right_col_w + (right_col_w - icon_side) * 0.5
+	var icon_y: float = preview_hdr_y + sec_h + 6.0
+	if result_icon != null:
+		result_icon.rotation = 0.0
+		result_icon.z_index = 9
+		_camp_set_rect(result_icon, Vector2(icon_x, icon_y), Vector2(icon_side, icon_side))
+	var rtl_h: float = clampf(ph - (icon_y + icon_side) - bottom_reserve - 4.0, 96.0, 220.0)
+	if recipe_result_label != null:
+		recipe_result_label.rotation = 0.0
+		recipe_result_label.z_index = 9
+		_camp_style_rich_label(
+			recipe_result_label,
+			21,
+			Color(0.11, 0.082, 0.055, 0.90),
+			CAMP_BORDER_SOFT,
+			true
+		)
+		_camp_set_rect(
+			recipe_result_label,
+			Vector2(pw - pad - right_col_w + 8.0, icon_y + icon_side + 8.0),
+			Vector2(right_col_w - 16.0, rtl_h)
+		)
+
+	if _blacksmith_anvil_plate != null:
+		_camp_style_panel(_blacksmith_anvil_plate, Color(0.09, 0.065, 0.042, 0.55), CAMP_BORDER_SOFT, 16, 0)
+		var plate_top: float = craft_y - 10.0
+		var plate_bot: float = recipe_book_y + 44.0
+		_camp_set_rect(
+			_blacksmith_anvil_plate,
+			Vector2(mid_x + 4.0, plate_top),
+			Vector2(mid_w - 8.0, plate_bot - plate_top)
+		)
+
+	if recipe_book_panel != null:
+		_camp_style_panel(recipe_book_panel, CAMP_PANEL_BG, CAMP_BORDER_SOFT, 18, 8)
+		recipe_book_panel.z_index = 30
+		var book_w: float = clampf(mid_w * 0.92, 420.0, 620.0)
+		var book_h: float = clampf(ph * 0.52, 320.0, 520.0)
+		_camp_set_rect(
+			recipe_book_panel,
+			Vector2(mid_x + (mid_w - book_w) * 0.5, list_top + 28.0),
+			Vector2(book_w, book_h)
+		)
+		if recipe_list_text != null:
+			_camp_style_rich_label(recipe_list_text, 19, CAMP_PANEL_BG_SOFT, CAMP_BORDER_SOFT, true)
+			_camp_set_rect(recipe_list_text, Vector2(14.0, 14.0), Vector2(book_w - 28.0, book_h - 52.0))
+		if close_book_btn != null:
+			_camp_style_button(close_book_btn, false, 15, 34.0)
+			close_book_btn.text = "✕"
+			close_book_btn.z_index = 31
+			_camp_set_rect(close_book_btn, Vector2(book_w - 48.0, 8.0), Vector2(40.0, 34.0))
+
+	if close_blacksmith_btn != null:
+		close_blacksmith_btn.z_index = 25
+		_camp_style_button(close_blacksmith_btn, false, 19, 44.0)
+		_camp_set_rect(close_blacksmith_btn, Vector2(pw - 148.0, ph - 56.0), Vector2(130.0, 44.0))
+
+	_blacksmith_style_slot_backdrops()
+
+
+func _blacksmith_finish_recipe_check() -> void:
+	_sync_blacksmith_anvil_hint()
+	_blacksmith_update_craft_ready_affordance()
+
+
+func _ensure_blacksmith_workbench_chrome() -> void:
+	if blacksmith_panel == null:
+		return
+	if _blacksmith_anvil_hint_strip == null:
+		_blacksmith_anvil_hint_strip = Panel.new()
+		_blacksmith_anvil_hint_strip.name = "BlacksmithAnvilHintStrip"
+		_blacksmith_anvil_hint_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		blacksmith_panel.add_child(_blacksmith_anvil_hint_strip)
+	if _blacksmith_anvil_hint_lbl == null:
+		_blacksmith_anvil_hint_lbl = Label.new()
+		_blacksmith_anvil_hint_lbl.name = "BlacksmithAnvilHint"
+		_blacksmith_anvil_hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_blacksmith_anvil_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		blacksmith_panel.add_child(_blacksmith_anvil_hint_lbl)
+	if _blacksmith_workbench_divider == null:
+		_blacksmith_workbench_divider = Panel.new()
+		_blacksmith_workbench_divider.name = "BlacksmithWorkbenchDivider"
+		_blacksmith_workbench_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		blacksmith_panel.add_child(_blacksmith_workbench_divider)
+	while _blacksmith_socket_labels.size() < 3:
+		var n := _blacksmith_socket_labels.size() + 1
+		var sl := Label.new()
+		sl.name = "BlacksmithSocketIdx%d" % n
+		sl.text = str(n)
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		blacksmith_panel.add_child(sl)
+		_blacksmith_socket_labels.append(sl)
+
+
+func _sync_blacksmith_anvil_hint() -> void:
+	if _blacksmith_anvil_hint_lbl == null or not is_instance_valid(_blacksmith_anvil_hint_lbl):
+		return
+	if blacksmith_panel == null or not blacksmith_panel.visible:
+		_blacksmith_anvil_hint_lbl.visible = false
+		if _blacksmith_anvil_hint_strip != null and is_instance_valid(_blacksmith_anvil_hint_strip):
+			_blacksmith_anvil_hint_strip.visible = false
+		return
+	var filled: int = 0
+	for it in anvil_items:
+		if it != null:
+			filled += 1
+	var show_hint: bool = filled < 3 and craft_button != null and craft_button.disabled
+	_blacksmith_anvil_hint_lbl.visible = show_hint
+	if _blacksmith_anvil_hint_strip != null and is_instance_valid(_blacksmith_anvil_hint_strip):
+		_blacksmith_anvil_hint_strip.visible = show_hint
+	if not show_hint:
+		return
+	match filled:
+		0:
+			_blacksmith_anvil_hint_lbl.text = "Drag materials from convoy into the sockets, or double-click a stack to send one."
+		1:
+			_blacksmith_anvil_hint_lbl.text = "Add more to the sockets — salvage uses one weapon; most recipes need three materials."
+		2:
+			_blacksmith_anvil_hint_lbl.text = "One more socket. Fill all three to test a forge pattern (unless you are salvaging a single weapon)."
+
+
+func _blacksmith_stop_craft_ready_affordance() -> void:
+	if _blacksmith_craft_ready_tween != null and _blacksmith_craft_ready_tween.is_valid():
+		_blacksmith_craft_ready_tween.kill()
+	_blacksmith_craft_ready_tween = null
+	_blacksmith_was_craft_ready = false
+	if craft_button != null and is_instance_valid(craft_button):
+		craft_button.modulate = Color.WHITE
+
+
+func _blacksmith_play_craft_ready_tick_sound() -> void:
+	if select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = 1.18
+		select_sound.play()
+
+
+func _blacksmith_update_craft_ready_affordance() -> void:
+	if craft_button == null or not is_instance_valid(craft_button):
+		return
+	if craft_button.disabled:
+		_blacksmith_stop_craft_ready_affordance()
+		return
+	if not _blacksmith_was_craft_ready:
+		_blacksmith_was_craft_ready = true
+		_blacksmith_play_craft_ready_tick_sound()
+	if _blacksmith_craft_ready_tween != null and _blacksmith_craft_ready_tween.is_valid():
+		return
+	_blacksmith_craft_ready_tween = create_tween().set_loops()
+	_blacksmith_craft_ready_tween.tween_property(craft_button, "modulate", Color(1.2, 1.14, 0.92), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_blacksmith_craft_ready_tween.tween_property(craft_button, "modulate", Color.WHITE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _blacksmith_slot_receive_juice(slot_index: int) -> void:
+	var slots: Array = [slot1, slot2, slot3]
+	if slot_index < 0 or slot_index >= slots.size():
+		return
+	var tr: Control = slots[slot_index] as Control
+	if tr == null or not is_instance_valid(tr):
+		return
+	var orig: Vector2 = Vector2.ONE
+	tr.scale = orig
+	var tw := create_tween()
+	tw.tween_property(tr, "scale", orig * 1.14, 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(tr, "scale", orig, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	if shop_buy_sound != null and shop_buy_sound.stream != null:
+		shop_buy_sound.pitch_scale = 0.88
+		shop_buy_sound.play()
+	elif select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = 1.22
+		select_sound.play()
+
+
+func _blacksmith_forge_success_panel_juice() -> void:
+	if blacksmith_portrait != null and is_instance_valid(blacksmith_portrait):
+		_shake_node(blacksmith_portrait)
+	if result_icon != null and is_instance_valid(result_icon):
+		var hi := Color(1.85, 1.75, 1.25, 1.0)
+		var rtw := create_tween()
+		rtw.tween_property(result_icon, "modulate", hi, 0.09)
+		rtw.tween_property(result_icon, "modulate", Color.WHITE, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = 1.14
+		select_sound.play()
+	await get_tree().create_timer(0.30).timeout
+
+
+func _blacksmith_make_forge_slot_style() -> StyleBoxFlat:
+	var st := _camp_make_panel_style(
+		Color(0.045, 0.032, 0.022, 1.0),
+		Color(0.88, 0.72, 0.32, 0.98),
+		10,
+		5
+	)
+	st.border_width_left = 3
+	st.border_width_top = 3
+	st.border_width_right = 3
+	st.border_width_bottom = 3
+	st.shadow_color = Color(0, 0, 0, 0.45)
+	st.shadow_size = 6
+	st.shadow_offset = Vector2(0, 4)
+	return st
+
+
+func _blacksmith_ensure_forge_slot_frame(slot: Control) -> void:
+	if slot == null or not is_instance_valid(slot):
+		return
+	var frame: Panel = slot.get_node_or_null("ForgeSlotFrame") as Panel
+	if frame == null:
+		frame = Panel.new()
+		frame.name = "ForgeSlotFrame"
+		slot.add_child(frame)
+		slot.move_child(frame, 0)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.show_behind_parent = true
+	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.offset_left = -4.0
+	frame.offset_top = -4.0
+	frame.offset_right = 4.0
+	frame.offset_bottom = 4.0
+	frame.add_theme_stylebox_override("panel", _blacksmith_make_forge_slot_style())
+
+
+func _sync_blacksmith_recipe_book_button_state() -> void:
+	if recipe_book_btn == null or not is_instance_valid(recipe_book_btn):
+		return
+	recipe_book_btn.visible = true
+	var has_book: bool = CampaignManager.has_recipe_book
+	recipe_book_btn.disabled = not has_book
+	if has_book:
+		recipe_book_btn.tooltip_text = ""
+	else:
+		recipe_book_btn.tooltip_text = "Locked until you obtain the Blacksmith's Tome. Then you can read Haldor's forge notes and recipe list here."
+
+
+func _blacksmith_style_slot_backdrops() -> void:
+	# Recessed pit is drawn by ForgeSlotFrame Panel; keep ColorRects transparent so the frame shows.
+	var slot_fill := Color(0, 0, 0, 0)
+	var preview_fill := Color(0.10, 0.076, 0.048, 0.78)
+	for slot in [slot1, slot2, slot3]:
+		if slot == null:
+			continue
+		_blacksmith_ensure_forge_slot_frame(slot)
+		for c in slot.get_children():
+			if c is ColorRect:
+				(c as ColorRect).color = slot_fill
+	if recipe_result_label != null:
+		for c in recipe_result_label.get_children():
+			if c is ColorRect:
+				(c as ColorRect).color = preview_fill
+	if result_icon != null:
+		_blacksmith_ensure_forge_slot_frame(result_icon)
+		for c in result_icon.get_children():
+			if c is ColorRect:
+				(c as ColorRect).color = Color(0, 0, 0, 0)
+		var preview_frame: Panel = result_icon.get_node_or_null("ForgeSlotFrame") as Panel
+		if preview_frame != null:
+			preview_frame.add_theme_stylebox_override("panel", _blacksmith_make_forge_slot_style())
+
+
+func _ensure_merchant_talk_modal() -> void:
+	if _merchant_talk_modal != null and is_instance_valid(_merchant_talk_modal):
+		return
+	var modal := Control.new()
+	modal.name = "MerchantTalkModal"
+	modal.visible = false
+	modal.mouse_filter = Control.MOUSE_FILTER_STOP
+	modal.z_index = 120
+	add_child(modal)
+	_merchant_talk_modal = modal
+
+	var dim := ColorRect.new()
+	dim.name = "MerchantTalkDimmer"
+	dim.color = Color.WHITE
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.gui_input.connect(_on_merchant_talk_dimmer_gui_input)
+	modal.add_child(dim)
+	_merchant_talk_dimmer = dim
+	var dim_shader_path := "res://merchant_talk_dimmer.gdshader"
+	if ResourceLoader.exists(dim_shader_path):
+		var sh: Shader = load(dim_shader_path) as Shader
+		if sh != null:
+			var mat := ShaderMaterial.new()
+			mat.shader = sh
+			mat.set_shader_parameter("dim_rgb", Vector3(0.03, 0.022, 0.014))
+			mat.set_shader_parameter("base_alpha", 0.78)
+			dim.material = mat
+
+	if talk_panel != null and talk_panel.get_parent() != modal:
+		var par: Node = talk_panel.get_parent()
+		if par != null:
+			par.remove_child(talk_panel)
+		modal.add_child(talk_panel)
+
+
+func _on_merchant_talk_dimmer_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			_close_merchant_talk_panel()
+
+
+func _merchant_talk_kill_modal_tweens() -> void:
+	if _merchant_talk_open_close_tween != null and _merchant_talk_open_close_tween.is_valid():
+		_merchant_talk_open_close_tween.kill()
+	_merchant_talk_open_close_tween = null
+	if _merchant_talk_stagger_tween != null and _merchant_talk_stagger_tween.is_valid():
+		_merchant_talk_stagger_tween.kill()
+	_merchant_talk_stagger_tween = null
+
+
+func _merchant_talk_stop_icon_pulse() -> void:
+	if quest_item_icon != null:
+		if quest_item_icon.has_meta("_mt_pulse_tw"):
+			var ptw: Variant = quest_item_icon.get_meta("_mt_pulse_tw")
+			if ptw is Tween and (ptw as Tween).is_valid():
+				(ptw as Tween).kill()
+			quest_item_icon.remove_meta("_mt_pulse_tw")
+		quest_item_icon.scale = Vector2.ONE
+
+
+func _merchant_talk_reset_modal_visuals() -> void:
+	_merchant_talk_stop_icon_pulse()
+	if _merchant_talk_dimmer != null:
+		_merchant_talk_dimmer.modulate = Color.WHITE
+	if talk_panel != null:
+		talk_panel.scale = Vector2.ONE
+		talk_panel.modulate = Color.WHITE
+		talk_panel.pivot_offset = Vector2.ZERO
+	for b in [option1, option2, option3]:
+		if b != null:
+			b.modulate = Color.WHITE
+			b.scale = Vector2.ONE
+
+
+func _merchant_talk_play_open_sfx() -> void:
+	if select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = 1.12
+		select_sound.play()
+	elif talk_sound != null and talk_sound.stream != null:
+		talk_sound.pitch_scale = 1.05
+		talk_sound.play()
+
+
+func _merchant_talk_play_close_sfx() -> void:
+	if select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = 0.88
+		select_sound.play()
+
+
+func _merchant_talk_play_hover_sfx() -> void:
+	if merchant_blip != null and merchant_blip.stream != null:
+		merchant_blip.pitch_scale = 1.35
+		merchant_blip.volume_db = -26.0
+		merchant_blip.play()
+
+
+func _merchant_talk_play_confirm_sfx(risky: bool) -> void:
+	if risky:
+		if shop_sell_sound != null and shop_sell_sound.stream != null:
+			shop_sell_sound.pitch_scale = 0.95
+			shop_sell_sound.play()
+		elif select_sound != null and select_sound.stream != null:
+			select_sound.pitch_scale = 0.82
+			select_sound.play()
+	else:
+		if shop_buy_sound != null and shop_buy_sound.stream != null:
+			shop_buy_sound.pitch_scale = 1.02
+			shop_buy_sound.play()
+		elif select_sound != null and select_sound.stream != null:
+			select_sound.pitch_scale = 1.0
+			select_sound.play()
+
+
+func _ensure_merchant_talk_quest_bar() -> void:
+	if talk_panel == null:
+		return
+	if _merchant_talk_quest_bar != null and is_instance_valid(_merchant_talk_quest_bar):
+		return
+	var bar := ProgressBar.new()
+	bar.name = "MerchantTalkQuestBar"
+	bar.min_value = 0.0
+	bar.max_value = 100.0
+	bar.value = 0.0
+	bar.step = 0.1
+	bar.show_percentage = false
+	bar.custom_minimum_size.y = MERCHANT_TALK_QUEST_BAR_H
+	bar.visible = false
+	talk_panel.add_child(bar)
+	_merchant_talk_quest_bar = bar
+	_style_merchant_talk_quest_bar(bar)
+
+
+func _style_merchant_talk_quest_bar(bar: ProgressBar) -> void:
+	if bar == null:
+		return
+	var bg := _camp_make_panel_style(Color(0.06, 0.045, 0.032, 0.95), CAMP_BORDER_SOFT.darkened(0.2), 10, 0)
+	var fill := _camp_make_panel_style(Color(0.35, 0.62, 0.38, 0.92), CAMP_ACCENT_GREEN.darkened(0.15), 8, 0)
+	bar.add_theme_stylebox_override("background", bg)
+	bar.add_theme_stylebox_override("fill", fill)
+
+
+func _update_merchant_talk_quest_bar() -> void:
+	_ensure_merchant_talk_quest_bar()
+	if _merchant_talk_quest_bar == null:
+		return
+	if not CampaignManager.merchant_quest_active:
+		_merchant_talk_quest_bar.visible = false
+		return
+	var tgt: int = maxi(1, int(CampaignManager.merchant_quest_target_amount))
+	var found: int = _count_party_items_for_quest(str(CampaignManager.merchant_quest_item_name), true)
+	_merchant_talk_quest_bar.visible = true
+	_merchant_talk_quest_bar.max_value = 100.0
+	_merchant_talk_quest_bar.value = clampf(100.0 * float(found) / float(tgt), 0.0, 100.0)
+
+
+func _ensure_merchant_talk_header() -> void:
+	if talk_panel == null:
+		return
+	if _merchant_talk_header_label != null and is_instance_valid(_merchant_talk_header_label):
+		return
+	var hdr := Label.new()
+	hdr.name = "MerchantTalkHeader"
+	hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hdr.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hdr.add_theme_font_size_override("font_size", 14)
+	hdr.add_theme_color_override("font_color", Color(0.82, 0.72, 0.42, 1.0))
+	hdr.add_theme_color_override("font_outline_color", Color(0.05, 0.04, 0.03, 0.92))
+	hdr.add_theme_constant_override("outline_size", 2)
+	hdr.text = "BARTHOLOMEW"
+	talk_panel.add_child(hdr)
+	talk_panel.move_child(hdr, 0)
+	_merchant_talk_header_label = hdr
+
+
+func _ensure_merchant_abandon_confirm() -> void:
+	if _merchant_abandon_confirm != null and is_instance_valid(_merchant_abandon_confirm):
+		return
+	var d := ConfirmationDialog.new()
+	d.name = "MerchantAbandonConfirm"
+	d.dialog_text = "Abandon this contract? You will lose 1 reputation with the merchant."
+	d.ok_button_text = "Abandon"
+	d.cancel_button_text = "Keep contract"
+	d.exclusive = true
+	# ConfirmationDialog extends Window — no CanvasItem z_index; keep above game UI when windowed.
+	d.always_on_top = true
+	add_child(d)
+	d.confirmed.connect(_on_merchant_abandon_confirmed)
+	_merchant_abandon_confirm = d
+
+
+func _on_merchant_abandon_confirmed() -> void:
+	var mc_name: String = "Hero"
+	if CampaignManager.player_roster.size() > 0:
+		mc_name = str(CampaignManager.player_roster[0]["unit_name"])
+	CampaignManager.merchant_reputation = max(CampaignManager.merchant_reputation - 1, 0)
+	_populate_shop()
+	CampaignManager.merchant_quest_active = false
+	CampaignManager.merchant_quest_item_name = ""
+	CampaignManager.merchant_quest_target_amount = 0
+	CampaignManager.merchant_quest_reward = 0
+	_merchant_talk_play_confirm_sfx(true)
+	_close_merchant_talk_panel()
+	_play_typewriter_animation(_line("abandon", {"name": mc_name}))
+
+
+func _merchant_talk_btn_hover_enter(btn: Button) -> void:
+	if btn == null or _merchant_talk_modal == null or not _merchant_talk_modal.visible:
+		return
+	_merchant_talk_play_hover_sfx()
+	if btn.has_meta("_mt_htw"):
+		var o: Variant = btn.get_meta("_mt_htw")
+		if o is Tween and (o as Tween).is_valid():
+			(o as Tween).kill()
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	btn.set_meta("_mt_htw", tw)
+	btn.pivot_offset = Vector2(btn.size.x * 0.5, btn.size.y * 0.5)
+	tw.tween_property(btn, "scale", Vector2(1.02, 1.02), 0.08)
+
+
+func _merchant_talk_btn_hover_exit(btn: Button) -> void:
+	if btn == null:
+		return
+	if btn.has_meta("_mt_htw"):
+		var o: Variant = btn.get_meta("_mt_htw")
+		if o is Tween and (o as Tween).is_valid():
+			(o as Tween).kill()
+		btn.remove_meta("_mt_htw")
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(btn, "scale", Vector2.ONE, 0.08)
+
+
+func _merchant_talk_wire_option_fx(btn: Button) -> void:
+	if btn == null:
+		return
+	if btn.has_meta("_mt_fx_wired") and bool(btn.get_meta("_mt_fx_wired")):
+		return
+	btn.set_meta("_mt_fx_wired", true)
+	btn.mouse_entered.connect(_merchant_talk_btn_hover_enter.bind(btn))
+	btn.mouse_exited.connect(_merchant_talk_btn_hover_exit.bind(btn))
+
+
+func _merchant_talk_stagger_buttons_in() -> void:
+	if _merchant_talk_modal == null or not _merchant_talk_modal.visible:
+		return
+	_merchant_talk_stagger_tween = create_tween()
+	var tw: Tween = _merchant_talk_stagger_tween
+	for b in [option1, option2, option3]:
+		if b != null:
+			tw.tween_property(b, "modulate:a", 1.0, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_interval(0.032)
+	tw.tween_callback(func():
+		_merchant_talk_start_icon_pulse_if_quest()
+		_merchant_talk_grab_primary_focus()
+	)
+
+
+func _merchant_talk_start_icon_pulse_if_quest() -> void:
+	if quest_item_icon == null or not quest_item_icon.visible or _merchant_talk_modal == null:
+		return
+	if not _merchant_talk_modal.visible:
+		return
+	_merchant_talk_stop_icon_pulse()
+	quest_item_icon.pivot_offset = quest_item_icon.size * 0.5
+	var tw := create_tween().set_loops()
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(quest_item_icon, "scale", Vector2(1.035, 1.035), 0.55)
+	tw.tween_property(quest_item_icon, "scale", Vector2.ONE, 0.55)
+	quest_item_icon.set_meta("_mt_pulse_tw", tw)
+
+
+func _merchant_talk_flash_progress_text() -> void:
+	if talk_text == null:
+		return
+	var base: Color = talk_text.modulate
+	var tw := create_tween()
+	tw.tween_property(talk_text, "modulate", Color(1.28, 1.15, 0.82, 1.0), 0.07)
+	tw.tween_property(talk_text, "modulate", base, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func _merchant_talk_play_open_animation() -> void:
+	if talk_panel == null or _merchant_talk_modal == null or not _merchant_talk_modal.visible:
+		return
+	_camp_layout_merchant_talk_panel_inner()
+	talk_panel.pivot_offset = talk_panel.size * 0.5
+	talk_panel.scale = Vector2(0.96, 0.96)
+	talk_panel.modulate.a = 0.0
+	if _merchant_talk_dimmer != null:
+		_merchant_talk_dimmer.modulate = Color(1, 1, 1, 0)
+	for b in [option1, option2, option3]:
+		if b != null:
+			b.modulate.a = 0.0
+			b.scale = Vector2.ONE
+			b.pivot_offset = Vector2(b.size.x * 0.5, b.size.y * 0.5)
+	_merchant_talk_play_open_sfx()
+	_merchant_talk_kill_modal_tweens()
+	var tw := create_tween()
+	_merchant_talk_open_close_tween = tw
+	tw.set_parallel(true)
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if _merchant_talk_dimmer != null:
+		tw.tween_property(_merchant_talk_dimmer, "modulate:a", 1.0, 0.16)
+	tw.tween_property(talk_panel, "modulate:a", 1.0, 0.14)
+	tw.tween_property(talk_panel, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_callback(_merchant_talk_stagger_buttons_in)
+
+
+func _merchant_talk_play_close_animation() -> void:
+	if _merchant_talk_modal == null:
+		_sync_merchant_talk_button_caption()
+		return
+	if talk_panel == null or not _merchant_talk_modal.visible:
+		_merchant_talk_reset_modal_visuals()
+		_merchant_talk_modal.visible = false
+		_sync_merchant_talk_button_caption()
+		return
+	_merchant_talk_stop_icon_pulse()
+	_merchant_talk_kill_modal_tweens()
+	_merchant_talk_play_close_sfx()
+	var tw := create_tween()
+	_merchant_talk_open_close_tween = tw
+	tw.set_parallel(true)
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if _merchant_talk_dimmer != null:
+		tw.tween_property(_merchant_talk_dimmer, "modulate:a", 0.0, 0.12)
+	tw.tween_property(talk_panel, "modulate:a", 0.0, 0.11)
+	tw.tween_property(talk_panel, "scale", Vector2(0.94, 0.94), 0.12)
+	tw.chain().tween_callback(func():
+		_merchant_talk_reset_modal_visuals()
+		_merchant_talk_modal.visible = false
+		_sync_merchant_talk_button_caption()
+	)
+
+
+func _merchant_talk_show_modal_animated() -> void:
+	_ensure_merchant_talk_modal()
+	if _merchant_talk_modal == null:
+		return
+	_merchant_talk_kill_modal_tweens()
+	_merchant_talk_modal.visible = true
+	if talk_panel != null:
+		talk_panel.visible = true
+	call_deferred("_merchant_talk_play_open_animation")
+
+
+func _camp_layout_merchant_talk_panel() -> void:
+	if talk_panel == null:
+		return
+	_ensure_merchant_talk_modal()
+	var box: Vector2 = size
+	if box.x < 64.0 or box.y < 64.0:
+		box = get_viewport().get_visible_rect().size
+	if _merchant_talk_modal != null:
+		_camp_set_rect(_merchant_talk_modal, Vector2.ZERO, box)
+	if _merchant_talk_dimmer != null:
+		_camp_set_rect(_merchant_talk_dimmer, Vector2.ZERO, box)
+	talk_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_w: float = clampf(box.x * 0.46, 400.0, 640.0)
+	var panel_h: float = clampf(box.y * 0.58, 300.0, 560.0)
+	var pos := Vector2((box.x - panel_w) * 0.5, (box.y - panel_h) * 0.5)
+	_camp_set_rect(talk_panel, pos, Vector2(panel_w, panel_h))
+	_camp_style_panel(talk_panel, CAMP_PANEL_BG_ALT, CAMP_BORDER, 20, 10)
+	call_deferred("_camp_layout_merchant_talk_panel_inner")
+	if _merchant_talk_modal != null and _merchant_talk_modal.visible:
+		call_deferred("_camp_layout_merchant_talk_panel_inner")
+
+
+func _camp_layout_merchant_talk_panel_inner() -> void:
+	if talk_panel == null or not is_instance_valid(talk_panel):
+		return
+	var sz: Vector2 = talk_panel.size
+	if sz.x < 32.0 or sz.y < 40.0:
+		return
+	var m := 12.0
+	_ensure_merchant_talk_header()
+	var header_h: float = MERCHANT_TALK_HEADER_H
+	var top_y0: float = m + header_h + 6.0
+	var bar_reserve: float = MERCHANT_TALK_QUEST_BAR_H + 10.0 if CampaignManager.merchant_quest_active else 0.0
+	var vbox_min_h: float = maxf(100.0, sz.y * 0.26)
+	var text_block_h: float = maxf(88.0, sz.y - top_y0 - vbox_min_h - m - 8.0 - bar_reserve)
+	if _merchant_talk_header_label != null:
+		_camp_set_rect(_merchant_talk_header_label, Vector2(m, m), Vector2(sz.x - 2.0 * m, header_h))
+	var talk_bg: Panel = talk_panel.get_node_or_null("TalkBackground") as Panel
+	if talk_bg != null:
+		_camp_style_panel(talk_bg, Color(0.07, 0.052, 0.036, 0.94), CAMP_BORDER_SOFT, 18, 0)
+		_camp_set_rect(talk_bg, Vector2(m, top_y0), Vector2(sz.x - 2.0 * m, text_block_h))
+	var content_vbox: VBoxContainer = talk_panel.get_node_or_null("TalkContentVBox") as VBoxContainer
+	if content_vbox != null:
+		content_vbox.add_theme_constant_override("separation", 8)
+		_camp_set_rect(content_vbox, Vector2(m + 10.0, top_y0 + 10.0), Vector2(sz.x - 2.0 * m - 20.0, text_block_h - 20.0))
+		var tail: Control = content_vbox.get_node_or_null("TalkContentTailSpacer") as Control
+		if tail != null:
+			tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			tail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_update_merchant_talk_quest_bar()
+	var after_text: float = top_y0 + text_block_h + 6.0
+	if CampaignManager.merchant_quest_active and _merchant_talk_quest_bar != null:
+		_camp_set_rect(
+			_merchant_talk_quest_bar,
+			Vector2(m + 6.0, after_text),
+			Vector2(sz.x - 2.0 * m - 12.0, MERCHANT_TALK_QUEST_BAR_H)
+		)
+		after_text += MERCHANT_TALK_QUEST_BAR_H + 8.0
+	var vbox_top: float = after_text + 4.0
+	var vbox: VBoxContainer = talk_panel.get_node_or_null("VBoxContainer") as VBoxContainer
+	if vbox != null:
+		vbox.add_theme_constant_override("separation", 10)
+		_camp_set_rect(vbox, Vector2(m, vbox_top), Vector2(sz.x - 2.0 * m, maxf(100.0, sz.y - vbox_top - m)))
+	if talk_text != null:
+		_camp_style_label(talk_text, CAMP_TEXT, 20, 2)
+		talk_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		talk_text.custom_minimum_size = Vector2.ZERO
+		talk_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# Natural text height + icon grouped; tail spacer absorbs extra panel height (icon sits higher).
+		talk_text.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var opt3_danger: bool = CampaignManager.merchant_quest_active
+	_camp_style_merchant_talk_option(option1, false)
+	_camp_style_merchant_talk_option(option2, false)
+	_camp_style_merchant_talk_option(option3, opt3_danger)
+	for ob in [option1, option2, option3]:
+		if ob is Button:
+			_merchant_talk_wire_option_fx(ob as Button)
+	if quest_item_icon != null:
+		quest_item_icon.custom_minimum_size = Vector2(84, 84)
+		quest_item_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+
 func _on_camp_ui_resized() -> void:
 	call_deferred("_camp_apply_ui_overhaul")
 
@@ -2471,6 +4351,10 @@ func _on_camp_ui_resized() -> void:
 ## Inputs: None.  Outputs: None.
 ## Side effects: Connects signals, populates grids, may append test data (dragon meat / hatch) if DragonManager is empty.
 func _ready() -> void:
+	if camp_music != null:
+		camp_music.bus = "Music"
+	if minigame_music != null:
+		minigame_music.bus = "Music"
 	# Single source of truth for default camp music (shared with CampExplore).
 	if camp_music_tracks.is_empty():
 		camp_music_tracks = DefaultCampMusic.get_default_camp_music_tracks()
@@ -2501,8 +4385,8 @@ func _ready() -> void:
 	if save_slot_2: save_slot_2.pressed.connect(func(): _try_to_save(2))
 	if save_slot_3: save_slot_3.pressed.connect(func(): _try_to_save(3))
 	if close_save_btn: close_save_btn.pressed.connect(_on_back_pressed)
-	if get_node_or_null("%BlacksmithTalkButton"):
-		get_node_or_null("%BlacksmithTalkButton").pressed.connect(_on_blacksmith_talk_pressed)
+	if blacksmith_talk_button != null:
+		blacksmith_talk_button.pressed.connect(_on_blacksmith_talk_pressed)
 	if overwrite_dialog:
 		overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
 	
@@ -2556,7 +4440,6 @@ func _ready() -> void:
 	# --- JUKEBOX CONNECTIONS ---
 	if jukebox_btn: jukebox_btn.pressed.connect(_open_jukebox)
 	if close_jukebox_btn: close_jukebox_btn.pressed.connect(_close_jukebox)
-	if jukebox_list: jukebox_list.item_selected.connect(_on_jukebox_track_selected)
 	
 	if jukebox_volume_slider:
 		jukebox_volume_slider.value_changed.connect(_on_jukebox_volume_changed)
@@ -2571,6 +4454,7 @@ func _ready() -> void:
 
 	camp_music.finished.connect(_on_camp_music_finished)
 	jukebox_playback_mode = CampaignManager.jukebox_last_mode if CampaignManager.jukebox_last_mode in [JUKEBOX_MODE_DEFAULT, JUKEBOX_MODE_LOOP_TRACK, JUKEBOX_MODE_LOOP_PLAYLIST, JUKEBOX_MODE_SHUFFLE_PLAYLIST] else JUKEBOX_MODE_DEFAULT
+	_jukebox_track_sort_mode = JUKEBOX_SORT_ALPHA if CampaignManager.jukebox_sort_mode == JUKEBOX_SORT_ALPHA else JUKEBOX_SORT_UNLOCK
 	_restore_jukebox_session()	
 	if swap_ability_btn: swap_ability_btn.pressed.connect(_on_swap_ability_pressed)
 	# --- SKILL TREE CONNECTIONS ---
@@ -2584,12 +4468,17 @@ func _ready() -> void:
 	
 	haggle_button.pressed.connect(_on_haggle_pressed)
 	haggle_confirmation.confirmed.connect(_start_haggle_minigame)
+	if haggle_confirmation != null:
+		haggle_confirmation.about_to_popup.connect(_apply_haggle_confirmation_theme)
+		call_deferred("_apply_haggle_confirmation_theme")
 	
 	talk_button.pressed.connect(_on_talk_pressed)
 	option1.pressed.connect(_on_option1_pressed)
 	option2.pressed.connect(_on_option2_pressed)
-	option3.pressed.connect(_on_option3_pressed)	
-	
+	option3.pressed.connect(_on_option3_pressed)
+	if blacksmith_panel != null:
+		blacksmith_panel.visibility_changed.connect(_sync_merchant_talk_button_state)
+
 	# --- BLACKSMITH DRAG & DROP CONNECTIONS ---
 	# 1. Forward the drag signals to our custom functions
 	slot1.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(0))
@@ -2604,13 +4493,15 @@ func _ready() -> void:
 	# --- BLACKSMITH BUTTON CONNECTIONS ---
 	if open_blacksmith_btn:
 		open_blacksmith_btn.pressed.connect(open_blacksmith)
-		open_blacksmith_btn.visible = CampaignManager.blacksmith_unlocked
-		
-		# --- NEW: HIDE UNTIL LEVEL 3 IS CLEARED ---
-		if CampaignManager.max_unlocked_index >= 3:
+		if DEBUG_CAMP_ALWAYS_SHOW_BLACKSMITH:
 			open_blacksmith_btn.visible = true
 		else:
-			open_blacksmith_btn.visible = false
+			open_blacksmith_btn.visible = CampaignManager.blacksmith_unlocked
+			# HIDE UNTIL LEVEL 3 IS CLEARED
+			if CampaignManager.max_unlocked_index >= 3:
+				open_blacksmith_btn.visible = true
+			else:
+				open_blacksmith_btn.visible = false
 	if close_blacksmith_btn:
 		close_blacksmith_btn.pressed.connect(close_blacksmith)
 	if craft_button:
@@ -2708,106 +4599,364 @@ func _on_world_map_pressed() -> void:
 func _process(delta: float) -> void:
 	if not haggle_active:
 		return
-		
-	var panel_height = haggle_panel.size.y
-	var bar_height = haggle_player_bar.size.y
-	var target_height = haggle_target_zone.size.y
-	
-	# 1. Player Input (Hold Space or Click to rise, release to fall)
-	if Input.is_action_pressed("ui_accept") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		player_velocity -= 800 * delta # Fly up
+
+	var top_y: float = _haggle_playfield_top
+	var panel_height: float = _haggle_playfield_h
+	var bar_height: float = haggle_player_bar.size.y
+	var target_height: float = haggle_target_zone.size.y
+
+	var boost: bool = Input.is_action_pressed("haggle_boost")
+	if not boost and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		boost = _haggle_playfield_global_rect.has_point(get_viewport().get_mouse_position())
+
+	if boost:
+		player_velocity -= 800.0 * delta
 	else:
-		player_velocity += 800 * delta # Gravity
-		
-	player_velocity = clamp(player_velocity, -400, 400)
+		player_velocity += 800.0 * delta
+
+	player_velocity = clampf(player_velocity, -400.0, 400.0)
 	haggle_player_bar.position.y += player_velocity * delta
-	
-	# Clamp player to panel bounds
-	if haggle_player_bar.position.y < 0:
-		haggle_player_bar.position.y = 0
-		player_velocity = 0
-	elif haggle_player_bar.position.y > panel_height - bar_height:
-		haggle_player_bar.position.y = panel_height - bar_height
-		player_velocity = 0
 
-	# 2. Target AI (Moves randomly)
+	var min_py: float = top_y
+	var max_py: float = top_y + maxf(4.0, panel_height - bar_height)
+	haggle_player_bar.position.y = clampf(haggle_player_bar.position.y, min_py, max_py)
+	if haggle_player_bar.position.y <= min_py + 0.5 or haggle_player_bar.position.y >= max_py - 0.5:
+		player_velocity = 0.0
+
 	target_timer -= delta
-	if target_timer <= 0:
+	if target_timer <= 0.0:
 		target_timer = randf_range(0.5, 1.5)
-		target_velocity = randf_range(-300, 300)
-		
-	haggle_target_zone.position.y += target_velocity * delta
-	haggle_target_zone.position.y = clamp(haggle_target_zone.position.y, 0, panel_height - target_height)
+		var spd: float = 300.0
+		if haggle_progress.value > 55.0:
+			spd = 430.0
+		target_velocity = randf_range(-spd, spd)
 
-	# 3. Collision / Progress Check
-	var player_rect = Rect2(haggle_player_bar.position, haggle_player_bar.size)
-	var target_rect = Rect2(haggle_target_zone.position, haggle_target_zone.size)
-	
-	if player_rect.intersects(target_rect):
-		haggle_progress.value += 15 * delta # Fill bar
-		haggle_target_zone.color = Color.GREEN
+	haggle_target_zone.position.y += target_velocity * delta
+	var tgt_min: float = top_y
+	var tgt_max: float = top_y + maxf(4.0, panel_height - target_height)
+	haggle_target_zone.position.y = clampf(haggle_target_zone.position.y, tgt_min, tgt_max)
+
+	var player_rect := Rect2(haggle_player_bar.position, haggle_player_bar.size)
+	var target_rect := Rect2(haggle_target_zone.position, haggle_target_zone.size)
+	var overlapping: bool = player_rect.intersects(target_rect)
+
+	if overlapping:
+		haggle_progress.value = minf(100.0, haggle_progress.value + 15.0 * delta)
+		haggle_target_zone.color = Color(0.32, 0.62, 0.38, 0.98)
 	else:
-		haggle_progress.value -= 10 * delta # Drain bar
-		haggle_target_zone.color = Color.RED
-		
-	# 4. Win/Loss Condition
-	if haggle_progress.value >= 100:
+		haggle_progress.value = maxf(0.0, haggle_progress.value - 10.0 * delta)
+		haggle_target_zone.color = Color(0.52, 0.26, 0.24, 0.95)
+
+	if overlapping != haggle_last_overlap:
+		haggle_last_overlap = overlapping
+		_haggle_overlap_juice(overlapping)
+
+	if not haggle_mid_line_fired and haggle_progress.value >= 50.0:
+		haggle_mid_line_fired = true
+		_haggle_play_mid_bark()
+
+	if haggle_progress.value > 1.0:
+		haggle_grace_timer = 0.0
+	elif haggle_progress.value <= 0.0:
+		haggle_grace_timer += delta
+		if haggle_grace_timer >= HAGGLE_GRACE_SEC:
+			_end_haggle_minigame(false)
+
+	if haggle_progress.value >= 100.0:
 		_end_haggle_minigame(true)
-	elif haggle_progress.value <= 0 and haggle_progress.max_value > 0:
-		# Need a small grace period so they don't lose instantly at 0
-		_end_haggle_minigame(false)
+
+
+func _haggle_overlap_juice(overlapping: bool) -> void:
+	if merchant_blip != null and merchant_blip.stream != null:
+		merchant_blip.pitch_scale = 1.12 if overlapping else 0.84
+		merchant_blip.play()
+	if haggle_progress == null:
+		return
+	if _haggle_progress_pulse_tween != null and _haggle_progress_pulse_tween.is_valid():
+		_haggle_progress_pulse_tween.kill()
+	_haggle_progress_pulse_tween = create_tween()
+	var bump: Color = Color(1.12, 1.08, 0.95, 1.0) if overlapping else Color(1.0, 0.9, 0.9, 1.0)
+	_haggle_progress_pulse_tween.tween_property(haggle_progress, "modulate", bump, 0.06)
+	_haggle_progress_pulse_tween.tween_property(haggle_progress, "modulate", Color.WHITE, 0.14)
+
+
+func _haggle_play_mid_bark() -> void:
+	var mc_name: String = "Hero"
+	if CampaignManager.player_roster.size() > 0:
+		mc_name = str(CampaignManager.player_roster[0]["unit_name"])
+	var arr: Array = DialogueDatabase.merchant_lines.get("haggle_mid", [])
+	if arr.is_empty():
+		return
+	var line: String = str(arr[randi() % arr.size()])
+	_play_typewriter_animation(line % mc_name)
+
+
+func _apply_haggle_confirmation_theme() -> void:
+	var d: ConfirmationDialog = haggle_confirmation
+	if d == null or not is_instance_valid(d):
+		return
+	# Embedded subwindow so camp theme overrides draw (native OS windows ignore panel styles).
+	d.popup_window = false
+	d.unresizable = true
+	d.exclusive = true
+	d.transient = true
+	d.min_size = Vector2i(700, 400)
+	d.title = "Bartholomew — terms of the haggle"
+
+	var panel_st := _camp_make_panel_style(CAMP_PANEL_BG_ALT, CAMP_BORDER, 22, 14)
+	d.add_theme_stylebox_override("panel", panel_st)
+	d.add_theme_color_override("title_color", Color(0.93, 0.80, 0.44, 1.0))
+	d.add_theme_font_size_override("title_font_size", 19)
+	d.add_theme_constant_override("title_height", 40)
+	d.add_theme_color_override("close_color", CAMP_MUTED)
+	d.add_theme_color_override("close_hover_color", CAMP_BORDER)
+	d.add_theme_color_override("close_pressed_color", CAMP_BORDER.darkened(0.12))
+	d.add_theme_constant_override("buttons_separation", 18)
+
+	var body_well := _camp_make_panel_style(Color(0.085, 0.062, 0.04, 0.94), CAMP_BORDER_SOFT, 16, 0)
+	body_well.content_margin_left = 16
+	body_well.content_margin_right = 16
+	body_well.content_margin_top = 12
+	body_well.content_margin_bottom = 12
+
+	var dl: Label = d.get_label()
+	if dl != null:
+		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		dl.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		dl.add_theme_font_size_override("font_size", 16)
+		dl.add_theme_color_override("font_color", CAMP_TEXT)
+		dl.add_theme_color_override("font_outline_color", Color(0.03, 0.022, 0.015, 0.92))
+		dl.add_theme_constant_override("outline_size", 1)
+		dl.add_theme_constant_override("line_spacing", 3)
+		dl.add_theme_stylebox_override("normal", body_well)
+
+	var okb: Button = d.get_ok_button()
+	if okb != null:
+		_camp_style_button(okb, true, 17, 44.0)
+		okb.custom_minimum_size.x = maxf(okb.custom_minimum_size.x, 132.0)
+	var cb: Button = d.get_cancel_button()
+	if cb != null:
+		_camp_style_button(cb, false, 17, 44.0)
+		cb.custom_minimum_size.x = maxf(cb.custom_minimum_size.x, 132.0)
+
+
+func _build_haggle_confirmation_dialog_text() -> String:
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append("Overlap my bar with yours (hold Space or click inside the play area) to fill the patience meter.")
+	lines.append("Late game: the target jitters faster above 50%%.")
+	lines.append("")
+	lines.append("Win: +1 reputation, an extra cut on today's spotlight deal (stacks up to 15%%), and a chance at a second half-price shelf item.")
+	lines.append("Lose after hovering at empty too long: −1 reputation.")
+	lines.append("Esc or Walk away: stop — no reputation change, but this visit's haggle is spent.")
+	var rep: int = CampaignManager.merchant_reputation
+	if rep > 0:
+		var pct: int = mini(rep * 2, 20)
+		lines.append("")
+		lines.append("Your standing already trims all prices by %d%% (max 20%%)." % pct)
+	return "\n".join(lines)
+
+
+func _ensure_haggle_walk_away_button() -> void:
+	if haggle_panel == null:
+		return
+	if _haggle_walk_away_btn != null and is_instance_valid(_haggle_walk_away_btn):
+		return
+	var b := Button.new()
+	b.name = "HaggleWalkAway"
+	b.text = "Walk away"
+	b.focus_mode = Control.FOCUS_NONE
+	haggle_panel.add_child(b)
+	_haggle_walk_away_btn = b
+	_camp_style_button(b, false, 15, 34.0)
+	b.pressed.connect(_end_haggle_concede)
+
+
+func _style_haggle_minigame_chrome() -> void:
+	if haggle_panel != null:
+		haggle_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	if haggle_target_zone is ColorRect:
+		(haggle_target_zone as ColorRect).color = _haggle_target_neutral_color
+	if haggle_player_bar is ColorRect:
+		(haggle_player_bar as ColorRect).color = Color(0.38, 0.52, 0.68, 0.98)
+	if haggle_progress != null:
+		var bg := _camp_make_panel_style(Color(0.06, 0.045, 0.032, 0.95), CAMP_BORDER_SOFT.darkened(0.2), 8, 0)
+		var fill := _camp_make_panel_style(Color(0.42, 0.55, 0.32, 0.92), CAMP_ACCENT_GREEN.darkened(0.12), 6, 0)
+		haggle_progress.add_theme_stylebox_override("background", bg)
+		haggle_progress.add_theme_stylebox_override("fill", fill)
+
+
+func _camp_layout_haggle_panel() -> void:
+	if haggle_panel == null:
+		return
+	var view_size: Vector2 = get_viewport_rect().size
+	if view_size.x < 100.0 or view_size.y < 100.0:
+		return
+	var panel_w: float = 136.0
+	var panel_h: float = clampf(view_size.y * 0.44, 340.0, 520.0)
+	var pos := Vector2((view_size.x - panel_w) * 0.5, (view_size.y - panel_h) * 0.5)
+	_camp_set_rect(haggle_panel, pos, Vector2(panel_w, panel_h))
+	_camp_style_panel(haggle_panel, CAMP_PANEL_BG_ALT, CAMP_BORDER, 18, 8)
+	haggle_panel.z_index = 420
+
+	var pad: float = 12.0
+	var prog_h: float = 22.0
+	var btn_h: float = 36.0
+	var title_h: float = 26.0
+	_haggle_playfield_top = pad + title_h
+	_haggle_playfield_h = maxf(120.0, panel_h - _haggle_playfield_top - pad * 2.0 - prog_h - btn_h - 6.0)
+
+	var cx: float = (panel_w - _haggle_bar_w) * 0.5
+	haggle_player_bar.position = Vector2(cx, _haggle_playfield_top + _haggle_playfield_h * 0.5)
+	haggle_player_bar.size = Vector2(_haggle_bar_w, 36.0)
+	haggle_target_zone.position = Vector2(cx, _haggle_playfield_top + _haggle_playfield_h * 0.45)
+	haggle_target_zone.size = Vector2(_haggle_bar_w, maxf(28.0, base_target_height))
+
+	var pf_top_left: Vector2 = haggle_panel.global_position + Vector2(cx, _haggle_playfield_top)
+	_haggle_playfield_global_rect = Rect2(pf_top_left, Vector2(_haggle_bar_w, _haggle_playfield_h))
+
+	if haggle_progress != null:
+		var py: float = panel_h - pad - btn_h - prog_h - 4.0
+		_camp_set_rect(haggle_progress, Vector2(pad, py), Vector2(panel_w - pad * 2.0, prog_h))
+	if _haggle_walk_away_btn != null:
+		_camp_set_rect(_haggle_walk_away_btn, Vector2(pad, panel_h - pad - btn_h), Vector2(panel_w - pad * 2.0, btn_h))
+
+
+func _haggle_restore_camp_music() -> void:
+	if minigame_music.playing:
+		minigame_music.stop()
+	if camp_music.stream_paused:
+		camp_music.stream_paused = false
+
+
+func _finish_haggle_session() -> void:
+	haggle_active = false
+	has_haggled_this_visit = true
+	CampaignManager.camp_has_haggled = true
+	_sync_merchant_talk_button_state()
+	player_velocity = 0.0
+	target_velocity = 0.0
+	target_timer = 0.0
+	haggle_grace_timer = 0.0
+	haggle_last_overlap = false
+	_haggle_restore_camp_music()
+	_sync_haggle_button_availability()
+
 
 func _on_haggle_pressed() -> void:
+	if haggle_active:
+		return
+	if shop_stock.is_empty():
+		warning_dialog.dialog_text = "I have nothing on the shelves to argue about. Come back when stock exists."
+		warning_dialog.popup_centered()
+		return
 	if has_haggled_this_visit:
-		# Use the new WarningDialog instead of buy_confirmation!
 		warning_dialog.dialog_text = "Bartholomew's patience has run out for today!"
 		warning_dialog.popup_centered()
 		return
+	haggle_confirmation.dialog_text = _build_haggle_confirmation_dialog_text()
 	haggle_confirmation.popup_centered()
 
+
 func _start_haggle_minigame() -> void:
-	has_haggled_this_visit = true
-	CampaignManager.camp_has_haggled = true
+	_ensure_haggle_walk_away_button()
+	_camp_layout_haggle_panel()
+	_style_haggle_minigame_chrome()
 	haggle_active = true
+	_sync_merchant_talk_button_state()
 	haggle_panel.visible = true
-	
-	# --- NEW DIFFICULTY SCALING ---
-	# Shrink the target by 6 pixels per reputation level.
-	var new_height = base_target_height - (CampaignManager.merchant_reputation * 6.0)
-	# Clamp it so it never gets smaller than 25 pixels high
-	haggle_target_zone.size.y = max(new_height, 25.0)
-	
-	haggle_progress.value = 30 # Start with a little progress
-	haggle_player_bar.position.y = haggle_panel.size.y / 2
-	haggle_target_zone.position.y = haggle_panel.size.y / 2
-	
-	# --- SWAP MUSIC ---
-	if camp_music.playing: 
+	haggle_mid_line_fired = false
+	haggle_grace_timer = 0.0
+	haggle_last_overlap = false
+	haggle_progress.modulate = Color.WHITE
+
+	var rep: int = CampaignManager.merchant_reputation
+	var rel_base: float = minf(base_target_height, _haggle_playfield_h * 0.28)
+	if rel_base < 32.0:
+		rel_base = minf(HAGGLE_TARGET_BASE_H, _haggle_playfield_h * 0.28)
+	var new_height: float = maxf(25.0, rel_base - float(rep) * 6.0)
+	haggle_target_zone.size = Vector2(_haggle_bar_w, new_height)
+	haggle_player_bar.position.y = clampf(
+		_haggle_playfield_top + _haggle_playfield_h * 0.5,
+		_haggle_playfield_top,
+		_haggle_playfield_top + maxf(4.0, _haggle_playfield_h - haggle_player_bar.size.y)
+	)
+	haggle_target_zone.position.y = clampf(
+		_haggle_playfield_top + _haggle_playfield_h * 0.45,
+		_haggle_playfield_top,
+		_haggle_playfield_top + maxf(4.0, _haggle_playfield_h - haggle_target_zone.size.y)
+	)
+
+	haggle_progress.max_value = 100.0
+	haggle_progress.value = 30.0
+
+	if camp_music.playing:
 		camp_music.stream_paused = true
-		
-	# Play a random track from your new array
 	_play_random_minigame_music()
 
-func _end_haggle_minigame(won: bool) -> void:
-	haggle_active = false
+
+func _end_haggle_concede() -> void:
+	if not haggle_active:
+		return
+	_finish_haggle_session()
 	haggle_panel.visible = false
-	
-	# Swap Music back
-	if minigame_music.playing: 
-		minigame_music.stop()
-	if camp_music.stream_paused: 
-		camp_music.stream_paused = false
-	
+	_update_merchant_text("haggle_concede")
+	_show_haggle_concede_popup()
+	_populate_shop()
+
+
+func _show_haggle_concede_popup() -> void:
+	if rep_popup == null:
+		return
+	rep_popup.visible = true
+	rep_popup.modulate.a = 1.0
+	var start_pos: Vector2 = rep_popup.position
+	rep_popup.text = "Walked away — no reputation change"
+	rep_popup.add_theme_color_override("font_color", Color(0.75, 0.72, 0.65, 1.0))
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(rep_popup, "position:y", start_pos.y - 50, 1.6).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(rep_popup, "modulate:a", 0.0, 1.6)
+	tween.chain().tween_callback(func():
+		if is_instance_valid(rep_popup):
+			rep_popup.visible = false
+			rep_popup.position = start_pos
+	)
+
+
+func _end_haggle_minigame(won: bool) -> void:
+	if not haggle_active:
+		return
+	_finish_haggle_session()
+	haggle_panel.visible = false
+
+	var got_second_deal: bool = false
 	if won:
 		CampaignManager.merchant_reputation += 1
-		_update_merchant_text("haggle_win")
+		CampaignManager.camp_haggle_extra_off = clampf(CampaignManager.camp_haggle_extra_off + 0.05, 0.0, 0.15)
+		if randf() < 0.22 and shop_stock.size() >= 2:
+			var opts: Array[Resource] = []
+			for it in shop_stock:
+				if it == null:
+					continue
+				if it == discounted_item:
+					continue
+				if it == CampaignManager.camp_second_discount_item:
+					continue
+				opts.append(it)
+			if opts.size() > 0:
+				CampaignManager.camp_second_discount_item = opts[randi() % opts.size()]
+				got_second_deal = true
+		if got_second_deal:
+			_update_merchant_text("haggle_win_extra")
+		else:
+			_update_merchant_text("haggle_win")
 	else:
 		CampaignManager.merchant_reputation -= 1
 		if CampaignManager.merchant_reputation < 0:
 			CampaignManager.merchant_reputation = 0
 		_update_merchant_text("haggle_lose")
-		
-	# Trigger the visual feedback and refresh the shop
+
 	_show_rep_popup(won)
 	_populate_shop()
 	
@@ -2826,6 +4975,8 @@ func _update_merchant_text(category: String) -> void:
 		_reset_idle_timer()
 
 func _apply_random_discount() -> void:
+	CampaignManager.camp_haggle_extra_off = 0.0
+	CampaignManager.camp_second_discount_item = null
 	if shop_stock.is_empty():
 		discounted_item = null
 		return
@@ -2876,11 +5027,13 @@ func _get_final_price(item: Resource) -> int:
 	var final_multiplier = 1.0 - rep_discount
 	
 	var final_price = int(base_price * final_multiplier)
-	
-	# Stack the 50% deal if it's the discounted item!
-	if item == discounted_item:
+	var spotlight: bool = (item == discounted_item)
+	var second_deal: bool = (item == CampaignManager.camp_second_discount_item)
+	if spotlight or second_deal:
 		final_price = int((base_price / 2.0) * final_multiplier)
-		
+	if spotlight:
+		var extra: float = clampf(CampaignManager.camp_haggle_extra_off, 0.0, 0.2)
+		final_price = int(roundf(float(final_price) * (1.0 - extra)))
 	return final_price
 
 func _play_typewriter_animation(new_text: String) -> void:
@@ -2956,7 +5109,12 @@ func _populate_shop() -> void:
 	for i in range(shop_stock.size()):
 		var item = shop_stock[i]
 		var final_price := _get_final_price(item)
-		var is_on_sale: bool = (item == discounted_item)
+		var is_on_sale: bool = (item == discounted_item or item == CampaignManager.camp_second_discount_item)
+		var deal_tag: String = ""
+		if item == discounted_item:
+			deal_tag = "spotlight"
+		elif item == CampaignManager.camp_second_discount_item:
+			deal_tag = "second"
 
 		var btn = Button.new()
 		btn.custom_minimum_size = Vector2(88, 88)
@@ -2974,16 +5132,25 @@ func _populate_shop() -> void:
 			var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
 			btn.text = str(i_name).substr(0, 3) if i_name else "???"
 
-		var price_lbl := _add_item_corner_label(btn, Color.YELLOW if is_on_sale else Color.KHAKI)
+		var tag_color: Color = Color.KHAKI
+		if is_on_sale:
+			tag_color = Color(0.45, 0.95, 0.72, 1.0) if deal_tag == "second" else Color.YELLOW
+		var price_lbl := _add_item_corner_label(btn, tag_color)
 		price_lbl.text = str(final_price) + "G"
 
 		if item.get_meta("is_locked", false) == true:
 			_add_item_lock_star(btn)
 
-		var meta := {"index": i, "item": item, "price": final_price, "is_sale": is_on_sale, "rep_text": rep_bonus_text}
+		var meta := {"index": i, "item": item, "price": final_price, "is_sale": is_on_sale, "deal_tag": deal_tag, "rep_text": rep_bonus_text}
 		btn.set_meta("shop_data", meta)
 		btn.pressed.connect(func(): _on_shop_grid_item_clicked(btn, meta))
-						
+	_sync_haggle_button_availability()
+
+func _sync_haggle_button_availability() -> void:
+	if haggle_button == null:
+		return
+	haggle_button.disabled = shop_stock.is_empty() or haggle_active
+
 func _on_shop_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 	if select_sound and select_sound.stream != null:
 		select_sound.pitch_scale = 1.2
@@ -3002,10 +5169,25 @@ func _on_shop_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 	if selected_roster_index >= 0 and selected_roster_index < CampaignManager.player_roster.size():
 		current_equipped = CampaignManager.player_roster[selected_roster_index].get("equipped_weapon")
 		
-	var text_details = _get_item_detailed_info(item, meta["price"], 1, current_equipped)
+	var text_details = _get_item_detailed_info(item, meta["price"], 1, current_equipped, "Merchant stock")
 	
-	if meta["is_sale"]:
-		text_details = "[center][color=yellow]--- 50% OFF DAILY DEAL ---[/color][/center]\n" + text_details
+	if meta.get("deal_tag", "") == "spotlight":
+		var extra_pct: int = int(roundf(CampaignManager.camp_haggle_extra_off * 100.0))
+		var bonus_line: String = ""
+		if extra_pct > 0:
+			bonus_line = "[color=#b8f0c8]Haggle sweetener: −%d%% on this slot.[/color]\n" % extra_pct
+		text_details = (
+			"[center][font_size=15][color=#e8c040]Daily spotlight[/color][color=#6e624c] · [/color]"
+			+ "[color=#9cdf7a]−50%[/color][/font_size][/center]\n"
+			+ bonus_line + "\n"
+			+ text_details
+		)
+	elif meta.get("deal_tag", "") == "second":
+		text_details = (
+			"[center][font_size=15][color=#7ae8c8]Haggle bonus shelf[/color][color=#6e624c] · [/color]"
+			+ "[color=#9cdf7a]−50%[/color][/font_size][/center]\n\n"
+			+ text_details
+		)
 	if meta["rep_text"] != "":
 		text_details += "\n[color=lime]" + meta["rep_text"] + "[/color]"
 		
@@ -3139,6 +5321,8 @@ func _on_buy_confirmed() -> void:
 	if item == discounted_item:
 		discounted_item = null
 		CampaignManager.camp_discount_item = null
+	if item == CampaignManager.camp_second_discount_item:
+		CampaignManager.camp_second_discount_item = null
 	_refresh_gold_label()
 	var inv_target: Vector2 = (inventory_desc.global_position + inventory_desc.size / 2.0) if inventory_desc else (get_viewport_rect().get_center())
 	_animate_buy_item_fly_in(shop_origin, inv_target, dup_item)
@@ -3149,7 +5333,7 @@ func _on_buy_confirmed() -> void:
 # --- POPULATE THE CONVOY ---
 func _populate_inventory() -> void:
 	_clear_grids()
-	if inventory_desc: inventory_desc.text = "Select an item to view details."
+	_camp_inventory_desc_set_text("Select an item to view details.")
 	
 	# 1. FIND THE CURRENTLY SELECTED UNIT
 	var unit_data = null
@@ -3217,7 +5401,8 @@ func _populate_inventory() -> void:
 
 	# 4. BUILD THE SHARED GRID
 	_build_shared_grid(filtered_items)
-	
+	_camp_try_flash_pending_inv_slot()
+
 	# --- FORCE MATERIAL SCROLL SIZE (Prevents the invisible wall bug!) ---
 	if material_scroll:
 		material_scroll.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -3339,6 +5524,75 @@ func _add_item_corner_label(btn: Button, font_color: Color = Color.KHAKI) -> Lab
 	lbl.offset_bottom = -4
 	return lbl
 
+
+func _add_item_equipped_badge(btn: Button) -> void:
+	if btn == null or btn.get_node_or_null("EquippedBadge") != null:
+		return
+	var badge := Label.new()
+	badge.name = "EquippedBadge"
+	badge.text = "E"
+	badge.add_theme_font_size_override("font_size", 15)
+	badge.add_theme_color_override("font_color", Color(1.0, 0.92, 0.45))
+	badge.add_theme_constant_override("outline_size", 4)
+	badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(badge)
+	badge.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	badge.offset_left = 4
+	badge.offset_bottom = -2
+	badge.grow_horizontal = Control.GROW_DIRECTION_END
+
+
+func _play_camp_inv_sfx_equip() -> void:
+	if select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = randf_range(0.86, 0.98)
+		select_sound.play()
+
+
+func _play_camp_inv_sfx_use() -> void:
+	if use_item_sound != null and use_item_sound.stream != null:
+		use_item_sound.pitch_scale = randf_range(1.08, 1.24)
+		use_item_sound.play()
+	elif select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = randf_range(1.14, 1.28)
+		select_sound.play()
+
+
+func _play_camp_inv_sfx_invalid() -> void:
+	if select_sound != null and select_sound.stream != null:
+		select_sound.pitch_scale = randf_range(0.70, 0.82)
+		select_sound.play()
+
+
+func _play_camp_inv_slot_flash(btn: Button) -> void:
+	if btn == null or not is_instance_valid(btn):
+		return
+	btn.pivot_offset = btn.size * 0.5
+	var peak := Vector2(1.11, 1.11)
+	var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(btn, "scale", peak, 0.085)
+	tw.tween_property(btn, "scale", Vector2.ONE, 0.11)
+	var base_col: Color = btn.get_meta("hover_base_modulate", Color.WHITE)
+	var tw2 := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw2.tween_property(btn, "modulate", base_col * Color(1.32, 1.22, 1.05), 0.07)
+	tw2.tween_property(btn, "modulate", base_col, 0.13)
+
+
+func _camp_try_flash_pending_inv_slot() -> void:
+	if _camp_inv_flash_item == null:
+		return
+	var want: Resource = _camp_inv_flash_item
+	_camp_inv_flash_item = null
+	for grid in [unit_grid, convoy_grid]:
+		if grid == null:
+			continue
+		for c in grid.get_children():
+			if c is Button and (c as Button).has_meta("inv_data"):
+				var d: Dictionary = (c as Button).get_meta("inv_data") as Dictionary
+				if d.get("item") == want:
+					_play_camp_inv_slot_flash(c as Button)
+					return
+
 ## Builds the unit's 5-slot personal inventory grid. Uses _style_item_button for unified look; lock star overlay (top-right, non-blocking); equips/drag/press wired.
 ## Purpose: Populate unit_grid with item buttons or empty slots. Inputs: unit_data, unit_idx. Outputs: None. Side effects: Adds buttons to unit_grid, connects gui_input/pressed/drag.
 func _build_unit_grid(unit_data: Dictionary, unit_idx: int) -> void:
@@ -3375,6 +5629,8 @@ func _build_unit_grid(unit_data: Dictionary, unit_idx: int) -> void:
 
 			if item != null and item.get_meta("is_locked", false) == true:
 				_add_item_lock_star(btn)
+			if state.get("is_equipped", false):
+				_add_item_equipped_badge(btn)
 
 			var meta = {"source": "unit", "unit_index": unit_idx, "inv_index": i, "item": item, "count": 1}
 			btn.set_meta("inv_data", meta)
@@ -3419,6 +5675,8 @@ func _build_shared_grid(filtered_items: Array) -> void:
 
 		if item != null and item.get_meta("is_locked", false) == true:
 			_add_item_lock_star(btn)
+		if state.get("is_equipped", false):
+			_add_item_equipped_badge(btn)
 
 		if count > 1:
 			var count_lbl := _add_item_corner_label(btn, Color.WHITE)
@@ -3457,18 +5715,21 @@ func _on_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 	var count = meta.get("count", 1)
 	var sell_val = int(item.get("gold_cost") / 2) if item.get("gold_cost") != null else 0
 
-	var location_text = ""
-	if meta["source"] == "convoy": location_text = "[color=gray]Location: Convoy[/color]"
-	elif meta["source"] == "unit": location_text = "[color=cyan]Location: Personal Backpack[/color]"
-	elif meta["source"] == "other_unit": location_text = "[color=orange]Location: " + meta["owner_name"] + "'s Backpack[/color]"
+	var inv_ctx: String = ""
+	match meta["source"]:
+		"convoy":
+			inv_ctx = "Convoy supplies"
+		"unit":
+			inv_ctx = "Personal loadout"
+		"other_unit":
+			inv_ctx = str(meta.get("owner_name", "Ally")) + "'s pack"
 
-	# --- WEAPON COMPARE FETCH ---
 	var current_equipped = null
 	if selected_roster_index >= 0 and selected_roster_index < CampaignManager.player_roster.size():
 		current_equipped = CampaignManager.player_roster[selected_roster_index].get("equipped_weapon")
 
-	var desc = _get_item_detailed_info(item, sell_val, count, current_equipped)
-	if inventory_desc: inventory_desc.text = location_text + "\n\n" + desc
+	var desc = _get_item_detailed_info(item, sell_val, count, current_equipped, inv_ctx)
+	_camp_inventory_desc_set_text(desc)
 
 	# --- DYNAMIC BUTTON ENABLE/DISABLE LOGIC ---
 	equip_button.disabled = false
@@ -3689,11 +5950,37 @@ func _on_roster_item_selected(index: int) -> void:
 	else:
 		portrait_rect.visible = false
 	
-	# --- 2. Simplified roster summary: name + level only (details in Unit Info panel). ---
-	var unit_name: String = unit_data.get("unit_name", "Hero")
-	var current_level: int = unit_data.get("level", 1)
+	# --- 2. Commander card: name, level, HP, class (details in Unit Dossier panel). ---
+	var unit_name: String = str(unit_data.get("unit_name", "Hero"))
+	var current_level: int = int(unit_data.get("level", 1))
+	var cur_hp: int = int(unit_data.get("current_hp", 0))
+	var max_hp: int = maxi(1, int(unit_data.get("max_hp", cur_hp)))
+	var weapon_value: Variant = unit_data.get("equipped_weapon")
+	var weapon_res: Resource = null
+	if weapon_value is String and ResourceLoader.exists(weapon_value):
+		weapon_res = load(weapon_value)
+		unit_data["equipped_weapon"] = weapon_res
+	elif weapon_value is Resource:
+		weapon_res = weapon_value
+	var weapon_marker: String = _camp_weapon_marker(weapon_res) if weapon_res != null else "--"
+	var weapon_title: String = "UNARMED" if weapon_res == null else _get_item_display_name(weapon_res)
+	var class_title: String = _resolve_unit_class_name(unit_data).strip_edges()
+	if class_title.is_empty():
+		class_title = str(unit_data.get("unit_class", "")).strip_edges()
+	if class_title.is_empty():
+		class_title = "—"
+	var hp_color := "#9bea9b" if cur_hp > float(max_hp) * 0.35 else "#e8a077"
 	if stats_label:
-		stats_label.text = "[center][font_size=24][color=cyan]" + unit_name.to_upper() + "[/color][/font_size]\n[color=gray]Lv " + str(current_level) + "[/color][/center]"
+		stats_label.bbcode_enabled = true
+		stats_label.text = (
+			"[center]"
+			+ "[font_size=32][color=#7bdcff]" + unit_name.to_upper() + "[/color][/font_size]\n"
+			+ "[font_size=22][color=#cfc7be]Lv " + str(current_level) + "[/color][/font_size]\n"
+			+ "[font_size=20][color=" + hp_color + "]HP " + str(cur_hp) + " / " + str(max_hp) + "[/color][/font_size]\n"
+			+ "[font_size=18][color=#d4b87a]" + class_title.to_upper() + "[/color][/font_size]\n"
+			+ "[font_size=18][color=#e8dbc0]" + weapon_marker + " " + weapon_title.to_upper() + "[/color][/font_size]"
+			+ "[/center]"
+		)
 
 	# --- 3. Weapon sync: ensure equipped weapon is in unit inventory (data integrity). ---
 	var wpn = unit_data.get("equipped_weapon")
@@ -3740,6 +6027,9 @@ func _on_roster_item_selected(index: int) -> void:
 				else:
 					open_skills_btn.text = "Skill Tree"
 					open_skills_btn.modulate = Color.WHITE
+
+	if _camp_commander_card.size.x > 10.0:
+		_layout_camp_commander_column()
 
 # --- AI/Reviewer: Unit Info panel = inspection flow (like BattleField detailed_unit_info). Entry: InspectUnitButton -> _on_inspect_unit_pressed -> _update_unit_info. ---
 # Panel uses %UnitInfoPanel, %UnitInfoPortrait, %UnitInfoName, %UnitInfoStats (RichTextLabel), %UnitInfoCloseButton. Pop-in tween on show.
@@ -4042,9 +6332,12 @@ func _on_equip_pressed() -> void:
 				unit_data["equipped_weapon"] = null
 			else:
 				unit_data["equipped_weapon"] = item
-				
+			_camp_inv_flash_item = item
+			_play_camp_inv_sfx_equip()
+
 	elif meta["source"] == "convoy" or meta["source"] == "other_unit":
 		if unit_data["inventory"].size() >= 5:
+			_play_camp_inv_sfx_invalid()
 			warning_dialog.dialog_text = unit_data["unit_name"] + "'s backpack is full!"
 			warning_dialog.popup_centered()
 			return
@@ -4058,10 +6351,12 @@ func _on_equip_pressed() -> void:
 				other_unit["equipped_weapon"] = null
 				
 		unit_data["inventory"].append(item)
-		
+		_camp_inv_flash_item = item
+		_play_camp_inv_sfx_equip()
+
 	_populate_inventory()
 	_on_roster_item_selected(unit_idx)
-	if inventory_desc: inventory_desc.text = "Action successful. Select an item to view details."
+	_camp_inventory_desc_set_text("Action successful. Select an item to view details.")
 	
 # --- UNEQUIP LOGIC ---
 func _on_unequip_pressed() -> void:
@@ -4090,10 +6385,12 @@ func _on_unequip_pressed() -> void:
 		elif not to_append.has_meta("original_path") and item.has_meta("original_path"):
 			to_append.set_meta("original_path", item.get_meta("original_path"))
 		CampaignManager.global_inventory.append(to_append)
-	
+		_camp_inv_flash_item = to_append
+
+	_play_camp_inv_sfx_equip()
 	_populate_inventory()
 	_on_roster_item_selected(unit_idx)
-	if inventory_desc: inventory_desc.text = "Action successful. Select an item to view details."
+	_camp_inventory_desc_set_text("Action successful. Select an item to view details.")
 	
 	
 func _on_next_battle_pressed() -> void:
@@ -4284,109 +6581,240 @@ func _get_stat_abbr(stat_name: String) -> String:
 		"hp": return "HP"
 		_: return stat_name.strip_edges().to_upper().substr(0, 3)
 
-# Generates the multi-line text for the Shop and Inventory Panels
-func _get_item_detailed_info(item: Resource, price: int, stack_count: int = 1, compare_item: Resource = null) -> String:
-	var info = ""
-	var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-	if i_name == null: i_name = "Unknown Item"
-	
-	var final_price = price
-	
-	var rarity = item.get("rarity") if item.get("rarity") != null else "Common"
-	var rarity_color = "white"
+func _camp_inv_bb_escape(s: String) -> String:
+	return str(s).replace("[", "[lb]")
+
+
+func _camp_inv_soft_rule() -> String:
+	# Centered hairline: light horizontal box-drawing reads as one bar in pixel fonts;
+	# spaced middots looked like chunky, uneven dots.
+	const RULE_LEN := 52
+	var seg := "\u2500".repeat(RULE_LEN)
+	return "[center][font_size=11][color=#b09870]%s[/color][/font_size][/center]" % seg
+
+
+func _camp_inv_rarity_title_hex(rarity: String) -> String:
 	match rarity:
-		"Uncommon": rarity_color = "lime"
-		"Rare": rarity_color = "deepskyblue"
-		"Epic": rarity_color = "mediumorchid"
-		"Legendary": rarity_color = "gold"
-		
-	info += "[center][font_size=26][color=" + rarity_color + "]" + str(i_name).to_upper() + "[/color][/font_size][/center]\n"
-		
-	var stack_text = ""
+		"Uncommon":
+			return "#8ce8a8"
+		"Rare":
+			return "#7fd4ff"
+		"Epic":
+			return "#d0a0ff"
+		"Legendary":
+			return "#ffcf6a"
+		_:
+			return "#f2ebe0"
+
+
+func _camp_inv_section_heading(title: String) -> String:
+	return (
+		"[font_size=22][color=#c4943a]▍ [/color][color=#f0d78c]%s[/color][/font_size]"
+		% _camp_inv_bb_escape(str(title).to_upper())
+	)
+
+
+func _camp_inv_kv(label: String, value_bb: String) -> String:
+	return (
+		"[font_size=22][color=#b0a090]%s[/color][color=#4f4638]   [/color]%s[/font_size]"
+		% [_camp_inv_bb_escape(label), value_bb]
+	)
+
+
+## Tightens BBCode font_size tags for narrow forge OUTCOME readouts (lifts tiny rules, caps huge titles).
+func _camp_bbcode_clamp_font_sizes(text: String, min_size: int = 17, max_size: int = 22) -> String:
+	var re := RegEx.new()
+	if re.compile("\\[font_size=(\\d+)\\]") != OK:
+		return text
+	var out := text
+	while true:
+		var m: RegExMatch = re.search(out)
+		if m == null:
+			break
+		var n: int = int(m.get_string(1))
+		var c: int = clampi(n, min_size, max_size)
+		var rep := "[font_size=%d]" % c
+		out = out.substr(0, m.get_start()) + rep + out.substr(m.get_end())
+	return out
+
+
+## Shared layout for Quartermaster item panel, shop card, and forge readouts.
+func _get_item_detailed_info(
+		item: Resource,
+		price: int,
+		stack_count: int = 1,
+		compare_item: Resource = null,
+		context_header_plain: String = "",
+		forge_readout: bool = false
+) -> String:
+	var lines: PackedStringArray = []
+
+	if context_header_plain.strip_edges() != "":
+		lines.append(
+			"[font_size=17][color=#928575]%s[/color][/font_size]"
+			% _camp_inv_bb_escape(context_header_plain.strip_edges())
+		)
+
+	var i_name: String = str(item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name"))
+	if i_name.strip_edges() == "":
+		i_name = "Unknown Item"
+
+	var rarity: String = str(item.get("rarity") if item.get("rarity") != null else "Common")
+	var title_hex: String = _camp_inv_rarity_title_hex(rarity)
+	lines.append("[center][font_size=26][color=%s]%s[/color][/font_size][/center]" % [title_hex, _camp_inv_bb_escape(i_name.to_upper())])
+
+	var stack_bb: String = ""
 	if stack_count > 1:
-		stack_text = "   |   [color=white]Owned: x" + str(stack_count) + "[/color]"
-		
-	info += "[center][ [color=" + rarity_color + "]" + rarity + "[/color] ]   |   Value: [color=khaki]" + str(final_price) + "G[/color]" + stack_text + "[/center]\n"
-	info += "[color=gray]------------------------------------------------[/color]\n"
-	
+		stack_bb = (
+			"[color=#4a4236] · [/color][color=#c8b8a0]Stock[/color][color=#4a4236] [/color][color=#f2ebe0]×%d[/color]"
+			% stack_count
+		)
+
+	lines.append(
+		"[center][font_size=21][color=%s]%s[/color][color=#4a4236]  ·  [/color]"
+		% [title_hex, _camp_inv_bb_escape(rarity)]
+		+ "[color=#b8a898]Value[/color][color=#4a4236] [/color][color=#e8c97c]%d[/color][color=#9a8b78]g[/color]%s[/font_size][/center]"
+		% [int(price), stack_bb]
+	)
+
+	lines.append(_camp_inv_soft_rule())
+
 	if item is WeaponData:
 		if item.get("current_durability") != null and item.current_durability <= 0:
-			info += "[color=red]BROKEN! Effectiveness halved. Needs repair.[/color]\n\n"
-			
-		var w_type_str = "Unknown"
+			lines.append("[font_size=22][color=#ff9a8a]Broken[/color][color=#8a7868] — [/color][color=#c4bba8]Half effectiveness until repaired.[/color][/font_size]")
+
+		lines.append(_camp_inv_section_heading("Combat profile"))
+
+		var w_type_str: String = "Unknown"
 		if item.get("weapon_type") != null:
 			w_type_str = WeaponData.get_weapon_type_name(int(item.weapon_type))
-		var d_type_str = "Physical" if item.get("damage_type") != null and item.damage_type == 0 else "Magical"
-		
-		info += "[color=gray]Type:[/color] " + w_type_str + " (" + d_type_str + ")\n"
-		info += "[color=coral]Might:[/color] " + str(item.might) + "   [color=khaki]Hit:[/color] +" + str(item.hit_bonus) + "\n"
-		info += "[color=palegreen]Range:[/color] " + str(item.min_range) + "-" + str(item.max_range) + "\n"
-		
+		var d_type_str: String = "Physical" if item.get("damage_type") != null and item.damage_type == 0 else "Magical"
+		lines.append(
+			_camp_inv_kv(
+				"Class",
+				"[color=#f5ecd8]%s[/color][color=#4f4638] · [/color][color=#a89888]%s[/color]" % [w_type_str, d_type_str]
+			)
+		)
+		lines.append(_camp_inv_kv("Might", "[color=#ffc9a8]%d[/color]" % int(item.might)))
+		lines.append(_camp_inv_kv("Hit", "[color=#f0d78c]+%d[/color]" % int(item.hit_bonus)))
+		lines.append(
+			_camp_inv_kv(
+				"Reach",
+				"[color=#b8e8c0]%d[/color][color=#5a5248]–[/color][color=#b8e8c0]%d[/color]" % [int(item.min_range), int(item.max_range)]
+			)
+		)
+
 		if item.get("current_durability") != null:
-			info += "[color=lightskyblue]Durability:[/color] " + str(item.current_durability) + " / " + str(item.max_durability) + "\n"
-		
-		var effects = []
-		if item.get("is_healing_staff") == true:
-			effects.append("Restores " + str(item.effect_amount) + " HP")
-			
-		if item.get("is_buff_staff") == true or item.get("is_debuff_staff") == true:
-			var word = "Grants +" if item.get("is_buff_staff") == true else "Inflicts -"
-			if item.get("affected_stat") != null and str(item.affected_stat) != "":
-				var stats = str(item.affected_stat).split(",")
-				var formatted_stats = []
-				for s in stats: formatted_stats.append(s.strip_edges().capitalize())
-				effects.append(word + str(item.effect_amount) + " to " + ", ".join(formatted_stats))
-			
-		if effects.size() > 0:
-			info += "[color=plum]Effect:[/color] " + " & ".join(effects) + "\n"
-		
-		# --- WEAPON COMPARE LOGIC ---
+			lines.append(
+				_camp_inv_kv(
+					"Durability",
+					"[color=#a8d8f0]%d[/color][color=#5a5248]/[/color][color=#8a98a8]%d[/color]"
+					% [int(item.current_durability), int(item.max_durability)]
+				)
+			)
+
 		if compare_item != null and compare_item is WeaponData and item != compare_item:
 			if item.damage_type == compare_item.damage_type:
-				info += "\n[color=gray]--- VS EQUIPPED (" + compare_item.weapon_name + ") ---[/color]\n"
-				
-				var m_diff = item.might - compare_item.might
-				var h_diff = item.hit_bonus - compare_item.hit_bonus
-				
-				var m_color = "lime" if m_diff > 0 else ("red" if m_diff < 0 else "gray")
-				var h_color = "lime" if h_diff > 0 else ("red" if h_diff < 0 else "gray")
-				
-				var m_sign = "+" if m_diff > 0 else ""
-				var h_sign = "+" if h_diff > 0 else ""
-				
-				info += "Might: [color=" + m_color + "]" + m_sign + str(m_diff) + "[/color]  |  "
-				info += "Hit: [color=" + h_color + "]" + h_sign + str(h_diff) + "[/color]\n"
-	
+				var m_diff_cmp: int = int(item.might) - int(compare_item.might)
+				var h_diff_cmp: int = int(item.hit_bonus) - int(compare_item.hit_bonus)
+				if m_diff_cmp != 0 or h_diff_cmp != 0:
+					var cmp_parts: PackedStringArray = []
+					if m_diff_cmp != 0:
+						var m_hex: String = "#8ce8a8" if m_diff_cmp > 0 else "#ff9a8a"
+						cmp_parts.append("[color=%s]%s Might[/color]" % [m_hex, "%+d" % m_diff_cmp])
+					if h_diff_cmp != 0:
+						var h_hex: String = "#8ce8a8" if h_diff_cmp > 0 else "#ff9a8a"
+						cmp_parts.append("[color=%s]%s Hit[/color]" % [h_hex, "%+d" % h_diff_cmp])
+					var cmp_sep: String = "[color=#4f4638] · [/color]"
+					lines.append(
+						"[font_size=21][color=#8a7868]Δ vs equipped[/color][color=#4f4638] · [/color]%s[/font_size]"
+						% cmp_sep.join(cmp_parts)
+					)
+
+		var w_effects: Array = []
+		if item.get("is_healing_staff") == true:
+			w_effects.append("Restores %d HP" % int(item.effect_amount))
+
+		if item.get("is_buff_staff") == true or item.get("is_debuff_staff") == true:
+			var word: String = "Grants +" if item.get("is_buff_staff") == true else "Inflicts -"
+			if item.get("affected_stat") != null and str(item.affected_stat) != "":
+				var stats_split: PackedStringArray = str(item.affected_stat).split(",")
+				var formatted_stats: PackedStringArray = []
+				for s in stats_split:
+					formatted_stats.append(s.strip_edges().capitalize())
+				w_effects.append(word + str(item.effect_amount) + " to " + ", ".join(formatted_stats))
+
+		if w_effects.size() > 0:
+			lines.append(_camp_inv_section_heading("Weapon effects"))
+			for e in w_effects:
+				lines.append("[font_size=21][color=#e8d0ff]◆[/color][color=#4a4236] [/color][color=#ece2d8]%s[/color][/font_size]" % _camp_inv_bb_escape(str(e)))
+
 	elif item is ConsumableData:
-		info += "[color=gray]Type:[/color] Consumable\n"
-		var effects = []
-		if item.heal_amount > 0: effects.append("Restores " + str(item.heal_amount) + " HP")
-		var boosts = []
-		if item.hp_boost > 0: boosts.append("+" + str(item.hp_boost) + " HP")
-		if item.str_boost > 0: boosts.append("+" + str(item.str_boost) + " STR")
-		if item.mag_boost > 0: boosts.append("+" + str(item.mag_boost) + " MAG")
-		if item.def_boost > 0: boosts.append("+" + str(item.def_boost) + " DEF")
-		if item.res_boost > 0: boosts.append("+" + str(item.res_boost) + " RES")
-		if item.spd_boost > 0: boosts.append("+" + str(item.spd_boost) + " SPD")
-		if item.agi_boost > 0: boosts.append("+" + str(item.agi_boost) + " AGI")
-		
-		if boosts.size() > 0: effects.append("Permanent Boost: " + ", ".join(boosts))
-		if effects.size() > 0: info += "[color=plum]Effect:[/color]\n" + "\n".join(effects) + "\n"
-			
+		lines.append(_camp_inv_section_heading("Overview"))
+		lines.append(_camp_inv_kv("Kind", "[color=#f5ecd8]Consumable[/color]"))
+
+		var c_effects: Array = []
+		if item.heal_amount > 0:
+			c_effects.append("Restores %d HP" % int(item.heal_amount))
+		var boosts: PackedStringArray = []
+		if item.hp_boost > 0:
+			boosts.append("+%d HP (max)" % int(item.hp_boost))
+		if item.str_boost > 0:
+			boosts.append("+%d STR" % int(item.str_boost))
+		if item.mag_boost > 0:
+			boosts.append("+%d MAG" % int(item.mag_boost))
+		if item.def_boost > 0:
+			boosts.append("+%d DEF" % int(item.def_boost))
+		if item.res_boost > 0:
+			boosts.append("+%d RES" % int(item.res_boost))
+		if item.spd_boost > 0:
+			boosts.append("+%d SPD" % int(item.spd_boost))
+		if item.agi_boost > 0:
+			boosts.append("+%d AGI" % int(item.agi_boost))
+
+		if boosts.size() > 0:
+			c_effects.append("Permanent: " + ", ".join(boosts))
+
+		if c_effects.size() > 0:
+			lines.append(_camp_inv_section_heading("Effects"))
+			for e2 in c_effects:
+				lines.append("[font_size=21][color=#e8d0ff]◆[/color][color=#4a4236] [/color][color=#ece2d8]%s[/color][/font_size]" % _camp_inv_bb_escape(str(e2)))
+
 	elif item is ChestKeyData:
-		info += "[color=gray]Type:[/color] Key\nOpens locked chests.\n"
+		lines.append(_camp_inv_section_heading("Overview"))
+		lines.append(_camp_inv_kv("Kind", "[color=#f5ecd8]Key[/color]"))
+		lines.append("[font_size=21][color=#c4bba8]Opens locked chests on the field.[/color][/font_size]")
 
-	elif item != null and item.get_class() == "MaterialData":
-		info += "[color=gray]Type:[/color] Crafting Material\n"
+	elif item is MaterialData:
+		lines.append(_camp_inv_section_heading("Overview"))
+		lines.append(_camp_inv_kv("Kind", "[color=#f5ecd8]Crafting material[/color]"))
 
-	info += "[color=gray]------------------------------------------------[/color]\n"
-	if item.get("description") != null and item.description.strip_edges() != "":
-		info += "[color=silver][i]\"" + item.description + "\"[/i][/color]"
 	else:
-		info += "[color=dimgray][i]No description available.[/i][/color]"
-		
-	return info
-				
+		lines.append(_camp_inv_section_heading("Overview"))
+		lines.append("[font_size=21][color=#c4bba8]Miscellaneous inventory — still salable at standard rates.[/color][/font_size]")
+
+	lines.append(_camp_inv_soft_rule())
+	lines.append(_camp_inv_section_heading("Details"))
+
+	var raw_desc: String = str(item.description) if item.get("description") != null else ""
+	if raw_desc.strip_edges() != "":
+		for piece: String in raw_desc.split("\n"):
+			var row: String = piece.strip_edges()
+			if row == "":
+				continue
+			lines.append(
+				"[font_size=22][color=#9a8b78]▸[/color][color=#4a4236] [/color][color=#e8dfd4][i]%s[/i][/color][/font_size]"
+				% _camp_inv_bb_escape(row)
+			)
+	else:
+		lines.append("[font_size=22][color=#7a7064][i]No written notes on this entry.[/i][/color][/font_size]")
+
+	var body := "\n".join(lines)
+	if forge_readout:
+		body = _camp_bbcode_clamp_font_sizes(body, 19, 24)
+	return body
+
+
 func _reset_idle_timer() -> void:
 	# Picks a random time between 15 and 30 seconds
 	idle_timer.start(randf_range(15.0, 30.0))
@@ -4397,12 +6825,68 @@ func _on_idle_timer_timeout() -> void:
 		_update_merchant_text("idle")
 	_reset_idle_timer()
 
+
+func _sync_merchant_talk_button_caption() -> void:
+	if talk_button == null:
+		return
+	var open: bool = _merchant_talk_modal != null and _merchant_talk_modal.visible
+	talk_button.text = "Close" if open else "Talk"
+
+
+func _sync_merchant_talk_button_state() -> void:
+	if talk_button == null:
+		return
+	var blocked: bool = haggle_active or (
+		blacksmith_panel != null and is_instance_valid(blacksmith_panel) and blacksmith_panel.visible
+	)
+	talk_button.disabled = blocked
+	if blocked:
+		_close_merchant_talk_panel(true)
+	else:
+		_sync_merchant_talk_button_caption()
+
+
+func _close_merchant_talk_panel(instant: bool = false) -> void:
+	if instant:
+		_merchant_talk_kill_modal_tweens()
+		_merchant_talk_reset_modal_visuals()
+		if _merchant_talk_modal != null:
+			_merchant_talk_modal.visible = false
+		_sync_merchant_talk_button_caption()
+		return
+	if _merchant_talk_modal == null or not _merchant_talk_modal.visible:
+		_sync_merchant_talk_button_caption()
+		return
+	_merchant_talk_play_close_animation()
+
+
+func _merchant_talk_grab_primary_focus() -> void:
+	if option1 != null and _merchant_talk_modal != null and _merchant_talk_modal.visible:
+		option1.grab_focus()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if haggle_active and event.is_action_pressed("camp_cancel"):
+		_end_haggle_concede()
+		get_viewport().set_input_as_handled()
+		return
+	if _merchant_talk_modal == null or not _merchant_talk_modal.visible:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_close_merchant_talk_panel()
+
 func _on_talk_pressed() -> void:
-	if talk_sound.stream != null:
-		talk_sound.play()
-		
-	talk_panel.visible = true
+	if talk_button != null and talk_button.disabled:
+		return
+	if _merchant_talk_modal != null and _merchant_talk_modal.visible:
+		_close_merchant_talk_panel()
+		return
+
+	_camp_layout_merchant_talk_panel()
 	_refresh_talk_ui()
+	_merchant_talk_show_modal_animated()
+	_sync_merchant_talk_button_caption()
 
 func _get_item_display_name(item: Resource) -> String:
 	if item == null:
@@ -4628,6 +7112,12 @@ func _remove_party_items_for_quest(item_name: String, amount: int) -> int:
 
 	return removed
 
+
+func _merchant_quest_progress_block(reward_gold: int, rep_reward: int, found: int, target: int) -> String:
+	# Avoid "+N" next to tall letters — pixel fonts often read "+2" as "-2".
+	return "Pays %d gold and %d reputation on delivery.\nProgress: %d / %d" % [reward_gold, rep_reward, found, target]
+
+
 func _get_active_quest_status_text(mc_name: String) -> String:
 	var amt: int = CampaignManager.merchant_quest_target_amount
 	var item_name: String = str(CampaignManager.merchant_quest_item_name)
@@ -4642,8 +7132,7 @@ func _get_active_quest_status_text(mc_name: String) -> String:
 		"name": mc_name
 	})
 
-	text += "\n\nReward: %dG | +%d Reputation" % [CampaignManager.merchant_quest_reward, rep_reward]
-	text += "\nProgress: %d / %d" % [owned, amt]
+	text += "\n\n" + _merchant_quest_progress_block(CampaignManager.merchant_quest_reward, rep_reward, owned, amt)
 
 	return text
 
@@ -4654,6 +7143,8 @@ func _refresh_talk_ui() -> void:
 
 	if CampaignManager.merchant_quest_active:
 		current_talk_state = "active"
+		if _merchant_talk_header_label != null:
+			_merchant_talk_header_label.text = "CONTRACT"
 
 		var quest_item: Resource = _find_quest_item_resource(CampaignManager.merchant_quest_item_name)
 		if quest_item != null and quest_item.get("icon") != null:
@@ -4666,10 +7157,12 @@ func _refresh_talk_ui() -> void:
 
 		option1.text = "Turn in items."
 		option2.text = "Show progress."
-		option3.text = "Abandon contract."
+		option3.text = "⚠ Abandon contract."
 		option3.visible = true
 	else:
 		current_talk_state = "idle"
+		if _merchant_talk_header_label != null:
+			_merchant_talk_header_label.text = "BARTHOLOMEW"
 
 		quest_item_icon.visible = false
 		talk_text.text = _line("idle_open", {"name": mc_name})
@@ -4678,20 +7171,25 @@ func _refresh_talk_ui() -> void:
 		option2.text = "Tell me a rumor."
 		option3.text = "Never mind."
 		option3.visible = true
-			
+	_update_merchant_talk_quest_bar()
+	if _merchant_talk_modal != null and _merchant_talk_modal.visible:
+		call_deferred("_camp_layout_merchant_talk_panel_inner")
+
 func _on_option1_pressed() -> void:
+	_merchant_talk_play_confirm_sfx(false)
 	if current_talk_state == "idle":
 		_generate_procedural_quest()
 	elif current_talk_state == "active":
 		_try_complete_quest()
-		
+
 func _on_option2_pressed() -> void:
+	_merchant_talk_play_confirm_sfx(false)
 	var mc_name: String = "Hero"
 	if CampaignManager.player_roster.size() > 0:
 		mc_name = str(CampaignManager.player_roster[0]["unit_name"])
 
 	if current_talk_state == "idle":
-		talk_panel.visible = false
+		_close_merchant_talk_panel()
 		_play_typewriter_animation(_line("rumors", {"name": mc_name}))
 	elif current_talk_state == "active":
 		var amt: int = CampaignManager.merchant_quest_target_amount
@@ -4709,27 +7207,21 @@ func _on_option2_pressed() -> void:
 			"plural": plural
 		})
 
-		talk_text.text += "\n\nReward: %dG | +%d Reputation" % [CampaignManager.merchant_quest_reward, rep_reward]
-		talk_text.text += "\nProgress: %d / %d" % [found, amt]
-				
+		talk_text.text += "\n\n" + _merchant_quest_progress_block(
+			CampaignManager.merchant_quest_reward,
+			rep_reward,
+			found,
+			amt
+		)
+		_merchant_talk_flash_progress_text()
+
 func _on_option3_pressed() -> void:
-	var mc_name: String = "Hero"
-	if CampaignManager.player_roster.size() > 0:
-		mc_name = str(CampaignManager.player_roster[0]["unit_name"])
-
 	if current_talk_state == "idle":
-		talk_panel.visible = false
+		_merchant_talk_play_confirm_sfx(false)
+		_close_merchant_talk_panel()
 	else:
-		CampaignManager.merchant_reputation = max(CampaignManager.merchant_reputation - 1, 0)
-		_populate_shop()
-
-		CampaignManager.merchant_quest_active = false
-		CampaignManager.merchant_quest_item_name = ""
-		CampaignManager.merchant_quest_target_amount = 0
-		CampaignManager.merchant_quest_reward = 0
-
-		talk_panel.visible = false
-		_play_typewriter_animation(_line("abandon", {"name": mc_name}))
+		_ensure_merchant_abandon_confirm()
+		_merchant_abandon_confirm.popup_centered()
 
 		
 func _generate_procedural_quest() -> void:
@@ -4785,12 +7277,9 @@ func _try_complete_quest() -> void:
 		if CampaignManager.player_roster.size() > 0:
 			mc_name = str(CampaignManager.player_roster[0]["unit_name"])
 
-		talk_panel.visible = false
+		_close_merchant_talk_panel()
 		_play_typewriter_animation(
-			_line("quest_complete", {
-				"reward": reward_gold,
-				"name": mc_name
-			}) + " (+" + str(reward_rep) + " Reputation)"
+			"%s You gain %d merchant reputation." % [_line("quest_complete", {"reward": reward_gold, "name": mc_name}), reward_rep]
 		)
 
 		_refresh_gold_label()
@@ -4809,10 +7298,14 @@ func _try_complete_quest() -> void:
 			"plural": plural
 		})
 
-		talk_text.text += "\n\nReward: %dG | +%d Reputation" % [CampaignManager.merchant_quest_reward, reward_rep]
-		talk_text.text += "\nProgress: %d / %d" % [items_found, target_amount]
+		talk_text.text += "\n\n" + _merchant_quest_progress_block(
+			CampaignManager.merchant_quest_reward,
+			reward_rep,
+			items_found,
+			target_amount
+		)
 
-	
+
 func _find_quest_item_resource(item_name: String) -> Resource:
 	if ItemDatabase.master_item_pool.is_empty(): # <--- CHANGED THIS LINE
 		return null
@@ -4976,7 +7469,7 @@ func _on_inventory_item_selected(list_index: int) -> void:
 	var mapped_data = inventory_mapping[list_index]
 	
 	if mapped_data["source"] == "header" or mapped_data["source"] == "empty":
-		if inventory_desc: inventory_desc.text = ""
+		_camp_inventory_desc_set_text("")
 		equip_button.disabled = true
 		unequip_button.disabled = true
 		sell_button.disabled = true
@@ -5007,14 +7500,22 @@ func _on_inventory_item_selected(list_index: int) -> void:
 
 	var item = mapped_data["item"]
 	var sell_val = int(item.get("gold_cost") / 2) if item.get("gold_cost") != null else 0
-	
-	var location_text = ""
-	if mapped_data["source"] == "convoy": location_text = "[color=gray]Location: Convoy[/color]"
-	elif mapped_data["source"] == "unit": location_text = "[color=cyan]Location: Personal Backpack[/color]"
-	elif mapped_data["source"] == "other_unit": location_text = "[color=orange]Location: " + mapped_data["owner_name"] + "'s Backpack[/color]"
-	
-	var desc = _get_item_detailed_info(item, sell_val)
-	if inventory_desc: inventory_desc.text = location_text + "\n\n" + desc
+
+	var inv_ctx: String = ""
+	match mapped_data["source"]:
+		"convoy":
+			inv_ctx = "Convoy supplies"
+		"unit":
+			inv_ctx = "Personal loadout"
+		"other_unit":
+			inv_ctx = str(mapped_data.get("owner_name", "Ally")) + "'s pack"
+
+	var list_equipped: Resource = null
+	if selected_roster_index >= 0 and selected_roster_index < CampaignManager.player_roster.size():
+		list_equipped = CampaignManager.player_roster[selected_roster_index].get("equipped_weapon")
+
+	var desc = _get_item_detailed_info(item, sell_val, 1, list_equipped, inv_ctx)
+	_camp_inventory_desc_set_text(desc)
 
 func _get_item_display_text(item: Resource) -> String:
 	var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
@@ -5099,11 +7600,16 @@ func _get_item_row_color(item: Resource) -> Color:
 # ==========================================
 
 func open_blacksmith() -> void:
-	# --- 1. OPTIONAL: THE TEST CHEAT ---
-	CampaignManager.has_recipe_book = false 
-	
+	_ensure_blacksmith_dimmer()
+	if _blacksmith_dimmer != null:
+		_blacksmith_dimmer.visible = true
+		_camp_layout_blacksmith_dimmer()
+
 	blacksmith_panel.visible = true
-	
+	if recipe_book_panel != null:
+		recipe_book_panel.visible = false
+	call_deferred("_camp_layout_blacksmith_panel")
+
 	# --- THE SILVER BULLET FIX ---
 	# Forces Godot to push the Blacksmith Panel over absolutely everything else!
 	blacksmith_panel.move_to_front() 
@@ -5126,9 +7632,8 @@ func open_blacksmith() -> void:
 				if item != null and _try_unlock_recipe(item):
 					unit["inventory"].remove_at(i)
 
-	# --- 3. REFRESH BUTTON VISIBILITY ---
-	if recipe_book_btn: 
-		recipe_book_btn.visible = CampaignManager.has_recipe_book
+	# --- 3. Recipe book button (always shown; disabled until Blacksmith's Tome) ---
+	_sync_blacksmith_recipe_book_button_state()
 
 	# --- 4. REFRESH UI ---
 	_update_anvil_visuals()
@@ -5221,14 +7726,19 @@ func _populate_material_list() -> void:
 		var btn = Button.new()
 		btn.custom_minimum_size = Vector2(88, 88)
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		btn.add_theme_font_size_override("font_size", 20)
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color(0.1, 0.1, 0.1, 0.8)
-		style.border_width_bottom = 2
-		style.border_color = Color(0.3, 0.3, 0.3)
-		btn.add_theme_stylebox_override("normal", style)
-		
+		_camp_style_button(btn, false, 18, 88.0)
+		var chit_n := _camp_make_button_style(CAMP_ACTION_SECONDARY.darkened(0.04), CAMP_BORDER, 12, 5)
+		chit_n.border_width_left = 3
+		chit_n.border_width_top = 3
+		chit_n.border_width_right = 3
+		chit_n.border_width_bottom = 3
+		var chit_h := chit_n.duplicate() as StyleBoxFlat
+		chit_h.bg_color = CAMP_ACTION_SECONDARY.lightened(0.1)
+		chit_h.border_color = CAMP_BORDER
+		btn.add_theme_stylebox_override("normal", chit_n)
+		btn.add_theme_stylebox_override("hover", chit_h)
+		btn.add_theme_stylebox_override("pressed", chit_n)
+
 		var item = d.item
 		var count = d.count
 		var first_available_index = d.indices[0] # The exact index of the first item in this stack
@@ -5244,10 +7754,10 @@ func _populate_material_list() -> void:
 		if count > 1:
 			var count_lbl = Label.new()
 			count_lbl.text = "x" + str(count)
-			count_lbl.add_theme_font_size_override("font_size", 24)
-			count_lbl.add_theme_color_override("font_color", Color.WHITE)
-			count_lbl.add_theme_constant_override("outline_size", 8)
-			count_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+			count_lbl.add_theme_font_size_override("font_size", 20)
+			count_lbl.add_theme_color_override("font_color", CAMP_BORDER)
+			count_lbl.add_theme_constant_override("outline_size", 4)
+			count_lbl.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.95))
 			btn.add_child(count_lbl)
 			
 			count_lbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -5283,32 +7793,64 @@ func _populate_material_list() -> void:
 		
 		material_grid.add_child(btn)
 
-# This function is now bound directly to the Button being dragged!
+
+func _camp_make_item_drag_preview(item: Resource, preview_side: float = 88.0) -> Control:
+	var sz := Vector2(preview_side, preview_side)
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.z_index = 1000
+	var tex: Texture2D = null
+	if item != null:
+		tex = item.get("icon") as Texture2D
+	if tex != null:
+		var tr := TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = sz
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(tr)
+		tr.position = -sz * 0.5
+	else:
+		var shell := Panel.new()
+		shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shell.custom_minimum_size = sz
+		shell.size = sz
+		shell.position = -sz * 0.5
+		_camp_style_panel(shell, Color(0.12, 0.09, 0.058, 0.95), CAMP_BORDER_SOFT, 14, 0)
+		root.add_child(shell)
+		var lbl := Label.new()
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var i_name: String = ""
+		if item != null:
+			i_name = str(item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name"))
+		if i_name.strip_edges() == "":
+			i_name = "?"
+		var short := i_name.substr(0, mini(4, i_name.length())).to_upper()
+		lbl.text = short
+		var fs: int = int(clampf(preview_side * 0.28, 18.0, 28.0))
+		_camp_style_label(lbl, CAMP_BORDER, fs, 2)
+		lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+		lbl.offset_left = 4.0
+		lbl.offset_top = 4.0
+		lbl.offset_right = -4.0
+		lbl.offset_bottom = -4.0
+		shell.add_child(lbl)
+	return root
+
+
 # This function is now bound directly to the Button being dragged!
 func _get_drag_material(_at_position: Vector2, btn: Button, meta: Dictionary) -> Variant:
 	var item = meta["item"]
-	
+
 	# 1. Hide the OS drag badges (like the forbidden circle)
 	Input.set_custom_mouse_cursor(empty_cursor, Input.CURSOR_CAN_DROP)
 	Input.set_custom_mouse_cursor(empty_cursor, Input.CURSOR_FORBIDDEN)
-	
-	# 2. Create the item icon that will act as our "mouse"
-	var preview = TextureRect.new()
-	preview.texture = item.get("icon")
-	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	preview.custom_minimum_size = Vector2(88, 88) 
-	preview.modulate.a = 1.0 
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE # <--- PREVENTS GHOST BLOCKING
-	
-	# Offset it so the mouse pointer is directly in the center of the icon
-	var c = Control.new()
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE # <--- PREVENTS GHOST BLOCKING
-	c.z_index = 1000
-	c.add_child(preview)
-	preview.position = -preview.custom_minimum_size / 2.0
-	
-	# Set the preview on the specific button being dragged
-	btn.set_drag_preview(c) 
+
+	var c := _camp_make_item_drag_preview(item, 88.0)
+	btn.set_drag_preview(c)
 	
 	if select_sound and select_sound.stream: select_sound.play()
 	
@@ -5331,15 +7873,14 @@ func _drop_slot(_at_position: Vector2, data: Variant, slot_index: int) -> void:
 			select_sound.play()
 		return 
 		
-	if select_sound and select_sound.stream: 
+	if select_sound and select_sound.stream:
 		select_sound.pitch_scale = 1.0
-	
+
 	anvil_items[slot_index] = item
-	anvil_indices[slot_index] = c_idx 
-	
-	if shop_buy_sound and shop_buy_sound.stream: shop_buy_sound.play() 
-	
+	anvil_indices[slot_index] = c_idx
+
 	_update_anvil_visuals()
+	_blacksmith_slot_receive_juice(slot_index)
 	check_blacksmith_recipe()
 	
 	# THE FIX: Safely rebuild the UI
@@ -5375,7 +7916,7 @@ func check_blacksmith_recipe() -> void:
 	current_recipe.clear()
 	craft_button.disabled = true
 	craft_button.text = "CRAFT" # Default text
-	result_icon.texture = null 
+	result_icon.texture = null
 	
 	# --- THE FIX: Define the variables right here! ---
 	var current_ingredients = []
@@ -5396,15 +7937,17 @@ func check_blacksmith_recipe() -> void:
 					broken_weapon_on_anvil = item
 				
 	if current_ingredients.is_empty():
-		recipe_result_label.text = "[center][color=gray]Drop materials here.[/color][/center]"
+		recipe_result_label.text = "[center][color=gray]Outcome preview appears here when a pattern matches.[/color][/center]"
+		_blacksmith_finish_recipe_check()
 		return
-		
+
 	current_ingredients.sort()
 	
 # --- NEW & IMPROVED: SMART SALVAGE ---
 	if current_ingredients.size() == 1 and weapon_count == 1:
-		if last_weapon != null and last_weapon.get_meta("is_locked", false) == true: 
+		if last_weapon != null and last_weapon.get_meta("is_locked", false) == true:
 			recipe_result_label.text = "[center][color=red]Cannot salvage a locked item![/color][/center]"
+			_blacksmith_finish_recipe_check()
 			return
 		var yield_name = ""
 		
@@ -5430,8 +7973,9 @@ func check_blacksmith_recipe() -> void:
 		var yield_res = _find_quest_item_resource(yield_name)
 		if yield_res == null:
 			recipe_result_label.text = "[center][color=red]Cannot salvage: " + yield_name + " not found in Pool.[/color][/center]"
+			_blacksmith_finish_recipe_check()
 			return
-			
+
 		current_recipe = {"type": "salvage", "weapon": last_weapon, "yield_res": yield_res}
 		
 		# 4. Update UI
@@ -5444,8 +7988,9 @@ func check_blacksmith_recipe() -> void:
 		
 		craft_button.text = "SALVAGE"
 		craft_button.disabled = false
+		_blacksmith_finish_recipe_check()
 		return
-		
+
 	# 1. Check Crafting & Smelting
 	for recipe in RecipeDatabase.master_recipes:
 		# --- THE FIX: SAFETY CHECK ---
@@ -5462,6 +8007,7 @@ func check_blacksmith_recipe() -> void:
 			if not recipe.get("is_smelt", false) and not recipe.get("is_structure", false):
 				if not CampaignManager.unlocked_recipes.has(recipe["name"]):
 					recipe_result_label.text = "[center][color=red]You haven't discovered this recipe yet![/color][/center]"
+					_blacksmith_finish_recipe_check()
 					return
 			current_recipe = recipe.duplicate() 
 			
@@ -5469,8 +8015,9 @@ func check_blacksmith_recipe() -> void:
 			if recipe.get("is_smelt", false):
 				if not CampaignManager.has_smelter:
 					recipe_result_label.text = "[center][color=red]Requires a Dwarven Crucible to melt ores![/color][/center]"
+					_blacksmith_finish_recipe_check()
 					return
-				
+
 				current_recipe["type"] = "smelt"
 				craft_button.text = "SMELT"
 				
@@ -5502,12 +8049,13 @@ func check_blacksmith_recipe() -> void:
 					result_icon.texture = preview_item.get("icon")
 					var cost = preview_item.get("gold_cost")
 					var sell_val = int(cost / 2) if cost != null else 0
-					var stats_text = _get_item_detailed_info(preview_item, sell_val)
+					var stats_text = _get_item_detailed_info(preview_item, sell_val, 1, null, "Forge preview", true)
 					recipe_result_label.text = "[center][color=cyan]--- CRAFTING: " + recipe["name"].to_upper() + " ---[/color][/center]\n\n" + stats_text
 				
 			craft_button.disabled = false
+			_blacksmith_finish_recipe_check()
 			return
-			
+
 	# 2. Check Universal Repair 
 	if current_ingredients.size() == 2 and broken_weapon_on_anvil != null:
 		if current_ingredients.has("Iron Ingot"): # Changed from Bone to Steel Ingot for better logic!
@@ -5517,22 +8065,36 @@ func check_blacksmith_recipe() -> void:
 			result_icon.texture = broken_weapon_on_anvil.get("icon")
 			var cost = broken_weapon_on_anvil.get("gold_cost")
 			var sell_val = int(cost / 2) if cost != null else 0
-			var stats_text = _get_item_detailed_info(broken_weapon_on_anvil, sell_val)
+			var stats_text = _get_item_detailed_info(broken_weapon_on_anvil, sell_val, 1, null, "Repair preview", true)
 			
-			stats_text = stats_text.replace("[color=red]BROKEN! Effectiveness halved. Needs repair.[/color]\n\n", "")
+			stats_text = stats_text.replace(
+				"[font_size=17][color=#ff9a8a]Broken[/color][color=#8a7868] — [/color][color=#c4bba8]Half effectiveness until repaired.[/color][/font_size]\n",
+				""
+			)
 			stats_text = "[color=lime]WILL BE FULLY REPAIRED[/color]\n\n" + stats_text
 			
 			recipe_result_label.text = "[center][color=lime]--- REPAIRING: " + w_name.to_upper() + " ---[/color][/center]\n\n" + stats_text
 			
 			craft_button.text = "REPAIR"
 			craft_button.disabled = false
+			_blacksmith_finish_recipe_check()
 			return
-			
-	recipe_result_label.text = "[center][color=red]Invalid Recipe.[/color][/center]"
-	
+
+	var invalid_body := "[center][color=#c45c5c]No known forge pattern for this mix.[/color][/center]\n\n"
+	invalid_body += "[center][color=gray]Try different materials or check ingredient counts.[/color][/center]"
+	if CampaignManager.has_recipe_book:
+		invalid_body += "\n\n[center][color=#c4a060]Open Recipe Book for known recipes and blueprints.[/color][/center]"
+	else:
+		invalid_body += "\n\n[center][color=gray][i]The full recipe list unlocks with the Blacksmith's Tome.[/i][/color][/center]"
+	recipe_result_label.text = invalid_body
+	_blacksmith_finish_recipe_check()
+
+
 func _on_craft_pressed() -> void:
-	if current_recipe.is_empty(): return
-	
+	if current_recipe.is_empty():
+		return
+	_blacksmith_stop_craft_ready_affordance()
+
 	var is_masterwork = false
 	
 	# 1. RUN MINIGAME (Skip for salvaging)
@@ -5652,8 +8214,10 @@ func _on_craft_pressed() -> void:
 		CampaignManager.global_inventory.append(salvaged_mat)
 		
 		await _play_dynamic_crafting_visuals(salvaged_mat.get("icon"), false)
-		_update_blacksmith_text("salvage")	
-		
+		_update_blacksmith_text("salvage")
+
+	await _blacksmith_forge_success_panel_juice()
+
 	# 4. CLEAN UP & REFRESH
 	anvil_items = [null, null, null]
 	anvil_indices = [-1, -1, -1]
@@ -5777,9 +8341,14 @@ func close_blacksmith() -> void:
 		
 	# Wipe the recipe memory
 	check_blacksmith_recipe()
-		
+
 	blacksmith_panel.visible = false
-	
+	if recipe_book_panel != null:
+		recipe_book_panel.visible = false
+	_blacksmith_stop_craft_ready_affordance()
+	if _blacksmith_dimmer != null:
+		_blacksmith_dimmer.visible = false
+
 # ==========================================
 # SYSTEM NOTIFICATIONS (DRAG END)
 # ==========================================
@@ -5791,14 +8360,16 @@ func _notification(what: int) -> void:
 		Input.set_custom_mouse_cursor(null, Input.CURSOR_FORBIDDEN)
 
 func _open_recipe_book() -> void:
+	if not CampaignManager.has_recipe_book:
+		return
 	if select_sound: select_sound.play()
-	
+
 	# Safety Check: If the panel node is missing, stop here to avoid the crash!
 	if recipe_book_panel == null:
 		push_error("Error: RecipeBookPanel node not found. Check Unique Name (%) in Editor.")
 		return
 
-	var txt = "[center][color=gold][b]--- BARTHOLOMEW'S FORGE NOTES ---[/b][/color][/center]\n\n"
+	var txt = "[center][color=#e8c040]— HALDOR'S FORGE NOTES —[/color][/center]\n\n"
 	
 	# --- NEW: DISPLAY CURRENT BLUEPRINT STOCK ---
 	txt += "[color=cyan]--- CURRENT BLUEPRINTS ---[/color]\n"
@@ -6062,7 +8633,7 @@ func _on_blacksmith_talk_pressed() -> void:
 func _refresh_blueprint_stock() -> void:
 	if blueprint_stock_label == null: return
 	
-	var txt = "[center][color=gold]--- DEPLOYMENT STOCK ---[/color][/center]\n\n"
+	var txt = ""
 	
 	for struct in CampaignManager.player_structures:
 		var s_name = struct.get("name", "Unknown")
@@ -6170,6 +8741,7 @@ func _on_use_pressed() -> void:
 			var save_string = t_name + "|" + track_path
 			
 			if CampaignManager.unlocked_music_paths.has(save_string):
+				_play_camp_inv_sfx_invalid()
 				if warning_dialog:
 					warning_dialog.dialog_text = "You already unlocked this track!"
 					warning_dialog.popup_centered()
@@ -6201,9 +8773,7 @@ func _on_use_pressed() -> void:
 				unit_data[key] += boost_val
 				feedback_list.append("+ " + str(boost_val) + " " + stats[key])
 
-		if use_item_sound:
-			use_item_sound.pitch_scale = randf_range(0.9, 1.1)
-			use_item_sound.play()
+		_play_camp_inv_sfx_use()
 	
 	# --- EXECUTE CONSUMPTION (REMOVE THE ITEM) ---
 	if meta["source"] == "unit":
@@ -6295,6 +8865,8 @@ func _on_qty_confirm_pressed() -> void:
 		if item == discounted_item:
 			discounted_item = null
 			CampaignManager.camp_discount_item = null
+		if item == CampaignManager.camp_second_discount_item:
+			CampaignManager.camp_second_discount_item = null
 		_update_merchant_text("buy")
 		_refresh_gold_label()
 		var inv_target: Vector2 = (inventory_desc.global_position + inventory_desc.size / 2.0) if inventory_desc else get_viewport_rect().get_center()
@@ -6322,7 +8894,7 @@ func _on_qty_confirm_pressed() -> void:
 	_populate_shop()
 	shop_desc.text = ""
 	if inventory_desc:
-		inventory_desc.text = "Transaction complete."
+		_camp_inventory_desc_set_text("Transaction complete.")
 
 # ==========================================
 # INVENTORY DRAG AND DROP
@@ -6331,19 +8903,8 @@ func _get_drag_inventory(_at_position: Vector2, btn: Button, meta: Dictionary) -
 	var item = meta["item"]
 	Input.set_custom_mouse_cursor(empty_cursor, Input.CURSOR_CAN_DROP)
 	Input.set_custom_mouse_cursor(empty_cursor, Input.CURSOR_FORBIDDEN)
-	
-	var preview = TextureRect.new()
-	preview.texture = item.get("icon")
-	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	preview.custom_minimum_size = Vector2(88, 88)
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
-	var c = Control.new()
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	c.z_index = 1000
-	c.add_child(preview)
-	preview.position = -preview.custom_minimum_size / 2.0
-	
+
+	var c := _camp_make_item_drag_preview(item, 88.0)
 	btn.set_drag_preview(c)
 	if select_sound: select_sound.play()
 	return {"type": "inventory_item", "meta": meta}
@@ -6461,6 +9022,31 @@ func _start_playlist_playback() -> void:
 		jukebox_active_playlist_name = ""
 		_update_now_playing_ui()
 		return
+	# Drop stale/invalid paths so broken playlist entries do not trap playback.
+	var sanitized_tracks: Array[String] = []
+	for track_path in jukebox_active_playlist_tracks:
+		var path_str := str(track_path).strip_edges()
+		if path_str != "" and ResourceLoader.exists(path_str):
+			sanitized_tracks.append(path_str)
+	var removed_count := jukebox_active_playlist_tracks.size() - sanitized_tracks.size()
+	if sanitized_tracks.size() != jukebox_active_playlist_tracks.size():
+		jukebox_active_playlist_tracks = sanitized_tracks
+		if not jukebox_active_playlist_name.is_empty():
+			CampaignManager.saved_music_playlists[jukebox_active_playlist_name] = sanitized_tracks.duplicate()
+		jukebox_shuffled_indices.clear()
+		if removed_count > 0:
+			_jukebox_set_status("Archive reconciled: %d missing entries removed." % removed_count, 3.0)
+	if jukebox_active_playlist_tracks.is_empty():
+		jukebox_active_playlist_name = ""
+		jukebox_playlist_index = 0
+		jukebox_shuffled_indices.clear()
+		is_playing_custom_track = false
+		current_custom_track = null
+		CampaignManager.jukebox_last_playlist_name = ""
+		CampaignManager.jukebox_last_track_path = ""
+		_play_random_camp_music()
+		_update_now_playing_ui()
+		return
 	if jukebox_playback_mode == JUKEBOX_MODE_SHUFFLE_PLAYLIST and jukebox_shuffled_indices.is_empty():
 		jukebox_shuffled_indices.resize(jukebox_active_playlist_tracks.size())
 		for i in jukebox_active_playlist_tracks.size():
@@ -6482,7 +9068,7 @@ func _start_playlist_playback() -> void:
 		return
 	is_playing_custom_track = true
 	current_custom_track = stream
-	_crossfade_music(stream)
+	_crossfade_music(stream, 0.65)
 	_update_now_playing_ui()
 
 ## Advances to next playlist track or loops; stops if playlist empty.
@@ -6504,6 +9090,7 @@ func _advance_playlist_or_stop() -> void:
 			_play_random_camp_music()
 			_update_now_playing_ui()
 			return
+	_jukebox_set_status("Deck advanced to Track %d/%d." % [jukebox_playlist_index + 1, jukebox_active_playlist_tracks.size()], 2.0)
 	_start_playlist_playback()
 
 ## Returns playlist names sorted A–Z for deterministic UI.
@@ -6515,7 +9102,7 @@ func _jukebox_sorted_playlist_names() -> Array[String]:
 	return names
 
 func _open_jukebox() -> void:
-	if jukebox_panel == null or jukebox_list == null:
+	if jukebox_panel == null:
 		return
 	if select_sound:
 		select_sound.play()
@@ -6523,14 +9110,15 @@ func _open_jukebox() -> void:
 	_layout_camp_jukebox_panel()
 	if not _jukebox_playlist_ui_created:
 		_create_jukebox_playlist_ui()
-	jukebox_list.clear()
-	jukebox_list.add_item("DEFAULT CAMP AMBIANCE")
-	jukebox_list.set_item_metadata(0, "DEFAULT")
-	var jukebox_list_index := 1
+	_jukebox_migrate_library_to_runtime_list()
+	if _jukebox_tracks_vbox == null:
+		return
+	if _jukebox_favorites_only_cb != null:
+		_jukebox_favorites_only_cb.set_pressed_no_signal(CampaignManager.jukebox_favorites_only)
+	var row_entries: Array[Dictionary] = []
+	row_entries.append({"text": "DEFAULT CAMP AMBIANCE", "meta": "DEFAULT"})
 	for playlist_name in _jukebox_sorted_playlist_names():
-		jukebox_list.add_item("[PLAYLIST] " + playlist_name)
-		jukebox_list.set_item_metadata(jukebox_list_index, "PLAYLIST|" + playlist_name)
-		jukebox_list_index += 1
+		row_entries.append({"text": "[PLAYLIST] " + playlist_name, "meta": "PLAYLIST|" + playlist_name})
 	var jukebox_entries: Array[Dictionary] = []
 	for saved_track in CampaignManager.unlocked_music_paths:
 		var parts := str(saved_track).split("|")
@@ -6547,56 +9135,84 @@ func _open_jukebox() -> void:
 		var entry_path := str(entry.get("path", ""))
 		var entry_name := str(entry.get("name", ""))
 		var entry_prefix := "[FAVORITE] " if entry_path in CampaignManager.favorite_music_paths else ""
-		jukebox_list.add_item(entry_prefix + entry_name)
-		jukebox_list.set_item_metadata(jukebox_list_index, entry_path)
-		jukebox_list_index += 1
+		row_entries.append({"text": entry_prefix + entry_name, "meta": entry_path})
+	if _camp_jukebox_library_badge != null:
+		var library_suffix := "FAVORITES %d" % jukebox_entries.size() if (_jukebox_favorites_only_cb != null and _jukebox_favorites_only_cb.button_pressed) else "%d UNLOCKED" % jukebox_entries.size()
+		_camp_jukebox_library_badge.text = "TRACK LIBRARY // " + library_suffix
+	_jukebox_rebuild_runtime_rows(row_entries)
 	_refresh_jukebox_playlist_option()
+	if _jukebox_runtime_rows.size() > 0:
+		var restored_index := clampi(CampaignManager.jukebox_last_selected_list_item, 0, _jukebox_runtime_rows.size() - 1)
+		for j in range(_jukebox_runtime_rows.size()):
+			var rb: Button = _jukebox_runtime_rows[j]
+			if rb.toggle_mode:
+				rb.set_pressed_no_signal(j == restored_index)
 	_update_now_playing_ui()
 	if _camp_jukebox_dimmer != null:
 		_camp_jukebox_dimmer.visible = true
 		move_child(_camp_jukebox_dimmer, max(0, get_child_count() - 2))
 	jukebox_panel.visible = true
 	move_child(jukebox_panel, get_child_count() - 1)
-	return
-	jukebox_list.clear()
-	# Option 0: default ambient
-	jukebox_list.add_item("⛺ Default Camp Ambiance")
-	jukebox_list.set_item_metadata(0, "DEFAULT")
-	var index: int = 1
-	# Playlists (sorted A–Z)
-	for pl_name in _jukebox_sorted_playlist_names():
-		jukebox_list.add_item("📋 " + pl_name)
-		jukebox_list.set_item_metadata(index, "PLAYLIST|" + pl_name)
-		index += 1
-	# Unlocked tracks: filter by favorites if on, then sort
-	var track_entries: Array[Dictionary] = []
-	for saved_str in CampaignManager.unlocked_music_paths:
-		var parts = saved_str.split("|")
-		if parts.size() != 2:
-			continue
-		var t_name: String = parts[0]
-		var path: String = parts[1]
-		if _jukebox_favorites_only_cb != null and _jukebox_favorites_only_cb.button_pressed:
-			if path not in CampaignManager.favorite_music_paths:
-				continue
-		track_entries.append({"name": t_name, "path": path})
-	if _jukebox_track_sort_mode == JUKEBOX_SORT_ALPHA:
-		track_entries.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
-	for entry in track_entries:
-		var path: String = entry.path
-		var t_name: String = entry.name
-		var star: String = "★ " if path in CampaignManager.favorite_music_paths else ""
-		jukebox_list.add_item("🎶 " + star + t_name)
-		jukebox_list.set_item_metadata(index, path)
-		index += 1
-	_refresh_jukebox_playlist_option()
-	_update_now_playing_ui()
-	jukebox_panel.visible = true
+
+func _jukebox_clear_row_container(row: Container) -> void:
+	if row == null:
+		return
+	for child in row.get_children():
+		row.remove_child(child)
+		child.queue_free()
+
+func _rebuild_jukebox_playlist_ui() -> void:
+	if _camp_jukebox_mode_row == null or _camp_jukebox_playlist_row == null or _camp_jukebox_playlist_tools_row == null or _camp_jukebox_manage_row == null or _camp_jukebox_filter_row == null or _camp_jukebox_filter_tools_row == null:
+		return
+	var legacy_controls: Array[Control] = [
+		_jukebox_mode_option,
+		_jukebox_playlist_option,
+		_jukebox_add_to_playlist_btn,
+		_jukebox_remove_from_playlist_btn,
+		_jukebox_new_playlist_btn,
+		_jukebox_rename_playlist_btn,
+		_jukebox_delete_playlist_btn,
+		_jukebox_move_up_btn,
+		_jukebox_move_down_btn,
+		_jukebox_favorite_btn,
+		_jukebox_favorites_only_cb,
+		_jukebox_track_sort_option,
+		_jukebox_duplicate_playlist_btn,
+		_jukebox_add_favorites_btn,
+		_jukebox_add_source_btn
+	]
+	for control in legacy_controls:
+		if control != null and is_instance_valid(control) and control.get_parent() != null:
+			control.get_parent().remove_child(control)
+			control.queue_free()
+	_jukebox_clear_row_container(_camp_jukebox_mode_row)
+	_jukebox_clear_row_container(_camp_jukebox_playlist_row)
+	_jukebox_clear_row_container(_camp_jukebox_playlist_tools_row)
+	_jukebox_clear_row_container(_camp_jukebox_manage_row)
+	_jukebox_clear_row_container(_camp_jukebox_filter_row)
+	_jukebox_clear_row_container(_camp_jukebox_filter_tools_row)
+	_jukebox_mode_option = null
+	_jukebox_playlist_option = null
+	_jukebox_add_to_playlist_btn = null
+	_jukebox_remove_from_playlist_btn = null
+	_jukebox_new_playlist_btn = null
+	_jukebox_rename_playlist_btn = null
+	_jukebox_delete_playlist_btn = null
+	_jukebox_move_up_btn = null
+	_jukebox_move_down_btn = null
+	_jukebox_favorite_btn = null
+	_jukebox_favorites_only_cb = null
+	_jukebox_track_sort_option = null
+	_jukebox_duplicate_playlist_btn = null
+	_jukebox_add_favorites_btn = null
+	_jukebox_add_source_btn = null
+	_jukebox_playlist_ui_created = false
+	_create_jukebox_playlist_ui()
 
 func _create_jukebox_playlist_ui() -> void:
 	if jukebox_panel == null or _jukebox_playlist_ui_created:
 		return
-	if _camp_jukebox_mode_row == null or _camp_jukebox_playlist_row == null or _camp_jukebox_manage_row == null or _camp_jukebox_filter_row == null:
+	if _camp_jukebox_mode_row == null or _camp_jukebox_playlist_row == null or _camp_jukebox_playlist_tools_row == null or _camp_jukebox_manage_row == null or _camp_jukebox_filter_row == null or _camp_jukebox_filter_tools_row == null:
 		return
 	var mode_text_label := Label.new()
 	mode_text_label.text = "PLAYBACK MODE"
@@ -6621,150 +9237,99 @@ func _create_jukebox_playlist_ui() -> void:
 	_jukebox_playlist_option.item_selected.connect(_on_jukebox_playlist_option_selected)
 	_camp_style_option_button(_jukebox_playlist_option, 15, 38.0)
 	_camp_jukebox_playlist_row.add_child(_jukebox_playlist_option)
+	playlist_text_label.custom_minimum_size = Vector2(128.0, 0.0)
 	_jukebox_new_playlist_btn = Button.new()
 	_jukebox_new_playlist_btn.text = "New Playlist"
 	_jukebox_new_playlist_btn.pressed.connect(_on_jukebox_new_playlist_pressed)
 	_camp_style_button(_jukebox_new_playlist_btn, false, 15, 38.0)
-	_camp_jukebox_playlist_row.add_child(_jukebox_new_playlist_btn)
+	_jukebox_new_playlist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_playlist_tools_row.add_child(_jukebox_new_playlist_btn)
 	_jukebox_rename_playlist_btn = Button.new()
 	_jukebox_rename_playlist_btn.text = "Rename"
 	_jukebox_rename_playlist_btn.pressed.connect(_on_jukebox_rename_playlist_pressed)
 	_camp_style_button(_jukebox_rename_playlist_btn, false, 15, 38.0)
-	_camp_jukebox_playlist_row.add_child(_jukebox_rename_playlist_btn)
+	_jukebox_rename_playlist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_playlist_tools_row.add_child(_jukebox_rename_playlist_btn)
 	_jukebox_delete_playlist_btn = Button.new()
 	_jukebox_delete_playlist_btn.text = "Delete"
 	_jukebox_delete_playlist_btn.pressed.connect(_on_jukebox_delete_playlist_pressed)
 	_camp_style_button(_jukebox_delete_playlist_btn, false, 15, 38.0)
-	_camp_jukebox_playlist_row.add_child(_jukebox_delete_playlist_btn)
+	_jukebox_delete_playlist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_playlist_tools_row.add_child(_jukebox_delete_playlist_btn)
+	_jukebox_duplicate_playlist_btn = Button.new()
+	_jukebox_duplicate_playlist_btn.text = "Duplicate"
+	_jukebox_duplicate_playlist_btn.pressed.connect(_on_jukebox_duplicate_playlist_pressed)
+	_camp_style_button(_jukebox_duplicate_playlist_btn, false, 15, 38.0)
+	_jukebox_duplicate_playlist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_playlist_tools_row.add_child(_jukebox_duplicate_playlist_btn)
 
 	_jukebox_add_to_playlist_btn = Button.new()
 	_jukebox_add_to_playlist_btn.text = "Add Selected Track"
 	_jukebox_add_to_playlist_btn.pressed.connect(_on_jukebox_add_to_playlist_pressed)
 	_camp_style_button(_jukebox_add_to_playlist_btn, false, 15, 38.0)
+	_jukebox_add_to_playlist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_camp_jukebox_manage_row.add_child(_jukebox_add_to_playlist_btn)
 	_jukebox_remove_from_playlist_btn = Button.new()
 	_jukebox_remove_from_playlist_btn.text = "Remove from Playlist"
 	_jukebox_remove_from_playlist_btn.pressed.connect(_on_jukebox_remove_from_playlist_pressed)
 	_camp_style_button(_jukebox_remove_from_playlist_btn, false, 15, 38.0)
+	_jukebox_remove_from_playlist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_camp_jukebox_manage_row.add_child(_jukebox_remove_from_playlist_btn)
 	_jukebox_move_up_btn = Button.new()
 	_jukebox_move_up_btn.text = "Move Up"
 	_jukebox_move_up_btn.pressed.connect(_on_jukebox_move_up_pressed)
 	_camp_style_button(_jukebox_move_up_btn, false, 15, 38.0)
+	_jukebox_move_up_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_camp_jukebox_manage_row.add_child(_jukebox_move_up_btn)
 	_jukebox_move_down_btn = Button.new()
 	_jukebox_move_down_btn.text = "Move Down"
 	_jukebox_move_down_btn.pressed.connect(_on_jukebox_move_down_pressed)
 	_camp_style_button(_jukebox_move_down_btn, false, 15, 38.0)
+	_jukebox_move_down_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_camp_jukebox_manage_row.add_child(_jukebox_move_down_btn)
 
 	_jukebox_favorite_btn = Button.new()
 	_jukebox_favorite_btn.text = "Mark Favorite"
 	_jukebox_favorite_btn.pressed.connect(_on_jukebox_favorite_pressed)
 	_camp_style_button(_jukebox_favorite_btn, false, 15, 38.0)
+	_jukebox_favorite_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_camp_jukebox_filter_row.add_child(_jukebox_favorite_btn)
 	_jukebox_favorites_only_cb = CheckButton.new()
 	_jukebox_favorites_only_cb.text = "Favorites Only"
-	_jukebox_favorites_only_cb.toggled.connect(func(_enabled: bool): _open_jukebox())
+	_jukebox_favorites_only_cb.toggled.connect(_on_jukebox_favorites_only_toggled)
 	_camp_style_check_button(_jukebox_favorites_only_cb, 15)
+	_jukebox_favorites_only_cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_camp_jukebox_filter_row.add_child(_jukebox_favorites_only_cb)
+	_jukebox_add_favorites_btn = Button.new()
+	_jukebox_add_favorites_btn.text = "Add All Favorites"
+	_jukebox_add_favorites_btn.pressed.connect(_on_jukebox_add_all_favorites_pressed)
+	_camp_style_button(_jukebox_add_favorites_btn, false, 15, 38.0)
+	_jukebox_add_favorites_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_filter_tools_row.add_child(_jukebox_add_favorites_btn)
+	_jukebox_add_source_btn = Button.new()
+	_jukebox_add_source_btn.text = "Add All Same Source"
+	_jukebox_add_source_btn.pressed.connect(_on_jukebox_add_all_source_pressed)
+	_camp_style_button(_jukebox_add_source_btn, false, 15, 38.0)
+	_jukebox_add_source_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_filter_tools_row.add_child(_jukebox_add_source_btn)
 	var sort_text_label := Label.new()
 	sort_text_label.text = "TRACK SORT"
 	_camp_style_label(sort_text_label, CAMP_MUTED, 15, 1)
-	_camp_jukebox_filter_row.add_child(sort_text_label)
+	sort_text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_camp_jukebox_filter_tools_row.add_child(sort_text_label)
 	_jukebox_track_sort_option = OptionButton.new()
+	_jukebox_track_sort_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_jukebox_track_sort_option.add_item("Unlock Order", 0)
 	_jukebox_track_sort_option.add_item("A-Z", 1)
 	_jukebox_track_sort_option.item_selected.connect(_on_jukebox_track_sort_selected)
 	_camp_style_option_button(_jukebox_track_sort_option, 15, 38.0)
-	_camp_jukebox_filter_row.add_child(_jukebox_track_sort_option)
+	_camp_jukebox_filter_tools_row.add_child(_jukebox_track_sort_option)
 
 	if _jukebox_playlist_popup == null or not is_instance_valid(_jukebox_playlist_popup):
 		_jukebox_playlist_popup = PopupMenu.new()
 		_jukebox_playlist_popup.id_pressed.connect(_on_jukebox_add_to_playlist_id_pressed)
 		jukebox_panel.add_child(_jukebox_playlist_popup)
 
-	_jukebox_playlist_ui_created = true
-	_sync_jukebox_mode_option()
-	_sync_jukebox_sort_option()
-	return
-	var row = HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	row.offset_left = 20.0
-	row.offset_top = 95.0
-	row.offset_right = 360.0
-	row.offset_bottom = 130.0
-	var mode_lbl = Label.new()
-	mode_lbl.text = "Mode:"
-	row.add_child(mode_lbl)
-	_jukebox_mode_option = OptionButton.new()
-	_jukebox_mode_option.add_item("Default", 0)
-	_jukebox_mode_option.add_item("Loop track", 1)
-	_jukebox_mode_option.add_item("Loop playlist", 2)
-	_jukebox_mode_option.add_item("Shuffle playlist", 3)
-	_jukebox_mode_option.item_selected.connect(_on_jukebox_mode_selected)
-	row.add_child(_jukebox_mode_option)
-	var pl_lbl = Label.new()
-	pl_lbl.text = " Playlist:"
-	row.add_child(pl_lbl)
-	_jukebox_playlist_option = OptionButton.new()
-	_jukebox_playlist_option.item_selected.connect(_on_jukebox_playlist_option_selected)
-	row.add_child(_jukebox_playlist_option)
-	_jukebox_new_playlist_btn = Button.new()
-	_jukebox_new_playlist_btn.text = "New"
-	_jukebox_new_playlist_btn.pressed.connect(_on_jukebox_new_playlist_pressed)
-	row.add_child(_jukebox_new_playlist_btn)
-	_jukebox_rename_playlist_btn = Button.new()
-	_jukebox_rename_playlist_btn.text = "Rename"
-	_jukebox_rename_playlist_btn.pressed.connect(_on_jukebox_rename_playlist_pressed)
-	row.add_child(_jukebox_rename_playlist_btn)
-	_jukebox_delete_playlist_btn = Button.new()
-	_jukebox_delete_playlist_btn.text = "Delete"
-	_jukebox_delete_playlist_btn.pressed.connect(_on_jukebox_delete_playlist_pressed)
-	row.add_child(_jukebox_delete_playlist_btn)
-	_jukebox_add_to_playlist_btn = Button.new()
-	_jukebox_add_to_playlist_btn.text = "Add to playlist"
-	_jukebox_add_to_playlist_btn.pressed.connect(_on_jukebox_add_to_playlist_pressed)
-	row.add_child(_jukebox_add_to_playlist_btn)
-	_jukebox_remove_from_playlist_btn = Button.new()
-	_jukebox_remove_from_playlist_btn.text = "Remove from playlist"
-	_jukebox_remove_from_playlist_btn.pressed.connect(_on_jukebox_remove_from_playlist_pressed)
-	row.add_child(_jukebox_remove_from_playlist_btn)
-	_jukebox_move_up_btn = Button.new()
-	_jukebox_move_up_btn.text = "Move Up"
-	_jukebox_move_up_btn.pressed.connect(_on_jukebox_move_up_pressed)
-	row.add_child(_jukebox_move_up_btn)
-	_jukebox_move_down_btn = Button.new()
-	_jukebox_move_down_btn.text = "Move Down"
-	_jukebox_move_down_btn.pressed.connect(_on_jukebox_move_down_pressed)
-	row.add_child(_jukebox_move_down_btn)
-	jukebox_panel.add_child(row)
-	var row2 = HBoxContainer.new()
-	row2.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	row2.offset_left = 20.0
-	row2.offset_top = 132.0
-	row2.offset_right = 380.0
-	row2.offset_bottom = 165.0
-	_jukebox_favorite_btn = Button.new()
-	_jukebox_favorite_btn.text = "★ Favorite"
-	_jukebox_favorite_btn.pressed.connect(_on_jukebox_favorite_pressed)
-	row2.add_child(_jukebox_favorite_btn)
-	_jukebox_favorites_only_cb = CheckButton.new()
-	_jukebox_favorites_only_cb.text = "Favorites only"
-	_jukebox_favorites_only_cb.toggled.connect(func(_on): _open_jukebox())
-	row2.add_child(_jukebox_favorites_only_cb)
-	var sort_lbl = Label.new()
-	sort_lbl.text = " Sort:"
-	row2.add_child(sort_lbl)
-	_jukebox_track_sort_option = OptionButton.new()
-	_jukebox_track_sort_option.add_item("Unlock order", 0)
-	_jukebox_track_sort_option.add_item("A–Z", 1)
-	_jukebox_track_sort_option.item_selected.connect(_on_jukebox_track_sort_selected)
-	row2.add_child(_jukebox_track_sort_option)
-	jukebox_panel.add_child(row2)
-	_jukebox_playlist_popup = PopupMenu.new()
-	_jukebox_playlist_popup.id_pressed.connect(_on_jukebox_add_to_playlist_id_pressed)
-	jukebox_panel.add_child(_jukebox_playlist_popup)
 	_jukebox_playlist_ui_created = true
 	_sync_jukebox_mode_option()
 	_sync_jukebox_sort_option()
@@ -6926,18 +9491,31 @@ func _on_jukebox_delete_playlist_pressed() -> void:
 	_update_now_playing_ui()
 	_open_jukebox()
 
+func _on_jukebox_duplicate_playlist_pressed() -> void:
+	if _jukebox_playlist_option == null: return
+	var sel_idx: int = _jukebox_playlist_option.selected
+	var sel_id: int = _jukebox_playlist_option.get_item_id(sel_idx)
+	if sel_id < 0 or sel_id >= _jukebox_playlist_names_ordered.size(): return
+	var source_name: String = _jukebox_playlist_names_ordered[sel_id]
+	var target_name := source_name + " Copy"
+	var counter := 2
+	while CampaignManager.saved_music_playlists.has(target_name):
+		target_name = "%s Copy %d" % [source_name, counter]
+		counter += 1
+	var source_tracks: Array = CampaignManager.saved_music_playlists.get(source_name, [])
+	CampaignManager.saved_music_playlists[target_name] = source_tracks.duplicate()
+	_refresh_jukebox_playlist_option()
+	_jukebox_set_status("Duplicated playlist: " + target_name, 2.4)
+	_open_jukebox()
+
 func _on_jukebox_add_to_playlist_pressed() -> void:
-	var idx = jukebox_list.get_selected_items()
-	if idx.is_empty(): return
-	var meta = jukebox_list.get_item_metadata(idx[0])
-	var path_str = str(meta)
-	if path_str == "DEFAULT" or path_str.begins_with("PLAYLIST|"): return
-	if not ResourceLoader.exists(path_str): return
+	var selected_paths := _jukebox_selected_track_paths()
+	if selected_paths.is_empty(): return
 	_jukebox_playlist_popup.clear()
 	for i in _jukebox_playlist_names_ordered.size():
 		_jukebox_playlist_popup.add_item(_jukebox_playlist_names_ordered[i], i)
 	if _jukebox_playlist_popup.item_count == 0: return
-	_jukebox_playlist_popup.set_meta("add_track_path", path_str)
+	_jukebox_playlist_popup.set_meta("add_track_paths", selected_paths)
 	_jukebox_playlist_popup.popup(Rect2i(jukebox_panel.global_position + Vector2(20, 130), Vector2(180, 120)))
 
 func _on_jukebox_remove_from_playlist_pressed() -> void:
@@ -6946,13 +9524,11 @@ func _on_jukebox_remove_from_playlist_pressed() -> void:
 	var sel_id: int = _jukebox_playlist_option.get_item_id(sel_idx)
 	if sel_id < 0 or sel_id >= _jukebox_playlist_names_ordered.size(): return
 	var pl_name: String = _jukebox_playlist_names_ordered[sel_id]
-	var idx = jukebox_list.get_selected_items()
-	if idx.is_empty(): return
-	var meta = jukebox_list.get_item_metadata(idx[0])
-	var path_str = str(meta)
-	if path_str == "DEFAULT" or path_str.begins_with("PLAYLIST|"): return
+	var selected_paths := _jukebox_selected_track_paths()
+	if selected_paths.is_empty(): return
 	var arr: Array = CampaignManager.saved_music_playlists.get(pl_name, [])
-	arr.erase(path_str)
+	for path_str in selected_paths:
+		arr.erase(path_str)
 	CampaignManager.saved_music_playlists[pl_name] = arr
 	if jukebox_active_playlist_name == pl_name:
 		jukebox_active_playlist_tracks.clear()
@@ -6960,6 +9536,7 @@ func _on_jukebox_remove_from_playlist_pressed() -> void:
 			jukebox_active_playlist_tracks.append(str(a))
 		if jukebox_playlist_index >= jukebox_active_playlist_tracks.size():
 			jukebox_playlist_index = max(0, jukebox_active_playlist_tracks.size() - 1)
+	_jukebox_set_status("Removed %d track(s) from %s." % [selected_paths.size(), pl_name], 2.2)
 	_open_jukebox()
 
 ## Move selected track up in the selected playlist; syncs active playlist and playing index if needed.
@@ -6976,11 +9553,9 @@ func _jukebox_move_track_in_playlist(direction: int) -> void:
 	var sel_id: int = _jukebox_playlist_option.get_item_id(sel_idx)
 	if sel_id < 0 or sel_id >= _jukebox_playlist_names_ordered.size(): return
 	var pl_name: String = _jukebox_playlist_names_ordered[sel_id]
-	var idx = jukebox_list.get_selected_items()
-	if idx.is_empty(): return
-	var meta = jukebox_list.get_item_metadata(idx[0])
-	var path_str = str(meta)
-	if path_str == "DEFAULT" or path_str.begins_with("PLAYLIST|"): return
+	var path_str := _jukebox_first_selected_track_meta()
+	if path_str.is_empty():
+		return
 	var arr: Array = CampaignManager.saved_music_playlists.get(pl_name, [])
 	var i: int = arr.find(path_str)
 	if i < 0: return
@@ -7001,11 +9576,9 @@ func _jukebox_move_track_in_playlist(direction: int) -> void:
 	_open_jukebox()
 
 func _on_jukebox_favorite_pressed() -> void:
-	var idx = jukebox_list.get_selected_items()
-	if idx.is_empty(): return
-	var meta = jukebox_list.get_item_metadata(idx[0])
-	var path_str = str(meta)
-	if path_str == "DEFAULT" or path_str.begins_with("PLAYLIST|"): return
+	var path_str := _jukebox_first_selected_track_meta()
+	if path_str.is_empty():
+		return
 	if path_str in CampaignManager.favorite_music_paths:
 		CampaignManager.favorite_music_paths.erase(path_str)
 	else:
@@ -7014,18 +9587,32 @@ func _on_jukebox_favorite_pressed() -> void:
 
 func _on_jukebox_track_sort_selected(idx: int) -> void:
 	_jukebox_track_sort_mode = JUKEBOX_SORT_ALPHA if idx == 1 else JUKEBOX_SORT_UNLOCK
+	CampaignManager.jukebox_sort_mode = _jukebox_track_sort_mode
+	_open_jukebox()
+
+func _on_jukebox_favorites_only_toggled(enabled: bool) -> void:
+	CampaignManager.jukebox_favorites_only = enabled
 	_open_jukebox()
 
 func _on_jukebox_add_to_playlist_id_pressed(id: int) -> void:
-	var path_str: String = _jukebox_playlist_popup.get_meta("add_track_path", "")
-	if path_str.is_empty(): return
+	var selected_paths_variant: Variant = _jukebox_playlist_popup.get_meta("add_track_paths", [])
+	var selected_paths: Array[String] = []
+	if selected_paths_variant is Array:
+		for v in selected_paths_variant:
+			var s := str(v)
+			if s != "":
+				selected_paths.append(s)
+	if selected_paths.is_empty():
+		return
 	if id < 0 or id >= _jukebox_playlist_names_ordered.size(): return
 	var pl_name: String = _jukebox_playlist_names_ordered[id]
 	var arr: Array = CampaignManager.saved_music_playlists.get(pl_name, [])
-	if path_str in arr:
-		_jukebox_show_feedback("Already in playlist")
-		return
-	arr.append(path_str)
+	var added_count := 0
+	for path_str in selected_paths:
+		if path_str in arr:
+			continue
+		arr.append(path_str)
+		added_count += 1
 	CampaignManager.saved_music_playlists[pl_name] = arr
 	if jukebox_active_playlist_name == pl_name:
 		jukebox_active_playlist_tracks.clear()
@@ -7033,20 +9620,79 @@ func _on_jukebox_add_to_playlist_id_pressed(id: int) -> void:
 			jukebox_active_playlist_tracks.append(str(a))
 		if jukebox_playlist_index >= jukebox_active_playlist_tracks.size():
 			jukebox_playlist_index = max(0, jukebox_active_playlist_tracks.size() - 1)
-	_jukebox_show_feedback("Added to " + pl_name)
+	if added_count == 0:
+		_jukebox_set_status("Selected tracks were already in %s." % pl_name, 2.0)
+	else:
+		_jukebox_set_status("Added %d track(s) to %s." % [added_count, pl_name], 2.2)
+	_open_jukebox()
+
+func _on_jukebox_add_all_favorites_pressed() -> void:
+	if _jukebox_playlist_option == null: return
+	var sel_idx: int = _jukebox_playlist_option.selected
+	var sel_id: int = _jukebox_playlist_option.get_item_id(sel_idx)
+	if sel_id < 0 or sel_id >= _jukebox_playlist_names_ordered.size():
+		_jukebox_set_status("Choose a playlist first.", 2.0)
+		return
+	var pl_name: String = _jukebox_playlist_names_ordered[sel_id]
+	var arr: Array = CampaignManager.saved_music_playlists.get(pl_name, [])
+	var added_count := 0
+	for path_str in CampaignManager.favorite_music_paths:
+		if not ResourceLoader.exists(path_str):
+			continue
+		if path_str in arr:
+			continue
+		arr.append(path_str)
+		added_count += 1
+	CampaignManager.saved_music_playlists[pl_name] = arr
+	_jukebox_set_status("Added %d favorite track(s) to %s." % [added_count, pl_name], 2.4)
+	_open_jukebox()
+
+func _on_jukebox_add_all_source_pressed() -> void:
+	if _jukebox_playlist_option == null: return
+	var sel_idx: int = _jukebox_playlist_option.selected
+	var sel_id: int = _jukebox_playlist_option.get_item_id(sel_idx)
+	if sel_id < 0 or sel_id >= _jukebox_playlist_names_ordered.size():
+		_jukebox_set_status("Choose a playlist first.", 2.0)
+		return
+	var selected_meta := _jukebox_first_selected_track_meta()
+	if selected_meta.is_empty():
+		_jukebox_set_status("Select a track to infer source.", 2.0)
+		return
+	if selected_meta == "DEFAULT" or selected_meta.begins_with("PLAYLIST|"):
+		_jukebox_set_status("Select a real track first.", 2.0)
+		return
+	var selected_name := _get_display_name_for_path(selected_meta)
+	var source_key := _jukebox_infer_source(selected_name, selected_meta)
+	var pl_name: String = _jukebox_playlist_names_ordered[sel_id]
+	var arr: Array = CampaignManager.saved_music_playlists.get(pl_name, [])
+	var added_count := 0
+	for raw_track in CampaignManager.unlocked_music_paths:
+		var parts := str(raw_track).split("|")
+		if parts.size() != 2:
+			continue
+		var name_part := str(parts[0])
+		var path_part := str(parts[1])
+		if not ResourceLoader.exists(path_part):
+			continue
+		if _jukebox_infer_source(name_part, path_part) != source_key:
+			continue
+		if path_part in arr:
+			continue
+		arr.append(path_part)
+		added_count += 1
+	CampaignManager.saved_music_playlists[pl_name] = arr
+	_jukebox_set_status("Added %d '%s' track(s) to %s." % [added_count, source_key, pl_name], 2.6)
 	_open_jukebox()
 
 func _on_jukebox_track_selected(index: int) -> void:
 	if select_sound: select_sound.play()
-	var meta = jukebox_list.get_item_metadata(index)
-	var track_name = jukebox_list.get_item_text(index)
-	var meta_str = str(meta)
-	var clean_track_name := track_name.replace("[FAVORITE] ", "").replace("[PLAYLIST] ", "")
-	if _jukebox_favorite_btn != null:
-		if meta_str != "DEFAULT" and not meta_str.begins_with("PLAYLIST|"):
-			_jukebox_favorite_btn.text = "☆ Unfavorite" if meta_str in CampaignManager.favorite_music_paths else "★ Favorite"
-		else:
-			_jukebox_favorite_btn.text = "★ Favorite"
+	CampaignManager.jukebox_last_selected_list_item = maxi(0, index)
+	if index < 0 or index >= _jukebox_runtime_rows.size():
+		return
+	var row_btn: Button = _jukebox_runtime_rows[index]
+	var meta_str: String = str(row_btn.get_meta("jb_meta", ""))
+	var track_name: String = row_btn.text
+	var clean_track_name: String = track_name.replace("[FAVORITE] ", "").replace("[PLAYLIST] ", "")
 	if _jukebox_favorite_btn != null:
 		if meta_str != "DEFAULT" and not meta_str.begins_with("PLAYLIST|"):
 			_jukebox_favorite_btn.text = "Unfavorite" if meta_str in CampaignManager.favorite_music_paths else "Mark Favorite"
@@ -7063,6 +9709,14 @@ func _on_jukebox_track_selected(index: int) -> void:
 		CampaignManager.jukebox_last_mode = JUKEBOX_MODE_DEFAULT
 		CampaignManager.jukebox_last_track_path = ""
 		CampaignManager.jukebox_last_playlist_name = ""
+		if _jukebox_chip_source != null:
+			_jukebox_chip_source.text = "Source: Camp"
+		if _jukebox_chip_mood != null:
+			_jukebox_chip_mood.text = "Mood: Ambient"
+		if _jukebox_chip_length != null:
+			_jukebox_chip_length.text = "Length: Live"
+		if _jukebox_chip_favorite != null:
+			_jukebox_chip_favorite.text = "Favorite: N/A"
 		_update_now_playing_ui()
 		return
 	if meta_str.begins_with("PLAYLIST|"):
@@ -7074,6 +9728,7 @@ func _on_jukebox_track_selected(index: int) -> void:
 			jukebox_active_playlist_tracks.append(str(t))
 		jukebox_playlist_index = 0
 		jukebox_shuffled_indices.clear()
+		CampaignManager.jukebox_last_track_path = ""
 		CampaignManager.jukebox_last_playlist_name = pl_name
 		_start_playlist_playback()
 		_update_now_playing_ui()
@@ -7091,6 +9746,7 @@ func _on_jukebox_track_selected(index: int) -> void:
 			CampaignManager.jukebox_last_track_path = path
 			CampaignManager.jukebox_last_playlist_name = ""
 			_crossfade_music(stream)
+		_refresh_jukebox_meta_chips(path, clean_track_name)
 		_update_now_playing_ui(clean_track_name)
 
 func _get_display_name_for_path(path: String) -> String:
@@ -7100,17 +9756,63 @@ func _get_display_name_for_path(path: String) -> String:
 			return parts[0]
 	return path.get_file().get_basename()
 
+func _refresh_jukebox_meta_chips(path: String, display_name: String = "") -> void:
+	var shown_name := display_name if display_name != "" else _get_display_name_for_path(path)
+	var source_text := _jukebox_infer_source(shown_name, path)
+	var mood_text := _jukebox_infer_mood(shown_name)
+	var length_text := _jukebox_estimated_length_label(shown_name)
+	var favorite_text := "Yes" if path in CampaignManager.favorite_music_paths else "No"
+	if _jukebox_chip_source != null:
+		_jukebox_chip_source.text = "Source: " + source_text
+	if _jukebox_chip_mood != null:
+		_jukebox_chip_mood.text = "Mood: " + mood_text
+	if _jukebox_chip_length != null:
+		_jukebox_chip_length.text = "Length: " + length_text
+	if _jukebox_chip_favorite != null:
+		_jukebox_chip_favorite.text = "Favorite: " + favorite_text
+
+func _refresh_jukebox_up_next() -> void:
+	if _jukebox_up_next_label == null:
+		return
+	if jukebox_active_playlist_name.is_empty() or jukebox_active_playlist_tracks.is_empty():
+		_jukebox_up_next_label.text = "[color=#b6ad9b]UP NEXT\nNo queued playlist tracks.[/color]"
+		return
+	var lines: Array[String] = []
+	var count: int = mini(5, jukebox_active_playlist_tracks.size())
+	for step in range(count):
+		var virtual_index := (jukebox_playlist_index + step) % jukebox_active_playlist_tracks.size()
+		var actual_index := virtual_index
+		if jukebox_playback_mode == JUKEBOX_MODE_SHUFFLE_PLAYLIST and virtual_index < jukebox_shuffled_indices.size():
+			actual_index = jukebox_shuffled_indices[virtual_index]
+		var path := str(jukebox_active_playlist_tracks[actual_index])
+		var marker := "Now" if step == 0 else str(step)
+		lines.append("[color=#e8dbc0]%s.[/color] %s" % [marker, _get_display_name_for_path(path)])
+	_jukebox_up_next_label.text = "[color=#8ccbe6]UP NEXT // %s[/color]\n%s" % [jukebox_active_playlist_name, "\n".join(lines)]
+
 func _update_now_playing_ui(override_name: String = "") -> void:
-	if jukebox_now_playing == null: return
+	if jukebox_now_playing == null:
+		return
 	var mode_str: String = ""
 	match jukebox_playback_mode:
-		JUKEBOX_MODE_DEFAULT: mode_str = "Default"
-		JUKEBOX_MODE_LOOP_TRACK: mode_str = "Loop track"
-		JUKEBOX_MODE_LOOP_PLAYLIST: mode_str = "Loop playlist"
-		JUKEBOX_MODE_SHUFFLE_PLAYLIST: mode_str = "Shuffle"
-		_: mode_str = "Default"
+		JUKEBOX_MODE_DEFAULT:
+			mode_str = "Default"
+		JUKEBOX_MODE_LOOP_TRACK:
+			mode_str = "Loop Track"
+		JUKEBOX_MODE_LOOP_PLAYLIST:
+			mode_str = "Loop Playlist"
+		JUKEBOX_MODE_SHUFFLE_PLAYLIST:
+			mode_str = "Shuffle Playlist"
+		_:
+			mode_str = "Default"
+	var status_line := ""
+	if _jukebox_status_line != "":
+		status_line = "\n[color=cyan]%s[/color]" % _jukebox_status_line
+	if _camp_jukebox_deck_badge != null:
+		_camp_jukebox_deck_badge.text = "CONTROL DECK // " + mode_str.to_upper()
+	_jukebox_refresh_lyrics_button()
 	if override_name != "":
-		jukebox_now_playing.text = "[center]Now Playing:\n[color=gold]" + override_name + "[/color]\n[color=gray]" + mode_str + "[/color][/center]"
+		jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#fff0c8]%s[/color]\n[color=#8ccbe6]%s[/color]%s[/center]" % [override_name, mode_str.to_upper(), status_line]
+		_refresh_jukebox_up_next()
 		return
 	if not jukebox_active_playlist_name.is_empty() and jukebox_active_playlist_tracks.size() > 0:
 		var idx: int = jukebox_playlist_index
@@ -7120,20 +9822,35 @@ func _update_now_playing_ui(override_name: String = "") -> void:
 			var cur_path: String = jukebox_active_playlist_tracks[idx]
 			var name_str: String = _get_display_name_for_path(cur_path)
 			var one_based: int = jukebox_playlist_index + 1
-			jukebox_now_playing.text = "[center]Now Playing:\n[color=gold]" + name_str + "[/color]\n[color=cyan]" + jukebox_active_playlist_name + "[/color] (" + str(one_based) + "/" + str(jukebox_active_playlist_tracks.size()) + ")\n[color=gray]" + mode_str + "[/color][/center]"
+			jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#fff0c8]%s[/color]\n[color=#8ccbe6]PLAYLIST // %s (%d/%d)[/color]\n[color=#b6ad9b]%s[/color]%s[/center]" % [name_str, jukebox_active_playlist_name, one_based, jukebox_active_playlist_tracks.size(), mode_str.to_upper(), status_line]
+			_refresh_jukebox_meta_chips(cur_path, name_str)
 		else:
-			jukebox_now_playing.text = "[center]Now Playing:\n[color=cyan]" + jukebox_active_playlist_name + "[/color]\n[color=gray]" + mode_str + "[/color][/center]"
+			jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#8ccbe6]PLAYLIST // %s[/color]\n[color=#b6ad9b]%s[/color]%s[/center]" % [jukebox_active_playlist_name, mode_str.to_upper(), status_line]
+		_refresh_jukebox_up_next()
 		return
 	if is_playing_custom_track and current_custom_track != null:
-		var name_str: String = CampaignManager.jukebox_last_track_path.get_file().get_basename() if CampaignManager.jukebox_last_track_path != "" else "Custom Track"
+		var name_str: String = "Custom Track"
 		if CampaignManager.jukebox_last_track_path != "":
 			name_str = _get_display_name_for_path(CampaignManager.jukebox_last_track_path)
-		jukebox_now_playing.text = "[center]Now Playing:\n[color=gold]🎶 " + name_str + "[/color]\n[color=gray]" + mode_str + "[/color][/center]"
+		jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#fff0c8]%s[/color]\n[color=#b6ad9b]TRACK // %s[/color]%s[/center]" % [name_str, mode_str.to_upper(), status_line]
+		if CampaignManager.jukebox_last_track_path != "":
+			_refresh_jukebox_meta_chips(CampaignManager.jukebox_last_track_path, name_str)
+		_refresh_jukebox_up_next()
 		return
 	if camp_music.playing:
-		jukebox_now_playing.text = "[center]Now Playing:\n[color=lime]⛺ Default Camp Ambiance[/color]\n[color=gray]" + mode_str + "[/color][/center]"
+		jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#9ce8b5]CAMP AMBIANCE[/color]\n[color=#b6ad9b]%s[/color]%s[/center]" % [mode_str.to_upper(), status_line]
+		if _jukebox_chip_source != null:
+			_jukebox_chip_source.text = "Source: Camp"
+		if _jukebox_chip_mood != null:
+			_jukebox_chip_mood.text = "Mood: Ambient"
+		if _jukebox_chip_length != null:
+			_jukebox_chip_length.text = "Length: Live"
+		if _jukebox_chip_favorite != null:
+			_jukebox_chip_favorite.text = "Favorite: N/A"
+		_refresh_jukebox_up_next()
 		return
-	jukebox_now_playing.text = "[center]Now Playing:\n[color=gray]Stopped[/color]\n[color=gray]" + mode_str + "[/color][/center]"
+	jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#9f9688]STOPPED[/color]\n[color=#b6ad9b]%s[/color]%s[/center]" % [mode_str.to_upper(), status_line]
+	_refresh_jukebox_up_next()
 
 func _on_jukebox_volume_changed(value: float) -> void:
 	if value <= 0.001:
@@ -7153,7 +9870,7 @@ func _on_jukebox_skip_pressed() -> void:
 	current_custom_track = null
 	camp_music.stop()
 	_play_random_camp_music()
-	_update_now_playing_ui("⛺ Default Camp Ambiance")
+	_update_now_playing_ui("Camp Ambiance")
 
 func _on_jukebox_stop_pressed() -> void:
 	if select_sound: select_sound.play()
@@ -7181,15 +9898,16 @@ func _on_camp_music_finished() -> void:
 		return
 	_play_random_camp_music()
 
-func _crossfade_music(new_stream: AudioStream) -> void:
+func _crossfade_music(new_stream: AudioStream, fade_seconds: float = 2.0) -> void:
 	var temp_player = AudioStreamPlayer.new()
 	temp_player.stream = new_stream
 	temp_player.volume_db = -40.0
 	add_child(temp_player)
 	temp_player.play()
 	var t = create_tween().set_parallel(true)
-	t.tween_property(camp_music, "volume_db", -40.0, 2.0).set_trans(Tween.TRANS_SINE)
-	t.tween_property(temp_player, "volume_db", user_music_volume, 2.0).set_trans(Tween.TRANS_SINE)
+	var fade_time := clampf(fade_seconds, 0.20, 4.0)
+	t.tween_property(camp_music, "volume_db", -40.0, fade_time).set_trans(Tween.TRANS_SINE)
+	t.tween_property(temp_player, "volume_db", user_music_volume, fade_time).set_trans(Tween.TRANS_SINE)
 	await t.finished
 	camp_music.stop()
 	camp_music.stream = new_stream
@@ -7533,7 +10251,10 @@ func _update_herder_text(category: String) -> void:
 	
 	herder_label.text = full_text
 	herder_label.visible_characters = 0
-	
+
+	if dragon_ranch_panel and dragon_ranch_panel.has_method("refit_herder_dialogue_bubble"):
+		dragon_ranch_panel.refit_herder_dialogue_bubble()
+
 	if herder_tween and herder_tween.is_valid():
 		herder_tween.kill()
 		

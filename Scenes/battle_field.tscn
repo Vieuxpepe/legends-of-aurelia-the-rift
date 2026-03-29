@@ -28,6 +28,7 @@
 [ext_resource type="AudioStream" uid="uid://7tprk5jnxe44" path="res://SoundEffects/Epic_Level_up_sound.wav" id="18_blsh6"]
 [ext_resource type="PackedScene" uid="uid://2dixucjj1jf1" path="res://Resources/Chests/treasure_chest.tscn" id="21_upysf"]
 [ext_resource type="Texture2D" uid="uid://dc5tksv7qa76g" path="res://Assets/Backgrounds/Default Background.png" id="24_niuv0"]
+[ext_resource type="Script" path="res://Scripts/UI/PathPreviewTicks.gd" id="33_path_ticks"]
 
 [sub_resource type="Resource" id="Resource_upysf"]
 script = ExtResource("8_j5eh6")
@@ -724,8 +725,33 @@ stream = ExtResource("12_ne017")
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("13_ne017")
 
+[node name="PathLineUnder" type="Line2D" parent="." unique_id=271209551]
+z_index = 100
+z_as_relative = false
+width = 11.0
+default_color = Color(0.03, 0.05, 0.12, 0.92)
+antialiased = true
+
 [node name="PathLine" type="Line2D" parent="." unique_id=271209550]
+z_index = 101
+z_as_relative = false
 width = 4.0
+default_color = Color(0.82, 0.96, 1, 1)
+antialiased = true
+
+[node name="PathEndMarker" type="Node2D" parent="." unique_id=271209552]
+z_index = 102
+z_as_relative = false
+visible = false
+
+[node name="Diamond" type="Polygon2D" parent="PathEndMarker"]
+polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
+color = Color(0.9, 0.98, 1, 0.92)
+
+[node name="PathPreviewTicks" type="Node2D" parent="."]
+z_index = 103
+z_as_relative = false
+script = ExtResource("33_path_ticks")
 
 [node name="HoverGlow" type="ColorRect" parent="." unique_id=990792456]
 z_index = -1

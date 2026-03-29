@@ -37,6 +37,14 @@ var dragon_uid: String = ""
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 const GLOW_SHADER: Shader = preload("res://elemental_glow.gdshader")
+const SELECT_SILHOUETTE_SHADER: Shader = preload("res://selection_silhouette.gdshader")
+const SELECT_SILHOUETTE_SCALE := 1.065
+const SELECT_SILHOUETTE_ALPHA_DIM := 0.50
+const SELECT_SILHOUETTE_ALPHA_BRIGHT := 0.88
+const SELECT_SILHOUETTE_GOLD := Color(1.0, 0.82, 0.16, 1.0)
+
+var selection_silhouette: TextureRect
+var selection_outline_tween: Tween
 
 func _ready() -> void:
 	rng.randomize()
@@ -56,6 +64,7 @@ func _exit_tree() -> void:
 	_kill_tween(element_tween)
 	_kill_tween(hover_tween)
 	_kill_tween(reaction_tween)
+	_kill_selection_outline_tween()
 
 func setup(data: Dictionary) -> void:
 	dragon_uid = str(data.get("uid", ""))
@@ -102,6 +111,7 @@ func setup(data: Dictionary) -> void:
 	_apply_element_identity()
 	_refresh_name()
 	_refresh_visual_emphasis(true)
+	_update_selection_silhouette_active_state()
 
 	if had_previous_size:
 		position = old_bottom_center - Vector2(size.x * 0.5, size.y)
@@ -213,6 +223,11 @@ func _apply_element_identity() -> void:
 	mat.set_shader_parameter("pulse_speed", base_pulse_speed)
 	mat.set_shader_parameter("glow_alpha", base_glow_alpha)
 
+	_sync_selection_silhouette_texture()
+	if is_selected:
+		_ensure_selection_silhouette()
+		_sync_selection_silhouette_layout(sprite.size)
+
 func _refresh_name() -> void:
 	name_label.text = str(dragon_data.get("name", "Dragon"))
 	name_label.custom_minimum_size = Vector2(120, 28)
@@ -220,6 +235,110 @@ func _refresh_name() -> void:
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.scale = Vector2.ONE
 	name_label.rotation = 0.0
+
+
+func _ensure_selection_silhouette() -> void:
+	if selection_silhouette != null and is_instance_valid(selection_silhouette):
+		if selection_silhouette.material == null:
+			var upgrade_mat: ShaderMaterial = ShaderMaterial.new()
+			upgrade_mat.shader = SELECT_SILHOUETTE_SHADER
+			upgrade_mat.set_shader_parameter(
+				"fill_color",
+				Color(SELECT_SILHOUETTE_GOLD.r, SELECT_SILHOUETTE_GOLD.g, SELECT_SILHOUETTE_GOLD.b, SELECT_SILHOUETTE_ALPHA_DIM)
+			)
+			selection_silhouette.material = upgrade_mat
+			selection_silhouette.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			selection_silhouette.modulate = Color.WHITE
+		return
+	selection_silhouette = TextureRect.new()
+	selection_silhouette.name = "SelectionSilhouette"
+	selection_silhouette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	selection_silhouette.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	selection_silhouette.modulate = Color.WHITE
+	var smat: ShaderMaterial = ShaderMaterial.new()
+	smat.shader = SELECT_SILHOUETTE_SHADER
+	smat.set_shader_parameter(
+		"fill_color",
+		Color(SELECT_SILHOUETTE_GOLD.r, SELECT_SILHOUETTE_GOLD.g, SELECT_SILHOUETTE_GOLD.b, SELECT_SILHOUETTE_ALPHA_DIM)
+	)
+	selection_silhouette.material = smat
+	body_pivot.add_child(selection_silhouette)
+	body_pivot.move_child(selection_silhouette, 0)
+
+
+func _sync_selection_silhouette_layout(rect_size: Vector2) -> void:
+	if selection_silhouette == null or not is_instance_valid(selection_silhouette):
+		return
+	selection_silhouette.position = Vector2.ZERO
+	selection_silhouette.size = rect_size
+	selection_silhouette.pivot_offset = rect_size * 0.5
+	selection_silhouette.scale = Vector2(SELECT_SILHOUETTE_SCALE, SELECT_SILHOUETTE_SCALE)
+	selection_silhouette.expand_mode = sprite.expand_mode
+	selection_silhouette.stretch_mode = sprite.stretch_mode
+	selection_silhouette.texture = sprite.texture
+
+
+func _sync_selection_silhouette_texture() -> void:
+	if selection_silhouette == null or not is_instance_valid(selection_silhouette):
+		return
+	selection_silhouette.texture = sprite.texture
+
+
+func _kill_selection_outline_tween() -> void:
+	if selection_outline_tween != null and is_instance_valid(selection_outline_tween):
+		selection_outline_tween.kill()
+	selection_outline_tween = null
+
+
+func _selection_silhouette_set_fill_alpha(alpha: float) -> void:
+	if selection_silhouette == null:
+		return
+	var sm: ShaderMaterial = selection_silhouette.material as ShaderMaterial
+	if sm == null:
+		return
+	sm.set_shader_parameter(
+		"fill_color",
+		Color(SELECT_SILHOUETTE_GOLD.r, SELECT_SILHOUETTE_GOLD.g, SELECT_SILHOUETTE_GOLD.b, alpha)
+	)
+
+
+func _stop_selection_outline_pulse() -> void:
+	_kill_selection_outline_tween()
+	if selection_silhouette != null and is_instance_valid(selection_silhouette):
+		selection_silhouette.hide()
+		_selection_silhouette_set_fill_alpha(SELECT_SILHOUETTE_ALPHA_DIM)
+
+
+func _start_selection_outline_pulse() -> void:
+	if selection_silhouette == null or not is_instance_valid(selection_silhouette) or not is_selected:
+		return
+	_kill_selection_outline_tween()
+	selection_silhouette.texture = sprite.texture
+	selection_silhouette.show()
+	_selection_silhouette_set_fill_alpha(SELECT_SILHOUETTE_ALPHA_DIM)
+	selection_outline_tween = create_tween().set_loops()
+	selection_outline_tween.tween_method(
+		_selection_silhouette_set_fill_alpha,
+		SELECT_SILHOUETTE_ALPHA_DIM,
+		SELECT_SILHOUETTE_ALPHA_BRIGHT,
+		0.48
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	selection_outline_tween.tween_method(
+		_selection_silhouette_set_fill_alpha,
+		SELECT_SILHOUETTE_ALPHA_BRIGHT,
+		SELECT_SILHOUETTE_ALPHA_DIM,
+		0.48
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _update_selection_silhouette_active_state() -> void:
+	_ensure_selection_silhouette()
+	_sync_selection_silhouette_layout(sprite.size)
+	if is_selected:
+		_start_selection_outline_pulse()
+	else:
+		_stop_selection_outline_pulse()
+
 
 func _refresh_visual_emphasis(immediate: bool = false) -> void:
 	var mat: ShaderMaterial = sprite.material as ShaderMaterial
@@ -232,12 +351,12 @@ func _refresh_visual_emphasis(immediate: bool = false) -> void:
 	var shadow_alpha: float = 0.72
 
 	if is_selected:
-		pulse_mult += 0.60
-		glow_add += 0.10
-		aura_bonus += 3
-		name_scale = Vector2(1.08, 1.08)
-		sprite_color = Color(1.08, 1.08, 1.08, 1.0)
-		shadow_alpha = 0.95
+		pulse_mult += 0.95
+		glow_add += 0.12
+		aura_bonus += 7
+		name_scale = Vector2(1.10, 1.10)
+		sprite_color = Color(1.10, 1.10, 1.06, 1.0)
+		shadow_alpha = 0.96
 
 	if is_hovered:
 		pulse_mult += 0.60
@@ -259,6 +378,7 @@ func _refresh_visual_emphasis(immediate: bool = false) -> void:
 	if mat != null:
 		mat.set_shader_parameter("pulse_speed", target_pulse)
 		mat.set_shader_parameter("glow_alpha", target_glow)
+		mat.set_shader_parameter("selection_boost", 1.0 if is_selected else 0.0)
 
 	aura_particles.amount = target_amount
 
@@ -734,6 +854,7 @@ func set_selected(value: bool) -> void:
 	if is_selected == value: return
 	is_selected = value
 	_refresh_visual_emphasis(false)
+	_update_selection_silhouette_active_state()
 
 func set_hovered(value: bool) -> void:
 	if is_hovered == value: return
@@ -912,7 +1033,7 @@ func _play_landing_burst(power: float = 1.0) -> void:
 	reaction_tween.finished.connect(func() -> void:
 		if is_instance_valid(aura_particles):
 			var reset_amount: int = base_aura_amount
-			if is_selected: reset_amount += 3
+			if is_selected: reset_amount += 7
 			if is_hovered: reset_amount += 4
 			if _has_trait("Magic Blooded") or _has_trait("Elder Arcana"): reset_amount += 2
 			aura_particles.amount = reset_amount
