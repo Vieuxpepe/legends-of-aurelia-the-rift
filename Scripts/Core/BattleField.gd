@@ -3988,7 +3988,7 @@ func _apply_tactical_ui_overhaul() -> void:
 			roster_items.size = Vector2(roster_panel.size.x - 24.0, maxf(40.0, list_h_r))
 			roster_items.z_index = 0
 		else:
-		roster_items.size = Vector2(roster_panel.size.x - 24.0, max(180.0, roster_panel.size.y - 122.0))
+			roster_items.size = Vector2(roster_panel.size.x - 24.0, max(180.0, roster_panel.size.y - 122.0))
 	if build_button != null and roster_panel != null:
 		build_button.position = Vector2(12, roster_panel.size.y - 58.0)
 		build_button.size = Vector2(roster_panel.size.x - 24.0, 46.0)
@@ -6465,7 +6465,7 @@ func _reset_rookie_battle_tracking() -> void:
 
 func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
 	return await CombatForecastHelpers.show_combat_forecast(self, attacker, defender)
-	
+
 func _on_forecast_confirm() -> void:
 	emit_signal("forecast_resolved", "confirm", false)
 
@@ -6548,7 +6548,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 # When force_single_attack is true (e.g. Dual Strike), only one strike is performed.
 func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_ability: bool = false, force_single_attack: bool = false) -> void:
 	await StrikeSequenceHelpers.run_strike_sequence(self, attacker, defender, force_active_ability, force_single_attack)
-								
+
 func screen_shake(intensity: float = 12.0, duration: float = 0.4) -> void:
 	if main_camera == null:
 		return
@@ -7296,7 +7296,7 @@ func _on_continue_button_pressed() -> void:
 	
 	# --- NEW: ARENA VICTORY LOGIC ---
 	if is_arena_match:
-		ArenaManager.current_opponent_data = {} 
+		ArenaManager.current_opponent_data = {}
 		get_tree().change_scene_to_file("res://Scenes/CityMenu.tscn")
 		return
 	

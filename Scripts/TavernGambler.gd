@@ -17,11 +17,11 @@ extends Node
 @export var chips_per_title_unlock: int = 5
 
 const GAMBLER_STATE_KEY: String = "tavern_gambler"
-const TITLE_UNLOCKS: PackedStringArray = PackedStringArray([
+const TITLE_UNLOCKS: Array[String] = [
 	"House Familiar",
 	"Luck-Touched",
 	"High Roller"
-])
+]
 
 var parent_ui: Control = null
 var interaction_active: bool = false
