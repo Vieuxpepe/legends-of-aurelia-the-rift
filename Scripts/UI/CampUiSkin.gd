@@ -112,7 +112,9 @@ static func make_button_style(
 	fill: Color,
 	border: Color,
 	radius: int = 18,
-	shadow_size: int = 6
+	shadow_size: int = 6,
+	content_margin_h: int = 0,
+	content_margin_v: int = 0
 ) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
@@ -128,10 +130,23 @@ static func make_button_style(
 	style.shadow_color = Color(0, 0, 0, 0.28)
 	style.shadow_size = shadow_size
 	style.shadow_offset = Vector2(0, 4)
+	if content_margin_h > 0:
+		style.content_margin_left = content_margin_h
+		style.content_margin_right = content_margin_h
+	if content_margin_v > 0:
+		style.content_margin_top = content_margin_v
+		style.content_margin_bottom = content_margin_v
 	return style
 
 
-static func style_button(button: Button, primary: bool = false, font_size: int = 22, min_height: float = 52.0) -> void:
+static func style_button(
+	button: Button,
+	primary: bool = false,
+	font_size: int = 22,
+	min_height: float = 52.0,
+	content_margin_h: int = 18,
+	content_margin_v: int = 12
+) -> void:
 	if button == null:
 		return
 	button.focus_mode = Control.FOCUS_ALL
@@ -147,11 +162,22 @@ static func style_button(button: Button, primary: bool = false, font_size: int =
 	button.add_theme_color_override("font_focus_color", base_font_color)
 	var base_fill := CAMP_ACTION_PRIMARY if primary else CAMP_ACTION_SECONDARY
 	var base_border := CAMP_ACCENT_CYAN if primary else CAMP_BORDER_SOFT
-	button.add_theme_stylebox_override("normal", make_button_style(base_fill, base_border))
-	button.add_theme_stylebox_override("hover", make_button_style(base_fill.lightened(0.08) if primary else base_fill.lightened(0.12), CAMP_BORDER))
-	button.add_theme_stylebox_override("pressed", make_button_style(base_fill.darkened(0.08), CAMP_ACCENT_CYAN if primary else CAMP_BORDER))
-	button.add_theme_stylebox_override("focus", make_button_style(base_fill, CAMP_ACCENT_CYAN))
-	button.add_theme_stylebox_override("disabled", make_button_style(base_fill.darkened(0.10), base_border.darkened(0.12), 18, 0))
+	var mh: int = content_margin_h
+	var mv: int = content_margin_v
+	button.add_theme_stylebox_override("normal", make_button_style(base_fill, base_border, 18, 6, mh, mv))
+	button.add_theme_stylebox_override(
+		"hover",
+		make_button_style(base_fill.lightened(0.08) if primary else base_fill.lightened(0.12), CAMP_BORDER, 18, 6, mh, mv)
+	)
+	button.add_theme_stylebox_override(
+		"pressed",
+		make_button_style(base_fill.darkened(0.08), CAMP_ACCENT_CYAN if primary else CAMP_BORDER, 18, 6, mh, mv)
+	)
+	button.add_theme_stylebox_override("focus", make_button_style(base_fill, CAMP_ACCENT_CYAN, 18, 6, mh, mv))
+	button.add_theme_stylebox_override(
+		"disabled",
+		make_button_style(base_fill.darkened(0.10), base_border.darkened(0.12), 18, 0, mh, mv)
+	)
 
 
 static func style_rich_label(

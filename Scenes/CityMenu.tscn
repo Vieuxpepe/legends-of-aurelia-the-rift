@@ -29,7 +29,19 @@ corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skpfb"]
-bg_color = Color(0, 0, 0, 0.8627451)
+bg_color = Color(0.13, 0.097, 0.068, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.82, 0.66, 0.24, 0.96)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(0, 0, 0, 0.38)
+shadow_size = 12
+shadow_offset = Vector2(0, 6)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ltwrq"]
 bg_color = Color(0, 0, 0, 1)
@@ -115,35 +127,42 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -390.0
-offset_top = -362.0
-offset_right = 410.0
-offset_bottom = 438.0
+offset_left = -480.0
+offset_top = -410.0
+offset_right = 480.0
+offset_bottom = 410.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_614eu")
+theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
 
 [node name="TitleLabel" type="Label" parent="ArenaPanel" unique_id=1665064123]
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -117.0
-offset_top = 37.0
-offset_right = 121.0
-offset_bottom = 67.0
+anchors_preset = 10
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 18.0
+offset_right = -24.0
+offset_bottom = 58.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 32
 text = "MULTIVERSE ARENA"
+horizontal_alignment = 1
 
 [node name="CloseArenaButton" type="Button" parent="ArenaPanel" unique_id=1826784044]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
+anchor_top = 0.0
 anchor_right = 1.0
-offset_left = -8.0
-offset_bottom = 8.0
+anchor_bottom = 0.0
+offset_left = -52.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 52.0
 grow_horizontal = 0
+grow_vertical = 0
 text = "X"
 
 [node name="RefreshMatchesButton" type="Button" parent="ArenaPanel" unique_id=1989032094]
@@ -153,59 +172,104 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -207.0
-offset_top = -57.0
-offset_right = -29.0
-offset_bottom = -34.0
+offset_left = -292.0
+offset_top = -60.0
+offset_right = -20.0
+offset_bottom = -16.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "Search for Challengers"
 
 [node name="StatusLabel" type="Label" parent="ArenaPanel" unique_id=1212572268]
-layout_mode = 0
-offset_left = 335.0
-offset_top = 533.0
-offset_right = 487.0
-offset_bottom = 548.0
+layout_mode = 1
+anchors_preset = 12
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -84.0
+offset_right = 280.0
+offset_bottom = -24.0
+grow_horizontal = 2
 text = "Welcome to the Arena."
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="ScrollContainer" type="ScrollContainer" parent="ArenaPanel" unique_id=1600422922]
-layout_mode = 0
-offset_left = 161.0
-offset_top = 119.0
-offset_right = 633.0
-offset_bottom = 503.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 112.0
+offset_right = -24.0
+offset_bottom = -96.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="OpponentContainer" type="VBoxContainer" parent="ArenaPanel/ScrollContainer" unique_id=852262241]
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="LeaderboardButton" type="Button" parent="ArenaPanel" unique_id=94634489]
-layout_mode = 0
-offset_left = 509.0
-offset_top = 97.0
-offset_right = 690.0
-offset_bottom = 148.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -236.0
+offset_top = 16.0
+offset_right = -60.0
+offset_bottom = 64.0
+grow_horizontal = 0
+grow_vertical = 0
 text = "Leaderboard"
 
 [node name="LeaderboardPanel" type="Panel" parent="ArenaPanel" unique_id=1800932549]
 visible = false
 z_index = 6
-layout_mode = 0
-offset_left = -82.0
-offset_top = -150.0
-offset_right = 802.0
-offset_bottom = 767.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_1hqi3")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
+
+[node name="LeaderboardTitle" type="Label" parent="ArenaPanel/LeaderboardPanel" unique_id=1800932550]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 12.0
+offset_right = -20.0
+offset_bottom = 48.0
+grow_horizontal = 2
+text = "TOP GLADIATORS"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="ArenaPanel/LeaderboardPanel" unique_id=1342991074]
-layout_mode = 0
-offset_left = 26.0
-offset_top = 4.0
-offset_right = 888.0
-offset_bottom = 707.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 56.0
+offset_right = -20.0
+offset_bottom = -56.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="LeaderboardContainer" type="VBoxContainer" parent="ArenaPanel/LeaderboardPanel/ScrollContainer" unique_id=124271385]
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="ArenaPanel/LeaderboardPanel" unique_id=1484709415]
 layout_mode = 1
@@ -214,100 +278,160 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -133.5
-offset_top = -42.0
-offset_right = 133.5
+offset_left = -120.0
+offset_top = -48.0
+offset_right = 120.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
 text = "Close"
 
 [node name="GhostInspectPanel" type="Panel" parent="ArenaPanel/LeaderboardPanel" unique_id=553963762]
-layout_mode = 0
-offset_left = 440.0
-offset_top = 25.0
-offset_right = 840.0
-offset_bottom = 236.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -412.0
+offset_top = 64.0
+offset_right = -16.0
+offset_bottom = 312.0
+grow_horizontal = 0
+grow_vertical = 0
 mouse_filter = 1
 
 [node name="GhostTitle" type="Label" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=1535445207]
-layout_mode = 0
-offset_left = 31.0
-offset_top = 23.0
-offset_right = 125.0
-offset_bottom = 38.0
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = -52.0
+offset_bottom = 44.0
+grow_horizontal = 2
 text = "Kaelen's Team"
+horizontal_alignment = 1
 
-[node name="GhostTeamGrid" type="GridContainer" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=1263462363]
-layout_mode = 0
-offset_left = 61.0
-offset_top = 57.0
-offset_right = 101.0
-offset_bottom = 97.0
+[node name="GhostTeamGrid" type="GridContainer" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=1263463463]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 52.0
+offset_right = -16.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
 columns = 3
 
 [node name="CloseButton" type="Button" parent="ArenaPanel/LeaderboardPanel/GhostInspectPanel" unique_id=15891023]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-text = "Close"
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -44.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 44.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "X"
 
 [node name="ArenaSetupPanel" type="Panel" parent="." unique_id=601249676]
 visible = false
 z_index = 2
-layout_mode = 0
-offset_left = 723.0
-offset_top = 267.0
-offset_right = 1266.0
-offset_bottom = 906.0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -400.0
+offset_right = 320.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
 
 [node name="TitleLabel" type="Label" parent="ArenaSetupPanel" unique_id=1081308587]
-layout_mode = 0
-offset_left = 207.0
-offset_top = 39.0
-offset_right = 330.0
-offset_bottom = 54.0
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 16.0
+offset_right = -20.0
+offset_bottom = 52.0
+grow_horizontal = 2
 text = "Select 3 Fighters"
+horizontal_alignment = 1
 
 [node name="RosterGrid" type="GridContainer" parent="ArenaSetupPanel" unique_id=536690061]
-layout_mode = 0
-offset_left = 58.0
-offset_top = 66.0
-offset_right = 98.0
-offset_bottom = 106.0
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 144.0
+offset_right = -20.0
+offset_bottom = 316.0
+grow_horizontal = 2
 columns = 5
 
 [node name="TeamGrid" type="GridContainer" parent="ArenaSetupPanel" unique_id=186408078]
-layout_mode = 0
-offset_left = 111.0
-offset_top = 210.0
-offset_right = 151.0
-offset_bottom = 250.0
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 324.0
+offset_right = -20.0
+offset_bottom = 428.0
+grow_horizontal = 2
 columns = 3
 
 [node name="ConfirmTeamButton" type="Button" parent="ArenaSetupPanel" unique_id=1131908771]
-layout_mode = 0
-offset_left = 117.0
-offset_top = 503.0
-offset_right = 435.0
-offset_bottom = 541.0
+layout_mode = 1
+anchors_preset = 12
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -120.0
+offset_right = -20.0
+offset_bottom = -64.0
+grow_horizontal = 2
 theme_override_font_sizes/font_size = 32
 text = "Lock Team & Find Match"
 
 [node name="CloseSetupButton" type="Button" parent="ArenaSetupPanel" unique_id=827058810]
-layout_mode = 0
-offset_left = 200.0
-offset_top = 562.0
-offset_right = 341.0
-offset_bottom = 612.0
+layout_mode = 1
+anchors_preset = 12
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -56.0
+offset_right = -20.0
+offset_bottom = -12.0
+grow_horizontal = 2
 theme_override_font_sizes/font_size = 32
 text = "Cancel"
 
 [node name="TokenDisplayLabel" type="Label" parent="ArenaSetupPanel" unique_id=608356706]
-layout_mode = 0
-offset_left = 211.0
-offset_top = 353.0
-offset_right = 359.0
-offset_bottom = 418.0
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 536.0
+offset_right = -20.0
+offset_bottom = 572.0
+grow_horizontal = 2
+horizontal_alignment = 1
 
 [node name="DefensePopup" type="Panel" parent="." unique_id=1472839651]
 visible = false
@@ -354,171 +478,193 @@ text = "OK"
 [node name="ArenaResultSequence" type="Control" parent="." unique_id=1372234374]
 visible = false
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -275.0
-offset_top = -297.0
-offset_right = 275.0
-offset_bottom = 297.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Panel" type="Panel" parent="ArenaResultSequence" unique_id=1039229012]
-layout_mode = 1
-offset_right = 552.0
-offset_bottom = 600.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
-
-[node name="TitleLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=282480243]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -66.0
-offset_top = 25.0
-offset_right = 66.0
-offset_bottom = 84.0
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 64
-text = "Title"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="RankIcon" type="TextureRect" parent="ArenaResultSequence/Panel" unique_id=1469144152]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -70.0
-offset_top = 100.0
-offset_right = 80.0
-offset_bottom = 250.0
-grow_horizontal = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="RankNameLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=1013685780]
-layout_mode = 0
-offset_left = 203.0
-offset_top = 243.0
-offset_right = 357.0
-offset_bottom = 273.0
-theme_override_font_sizes/font_size = 32
-text = "Ranmk Name"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="RatingLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=1797044186]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -87.0
-offset_top = 85.0
-offset_right = 87.0
-offset_bottom = 115.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 32
-text = "Rating Label"
-
-[node name="MMRDeltaLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=288807374]
-layout_mode = 0
-offset_left = 407.0
-offset_top = 390.0
-offset_right = 502.0
-offset_bottom = 412.0
-theme_override_colors/font_color = Color(1, 1, 0.45882353, 1)
-theme_override_font_sizes/font_size = 24
-text = "MMRDetla"
-
-[node name="RankBar" type="ProgressBar" parent="ArenaResultSequence/Panel" unique_id=1661710365]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -187.5
-offset_top = 275.0
-offset_right = 187.5
-offset_bottom = 315.0
-grow_horizontal = 2
-show_percentage = false
-
-[node name="RankBarValue" type="Label" parent="ArenaResultSequence/Panel" unique_id=466802852]
-layout_mode = 0
-offset_left = 264.0
-offset_top = 329.0
-offset_right = 476.0
-offset_bottom = 359.0
-theme_override_font_sizes/font_size = 32
-text = "Rank Bar Value"
-
-[node name="StampLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=560407519]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -22.0
-offset_top = -155.0
-offset_right = 56.0
-offset_bottom = -125.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_font_sizes/font_size = 32
-text = "Stamp"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="RewardsLabel" type="RichTextLabel" parent="ArenaResultSequence/Panel" unique_id=1046819383]
-layout_mode = 0
-offset_left = 195.0
-offset_top = 481.0
-offset_right = 364.0
-offset_bottom = 561.0
-theme_override_font_sizes/normal_font_size = 32
-bbcode_enabled = true
-text = "Rewards"
-
-[node name="ClickToContinue" type="Label" parent="ArenaResultSequence/Panel" unique_id=105888758]
-visible = false
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -103.0
-offset_top = -40.0
-offset_right = 103.0
-offset_bottom = -25.0
-grow_horizontal = 2
-grow_vertical = 0
-text = "- Click anywhere to continue -"
-
-[node name="Dimmer" type="ColorRect" parent="ArenaResultSequence" unique_id=1441196056]
-visible = false
-layout_mode = 0
-offset_right = 551.0
-offset_bottom = 598.0
-color = Color(1, 1, 1, 0)
-
-[node name="FlashRect" type="ColorRect" parent="ArenaResultSequence" unique_id=1679584176]
-visible = false
-layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Dimmer" type="ColorRect" parent="ArenaResultSequence" unique_id=1441196056]
+visible = false
+z_index = -2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="Panel" type="Panel" parent="ArenaResultSequence" unique_id=1039229012]
+z_index = 0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -318.0
+offset_right = 280.0
+offset_bottom = 318.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
+
+[node name="TitleLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=282480243]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 544.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 64
+text = "Title"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RankIcon" type="TextureRect" parent="ArenaResultSequence/Panel" unique_id=1469144152]
+layout_mode = 0
+offset_left = 196.0
+offset_top = 84.0
+offset_right = 356.0
+offset_bottom = 224.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RankNameLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=1013685780]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 228.0
+offset_right = 544.0
+offset_bottom = 264.0
+theme_override_font_sizes/font_size = 32
+text = "Ranmk Name"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RankBar" type="ProgressBar" parent="ArenaResultSequence/Panel" unique_id=1661710365]
+layout_mode = 0
+offset_left = 88.0
+offset_top = 272.0
+offset_right = 472.0
+offset_bottom = 308.0
+show_percentage = false
+
+[node name="RankBarValue" type="Label" parent="ArenaResultSequence/Panel" unique_id=466802852]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 312.0
+offset_right = 544.0
+offset_bottom = 348.0
+theme_override_font_sizes/font_size = 28
+text = "Rank Bar Value"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RatingLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=1797044186]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 356.0
+offset_right = 360.0
+offset_bottom = 392.0
+theme_override_font_sizes/font_size = 22
+text = "Rating Label"
+vertical_alignment = 1
+
+[node name="MMRDeltaLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=288807374]
+layout_mode = 0
+offset_left = 368.0
+offset_top = 356.0
+offset_right = 536.0
+offset_bottom = 392.0
+theme_override_colors/font_color = Color(1, 1, 0.45882353, 1)
+theme_override_font_sizes/font_size = 24
+text = "MMRDetla"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="StampLabel" type="Label" parent="ArenaResultSequence/Panel" unique_id=560407519]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 400.0
+offset_right = 548.0
+offset_bottom = 468.0
+theme_override_font_sizes/font_size = 32
+text = "Stamp"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="RewardsLabel" type="RichTextLabel" parent="ArenaResultSequence/Panel" unique_id=1046819383]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 476.0
+offset_right = 540.0
+offset_bottom = 572.0
+theme_override_font_sizes/normal_font_size = 24
+scroll_active = false
+fit_content = false
+autowrap_mode = 3
+bbcode_enabled = true
+text = "Rewards"
+
+[node name="ClickToContinue" type="Label" parent="ArenaResultSequence/Panel" unique_id=105888758]
+visible = false
+layout_mode = 0
+offset_left = 16.0
+offset_top = 584.0
+offset_right = 544.0
+offset_bottom = 618.0
+theme_override_font_sizes/font_size = 18
+text = "— Click or press Enter —"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FlashRect" type="ColorRect" parent="ArenaResultSequence" unique_id=1679584176]
+visible = false
+z_index = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="BurstParticles" type="CPUParticles2D" parent="ArenaResultSequence" unique_id=1206785302]
+z_index = 3
+position = Vector2(960, 540)
+emitting = false
+amount = 64
+lifetime = 1.1
+one_shot = true
+explosiveness = 0.92
+direction = Vector2(0, -1)
+spread = 180.0
+gravity = Vector2(0, 98)
+initial_velocity_min = 140.0
+initial_velocity_max = 320.0
+scale_amount_min = 2.0
+scale_amount_max = 5.0
+color = Color(0.82, 0.66, 0.24, 1)
+
+[node name="EpicSparkBurst" type="CPUParticles2D" parent="ArenaResultSequence" unique_id=1206785303]
+z_index = 3
+position = Vector2(960, 520)
+emitting = false
+amount = 140
+lifetime = 1.35
+one_shot = true
+explosiveness = 0.88
+direction = Vector2(0, -1)
+spread = 120.0
+gravity = Vector2(0, 40)
+initial_velocity_min = 80.0
+initial_velocity_max = 280.0
+scale_amount_min = 1.5
+scale_amount_max = 4.0
+color = Color(1, 0.95, 0.75, 1)
 
 [node name="GladiatorStreakBadge" type="Control" parent="." unique_id=909489580]
 visible = false
@@ -555,68 +701,79 @@ text = "Sublabel"
 
 [node name="UnitInfoPanel" type="Panel" parent="." unique_id=739349267]
 visible = false
-layout_mode = 0
-offset_left = 1380.0
-offset_top = 360.0
-offset_right = 1713.0
-offset_bottom = 679.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_ltwrq")
+z_index = 2
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -668.0
+offset_top = -200.0
+offset_right = -288.0
+offset_bottom = 200.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_skpfb")
 
-[node name="PortraitRect" type="TextureRect" parent="UnitInfoPanel" unique_id=1160808307]
-layout_mode = 0
-offset_left = 24.0
-offset_top = 27.0
-offset_right = 206.0
-offset_bottom = 160.0
+[node name="MarginContainer" type="MarginContainer" parent="UnitInfoPanel" unique_id=739349268]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="UnitInfoPanel/MarginContainer" unique_id=739349269]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="PortraitRect" type="TextureRect" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=1160808307]
+custom_minimum_size = Vector2(0, 128)
+layout_mode = 2
+size_flags_horizontal = 3
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="UnitInfoPanel" unique_id=472200276]
-layout_mode = 0
-offset_left = 28.0
-offset_top = 181.0
-offset_right = 68.0
-offset_bottom = 196.0
+[node name="NameLabel" type="Label" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=472200276]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
 text = "Name"
 
-[node name="ClassLabel" type="Label" parent="UnitInfoPanel" unique_id=1040074291]
-layout_mode = 0
-offset_left = 32.0
-offset_top = 198.0
-offset_right = 72.0
-offset_bottom = 213.0
+[node name="ClassLabel" type="Label" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=1040074291]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
 text = "Class"
 
-[node name="LevelLabel" type="Label" parent="UnitInfoPanel" unique_id=424142304]
-layout_mode = 0
-offset_left = 30.0
-offset_top = 216.0
-offset_right = 70.0
-offset_bottom = 231.0
+[node name="LevelLabel" type="Label" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=424142304]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
 text = "Level"
 
-[node name="HPLabel" type="Label" parent="UnitInfoPanel" unique_id=843536431]
-layout_mode = 0
-offset_left = 30.0
-offset_top = 232.0
-offset_right = 70.0
-offset_bottom = 247.0
+[node name="HPLabel" type="Label" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=843536431]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
 text = "HP"
 
-[node name="StatsLabel" type="Label" parent="UnitInfoPanel" unique_id=9909146]
-layout_mode = 0
-offset_left = 27.0
-offset_top = 248.0
-offset_right = 67.0
-offset_bottom = 263.0
+[node name="StatsLabel" type="Label" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=9909146]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
 text = "Stats"
 
-[node name="WeaponLabel" type="Label" parent="UnitInfoPanel" unique_id=929268479]
-layout_mode = 0
-offset_left = 23.0
-offset_top = 291.0
-offset_right = 71.0
-offset_bottom = 306.0
+[node name="WeaponLabel" type="Label" parent="UnitInfoPanel/MarginContainer/VBox" unique_id=929268479]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
 text = "Weapon"
 
 [node name="ArenaMusic" type="AudioStreamPlayer" parent="." unique_id=804339819]

@@ -22,6 +22,155 @@ func _end_qte(bf: Node2D, qte_layer: CanvasLayer, state: Dictionary) -> void:
 	
 	if bf.select_sound and bf.select_sound.stream != null:
 		bf.select_sound.pitch_scale = state["old_pitch"]
+
+
+func _apply_qte_visual_overhaul(qte_layer: CanvasLayer, title: Label, help: Label) -> void:
+	if qte_layer == null or not is_instance_valid(qte_layer):
+		return
+	var vp: Vector2 = qte_layer.get_viewport().get_visible_rect().size
+	var accent: Color = Color(0.96, 0.82, 0.32, 1.0)
+	if title != null and is_instance_valid(title):
+		var sample := title.get_theme_color("font_color", "Label")
+		if sample.a > 0.0:
+			accent = sample
+
+	var dimmer := qte_layer.get_child(0) as ColorRect if qte_layer.get_child_count() > 0 else null
+	if dimmer != null and dimmer.size.x >= vp.x * 0.95 and dimmer.size.y >= vp.y * 0.95:
+		dimmer.color = Color(0.015, 0.02, 0.035, 0.70)
+
+	var atmosphere := ColorRect.new()
+	atmosphere.name = "QteAtmosphere"
+	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	atmosphere.size = vp
+	atmosphere.color = Color(accent.r * 0.12, accent.g * 0.08, accent.b * 0.16, 0.16)
+	atmosphere.z_index = -4
+	qte_layer.add_child(atmosphere)
+	qte_layer.move_child(atmosphere, 1)
+
+	var frame := Panel.new()
+	frame.name = "QteBackdropPanel"
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.size = Vector2(minf(vp.x * 0.76, 980.0), minf(vp.y * 0.46, 360.0))
+	frame.position = Vector2((vp.x - frame.size.x) * 0.5, (vp.y - frame.size.y) * 0.5 - 36.0)
+	frame.z_index = -3
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.04, 0.05, 0.08, 0.78)
+	frame_style.border_color = Color(accent.r, accent.g, accent.b, 0.70)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(16)
+	frame_style.shadow_size = 26
+	frame_style.shadow_color = Color(0, 0, 0, 0.55)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	qte_layer.add_child(frame)
+	qte_layer.move_child(frame, 2)
+
+	var top_glow := ColorRect.new()
+	top_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_glow.size = Vector2(frame.size.x - 26.0, 5.0)
+	top_glow.position = Vector2(13.0, 11.0)
+	top_glow.color = Color(accent.r, accent.g, accent.b, 0.55)
+	frame.add_child(top_glow)
+
+	if title != null and is_instance_valid(title):
+		title.add_theme_font_size_override("font_size", max(42, int(title.get_theme_font_size("font_size", "Label"))))
+		title.add_theme_color_override("font_color", Color(minf(accent.r + 0.10, 1.0), minf(accent.g + 0.08, 1.0), minf(accent.b + 0.08, 1.0), 1.0))
+		title.add_theme_constant_override("outline_size", 7)
+		title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+		title.position.y = frame.position.y - 72.0
+		title.size.x = vp.x
+
+	if help != null and is_instance_valid(help):
+		help.add_theme_font_size_override("font_size", max(24, int(help.get_theme_font_size("font_size", "Label"))))
+		help.add_theme_color_override("font_color", Color(0.94, 0.96, 1.0, 0.96))
+		help.add_theme_constant_override("outline_size", 5)
+		help.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.86))
+		help.position.y = frame.position.y - 30.0
+		help.size.x = vp.x
+
+	frame.scale = Vector2(0.965, 0.965)
+	frame.modulate.a = 0.0
+	var open_tw := qte_layer.create_tween()
+	open_tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	open_tw.tween_property(frame, "modulate:a", 1.0, 0.18)
+	open_tw.parallel().tween_property(frame, "scale", Vector2.ONE, 0.20)
+
+	if title != null and is_instance_valid(title):
+		var title_tw := qte_layer.create_tween().set_loops()
+		title_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		title_tw.tween_property(title, "modulate:a", 0.88, 0.62)
+		title_tw.tween_property(title, "modulate:a", 1.0, 0.62)
+	if help != null and is_instance_valid(help):
+		var help_tw := qte_layer.create_tween().set_loops()
+		help_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		help_tw.tween_property(help, "modulate:a", 0.74, 0.48)
+		help_tw.tween_property(help, "modulate:a", 0.96, 0.48)
+
+	call_deferred("_polish_qte_controls_deferred", qte_layer, accent)
+
+
+func _polish_qte_controls_deferred(qte_layer: CanvasLayer, accent: Color) -> void:
+	if qte_layer == null or not is_instance_valid(qte_layer):
+		return
+	var stack: Array[Node] = [qte_layer]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for child in n.get_children():
+			if child is Node:
+				stack.append(child)
+		_apply_polish_to_qte_node(n, accent)
+
+
+func _apply_polish_to_qte_node(n: Node, accent: Color) -> void:
+	if n == null or not is_instance_valid(n):
+		return
+	var lname: String = String(n.name).to_lower()
+	if n is ColorRect:
+		var rect: ColorRect = n as ColorRect
+		if lname.contains("dimmer") or lname.contains("atmosphere"):
+			return
+		if lname.contains("bar_bg"):
+			rect.color = Color(0.055, 0.065, 0.095, 0.95)
+		elif lname.contains("fill"):
+			rect.color = Color(
+				clampf(accent.r * 0.85 + 0.08, 0.0, 1.0),
+				clampf(accent.g * 0.95 + 0.08, 0.0, 1.0),
+				clampf(accent.b * 1.05 + 0.10, 0.0, 1.0),
+				0.96
+			)
+		elif lname.contains("perfect"):
+			rect.color = Color(1.0, 0.84, 0.26, 0.96)
+		elif lname.contains("good") or lname.contains("green_zone"):
+			rect.color = Color(0.44, 0.98, 0.56, 0.92)
+		elif lname.contains("cursor") or lname.contains("needle") or lname.contains("target_dot"):
+			rect.color = Color(0.95, 0.97, 1.0, 0.98)
+		elif lname.contains("line"):
+			rect.color = Color(0.88, 0.92, 1.0, 0.84)
+		elif lname.contains("pivot"):
+			rect.color = Color(0.92, 0.94, 1.0, 0.78)
+	elif n is Panel:
+		var panel: Panel = n as Panel
+		if lname.contains("qtebackdroppanel"):
+			return
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.06, 0.07, 0.10, 0.90)
+		style.border_color = Color(
+			clampf(accent.r * 0.85 + 0.12, 0.0, 1.0),
+			clampf(accent.g * 0.85 + 0.12, 0.0, 1.0),
+			clampf(accent.b * 0.85 + 0.12, 0.0, 1.0),
+			0.90
+		)
+		style.set_border_width_all(2)
+		style.set_corner_radius_all(12)
+		style.shadow_size = 12
+		style.shadow_color = Color(0.0, 0.0, 0.0, 0.44)
+		panel.add_theme_stylebox_override("panel", style)
+	elif n is Label:
+		var lbl: Label = n as Label
+		if lname.contains("title"):
+			return
+		if lname.contains("status") or lname.contains("counter") or lname.contains("prompt"):
+			lbl.add_theme_color_override("font_color", Color(0.90, 0.94, 1.0, 0.98))
+			lbl.add_theme_constant_override("outline_size", max(lbl.get_theme_constant("outline_size", "Label"), 5))
 		
 # =========================================================
 # ARCHER QTE 1: DEADEYE SHOT
@@ -67,6 +216,7 @@ func run_deadeye_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
@@ -205,6 +355,7 @@ func run_volley_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
@@ -378,6 +529,7 @@ func run_rain_of_arrows_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var panel: ColorRect = ColorRect.new()
 	panel.color = Color(0.08, 0.08, 0.08, 0.96)
@@ -556,6 +708,7 @@ func run_divine_protection_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center := vp * 0.5 + Vector2(0, 20)
 
@@ -705,6 +858,7 @@ func run_healing_light_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.size = Vector2(520, 34)
@@ -864,6 +1018,7 @@ func run_miracle_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var dial := Panel.new()
 	dial.size = Vector2(280, 280)
@@ -1013,6 +1168,7 @@ func run_charge_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.size = Vector2(520, 34)
@@ -1165,6 +1321,7 @@ func run_shield_bash_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var panel: ColorRect = ColorRect.new()
 	panel.size = Vector2(560, 210)
@@ -1337,6 +1494,7 @@ func run_unbreakable_bastion_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.size = Vector2(540, 36)
@@ -1518,6 +1676,7 @@ func run_fireball_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center: Vector2 = vp * 0.5 + Vector2(0, 10)
 
@@ -1668,6 +1827,7 @@ func run_arcane_shift_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.size = Vector2(520, 36)
@@ -1827,6 +1987,7 @@ func run_meteor_storm_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var panel := ColorRect.new()
 	panel.size = Vector2(700, 240)
@@ -1984,6 +2145,7 @@ func run_flurry_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var counter := Label.new()
 	counter.text = "TAPS: 0"
@@ -2114,6 +2276,7 @@ func run_battle_cry_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg := ColorRect.new()
 	bar_bg.size = Vector2(520, 34)
@@ -2260,6 +2423,7 @@ func run_blade_tempest_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var dial := Panel.new()
 	dial.size = Vector2(320, 320)
@@ -2425,6 +2589,7 @@ func run_chakra_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(560, 34)
@@ -2585,6 +2750,7 @@ func run_inner_peace_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var panel: ColorRect = ColorRect.new()
 	panel.size = Vector2(680, 220)
@@ -2768,6 +2934,7 @@ func run_chi_burst_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var circle: Panel = Panel.new()
 	var circle_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -2900,6 +3067,7 @@ func run_roar_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var wave: Panel = Panel.new()
 	var wave_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -3038,6 +3206,7 @@ func run_frenzy_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center_x: float = vp.x * 0.5
 	var center_y: float = vp.y * 0.5
@@ -3250,6 +3419,7 @@ func run_rending_claw_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var scratch_line: ColorRect = ColorRect.new()
 	scratch_line.size = Vector2(420, 8)
@@ -3381,6 +3551,7 @@ func run_smite_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center: Vector2 = vp * 0.5 + Vector2(0, 20)
 
@@ -3517,6 +3688,7 @@ func run_holy_ward_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var panel: ColorRect = ColorRect.new()
 	panel.size = Vector2(600, 180)
@@ -3654,6 +3826,7 @@ func run_sacred_judgment_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(560, 40)
@@ -3802,6 +3975,7 @@ func run_flame_blade_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(40, 300)
@@ -3951,6 +4125,7 @@ func run_blink_step_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_font_size_override("font_size", 28)
 	help.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, null, help)
 
 	Input.flush_buffered_events()
 
@@ -4073,6 +4248,7 @@ func run_elemental_convergence_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(560, 40)
@@ -4206,6 +4382,7 @@ func run_shadow_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(500, 30)
@@ -4333,6 +4510,7 @@ func run_assassinate_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(600, 20)
@@ -4465,6 +4643,7 @@ func run_ultimate_shadow_step_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var arrow_label: Label = Label.new()
 	arrow_label.text = ""
@@ -4599,6 +4778,7 @@ func run_power_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(500, 30)
@@ -4731,6 +4911,7 @@ func run_adrenaline_rush_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(500, 30)
@@ -4875,6 +5056,7 @@ func run_earthshatter_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center: Vector2 = vp * 0.5 + Vector2(0, 30)
 	
@@ -5021,6 +5203,7 @@ func run_shadow_pin_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var arena: ColorRect = ColorRect.new()
 	arena.size = Vector2(560, 320)
@@ -5220,6 +5403,7 @@ func run_weapon_shatter_minigame(bf: Node2D, defender: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var track: ColorRect = ColorRect.new()
 	track.size = Vector2(620, 120)
@@ -5349,6 +5533,7 @@ func run_savage_toss_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var dial: Panel = Panel.new()
 	dial.size = Vector2(340, 340)
@@ -5506,6 +5691,7 @@ func run_vanguards_rally_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var panel: ColorRect = ColorRect.new()
 	panel.size = Vector2(760, 230)
@@ -5692,6 +5878,7 @@ func run_severing_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var arena: ColorRect = ColorRect.new()
 	arena.size = Vector2(640.0, 340.0)
@@ -5879,6 +6066,7 @@ func run_aether_bind_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var arena: ColorRect = ColorRect.new()
 	arena.size = Vector2(560.0, 340.0)
@@ -6056,6 +6244,7 @@ func run_parting_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center: Vector2 = vp * 0.5 + Vector2(0.0, 25.0)
 
@@ -6273,6 +6462,7 @@ func run_soul_harvest_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var bar_bg: ColorRect = ColorRect.new()
 	bar_bg.size = Vector2(580.0, 40.0)
@@ -6420,6 +6610,7 @@ func run_celestial_choir_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var arena: ColorRect = ColorRect.new()
 	arena.size = Vector2(420.0, 360.0)
@@ -6663,6 +6854,7 @@ func run_hellfire_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var gauge_bg: ColorRect = ColorRect.new()
 	gauge_bg.size = Vector2(76.0, 340.0)
@@ -6820,6 +7012,7 @@ func run_phalanx_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center_x: float = vp.x * 0.5
 	var center_y: float = vp.y * 0.5
@@ -7000,6 +7193,7 @@ func run_ballista_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var arena: ColorRect = ColorRect.new()
 	arena.size = Vector2(700.0, 380.0)
@@ -7197,6 +7391,7 @@ func run_aegis_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	help.add_theme_constant_override("outline_size", 6)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte_layer.add_child(help)
+	_apply_qte_visual_overhaul(qte_layer, title, help)
 
 	var center: Vector2 = vp * 0.5 + Vector2(0.0, 18.0)
 

@@ -1,0 +1,241 @@
+# Legends of Aurelia - Boss Artstyle Production Sheet
+
+Purpose: Production-facing art direction for named bosses and major rivals only.
+Scope: Bosses/sub-bosses from the Enemy Bible. Excludes generic enemies and common fodder.
+
+## 1) Global Boss Visual Pillars
+
+- Base style: gritty dark-fantasy pixel art with crisp readability at tactical zoom.
+- Rendering feel: high-contrast shadows, controlled palette, grounded materials.
+- Rule of exaggeration: silhouettes can become dramatic for boss identity, but gear should still feel physically plausible unless intentionally cosmic/aberrant.
+- Readability priority: weapon, stance, and threat type must be identifiable at a glance.
+- Boss hierarchy signal: each boss must own at least one unique silhouette trait plus one unique VFX language.
+
+## 2) Boss Tier Visual Hierarchy
+
+- Chapter boss: strong single-theme silhouette + one map-identity VFX cue.
+- Recurring rival: recognizably stable core design with escalating corruption/ornament per reappearance.
+- Endgame/cosmic: breaks normal human readability boundaries while preserving gameplay legibility.
+
+## 3) Faction Color Languages (Boss Use)
+
+- Valeron hardline / purifiers: ivory, silver, deep blue, sanctified gold accents.
+- Merchant League predator elite: lacquer black, deep burgundy, coin-gold, polished steel.
+- Obsidian Circle / void occult: ash black, bruise-violet, sickly green, bone-white accents.
+- Frontier warlords / opportunists: weathered iron, mud-leather, smoke brown, worn heraldic remnants.
+- Cosmic manifestation: non-natural contrast (bone/void glass/parchment-flesh hybrids), anti-human highlight logic.
+
+## 4) Boss Art Cards
+
+### 1. Lady Vespera
+- Faction: Obsidian Circle
+- Deployments: Level 1, 18, 19
+- Silhouette: ceremonial high-collar authority silhouette with occult asymmetry as she escalates.
+- Materials: void-weave cloth, ritual metal, fractured relic surfaces.
+- Palette: black-violet base, blood-red control accents, cold lunar edge light.
+- VFX language: rift bloom, particulate ash, altar-linked pulses.
+- Animation direction: deliberate priestly stillness into catastrophic burst motion.
+- Avoid: generic "evil sorceress" glamour without ideological gravitas.
+
+### 2. Master Enric
+- Faction: Obsidian Circle
+- Deployment: Level 15
+- Silhouette: scholar-necromancer with burdened frame and ritual apparatus.
+- Materials: damp rot fabrics, old bindings, surgical/ritual tools.
+- Palette: marsh green, dead brown, corpse-grey highlights.
+- VFX language: rot spores, husk wake trails, mire corruption rings.
+- Animation direction: precise, economical motions; corpse puppetry over brute force.
+- Avoid: cartoon plague wizard styling.
+
+### 3. Captain Selene
+- Faction: Vespera-aligned elite
+- Deployments: Level 13, 18
+- Silhouette: disciplined elite duelist/commander; sharp cape and blade line.
+- Materials: refined plate + field wear, command insignia.
+- Palette: steel, midnight blue, restrained crimson accent.
+- VFX language: clean lethal slash arcs, command-marker flashes.
+- Animation direction: fast measured cuts, minimal wasted movement.
+- Avoid: over-ornamentation that hides tactical role.
+
+### 4. Ephrem the Zealot
+- Faction: Fallen Valeron zealot
+- Deployment: Level 3
+- Silhouette: austere righteous executioner; rigid icon profile.
+- Materials: liturgical armor, cinder-marked cloth.
+- Palette: sanctified ivory scorched by ember orange.
+- VFX language: cinder brand marks, devotion flare, anti-mercy impact bursts.
+- Animation direction: prayer-like windup into violent conviction strikes.
+- Avoid: making him comic fanatic instead of terrifyingly sincere.
+
+### 5. Mother Caldris Vein
+- Faction: Valeron Purifiers
+- Deployments: Level 2, 10, 17
+- Silhouette: severe ecclesial authority with weaponized sanctity.
+- Materials: pristine holy regalia with punitive iconography.
+- Palette: white/gold over cold steel with controlled blood-red punish accents.
+- VFX language: judgment sigils, restraint circles, cleansing flares.
+- Animation direction: composed tribunal gestures that snap into punishment.
+- Avoid: soft healer read; she must read institutional threat.
+
+### 6. Port-Master Rhex Valcero
+- Faction: Merchant League predator bloc
+- Deployments: Level 4, 5
+- Silhouette: broad mercantile warlord, weighted by wealth and enforcement power.
+- Materials: expensive naval coat over armored core, coin-chain details.
+- Palette: tar black, brass gold, dock-rust red.
+- VFX language: alarm/net motifs, paid reinforcement cues, ballistic sparks.
+- Animation direction: decisive command beats, momentum-heavy firearm/launcher actions.
+- Avoid: pirate caricature.
+
+### 7. Mortivar Hale, Grave Marshal of Greyspire
+- Faction: Obsidian Circle military arm
+- Deployments: Level 6, 14
+- Silhouette: grave-knight commander with death-parade authority.
+- Materials: funerary plate, ossified trim, military relics.
+- Palette: iron-black, bone ash, gravefire cyan accents.
+- VFX language: muster circles, revenant wake, tomb-light pulses.
+- Animation direction: marching inevitability; heavy command point-and-rise motions.
+- Avoid: generic skeleton lord look.
+
+### 8. Preceptor Cassian Vow
+- Faction: Valeron hardliners
+- Deployments: Level 9A, 17
+- Silhouette: tall doctrinal inquisitor, immaculate and severe.
+- Materials: ceremonial armor-cloth hybrids, legal-seal motifs.
+- Palette: high ivory/blue contrast with cold gold edges.
+- VFX language: silence fields, restraint lines, sanction flashes.
+- Animation direction: cold legalistic gestures; no emotional flourish.
+- Avoid: flamboyant paladin energy.
+
+### 9. Auditor Nerez Sable
+- Faction: Luminous Table / Vharian elite
+- Deployments: Level 9B, 11, 17
+- Silhouette: predatory aristocrat-accountant; elegant but knife-like.
+- Materials: luxury textiles, concealed armor panels, ledger/seal motifs.
+- Palette: burgundy-black, coin gold, pale skin highlight.
+- VFX language: debt marks, extraction lines, contractual sigils.
+- Animation direction: restrained economy of movement with sudden execution speed.
+- Avoid: making him a generic rogue without elite menace.
+
+### 10. Juno Kest, Keeper of Bells
+- Faction: Vharian dock security
+- Deployment: Level 5
+- Silhouette: compact alarm-master with signal equipment profile.
+- Materials: reinforced dock guard kit, bell/siren rigging.
+- Palette: weathered navy, brass, signal red.
+- VFX language: alarm net pulses, tower wake signals, crossfire markers.
+- Animation direction: quick trigger-and-disengage cadence.
+- Avoid: overfancy design that loses "tempo boss" readability.
+
+### 11. Lord Septen Harrow
+- Faction: Edranor opportunists
+- Deployment: Level 7
+- Silhouette: famine lord logistics tyrant; guarded bulk with authority posture.
+- Materials: noble armor mixed with ration-hoard battlefield protections.
+- Palette: muted noble crimson, grain ash, tarnished gold.
+- VFX language: hoardfire ignition, convoy stress cues.
+- Animation direction: slow command dominance; economy/attrition pressure feel.
+- Avoid: glam villain look detached from starvation theme.
+
+### 12. Thorn-Captain Edda Fen
+- Faction: Frontier militarization
+- Deployment: Level 8
+- Silhouette: hardened ranger-captain with practical predatory profile.
+- Materials: thorned leather, field metal, forest campaign gear.
+- Palette: pine-dark, mud brown, poison moss accents.
+- VFX language: trap trigger lines, pursuit markers, thorn burst.
+- Animation direction: hunter precision, abrupt directional aggression.
+- Avoid: making her read as generic druid caster.
+
+### 13. Justicar Halwen Serast
+- Faction: Valeron militant tribunal
+- Deployment: Level 10
+- Silhouette: formal martial judge, vertical and imposing.
+- Materials: tribunal plate, execution-textile layering.
+- Palette: cold white/steel with punitive orange highlights.
+- VFX language: verdict arcs, condemnation seals, radiant impact cracks.
+- Animation direction: controlled, ritualized sentencing motions.
+- Avoid: hero-paladin glow language.
+
+### 14. Noemi Veyr, The Fifth Mask
+- Faction: League-linked assassin interests
+- Deployment: Level 11
+- Silhouette: elegant shape-shifter aesthetic, interchangeable social profiles.
+- Materials: mask motifs, fine gloves, hidden blades, modular costume reads.
+- Palette: porcelain, black silk, jewel-tone accents by disguise mode.
+- VFX language: mask shimmer, identity-swap afterimages, social-feint flashes.
+- Animation direction: dancer precision; deceptive rhythm breaks.
+- Avoid: overt clown/jester coding.
+
+### 15. Provost Serik Quill
+- Faction: College censor-technologist wing
+- Deployment: Level 12
+- Silhouette: severe scholar-warden, angular and mechanism-weighted.
+- Materials: modified robes, locking seals, lenswork, runic hardware.
+- Palette: ink black, parchment tan, brass rune glow.
+- VFX language: lock glyphs, suppression grids, archive containment pulses.
+- Animation direction: measured procedural gestures.
+- Avoid: steampunk clutter that hurts readability.
+
+### 16. Roen Halbrecht, the Broken Castellan
+- Faction: Internal traitor / fortress opportunist
+- Deployment: Level 14
+- Silhouette: tired veteran officer; still competent but visibly eroded.
+- Materials: repeatedly repaired armor, worn straps, campaign grime.
+- Palette: weathered steel, faded heraldic tones, fatigue grey.
+- VFX language: collapsing defense cues, failure sparks, morale fracture beats.
+- Animation direction: human hesitation under pressure.
+- Avoid: cartoon villain posture; keep tragic humanity.
+
+### 17. The Ash Adjudicator
+- Faction: Spectral vestige of the Order of the Dawn
+- Deployment: Level 16
+- Silhouette: iconographic ghost-judge, ritual and ancient.
+- Materials: burnt-white ash cloak, cracked heraldry, hollow visor light.
+- Palette: ash white, charcoal, solemn ember points.
+- VFX language: cinder drift, verdict rings, liturgical strike echoes.
+- Animation direction: ritualized, ceremonial, unhurried inevitability.
+- Avoid: generic "floaty ghost knight" treatment.
+
+### 18. Duke Alric Thornmere
+- Faction: Edranor traditionalist-opportunist bloc
+- Deployment: Level 17
+- Silhouette: noble cavalry commander in polished late-prime authority form.
+- Materials: field-ready aristocratic plate, heavy riding cloak, elite tack.
+- Palette: rich family heraldry over martial steel.
+- VFX language: cavalry dominance shock lines, formation authority signals.
+- Animation direction: composed ducal precision with decisive mounted force.
+- Avoid: making him cartoonishly decadent.
+
+### 19. Naeva, Marrow-Seer of the Dark Tide
+- Faction: Obsidian Circle
+- Deployment: Level 18
+- Silhouette: half-priestess half-omen; fluid dark-water ceremonial shape.
+- Materials: wet-shadow silk, shell/bone ornament, void ritual markings.
+- Palette: abyss teal, void black, marrow ivory accents.
+- VFX language: tide-like shadow motion, omen halos, marrow glyph wake.
+- Animation direction: calm devotional menace; smooth, unsettling flow.
+- Avoid: generic cultist sorceress silhouette.
+
+### 20. The Witness Without Eyes
+- Faction: Manifestation of Vel'golath
+- Deployment: Level 19
+- Silhouette: towering asymmetry; non-human anatomy that remains game-readable.
+- Materials: bone, void-glass, parchment-flesh ambiguities.
+- Palette: anti-natural neutrals + invasive non-local highlights.
+- VFX language: observation pressure, geometry warping, unmaking pulses.
+- Animation direction: impossible but deliberate motion grammar.
+- Avoid: humanoid boss readability that undermines cosmic scale.
+
+## 5) Boss Readability Checklist (Production Gate)
+
+- Can a player identify boss archetype in under 1 second at tactical zoom?
+- Does the silhouette remain unique in grayscale?
+- Is the boss VFX language unique and not shared by common enemies?
+- Is weapon/ability identity readable without UI text?
+- Does chapter progression visibly escalate corruption, status, or ritual intensity?
+
+## 6) Exclusions
+
+- This sheet does not define generic enemy artstyle.
+- Generic enemy direction remains in the Artstyle Manifesto and generic roster docs.

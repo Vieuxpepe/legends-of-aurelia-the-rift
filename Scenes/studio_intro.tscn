@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://borit6ajc77y0" path="res://Scripts/UI/StudioIntro.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://souo7l4cvmne" path="res://GRAPHIQUES/Korvain Games - Logo (1).png" id="2_3a1lc"]
+[ext_resource type="Texture2D" uid="uid://dhub5cpvk3an8" path="res://Assets/UI/godot_engine_logo.svg" id="3_godot"]
 
 [node name="StudioIntro" type="Control" unique_id=1096400575]
 layout_mode = 3
@@ -12,10 +13,11 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_script")
+show_skip_hint = true
 logo_texture = ExtResource("2_3a1lc")
 studio_name = ""
 studio_tagline = ""
-hold_seconds = 3.0
+studio_hold_seconds = 3.0
 
 [node name="Backdrop" type="ColorRect" parent="." unique_id=51896767]
 layout_mode = 1
@@ -26,7 +28,62 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 1)
 
-[node name="Center" type="VBoxContainer" parent="." unique_id=1660645753]
+[node name="BeatsRoot" type="Control" parent="." unique_id=900001001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BeatEngine" type="VBoxContainer" parent="BeatsRoot" unique_id=900001010]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -600.0
+offset_top = -400.0
+offset_right = 600.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="EngineLogo" type="TextureRect" parent="BeatsRoot/BeatEngine" unique_id=900001011]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("3_godot")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EnginePrimary" type="Label" parent="BeatsRoot/BeatEngine" unique_id=900001012]
+layout_mode = 2
+text = "MADE WITH GODOT"
+horizontal_alignment = 1
+
+[node name="EngineSecondary" type="Label" parent="BeatsRoot/BeatEngine" unique_id=900001013]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="EngineGodotVersion" type="Label" parent="BeatsRoot/BeatEngine" unique_id=900001014]
+layout_mode = 2
+text = "Godot 0.0.0"
+horizontal_alignment = 1
+
+[node name="EngineGodotLegal" type="Label" parent="BeatsRoot/BeatEngine" unique_id=900001015]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="BeatStudio" type="VBoxContainer" parent="BeatsRoot" unique_id=1660645753]
+visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -42,7 +99,7 @@ grow_vertical = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="Logo" type="TextureRect" parent="Center" unique_id=1587493391]
+[node name="Logo" type="TextureRect" parent="BeatsRoot/BeatStudio" unique_id=1587493391]
 custom_minimum_size = Vector2(1200, 800)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -50,15 +107,60 @@ texture = ExtResource("2_3a1lc")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Title" type="Label" parent="Center" unique_id=111205373]
+[node name="Title" type="Label" parent="BeatsRoot/BeatStudio" unique_id=111205373]
 layout_mode = 2
-text = "ROOKTIDE GAMES"
+text = "KORVAIN GAMES"
 horizontal_alignment = 1
 
-[node name="Tagline" type="Label" parent="Center" unique_id=54838759]
+[node name="Tagline" type="Label" parent="BeatsRoot/BeatStudio" unique_id=54838759]
 layout_mode = 2
 text = "Forging tactical legends."
 horizontal_alignment = 1
+
+[node name="StudioCopyright" type="Label" parent="BeatsRoot/BeatStudio" unique_id=900001016]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="BeatGame" type="VBoxContainer" parent="BeatsRoot" unique_id=900001020]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -600.0
+offset_top = -380.0
+offset_right = 600.0
+offset_bottom = 380.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="GameLogo" type="TextureRect" parent="BeatsRoot/BeatGame" unique_id=900001021]
+visible = false
+custom_minimum_size = Vector2(900, 320)
+layout_mode = 2
+size_flags_horizontal = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GameTitle" type="Label" parent="BeatsRoot/BeatGame" unique_id=900001022]
+layout_mode = 2
+text = "LEGENDS OF AURELIA : THE RIFT"
+horizontal_alignment = 1
+
+[node name="GameTagline" type="Label" parent="BeatsRoot/BeatGame" unique_id=900001023]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="GameCopyright" type="Label" parent="BeatsRoot/BeatGame" unique_id=900001026]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="SkipHint" type="Label" parent="." unique_id=210811158]
 layout_mode = 1
@@ -67,13 +169,13 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -180.0
+offset_left = -220.0
 offset_top = -46.0
-offset_right = 180.0
+offset_right = 220.0
 offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
-text = "Press any key to continue"
+text = "Press any key to skip"
 horizontal_alignment = 1
 
 [node name="StingPlayer" type="AudioStreamPlayer" parent="." unique_id=123654755]

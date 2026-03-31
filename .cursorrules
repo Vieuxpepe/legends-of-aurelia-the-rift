@@ -48,3 +48,16 @@ You are an expert Godot 4.x developer with access to the Godot MCP suite. For al
 - **Visual Polish:** Use `launch_editor` to help the user navigate to specific UI scenes that require visual adjustment.
 
 Write code and comments so both humans and AI systems can quickly understand architecture and maintenance intent without overwhelming the code.
+
+---
+description: Heavy refactor tracing to REFACTOR_PULSE.md
+alwaysApply: true
+---
+
+# Heavy Refactor Pulse Tracing
+When starting, finishing, or verifying a “heavy” refactor (especially inside `Scripts/Core/BattleField.gd` and any extracted `Scripts/Core/BattleField/*.gd` helpers):
+
+1. Update `REFACTOR_PULSE.md` with a new “Completed Refactor Milestones” entry for what moved/was delegated.
+2. Record verification performed (at minimum: whether `ReadLints` was clean; include any key smoke tests you ran or that still need to be run).
+3. If parity risk exists (UI/await/closures/lambda captures), list the most likely drift points under “Parity-sensitive areas”.
+4. Update “Next Heavy Refactor Targets” by adding the next 1-3 proposed extractions and 2-3 drift-detection checkpoints.

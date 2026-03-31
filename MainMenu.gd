@@ -108,6 +108,7 @@ const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
 @onready var steam_avatar_frame: PanelContainer = $SteamProfileCorner/SteamCornerVBox/SteamAvatarFrame
 @onready var steam_avatar_button: TextureButton = $SteamProfileCorner/SteamCornerVBox/SteamAvatarFrame/Margin/SteamAvatarButton
 @onready var steam_playing_as_label: Label = $SteamProfileCorner/SteamCornerVBox/SteamPlayingAsLabel
+@onready var main_menu_version_footer: Label = $MainMenuVersionFooter
 
 var pending_delete_slot: int = 0
 var _dispatch_payload: Dictionary = {}
@@ -1071,6 +1072,15 @@ func _apply_theme() -> void:
 	_style_rule(achievements_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
 	_style_label(achievements_placeholder_label, MENU_TEXT, 15, 1)
 
+	if main_menu_version_footer != null:
+		main_menu_version_footer.text = "GAME VERSION %s\n%s\n%s · %s" % [
+			GameVersion.get_display_string(),
+			GameVersion.get_game_copyright_line(),
+			GameVersion.get_godot_version_label(),
+			GameVersion.get_godot_attribution_short(),
+		]
+		_style_label(main_menu_version_footer, MENU_TEXT_MUTED, 12, 1)
+
 	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignKicker, MENU_TEXT_MUTED, 16, 1)
 	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignTitle, MENU_ACCENT, 30, 3)
 	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignBody, MENU_TEXT_MUTED, 17, 1)
@@ -1428,6 +1438,14 @@ func _layout_menu() -> void:
 	if campaign_vbox != null:
 		var campaign_size := Vector2(clampf(vp_size.x * 0.66, 1120.0, 1320.0), clampf(vp_size.y * 0.56, 520.0, 640.0))
 		_set_control_rect(campaign_vbox, Vector2((vp_size.x - campaign_size.x) * 0.5, clampf(vp_size.y * 0.22, 196.0, 252.0)), campaign_size)
+	if main_menu_version_footer != null:
+		var pad_l := 24.0
+		var pad_b := 14.0
+		var max_w := clampf(vp_size.x * 0.58, 280.0, 640.0)
+		main_menu_version_footer.offset_left = pad_l
+		main_menu_version_footer.offset_right = pad_l + max_w
+		main_menu_version_footer.offset_top = -92.0
+		main_menu_version_footer.offset_bottom = -pad_b
 	_refresh_dispatch_body_layout()
 
 func _ensure_startup_black_overlay() -> void:

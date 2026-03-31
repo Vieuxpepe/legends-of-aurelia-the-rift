@@ -5,6 +5,9 @@ const AUCTION_LISTINGS_DOCUMENT_FALLBACK: String = "auction_house_listings_v1"
 const AUCTION_SETTLEMENT_LOCK_SECONDS: int = 20
 const AUCTION_NOTIFICATION_HISTORY_MAX: int = 8
 const AUCTION_SHARED_CACHE_PATH: String = "user://auction_house_shared_cache_v1.json"
+const CampUiSkin = preload("res://Scripts/UI/CampUiSkin.gd")
+## Full black scrim — anything less and the city still reads through the blend.
+const ARENA_EPIC_DIMMER_BASE := Color(0, 0, 0, 1)
 
 # CityMenu.gd – Arena 2.0 (Juiced, Ranked, & Token Shop)
 @onready var back_button: Button = $BackButton
@@ -197,23 +200,34 @@ var gladiator_lines = {
 @onready var ghost_inspect_panel: Panel = $ArenaPanel/LeaderboardPanel/GhostInspectPanel
 @onready var ghost_team_grid: GridContainer = $ArenaPanel/LeaderboardPanel/GhostInspectPanel/GhostTeamGrid
 @onready var ghost_title: Label = $ArenaPanel/LeaderboardPanel/GhostInspectPanel/GhostTitle
+@onready var arena_opponent_scroll: ScrollContainer = $ArenaPanel/ScrollContainer
+@onready var leaderboard_scroll: ScrollContainer = $ArenaPanel/LeaderboardPanel/ScrollContainer
 
 # --- Team Setup References ---
 @onready var arena_setup_panel: Control = $ArenaSetupPanel
+@onready var arena_setup_title_label: Label = $ArenaSetupPanel/TitleLabel
 @onready var roster_grid: GridContainer = $ArenaSetupPanel/RosterGrid
 @onready var team_grid: GridContainer = $ArenaSetupPanel/TeamGrid
 @onready var confirm_team_btn: Button = $ArenaSetupPanel/ConfirmTeamButton
 @onready var close_setup_btn: Button = $ArenaSetupPanel/CloseSetupButton
 
+var _arena_setup_instruction_label: Label = null
+var _arena_setup_identity_label: Label = null
+var _arena_setup_lock_banner: Label = null
+var _unit_info_hover_timer: Timer
+var _arena_opp_confirm_panel: Panel = null
+var _arena_opp_confirm_richtext: RichTextLabel = null
+var _arena_opp_confirm_pending: Dictionary = {}
+
 # --- Unit Info Panel References ---
 @onready var unit_info_panel: Control = $UnitInfoPanel
-@onready var info_portrait: TextureRect = $UnitInfoPanel/PortraitRect
-@onready var info_name: Label = $UnitInfoPanel/NameLabel
-@onready var info_class: Label = $UnitInfoPanel/ClassLabel
-@onready var info_level: Label = $UnitInfoPanel/LevelLabel
-@onready var info_hp: Label = $UnitInfoPanel/HPLabel
-@onready var info_stats: Label = $UnitInfoPanel/StatsLabel
-@onready var info_weapon: Label = $UnitInfoPanel/WeaponLabel
+@onready var info_portrait: TextureRect = $UnitInfoPanel/MarginContainer/VBox/PortraitRect
+@onready var info_name: Label = $UnitInfoPanel/MarginContainer/VBox/NameLabel
+@onready var info_class: Label = $UnitInfoPanel/MarginContainer/VBox/ClassLabel
+@onready var info_level: Label = $UnitInfoPanel/MarginContainer/VBox/LevelLabel
+@onready var info_hp: Label = $UnitInfoPanel/MarginContainer/VBox/HPLabel
+@onready var info_stats: Label = $UnitInfoPanel/MarginContainer/VBox/StatsLabel
+@onready var info_weapon: Label = $UnitInfoPanel/MarginContainer/VBox/WeaponLabel
 
 # --- Defence Rewards Popup (Standard) ---
 @onready var defense_popup: Panel = $DefensePopup
@@ -236,6 +250,8 @@ var gladiator_lines = {
 @onready var arena_result_stamp: Label = $ArenaResultSequence/Panel/StampLabel
 @onready var arena_result_rewards: RichTextLabel = $ArenaResultSequence/Panel/RewardsLabel
 @onready var arena_result_burst: CPUParticles2D = $ArenaResultSequence/BurstParticles
+@onready var arena_result_dimmer: ColorRect = $ArenaResultSequence/Dimmer
+@onready var arena_result_epic_spark: CPUParticles2D = $ArenaResultSequence/EpicSparkBurst
 
 @onready var streak_badge: Control = $GladiatorStreakBadge
 @onready var streak_label: Label = $GladiatorStreakBadge/Label
@@ -244,6 +260,8 @@ var gladiator_lines = {
 
 var selected_team: Array = []
 var rank_hierarchy: Array[String] = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Grandmaster"]
+var _arena_result_panel_rest_pos: Vector2 = Vector2.ZERO
+var _arena_stamp_offset_top_default: float = -155.0
 
 @onready var tavern_button: Button = $TavernButton
 
@@ -264,29 +282,6 @@ func _ready() -> void:
 		gladiator_blip.bus = "SFX"
 	if select_sound != null:
 		select_sound.bus = "SFX"
-	# =========================================================================
-	# GUIDANCE FOR AI/REVIEWERS: TEST CHEAT BLOCK
-	# PURPOSE: Temporarily overrides CampaignManager variables to test the 
-	# one-time rank reward logic in the Token Shop roadmap.
-	# NON-OBVIOUS LOGIC: By setting MMR to 2100, we force the UI to render all 
-	# 5 claimable buttons simultaneously to verify the loop works.
-	# =========================================================================
-	CampaignManager.arena_mmr = 2100 # Forces Grandmaster Rank
-	CampaignManager.claimed_rank_rewards.clear() # Erases claim history
-	CampaignManager.gladiator_tokens = 0 # Resets wallet to 0 for easy reading
-	# =========================================================================
-	
-	# ==========================================
-	# --- TEST CHEAT: FORCE RANK UP ANIMATION ---
-	# (Delete this block after you test it!)
-	# ==========================================
-	ArenaManager.last_match_result = "VICTORY"
-	ArenaManager.last_match_old_mmr = 1180  # High Bronze
-	ArenaManager.last_match_new_mmr = 1210  # Low Silver (Triggers the Rank Up!)
-	ArenaManager.last_match_mmr_change = 30
-	ArenaManager.last_match_gold_reward = 150
-	ArenaManager.last_match_token_reward = 5
-	# ==========================================
 	if back_button: back_button.pressed.connect(_on_back_pressed)
 	if arena_button: arena_button.pressed.connect(_open_setup_panel)
 	if close_arena_button: close_arena_button.pressed.connect(_close_arena)
@@ -294,7 +289,11 @@ func _ready() -> void:
 	if confirm_team_btn: confirm_team_btn.pressed.connect(_lock_team_and_search)
 	if close_setup_btn: close_setup_btn.pressed.connect(_close_arena)
 	if leaderboard_btn: leaderboard_btn.pressed.connect(_show_leaderboard)
-	if close_leaderboard_btn: close_leaderboard_btn.pressed.connect(func(): leaderboard_panel.hide())
+	if close_leaderboard_btn:
+		close_leaderboard_btn.pressed.connect(func():
+			leaderboard_panel.hide()
+			_hide_unit_info_panel_immediate()
+		)
 	if auction_house_button: auction_house_button.pressed.connect(_open_auction_house)
 	if auction_close_button: auction_close_button.pressed.connect(_close_auction_house)
 	if auction_refresh_button: auction_refresh_button.pressed.connect(_refresh_auction_house_async)
@@ -328,17 +327,20 @@ func _ready() -> void:
 	if unit_info_panel: unit_info_panel.hide()
 	if defense_popup: defense_popup.hide()
 	if arena_result_sequence: arena_result_sequence.hide()
+	if arena_result_stamp:
+		_arena_stamp_offset_top_default = arena_result_stamp.offset_top
 	if ghost_inspect_panel: ghost_inspect_panel.hide()
 	
-	$ArenaPanel/LeaderboardPanel/GhostInspectPanel/CloseButton.pressed.connect(func(): 
+	$ArenaPanel/LeaderboardPanel/GhostInspectPanel/CloseButton.pressed.connect(func():
 		ghost_inspect_panel.hide()
-		if unit_info_panel: unit_info_panel.hide()
+		_hide_unit_info_panel_immediate()
 	)
 	
 	ArenaManager.current_opponent_data = {}
-	ArenaManager.local_arena_team.clear()
+	ArenaManager.restore_local_arena_team_from_saved_identity()
 	
 	_configure_arena_ui_fx()
+	_apply_enter_arena_ui_theme()
 	_refresh_gladiator_badge()
 	_ensure_auction_listings()
 	_setup_auction_filter_controls()
@@ -356,10 +358,464 @@ func _ready() -> void:
 	
 	call_deferred("_check_offline_rewards")
 
+	_unit_info_hover_timer = Timer.new()
+	_unit_info_hover_timer.wait_time = 0.14
+	_unit_info_hover_timer.one_shot = true
+	_unit_info_hover_timer.timeout.connect(_on_unit_info_hover_timer_timeout)
+	add_child(_unit_info_hover_timer)
+	if arena_setup_panel:
+		arena_setup_panel.mouse_exited.connect(_schedule_unit_info_hide)
+	if unit_info_panel:
+		unit_info_panel.mouse_entered.connect(_cancel_unit_info_hide)
+		unit_info_panel.mouse_exited.connect(_schedule_unit_info_hide)
+	if ghost_inspect_panel:
+		ghost_inspect_panel.mouse_exited.connect(_schedule_unit_info_hide)
+
+
+func _on_unit_info_hover_timer_timeout() -> void:
+	if unit_info_panel:
+		unit_info_panel.hide()
+
+
+func _cancel_unit_info_hide() -> void:
+	if _unit_info_hover_timer and not _unit_info_hover_timer.is_stopped():
+		_unit_info_hover_timer.stop()
+
+
+func _schedule_unit_info_hide() -> void:
+	if unit_info_panel == null or not unit_info_panel.visible:
+		return
+	if _unit_info_hover_timer:
+		_unit_info_hover_timer.start()
+
+
+func _hide_unit_info_panel_immediate() -> void:
+	_cancel_unit_info_hide()
+	if unit_info_panel:
+		unit_info_panel.hide()
+
+
+func _arena_setup_punch_button(btn: Button) -> void:
+	if btn == null or not is_instance_valid(btn):
+		return
+	if btn.size.x < 2.0 or btn.size.y < 2.0:
+		call_deferred("_arena_setup_punch_button", btn)
+		return
+	btn.pivot_offset = btn.size * 0.5
+	var tw: Tween = create_tween()
+	tw.tween_property(btn, "scale", Vector2(1.11, 1.11), 0.09).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(btn, "scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func _arena_setup_animate_team_slot_by_index(slot_index: int) -> void:
+	if team_grid == null:
+		return
+	if slot_index < 0 or slot_index >= team_grid.get_child_count():
+		return
+	var b: Button = team_grid.get_child(slot_index) as Button
+	if b and not b.disabled:
+		_arena_setup_punch_button(b)
+
+
 func _configure_arena_ui_fx() -> void:
 	if arena_result_bar:
 		arena_result_bar.min_value = 0.0
 		arena_result_bar.max_value = 100.0
+	if arena_result_flash:
+		arena_result_flash.z_index = 2
+	if arena_result_burst:
+		arena_result_burst.z_index = 3
+	if arena_result_epic_spark:
+		arena_result_epic_spark.z_index = 3
+
+
+func _apply_enter_arena_ui_theme() -> void:
+	if arena_panel == null:
+		return
+	CampUiSkin.style_panel_surface(arena_panel, CampUiSkin.CAMP_PANEL_BG, CampUiSkin.CAMP_BORDER, 24, 12)
+	if arena_setup_panel:
+		CampUiSkin.style_panel_surface(arena_setup_panel, CampUiSkin.CAMP_PANEL_BG, CampUiSkin.CAMP_BORDER, 22, 10)
+	if leaderboard_panel:
+		CampUiSkin.style_panel_surface(leaderboard_panel, CampUiSkin.CAMP_PANEL_BG_ALT, CampUiSkin.CAMP_BORDER_SOFT, 20, 8)
+	if ghost_inspect_panel:
+		CampUiSkin.style_panel_surface(ghost_inspect_panel, CampUiSkin.CAMP_PANEL_BG_SOFT, CampUiSkin.CAMP_BORDER_SOFT, 16, 4)
+
+	if arena_opponent_scroll:
+		var opp_scroll_style := CampUiSkin.make_panel_style(CampUiSkin.CAMP_PANEL_BG_SOFT, CampUiSkin.CAMP_BORDER_SOFT, 14, 4)
+		opp_scroll_style.content_margin_top = 14
+		opp_scroll_style.content_margin_left = 12
+		opp_scroll_style.content_margin_right = 12
+		opp_scroll_style.content_margin_bottom = 18
+		arena_opponent_scroll.add_theme_stylebox_override("panel", opp_scroll_style)
+	if opponent_container:
+		opponent_container.add_theme_constant_override("separation", 14)
+	if leaderboard_scroll:
+		leaderboard_scroll.add_theme_stylebox_override(
+			"panel",
+			CampUiSkin.make_panel_style(CampUiSkin.CAMP_PANEL_BG_SOFT, CampUiSkin.CAMP_BORDER_SOFT, 12, 2)
+		)
+
+	var arena_title: Label = arena_panel.get_node_or_null("TitleLabel") as Label
+	if arena_title:
+		CampUiSkin.style_label(arena_title, CampUiSkin.CAMP_TEXT, 26, 2)
+		arena_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if status_label:
+		CampUiSkin.style_label(status_label, CampUiSkin.CAMP_MUTED, 15, 1)
+		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if arena_setup_title_label:
+		CampUiSkin.style_label(arena_setup_title_label, CampUiSkin.CAMP_ACCENT_CYAN, 21, 1)
+		arena_setup_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if token_display:
+		CampUiSkin.style_label(token_display, CampUiSkin.CAMP_ACTION_PRIMARY.lightened(0.12), 16, 0)
+		token_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if ghost_title:
+		CampUiSkin.style_label(ghost_title, CampUiSkin.CAMP_TEXT, 17, 1)
+	if leaderboard_panel:
+		var leaderboard_title: Label = leaderboard_panel.get_node_or_null("LeaderboardTitle") as Label
+		if leaderboard_title:
+			CampUiSkin.style_label(leaderboard_title, CampUiSkin.CAMP_ACCENT_CYAN, 22, 2)
+
+	CampUiSkin.style_button(arena_button, false, 20, 48)
+	CampUiSkin.style_button(close_arena_button, false, 17, 40)
+	if close_arena_button:
+		close_arena_button.custom_minimum_size = Vector2(44, 44)
+	CampUiSkin.style_button(refresh_matches_button, true, 17, 48)
+	CampUiSkin.style_button(leaderboard_btn, false, 16, 44)
+	CampUiSkin.style_button(close_leaderboard_btn, false, 17, 44)
+	CampUiSkin.style_button(confirm_team_btn, true, 18, 52)
+	CampUiSkin.style_button(close_setup_btn, false, 16, 48)
+	if confirm_team_btn:
+		confirm_team_btn.add_theme_constant_override("outline_size", 1)
+	if close_setup_btn:
+		close_setup_btn.add_theme_constant_override("outline_size", 1)
+	var ghost_close: Button = get_node_or_null("ArenaPanel/LeaderboardPanel/GhostInspectPanel/CloseButton") as Button
+	if ghost_close:
+		CampUiSkin.style_button(ghost_close, false, 16, 36)
+		ghost_close.custom_minimum_size = Vector2(36, 36)
+
+	_apply_unit_info_panel_theme()
+
+	_layout_arena_setup_feedback_nodes()
+
+
+func _apply_unit_info_panel_theme() -> void:
+	if unit_info_panel == null:
+		return
+	CampUiSkin.style_panel_surface(unit_info_panel, CampUiSkin.CAMP_PANEL_BG_ALT, CampUiSkin.CAMP_BORDER_SOFT, 18, 6)
+	if info_name:
+		CampUiSkin.style_label(info_name, CampUiSkin.CAMP_ACCENT_CYAN, 17, 0)
+	if info_class:
+		CampUiSkin.style_label(info_class, CampUiSkin.CAMP_MUTED, 14, 0)
+	if info_level:
+		CampUiSkin.style_label(info_level, CampUiSkin.CAMP_TEXT, 14, 0)
+	if info_hp:
+		CampUiSkin.style_label(info_hp, CampUiSkin.CAMP_TEXT, 14, 0)
+	if info_stats:
+		CampUiSkin.style_label(info_stats, CampUiSkin.CAMP_TEXT, 14, 0)
+	if info_weapon:
+		CampUiSkin.style_label(info_weapon, CampUiSkin.CAMP_MUTED, 13, 0)
+
+
+func _arena_epic_play_blip(won: bool, bright: bool = true) -> void:
+	if gladiator_blip == null:
+		return
+	gladiator_blip.pitch_scale = randf_range(1.65, 2.15) if (won and bright) else randf_range(0.82, 1.12)
+	gladiator_blip.play()
+
+
+func _arena_epic_prime_for_reveal() -> void:
+	if arena_result_title != null:
+		arena_result_title.modulate.a = 0.0
+		arena_result_title.scale = Vector2(0.82, 0.82)
+	if arena_result_rank_icon != null:
+		arena_result_rank_icon.modulate.a = 0.0
+		arena_result_rank_icon.scale = Vector2(0.28, 0.28)
+	if arena_result_rank_name != null:
+		arena_result_rank_name.modulate.a = 0.0
+		arena_result_rank_name.scale = Vector2(0.92, 0.92)
+	if arena_result_rating_label != null:
+		arena_result_rating_label.modulate.a = 0.0
+	if arena_result_delta_label != null:
+		arena_result_delta_label.modulate.a = 0.0
+	if arena_result_bar != null:
+		arena_result_bar.modulate.a = 0.0
+	if arena_result_bar_value != null:
+		arena_result_bar_value.modulate.a = 0.0
+
+
+func _arena_epic_stagger_reveal_header(won: bool) -> void:
+	await get_tree().process_frame
+	if arena_result_title != null:
+		arena_result_title.pivot_offset = Vector2(arena_result_title.size.x * 0.5, arena_result_title.size.y * 0.5)
+		var tw: Tween = create_tween().set_parallel(true)
+		tw.tween_property(arena_result_title, "modulate:a", 1.0, 0.28).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(arena_result_title, "scale", Vector2.ONE, 0.52).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		await tw.finished
+		_arena_epic_play_blip(won, true)
+		await get_tree().create_timer(0.05).timeout
+
+	if arena_result_rank_icon != null:
+		arena_result_rank_icon.pivot_offset = arena_result_rank_icon.size * 0.5
+		var tw2: Tween = create_tween().set_parallel(true)
+		tw2.tween_property(arena_result_rank_icon, "modulate:a", 1.0, 0.22)
+		tw2.tween_property(arena_result_rank_icon, "scale", Vector2.ONE, 0.58).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		await tw2.finished
+		_arena_epic_play_blip(won, true)
+		await get_tree().create_timer(0.05).timeout
+
+	if arena_result_rank_name != null:
+		arena_result_rank_name.pivot_offset = Vector2(arena_result_rank_name.size.x * 0.5, arena_result_rank_name.size.y * 0.5)
+		var tw3: Tween = create_tween().set_parallel(true)
+		tw3.tween_property(arena_result_rank_name, "modulate:a", 1.0, 0.22)
+		tw3.tween_property(arena_result_rank_name, "scale", Vector2.ONE, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		await tw3.finished
+		_arena_epic_play_blip(won, not won)
+		await get_tree().create_timer(0.06).timeout
+
+	if arena_result_rating_label != null and arena_result_delta_label != null:
+		var tw4: Tween = create_tween().set_parallel(true)
+		tw4.tween_property(arena_result_rating_label, "modulate:a", 1.0, 0.26)
+		tw4.tween_property(arena_result_delta_label, "modulate:a", 1.0, 0.26)
+		await tw4.finished
+		_arena_epic_play_blip(won, won)
+		await get_tree().create_timer(0.05).timeout
+
+	if arena_result_bar != null and arena_result_bar_value != null:
+		var tw5: Tween = create_tween().set_parallel(true)
+		tw5.tween_property(arena_result_bar, "modulate:a", 1.0, 0.3)
+		tw5.tween_property(arena_result_bar_value, "modulate:a", 1.0, 0.3)
+		await tw5.finished
+		if select_sound != null:
+			select_sound.pitch_scale = 1.05 if won else 0.92
+			select_sound.play()
+
+
+func _arena_epic_anticipation_flash() -> void:
+	if arena_result_flash == null:
+		return
+	arena_result_flash.color = Color(1.0, 0.93, 0.72, 1.0)
+	arena_result_flash.show()
+	arena_result_flash.modulate.a = 0.0
+	var tw: Tween = create_tween()
+	tw.tween_property(arena_result_flash, "modulate:a", 0.12, 0.07)
+	tw.tween_property(arena_result_flash, "modulate:a", 0.0, 0.22).set_trans(Tween.TRANS_QUAD)
+	await tw.finished
+	arena_result_flash.hide()
+
+
+func _arena_epic_reveal_spoils_finale(won: bool) -> void:
+	if arena_result_rewards == null:
+		return
+	await get_tree().process_frame
+	arena_result_rewards.pivot_offset = Vector2(arena_result_rewards.size.x * 0.5, arena_result_rewards.size.y * 0.5)
+	arena_result_rewards.scale = Vector2(0.9, 0.9)
+	arena_result_rewards.modulate.a = 0.0
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(arena_result_rewards, "modulate:a", 1.0, (0.45 if won else 0.55)).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(arena_result_rewards, "scale", Vector2.ONE, 0.52).set_trans(Tween.TRANS_ELASTIC if won else Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if won and token_buy_sound != null:
+		token_buy_sound.pitch_scale = 1.12
+		token_buy_sound.play()
+	elif not won and gladiator_blip != null:
+		gladiator_blip.pitch_scale = 0.78
+		gladiator_blip.play()
+	await tw.finished
+	if won and arena_result_flash != null:
+		arena_result_flash.color = CampUiSkin.CAMP_BORDER.lerp(Color(1, 1, 1, 1), 0.4)
+		arena_result_flash.show()
+		arena_result_flash.modulate.a = 0.0
+		var gl: Tween = create_tween()
+		gl.tween_property(arena_result_flash, "modulate:a", 0.1, 0.06)
+		gl.tween_property(arena_result_flash, "modulate:a", 0.0, 0.25)
+		await gl.finished
+		arena_result_flash.hide()
+	await get_tree().create_timer(0.14 if won else 0.22).timeout
+
+
+func _arena_epic_dimmer_pulse_rank(rank_color: Color) -> void:
+	if arena_result_dimmer == null:
+		return
+	# Brief lift from pure black so the tier-colored pulse still reads.
+	var warm: Color = rank_color.lerp(Color(0.2, 0.14, 0.09, 1.0), 0.52)
+	var tw: Tween = create_tween()
+	tw.tween_property(arena_result_dimmer, "color", warm, 0.11).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(arena_result_dimmer, "color", ARENA_EPIC_DIMMER_BASE, 0.72).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+func _configure_epic_spark_burst(accent: Color) -> void:
+	if arena_result_epic_spark == null:
+		return
+	var p: CPUParticles2D = arena_result_epic_spark
+	p.emitting = false
+	p.one_shot = true
+	p.amount = 150
+	p.lifetime = 1.4
+	p.explosiveness = 0.9
+	p.direction = Vector2(0.0, -1.0)
+	p.spread = 130.0
+	p.gravity = Vector2(0.0, 38.0)
+	p.initial_velocity_min = 95.0
+	p.initial_velocity_max = 310.0
+	p.scale_amount_min = 1.4
+	p.scale_amount_max = 4.2
+	p.color = accent.lerp(Color(1.0, 0.98, 0.85, 1.0), 0.4)
+
+
+func _camp_hex(c: Color) -> String:
+	return "%02x%02x%02x" % [clampi(int(c.r * 255.0), 0, 255), clampi(int(c.g * 255.0), 0, 255), clampi(int(c.b * 255.0), 0, 255)]
+
+
+func _apply_arena_result_camp_theme(won: bool, mmr_delta: int) -> void:
+	var gold_c: Color = CampUiSkin.CAMP_ACTION_PRIMARY
+	var token_c: Color = Color(1.0, 0.72, 0.35, 1.0)
+	var defeat_c: Color = Color(0.88, 0.38, 0.34, 1.0)
+	var title_win: Color = CampUiSkin.CAMP_ACCENT_GREEN
+	var title_loss: Color = Color(0.92, 0.42, 0.38, 1.0)
+	var outline: Color = Color(0.04, 0.03, 0.02, 0.94)
+
+	if arena_result_panel:
+		# Camp panel colors are ~0.88 alpha; that lets the city show *through the card*. Force opaque.
+		var panel_bg: Color = CampUiSkin.CAMP_PANEL_BG
+		panel_bg.a = 1.0
+		arena_result_panel.add_theme_stylebox_override(
+			"panel",
+			CampUiSkin.make_panel_style(panel_bg, CampUiSkin.CAMP_BORDER, 22, 14)
+		)
+
+	if arena_result_title:
+		arena_result_title.text = "ARENA VICTORY" if won else "ARENA DEFEAT"
+		arena_result_title.add_theme_font_size_override("font_size", 48)
+		arena_result_title.add_theme_color_override("font_color", title_win if won else title_loss)
+		arena_result_title.add_theme_constant_override("outline_size", 3)
+		arena_result_title.add_theme_color_override("font_outline_color", outline)
+
+	if arena_result_rating_label:
+		arena_result_rating_label.add_theme_color_override("font_color", CampUiSkin.CAMP_MUTED)
+		arena_result_rating_label.add_theme_font_size_override("font_size", 22)
+		arena_result_rating_label.add_theme_constant_override("outline_size", 1)
+		arena_result_rating_label.add_theme_color_override("font_outline_color", outline)
+
+	if arena_result_delta_label:
+		var delta_col: Color = CampUiSkin.CAMP_ACCENT_CYAN if mmr_delta >= 0 else Color(0.95, 0.45, 0.48, 1.0)
+		arena_result_delta_label.add_theme_color_override("font_color", delta_col)
+		arena_result_delta_label.add_theme_font_size_override("font_size", 28)
+		arena_result_delta_label.add_theme_constant_override("outline_size", 2)
+		arena_result_delta_label.add_theme_color_override("font_outline_color", outline)
+
+	if arena_result_rank_name:
+		arena_result_rank_name.add_theme_font_size_override("font_size", 30)
+		arena_result_rank_name.add_theme_constant_override("outline_size", 2)
+		arena_result_rank_name.add_theme_color_override("font_outline_color", outline)
+
+	if arena_result_bar_value:
+		arena_result_bar_value.add_theme_color_override("font_color", CampUiSkin.CAMP_TEXT)
+		arena_result_bar_value.add_theme_font_size_override("font_size", 26)
+		arena_result_bar_value.add_theme_constant_override("outline_size", 1)
+		arena_result_bar_value.add_theme_color_override("font_outline_color", outline)
+
+	if arena_result_rewards:
+		arena_result_rewards.scroll_active = false
+		arena_result_rewards.add_theme_color_override("default_color", CampUiSkin.CAMP_TEXT)
+		if won:
+			arena_result_rewards.text = (
+				"[center][font_size=22][color=#%s]Spoils[/color][/font_size]\n[font_size=24][color=#%s]+%d gold[/color]  ·  [color=#%s]+%d gladiator tokens[/color][/font_size][/center]"
+				% [_camp_hex(CampUiSkin.CAMP_MUTED), _camp_hex(gold_c), ArenaManager.last_match_gold_reward, _camp_hex(token_c), ArenaManager.last_match_token_reward]
+			)
+		else:
+			arena_result_rewards.text = (
+				"[center][font_size=24][color=#%s]Streak broken[/color][/font_size]\n[font_size=20][color=#%s]The quartermaster notes your fall — climb again.[/color][/font_size][/center]"
+				% [_camp_hex(defeat_c), _camp_hex(CampUiSkin.CAMP_MUTED)]
+			)
+
+	var continue_lbl: Label = arena_result_sequence.get_node_or_null("Panel/ClickToContinue") as Label
+	if continue_lbl:
+		continue_lbl.add_theme_color_override("font_color", CampUiSkin.CAMP_MUTED)
+		continue_lbl.add_theme_constant_override("outline_size", 1)
+		continue_lbl.add_theme_color_override("font_outline_color", outline)
+
+
+func _style_arena_rank_progress_bar(rank_data: Dictionary) -> void:
+	if arena_result_bar == null:
+		return
+	var track := StyleBoxFlat.new()
+	track.bg_color = CampUiSkin.CAMP_PANEL_BG_SOFT
+	track.border_color = CampUiSkin.CAMP_BORDER_SOFT
+	track.set_border_width_all(2)
+	track.corner_radius_top_left = 10
+	track.corner_radius_top_right = 10
+	track.corner_radius_bottom_left = 10
+	track.corner_radius_bottom_right = 10
+	arena_result_bar.add_theme_stylebox_override("background", track)
+
+	var rk: Color = rank_data["color"]
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = rk.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.12)
+	fill.border_color = rk.lightened(0.22)
+	fill.set_border_width_all(2)
+	fill.corner_radius_top_left = 10
+	fill.corner_radius_top_right = 10
+	fill.corner_radius_bottom_left = 10
+	fill.corner_radius_bottom_right = 10
+	arena_result_bar.add_theme_stylebox_override("fill", fill)
+
+
+func _configure_arena_burst(accent: Color, big: bool) -> void:
+	if arena_result_burst == null:
+		return
+	arena_result_burst.emitting = false
+	arena_result_burst.one_shot = true
+	arena_result_burst.amount = 88 if big else 44
+	arena_result_burst.lifetime = 1.05 if big else 0.75
+	arena_result_burst.explosiveness = 0.94 if big else 0.75
+	arena_result_burst.direction = Vector2(0.0, -1.0)
+	arena_result_burst.spread = 180.0
+	arena_result_burst.gravity = Vector2(0.0, 120.0)
+	arena_result_burst.initial_velocity_min = 160.0 if big else 100.0
+	arena_result_burst.initial_velocity_max = 360.0 if big else 240.0
+	arena_result_burst.scale_amount_min = 2.2
+	arena_result_burst.scale_amount_max = 5.5 if big else 4.0
+	arena_result_burst.color = accent
+
+
+func _arena_result_reset_fx() -> void:
+	var one: Color = Color(1, 1, 1, 1)
+	if arena_result_panel:
+		arena_result_panel.scale = Vector2.ONE
+		arena_result_panel.rotation = 0.0
+		arena_result_panel.position = _arena_result_panel_rest_pos
+	if arena_result_title:
+		arena_result_title.modulate = one
+		arena_result_title.scale = Vector2.ONE
+	if arena_result_rank_icon:
+		arena_result_rank_icon.modulate = one
+		arena_result_rank_icon.scale = Vector2.ONE
+	if arena_result_rank_name:
+		arena_result_rank_name.modulate = one
+		arena_result_rank_name.scale = Vector2.ONE
+	if arena_result_rating_label:
+		arena_result_rating_label.modulate = one
+	if arena_result_delta_label:
+		arena_result_delta_label.modulate = one
+	if arena_result_bar:
+		arena_result_bar.modulate = one
+	if arena_result_bar_value:
+		arena_result_bar_value.modulate = one
+	if arena_result_rewards:
+		arena_result_rewards.modulate = one
+		arena_result_rewards.scale = Vector2.ONE
+	if arena_result_stamp:
+		arena_result_stamp.scale = Vector2.ONE
+		arena_result_stamp.rotation = 0.0
+		arena_result_stamp.modulate = one
+		arena_result_stamp.offset_top = _arena_stamp_offset_top_default
+	if arena_result_dimmer:
+		arena_result_dimmer.color = ARENA_EPIC_DIMMER_BASE
+		arena_result_dimmer.modulate.a = 0.0
+		arena_result_dimmer.hide()
+	if arena_result_burst:
+		arena_result_burst.emitting = false
+	if arena_result_epic_spark:
+		arena_result_epic_spark.emitting = false
 
 # ==========================================
 # --- TOKEN SHOP CORE LOGIC ---
@@ -368,6 +824,7 @@ func _configure_arena_ui_fx() -> void:
 func _open_token_shop() -> void:
 	arena_panel.hide()
 	arena_setup_panel.hide()
+	_hide_unit_info_panel_immediate()
 	_close_auction_house()
 	shop_token_display.text = "Gladiator Tokens: " + str(CampaignManager.gladiator_tokens)
 	token_shop_panel.show()
@@ -1981,8 +2438,7 @@ func _open_auction_house() -> void:
 		arena_panel.hide()
 	if leaderboard_panel:
 		leaderboard_panel.hide()
-	if unit_info_panel:
-		unit_info_panel.hide()
+	_hide_unit_info_panel_immediate()
 	if auction_panel == null:
 		return
 	_apply_auction_ui_theme()
@@ -2818,61 +3274,92 @@ func _get_current_player_rank() -> String:
 func _play_arena_result_sequence() -> void:
 	arena_result_sequence.show()
 	arena_result_sequence.modulate.a = 1.0
-	
-	var old_mmr = ArenaManager.last_match_old_mmr
-	var new_mmr = ArenaManager.last_match_new_mmr
-	var mmr_delta = ArenaManager.last_match_mmr_change
-	var won = ArenaManager.last_match_result == "VICTORY"
-	
-	var old_rank = ArenaManager.get_rank_data(old_mmr)
-	var new_rank = ArenaManager.get_rank_data(new_mmr)
-	
-	arena_result_title.text = "ARENA VICTORY" if won else "ARENA DEFEAT"
-	arena_result_title.add_theme_color_override("font_color", Color.LIME if won else Color.RED)
+	await get_tree().process_frame
+
+	if arena_result_sequence.size != Vector2.ZERO:
+		var c: Vector2 = arena_result_sequence.size * 0.5
+		if arena_result_burst != null:
+			arena_result_burst.position = c
+		if arena_result_epic_spark != null:
+			arena_result_epic_spark.position = c + Vector2(0.0, 24.0)
+
+	var old_mmr: int = ArenaManager.last_match_old_mmr
+	var new_mmr: int = ArenaManager.last_match_new_mmr
+	var mmr_delta: int = ArenaManager.last_match_mmr_change
+	var won: bool = ArenaManager.last_match_result == "VICTORY"
+
+	_apply_arena_result_camp_theme(won, mmr_delta)
 	arena_result_delta_label.text = ArenaManager.format_signed(mmr_delta) + " MMR"
 
-	if won:
-		arena_result_rewards.text = "[center][color=gold]+%d Gold[/color]  [color=orange]+%d Tokens[/color][/center]" % [ArenaManager.last_match_gold_reward, ArenaManager.last_match_token_reward]
-	else:
-		arena_result_rewards.text = "[center][color=tomato]Streak Broken[/color][/center]"
-
-	# Initialize locked to the old rank
 	_set_result_meter_from_mmr(float(old_mmr), old_mmr)
+	_arena_epic_prime_for_reveal()
+	if arena_result_rewards != null:
+		arena_result_rewards.modulate.a = 0.0
+	if arena_result_stamp != null:
+		arena_result_stamp.hide()
+
+	_arena_result_panel_rest_pos = arena_result_panel.position
+	arena_result_panel.pivot_offset = arena_result_panel.size * 0.5
+	arena_result_panel.scale = Vector2(0.86, 0.86)
+	arena_result_panel.modulate.a = 0.0
+
+	if arena_result_dimmer != null:
+		arena_result_dimmer.show()
+		arena_result_dimmer.color = ARENA_EPIC_DIMMER_BASE
+		arena_result_dimmer.modulate.a = 0.0
+		var dtw: Tween = create_tween()
+		dtw.tween_property(arena_result_dimmer, "modulate:a", 1.0, 0.48).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+	var intro: Tween = create_tween().set_parallel(true)
+	intro.tween_property(arena_result_panel, "scale", Vector2.ONE, 0.72).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	intro.tween_property(arena_result_panel, "modulate:a", 1.0, 0.34)
+	await intro.finished
+
+	await _arena_epic_stagger_reveal_header(won)
+
+	if won:
+		await get_tree().create_timer(0.2).timeout
+		await _arena_epic_anticipation_flash()
+	else:
+		await get_tree().create_timer(0.12).timeout
+
+	var old_rank: Dictionary = ArenaManager.get_rank_data(old_mmr)
+	var new_rank: Dictionary = ArenaManager.get_rank_data(new_mmr)
 
 	# --- RANK UP SEQUENCE ---
 	if old_rank["index"] < new_rank["index"]:
-		var threshold = float(old_rank["max"]) # Hit the ceiling of the old rank
-		var tw = create_tween()
-		tw.tween_method(func(v: float): _set_result_meter_from_mmr(v, old_mmr), float(old_mmr), threshold, 1.0).set_trans(Tween.TRANS_CUBIC)
+		var threshold: float = float(old_rank["max"])
+		var tw: Tween = create_tween()
+		tw.tween_method(func(v: float): _set_result_meter_from_mmr(v, old_mmr), float(old_mmr), threshold, 1.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 		await tw.finished
-		
-		# Wait for the epic slam. It will swap visuals at the moment of impact!
+
 		await _play_rank_stamp(threshold, new_mmr, true)
-		
-		# Fill the rest of the bar in the new rank
-		var tw2 = create_tween()
-		tw2.tween_method(func(v: float): _set_result_meter_from_mmr(v, new_mmr), threshold, float(new_mmr), 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+		var tw2: Tween = create_tween()
+		tw2.tween_method(func(v: float): _set_result_meter_from_mmr(v, new_mmr), threshold, float(new_mmr), 0.85).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		await tw2.finished
 
 	# --- RANK DOWN SEQUENCE ---
 	elif old_rank["index"] > new_rank["index"]:
-		var threshold = float(old_rank["min"]) # Hit the floor of the old rank
-		var tw = create_tween()
-		tw.tween_method(func(v: float): _set_result_meter_from_mmr(v, old_mmr), float(old_mmr), threshold, 1.0).set_trans(Tween.TRANS_CUBIC)
-		await tw.finished
-		
-		await _play_rank_stamp(threshold, new_mmr, false)
-		
-		var tw2 = create_tween()
-		tw2.tween_method(func(v: float): _set_result_meter_from_mmr(v, new_mmr), threshold, float(new_mmr), 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		await tw2.finished
+		var threshold2: float = float(old_rank["min"])
+		var tw3: Tween = create_tween()
+		tw3.tween_method(func(v: float): _set_result_meter_from_mmr(v, old_mmr), float(old_mmr), threshold2, 1.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		await tw3.finished
+
+		await _play_rank_stamp(threshold2, new_mmr, false)
+
+		var tw4: Tween = create_tween()
+		tw4.tween_method(func(v: float): _set_result_meter_from_mmr(v, new_mmr), threshold2, float(new_mmr), 0.85).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		await tw4.finished
 
 	# --- NORMAL SEQUENCE (No change) ---
 	else:
-		var tw = create_tween()
-		tw.tween_method(func(v: float): _set_result_meter_from_mmr(v, old_mmr), float(old_mmr), float(new_mmr), 1.5).set_trans(Tween.TRANS_CUBIC)
-		await tw.finished
-		await get_tree().create_timer(0.5).timeout
+		var tw5: Tween = create_tween()
+		tw5.tween_method(func(v: float): _set_result_meter_from_mmr(v, old_mmr), float(old_mmr), float(new_mmr), 1.65).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		await tw5.finished
+		await get_tree().create_timer(0.42).timeout
+
+	await _arena_epic_reveal_spoils_finale(won)
 
 	# --- CLICK TO CONTINUE ---
 	var continue_lbl = arena_result_sequence.get_node_or_null("Panel/ClickToContinue")
@@ -2888,153 +3375,239 @@ func _play_arena_result_sequence() -> void:
 		if Input.is_action_just_pressed("ui_accept") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			clicked = true
 	
-	var out_tw = create_tween()
-	out_tw.tween_property(arena_result_sequence, "modulate:a", 0.0, 0.4)
+	var out_tw: Tween = create_tween().set_parallel(true)
+	out_tw.tween_property(arena_result_sequence, "modulate:a", 0.0, 0.48).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	if arena_result_dimmer != null:
+		out_tw.tween_property(arena_result_dimmer, "modulate:a", 0.0, 0.42)
 	await out_tw.finished
-	
-	if continue_lbl: continue_lbl.hide()
+
+	if continue_lbl != null:
+		continue_lbl.hide()
 	arena_result_sequence.hide()
 	arena_result_stamp.hide()
+	_arena_result_reset_fx()
 		
 func _set_result_meter_from_mmr(display_mmr: float, forced_rank_mmr: int = -1) -> void:
-	var mmr_int = int(round(display_mmr))
-	
-	# Lock the visuals to a specific rank if requested
-	var eval_mmr = mmr_int if forced_rank_mmr == -1 else forced_rank_mmr
-	var rank_data = ArenaManager.get_rank_data(eval_mmr)
+	var mmr_int: int = int(round(display_mmr))
+	var eval_mmr: int = mmr_int if forced_rank_mmr == -1 else forced_rank_mmr
+	var rank_data: Dictionary = ArenaManager.get_rank_data(eval_mmr)
 
 	arena_result_rank_name.text = str(rank_data["name"]).to_upper()
 	arena_result_rank_name.add_theme_color_override("font_color", rank_data["color"])
-	arena_result_rating_label.text = "RATING %d MMR" % mmr_int
-	
-	# --- NEW: APPLY COLOR TO STANDARD PROGRESS BAR ---
-	var fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = rank_data["color"]
-	# Optional: Give it slightly rounded corners so it looks nicer!
-	fill_style.corner_radius_top_left = 4
-	fill_style.corner_radius_top_right = 4
-	fill_style.corner_radius_bottom_left = 4
-	fill_style.corner_radius_bottom_right = 4
-	arena_result_bar.add_theme_stylebox_override("fill", fill_style)
-	# -------------------------------------------------
+	arena_result_rating_label.text = "Rating · %d MMR" % mmr_int
 
-	# Calculate the percentage based on the locked rank's boundaries
-	var r_min = float(rank_data["min"])
-	var r_max = float(rank_data["max"])
-	var span = max(1.0, r_max - r_min)
-	var ratio = clamp((float(mmr_int) - r_min) / span, 0.0, 1.0)
-	
+	_style_arena_rank_progress_bar(rank_data)
+
+	var r_min: float = float(rank_data["min"])
+	var r_max: float = float(rank_data["max"])
+	var span: float = max(1.0, r_max - r_min)
+	var ratio: float = clamp((float(mmr_int) - r_min) / span, 0.0, 1.0)
+
 	arena_result_bar.value = ratio * 100.0
 	arena_result_bar_value.text = "%d%%" % int(round(ratio * 100.0))
-	
-	var icon = ArenaManager.get_rank_icon(eval_mmr)
-	if icon: arena_result_rank_icon.texture = icon
+
+	var icon_tex = ArenaManager.get_rank_icon(eval_mmr)
+	if icon_tex:
+		arena_result_rank_icon.texture = icon_tex
 		
 func _play_rank_stamp(current_visual_mmr: float, target_mmr: int, went_up: bool) -> void:
-	var rank_data = ArenaManager.get_rank_data(target_mmr)
-	var rank_name = rank_data["name"]
-	var rank_color = rank_data["color"]
-	
-	arena_result_stamp.text = ("RANK UP! " if went_up else "RANK DOWN! ") + rank_name.to_upper()
-	arena_result_stamp.add_theme_color_override("font_color", rank_color)
+	var rank_data: Dictionary = ArenaManager.get_rank_data(target_mmr)
+	var rank_name: String = str(rank_data["name"])
+	var rank_color: Color = rank_data["color"]
+
+	arena_result_stamp.custom_minimum_size = Vector2(520, 0)
+	arena_result_stamp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	arena_result_stamp.text = ("RANK UP — " if went_up else "RANK DOWN — ") + rank_name.to_upper()
+	arena_result_stamp.add_theme_font_size_override("font_size", 44)
+	arena_result_stamp.add_theme_constant_override("outline_size", 4)
+	arena_result_stamp.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.015, 0.96))
+	arena_result_stamp.add_theme_color_override("font_color", rank_color.lightened(0.08))
 	arena_result_stamp.show()
-	
+	await get_tree().process_frame
+	arena_result_stamp.pivot_offset = Vector2(arena_result_stamp.size.x * 0.5, arena_result_stamp.size.y * 0.5)
+
 	if went_up:
-		arena_result_stamp.scale = Vector2(8, 8)
+		arena_result_stamp.scale = Vector2(10.0, 10.0)
 		arena_result_stamp.modulate.a = 0.0
-		
-		var s_tw = create_tween()
-		# Anticipation Hover
-		s_tw.tween_property(arena_result_stamp, "modulate:a", 1.0, 0.2)
-		s_tw.parallel().tween_property(arena_result_stamp, "scale", Vector2(4, 4), 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		# The Slam Down
-		s_tw.tween_property(arena_result_stamp, "scale", Vector2(0.9, 0.9), 0.15).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
-		
-		# --- THE IMPACT FIX ---
-		# Wait exactly 0.55s (0.4 hover + 0.15 slam) for the stamp to hit the UI!
-		await get_tree().create_timer(0.55).timeout
-		
-		# SWAP THE ICON & COLORS EXACTLY ON IMPACT
+		arena_result_stamp.rotation = -0.18
+
+		var s_tw: Tween = create_tween()
+		s_tw.tween_property(arena_result_stamp, "modulate:a", 1.0, 0.18)
+		s_tw.parallel().tween_property(arena_result_stamp, "rotation", 0.06, 0.38).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		s_tw.parallel().tween_property(arena_result_stamp, "scale", Vector2(4.2, 4.2), 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		s_tw.tween_property(arena_result_stamp, "scale", Vector2(0.82, 0.82), 0.14).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+		s_tw.parallel().tween_property(arena_result_stamp, "rotation", 0.0, 0.14).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+
+		await get_tree().create_timer(0.56).timeout
+
 		_set_result_meter_from_mmr(current_visual_mmr, target_mmr)
-		
-		# Bounce the stamp back up to normal size
-		var bounce_tw = create_tween()
-		bounce_tw.tween_property(arena_result_stamp, "scale", Vector2(1.0, 1.0), 0.2).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		_arena_epic_dimmer_pulse_rank(rank_color)
+		_configure_epic_spark_burst(rank_color)
+		if arena_result_epic_spark != null:
+			arena_result_epic_spark.emitting = true
 
-		if token_buy_sound: 
-			token_buy_sound.pitch_scale = 1.3 
+		var bounce_tw: Tween = create_tween()
+		bounce_tw.set_parallel(true)
+		bounce_tw.tween_property(arena_result_stamp, "scale", Vector2(1.0, 1.0), 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		bounce_tw.tween_property(arena_result_stamp, "rotation", 0.0, 0.28)
+
+		if token_buy_sound != null:
+			token_buy_sound.pitch_scale = 1.35
 			token_buy_sound.play()
-			
-		if arena_result_burst: 
-			arena_result_burst.emitting = true
-			
-		# Bounce the new Rank Icon
-		if arena_result_rank_icon:
-			arena_result_rank_icon.pivot_offset = arena_result_rank_icon.size / 2.0
-			var icon_tw = create_tween()
-			icon_tw.tween_property(arena_result_rank_icon, "scale", Vector2(1.5, 1.5), 0.1).set_trans(Tween.TRANS_ELASTIC)
-			icon_tw.tween_property(arena_result_rank_icon, "scale", Vector2(1.0, 1.0), 0.5).set_trans(Tween.TRANS_BOUNCE)
 
-		# Screen Shake
-		var original_pos = arena_result_panel.position
-		var shake = create_tween()
-		for i in range(8):
-			var offset = Vector2(randf_range(-25, 25), randf_range(-25, 25))
-			shake.tween_property(arena_result_panel, "position", original_pos + offset, 0.03)
-		shake.tween_property(arena_result_panel, "position", original_pos, 0.03)
-		
-		# Golden Flash
-		if arena_result_flash:
-			arena_result_flash.color = Color(1.0, 0.9, 0.5, 1.0)
+		_configure_arena_burst(rank_color.lerp(CampUiSkin.CAMP_BORDER, 0.35), true)
+		if arena_result_burst != null:
+			arena_result_burst.emitting = true
+
+		if arena_result_rank_icon != null:
+			arena_result_rank_icon.pivot_offset = arena_result_rank_icon.size * 0.5
+			var icon_tw: Tween = create_tween()
+			icon_tw.tween_property(arena_result_rank_icon, "scale", Vector2(1.65, 1.65), 0.12).set_trans(Tween.TRANS_ELASTIC)
+			icon_tw.tween_property(arena_result_rank_icon, "scale", Vector2(1.0, 1.0), 0.55).set_trans(Tween.TRANS_BOUNCE)
+
+		var punch: Tween = create_tween()
+		punch.tween_property(arena_result_panel, "scale", Vector2(1.04, 1.04), 0.06)
+		punch.tween_property(arena_result_panel, "scale", Vector2(1.0, 1.0), 0.22).set_trans(Tween.TRANS_ELASTIC)
+
+		var base: Vector2 = _arena_result_panel_rest_pos
+		var shake: Tween = create_tween()
+		for _i in range(12):
+			var offset: Vector2 = Vector2(randf_range(-32.0, 32.0), randf_range(-28.0, 28.0))
+			shake.tween_property(arena_result_panel, "position", base + offset, 0.028)
+		shake.tween_property(arena_result_panel, "position", base, 0.04)
+
+		await bounce_tw.finished
+
+		if arena_result_flash != null:
+			var flash_col: Color = rank_color.lerp(Color(1.0, 0.92, 0.55, 1.0), 0.45)
+			arena_result_flash.color = flash_col
 			arena_result_flash.show()
 			arena_result_flash.modulate.a = 1.0
-			var flash_tw = create_tween()
-			flash_tw.tween_property(arena_result_flash, "modulate:a", 0.0, 0.8)
+			var flash_tw: Tween = create_tween()
+			flash_tw.tween_property(arena_result_flash, "modulate:a", 0.0, 0.72).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			await flash_tw.finished
 			arena_result_flash.hide()
-			
 	else:
-		# Sad Rank Down Sequence
-		arena_result_stamp.scale = Vector2(2.5, 2.5)
+		arena_result_stamp.scale = Vector2(3.2, 3.2)
 		arena_result_stamp.modulate.a = 0.0
-		
-		var s_tw = create_tween().set_parallel(true)
-		s_tw.tween_property(arena_result_stamp, "scale", Vector2(1,1), 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-		s_tw.tween_property(arena_result_stamp, "modulate:a", 1.0, 0.3)
-		
-		await get_tree().create_timer(0.5).timeout
-		
-		# Swap Icon on impact
+		arena_result_stamp.rotation = 0.12
+		var start_top: float = arena_result_stamp.offset_top
+		arena_result_stamp.offset_top = start_top - 120.0
+
+		var s_tw2: Tween = create_tween()
+		s_tw2.set_parallel(true)
+		s_tw2.tween_property(arena_result_stamp, "offset_top", start_top, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		s_tw2.tween_property(arena_result_stamp, "scale", Vector2(1.0, 1.0), 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		s_tw2.tween_property(arena_result_stamp, "modulate:a", 1.0, 0.35)
+		s_tw2.tween_property(arena_result_stamp, "rotation", -0.04, 0.5).set_trans(Tween.TRANS_ELASTIC)
+
+		await get_tree().create_timer(0.52).timeout
+
 		_set_result_meter_from_mmr(current_visual_mmr, target_mmr)
-		
-		if token_buy_sound: 
-			token_buy_sound.pitch_scale = 0.5 
+
+		if token_buy_sound != null:
+			token_buy_sound.pitch_scale = 0.52
 			token_buy_sound.play()
-		
-		var original_pos = arena_result_panel.position
-		var shake = create_tween()
-		for i in range(3):
-			var offset = Vector2(randf_range(-5, 5), randf_range(-5, 5))
-			shake.tween_property(arena_result_panel, "position", original_pos + offset, 0.05)
-		shake.tween_property(arena_result_panel, "position", original_pos, 0.05)
-		await shake.finished
+
+		_configure_arena_burst(Color(0.45, 0.55, 0.78, 1.0), false)
+		if arena_result_burst != null:
+			arena_result_burst.emitting = true
+
+		var base2: Vector2 = _arena_result_panel_rest_pos
+		var shake2: Tween = create_tween()
+		for _j in range(7):
+			var off2: Vector2 = Vector2(randf_range(-14.0, 14.0), randf_range(-12.0, 12.0))
+			shake2.tween_property(arena_result_panel, "position", base2 + off2, 0.04)
+		shake2.tween_property(arena_result_panel, "position", base2, 0.05)
+		await shake2.finished
+
+		if arena_result_flash != null:
+			arena_result_flash.color = Color(0.35, 0.42, 0.55, 1.0).lerp(rank_color, 0.25)
+			arena_result_flash.show()
+			arena_result_flash.modulate.a = 0.85
+			var flash2: Tween = create_tween()
+			flash2.tween_property(arena_result_flash, "modulate:a", 0.0, 0.65)
+			await flash2.finished
+			arena_result_flash.hide()
 				
 # ==========================================
 # --- MATCHMAKING & LOBBY ---
 # ==========================================
 
 func _on_back_pressed() -> void:
+	_hide_unit_info_panel_immediate()
 	_close_auction_house()
 	SceneTransition.change_scene_to_file("res://Scenes/UI/WorldMap.tscn")
+
+
+func _layout_arena_setup_feedback_nodes() -> void:
+	if arena_setup_panel == null:
+		return
+	if _arena_setup_instruction_label != null and is_instance_valid(_arena_setup_instruction_label):
+		_arena_setup_instruction_label.position = Vector2(20, 56)
+		_arena_setup_instruction_label.size = Vector2(600, 44)
+	if _arena_setup_identity_label != null and is_instance_valid(_arena_setup_identity_label):
+		_arena_setup_identity_label.position = Vector2(20, 102)
+		_arena_setup_identity_label.size = Vector2(600, 32)
+	if _arena_setup_lock_banner != null and is_instance_valid(_arena_setup_lock_banner):
+		_arena_setup_lock_banner.position = Vector2(20, 580)
+		_arena_setup_lock_banner.size = Vector2(600, 60)
+
+
+func _ensure_arena_setup_feedback_nodes() -> void:
+	if arena_setup_panel == null:
+		return
+	if _arena_setup_instruction_label != null and is_instance_valid(_arena_setup_instruction_label):
+		_layout_arena_setup_feedback_nodes()
+		return
+	var inst: Label = Label.new()
+	inst.name = "ArenaSetupInstruction"
+	inst.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inst.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	inst.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	CampUiSkin.style_label(inst, CampUiSkin.CAMP_MUTED, 15, 0)
+	arena_setup_panel.add_child(inst)
+	_arena_setup_instruction_label = inst
+
+	var ident: Label = Label.new()
+	ident.name = "ArenaIdentityLine"
+	ident.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ident.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ident.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	CampUiSkin.style_label(ident, CampUiSkin.CAMP_ACCENT_CYAN, 13, 0)
+	arena_setup_panel.add_child(ident)
+	_arena_setup_identity_label = ident
+
+	var ban: Label = Label.new()
+	ban.name = "ArenaLockBanner"
+	ban.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ban.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ban.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	CampUiSkin.style_label(ban, CampUiSkin.CAMP_TEXT, 16, 0)
+	arena_setup_panel.add_child(ban)
+	_arena_setup_lock_banner = ban
+	_layout_arena_setup_feedback_nodes()
+
 
 func _open_setup_panel() -> void:
 	_close_auction_house()
 	selected_team.clear()
+	for u in ArenaManager.local_arena_team:
+		if u != null:
+			selected_team.append(u)
 	_refresh_setup_ui()
 	arena_setup_panel.show()
-	
+
 
 func _refresh_setup_ui() -> void:
+	_ensure_arena_setup_feedback_nodes()
+	if arena_setup_title_label != null:
+		arena_setup_title_label.text = "MULTIVERSE ROSTER"
+	if _arena_setup_instruction_label != null:
+		_arena_setup_instruction_label.text = "Tap units to fill up to three slots. Locking in uploads your roster to the Silent Wolf board so other players can fight your ghost."
+	if _arena_setup_identity_label != null and ArenaManager.has_method("get_arena_identity_blurb"):
+		_arena_setup_identity_label.text = ArenaManager.get_arena_identity_blurb()
+
 	for child in roster_grid.get_children(): child.queue_free()
 	for child in team_grid.get_children(): child.queue_free()
 	
@@ -3048,11 +3621,21 @@ func _refresh_setup_ui() -> void:
 		btn.custom_minimum_size = Vector2(80, 80)
 		var display_name: String = unit.get("unit_name", unit.get("name", "???"))
 		btn.text = display_name.substr(0, 4)
+		CampUiSkin.style_button(btn, false, 14, 80)
+		btn.add_theme_constant_override("outline_size", 1)
 		btn.mouse_entered.connect(func(): _update_unit_info(unit))
+		btn.mouse_exited.connect(_schedule_unit_info_hide)
 		btn.pressed.connect(func():
-			if selected_team.size() < 3:
-				selected_team.append(unit)
-				_refresh_setup_ui()
+			if selected_team.size() >= 3:
+				return
+			if select_sound:
+				select_sound.pitch_scale = 1.08
+				select_sound.play()
+			selected_team.append(unit)
+			var new_slot_i: int = selected_team.size() - 1
+			_refresh_setup_ui()
+			_update_unit_info(unit)
+			call_deferred("_arena_setup_animate_team_slot_by_index", new_slot_i)
 		)
 		roster_grid.add_child(btn)
 		
@@ -3062,40 +3645,104 @@ func _refresh_setup_ui() -> void:
 		if i < selected_team.size():
 			var chosen_unit = selected_team[i]
 			b.text = chosen_unit.get("unit_name", chosen_unit.get("name", "???"))
-			b.modulate = Color(0.4, 0.8, 1.0, 1.0)
+			CampUiSkin.style_button(b, true, 14, 100)
+			b.add_theme_constant_override("outline_size", 1)
 			b.mouse_entered.connect(func(): _update_unit_info(chosen_unit))
+			b.mouse_exited.connect(_schedule_unit_info_hide)
 			b.pressed.connect(func():
+				if select_sound:
+					select_sound.pitch_scale = 0.94
+					select_sound.play()
 				selected_team.erase(chosen_unit)
 				_refresh_setup_ui()
 			)
 		else:
 			b.text = "Empty"
 			b.disabled = true
+			CampUiSkin.style_button(b, false, 14, 100)
+			b.add_theme_constant_override("outline_size", 1)
+			b.mouse_entered.connect(_hide_unit_info_panel_immediate)
 		team_grid.add_child(b)
-		
-	confirm_team_btn.disabled = selected_team.is_empty()
+
+	var n: int = selected_team.size()
+	if _arena_setup_lock_banner != null:
+		if n <= 0:
+			_arena_setup_lock_banner.text = "Pick at least one fighter or dragon, then lock in to publish your team."
+			_arena_setup_lock_banner.add_theme_color_override("font_color", Color(0.92, 0.78, 0.42, 1.0))
+		elif n < 3:
+			_arena_setup_lock_banner.text = "Squad %d/3 — add more for a full trio, or lock in now with a partial team." % n
+			_arena_setup_lock_banner.add_theme_color_override("font_color", Color(0.95, 0.88, 0.55, 1.0))
+		else:
+			_arena_setup_lock_banner.text = "Full squad — lock in to upload and load challengers."
+			_arena_setup_lock_banner.add_theme_color_override("font_color", CampUiSkin.CAMP_ACCENT_GREEN)
+
+	if confirm_team_btn != null:
+		confirm_team_btn.disabled = selected_team.is_empty()
+		if n <= 0:
+			confirm_team_btn.text = "LOCK TEAM & FIND CHALLENGERS"
+			confirm_team_btn.tooltip_text = "Choose at least one unit from the roster above."
+		elif n < 3:
+			confirm_team_btn.text = "LOCK IN (%d/3) — FIND CHALLENGERS" % n
+			confirm_team_btn.tooltip_text = "Optional: fill all three slots. You can lock now or add more fighters first."
+		else:
+			confirm_team_btn.text = "LOCK TEAM & FIND CHALLENGERS"
+			confirm_team_btn.tooltip_text = "Uploads your snapshot to the Multiverse board and searches for opponents."
+		CampUiSkin.style_button(confirm_team_btn, true, 18, 52)
+		confirm_team_btn.add_theme_constant_override("outline_size", 1)
+
 	var current_mmr = ArenaManager.get_local_mmr()
 	var rank_data = ArenaManager.get_rank_data(current_mmr)
 	var current_power = ArenaManager._calculate_combat_power(selected_team)
-	
+
 	var stats_lbl = arena_setup_panel.get_node_or_null("TeamStatsLabel")
 	if stats_lbl == null:
 		stats_lbl = RichTextLabel.new()
 		stats_lbl.name = "TeamStatsLabel"
 		stats_lbl.bbcode_enabled = true
-		stats_lbl.custom_minimum_size = Vector2(400, 80)
-		stats_lbl.add_theme_font_size_override("normal_font_size", 22)
-		stats_lbl.position = Vector2(confirm_team_btn.position.x, confirm_team_btn.position.y - 80)
+		stats_lbl.custom_minimum_size = Vector2(600, 80)
+		stats_lbl.position = Vector2(20, 448)
 		arena_setup_panel.add_child(stats_lbl)
-		
-	var hex_color = rank_data["color"].to_html(false)
-	stats_lbl.text = "[center][b]Rank:[/b] [color=#%s]%s[/color] (%d MMR)\n[b]Power:[/b] %d[/center]" % [hex_color, rank_data["name"], current_mmr, current_power]
-	
+	CampUiSkin.style_rich_label_flat(stats_lbl, 15, false)
+	stats_lbl.add_theme_constant_override("line_separation", 6)
+	stats_lbl.add_theme_constant_override("outline_size", 0)
+	var stat_panel := CampUiSkin.make_panel_style(CampUiSkin.CAMP_PANEL_BG_SOFT, CampUiSkin.CAMP_BORDER_SOFT, 14, 0)
+	stat_panel.content_margin_top = 10
+	stat_panel.content_margin_bottom = 10
+	stat_panel.content_margin_left = 14
+	stat_panel.content_margin_right = 14
+	stats_lbl.add_theme_stylebox_override("normal", stat_panel)
+	stats_lbl.fit_content = false
+	stats_lbl.position = Vector2(20, 448)
+	stats_lbl.custom_minimum_size = Vector2(600, 80)
+
+	var hex_color: String = rank_data["color"].to_html(false)
+	var muted_hex: String = CampUiSkin.CAMP_MUTED.to_html(false)
+	stats_lbl.text = (
+		"[center][color=#%s]Rank[/color]  [color=#%s]%s[/color]  ·  %d MMR\n"
+		+ "[color=#%s]Power[/color]  %d[/center]"
+	) % [muted_hex, hex_color, rank_data["name"], current_mmr, muted_hex, current_power]
+
 	token_display.text = "Gladiator Tokens: %d" % CampaignManager.gladiator_tokens
-	token_display.add_theme_color_override("font_color", Color(1.0, 0.65, 0.0))
+	CampUiSkin.style_label(token_display, CampUiSkin.CAMP_ACTION_PRIMARY.lightened(0.12), 16, 0)
+
+	call_deferred("_arena_setup_pulse_stats_readout")
+
+
+func _arena_setup_pulse_stats_readout() -> void:
+	if arena_setup_panel == null or not arena_setup_panel.visible:
+		return
+	var sl: Control = arena_setup_panel.get_node_or_null("TeamStatsLabel") as Control
+	if sl == null:
+		return
+	sl.modulate.a = 0.55
+	var tw2: Tween = create_tween()
+	tw2.tween_property(sl, "modulate:a", 1.0, 0.24).set_trans(Tween.TRANS_SINE)
+
 
 func _update_unit_info(unit) -> void:
-	if unit_info_panel: unit_info_panel.show()
+	_cancel_unit_info_hide()
+	if unit_info_panel:
+		unit_info_panel.show()
 	
 	var u_name = "Unknown"; var u_class = "Unknown"; var u_lvl = 1
 	var m_hp = 10; var c_hp = 10
@@ -3170,31 +3817,186 @@ func _update_unit_info(unit) -> void:
 	info_weapon.text = "Weapon: %s" % str(wpn_name)
 				
 func _lock_team_and_search() -> void:
-	if selected_team.is_empty(): return
+	if selected_team.is_empty():
+		return
 	ArenaManager.local_arena_team = selected_team.duplicate()
 	arena_setup_panel.hide()
+	_hide_unit_info_panel_immediate()
 	arena_panel.show()
-	status_label.text = "Uploading team..."
+	status_label.text = "Publishing your roster to the Multiverse board…"
 	confirm_team_btn.disabled = true
 	await ArenaManager.push_team_to_cloud(selected_team)
+	CampaignManager.arena_locked_team_identity = ArenaManager.build_arena_team_identity(selected_team)
+	if CampaignManager.active_save_slot >= 0:
+		CampaignManager.save_game(CampaignManager.active_save_slot, true)
 	_fetch_matches()
 
 func _fetch_matches() -> void:
-	for child in opponent_container.get_children(): child.queue_free()
+	_hide_arena_opponent_confirm()
+	for child in opponent_container.get_children():
+		child.queue_free()
 	refresh_matches_button.disabled = true
-	var opponents = await ArenaManager.fetch_arena_opponents()
+	status_label.text = "Searching for challengers…"
+
+	if not has_node("/root/SilentWolf"):
+		refresh_matches_button.disabled = false
+		if confirm_team_btn:
+			confirm_team_btn.disabled = false
+		status_label.text = "Online arena needs Silent Wolf. Check your connection or project autoloads."
+		return
+
+	var opponents: Array = await ArenaManager.fetch_arena_opponents()
 	refresh_matches_button.disabled = false
-	status_label.text = "Select an opponent!"
-	for opp in opponents: _create_opponent_card(opp)
+	if confirm_team_btn:
+		confirm_team_btn.disabled = false
+
+	if opponents.is_empty():
+		status_label.text = ArenaManager.last_opponent_fetch_hint if ArenaManager.last_opponent_fetch_hint != "" else "No opponents found. Try Search for Challengers again."
+	else:
+		status_label.text = "Select an opponent!"
+		for opp in opponents:
+			_create_opponent_card(opp)
+
+
+func _hide_arena_opponent_confirm() -> void:
+	_arena_opp_confirm_pending.clear()
+	if _arena_opp_confirm_panel != null and is_instance_valid(_arena_opp_confirm_panel):
+		_arena_opp_confirm_panel.hide()
+
+
+func _ensure_arena_opponent_confirm_ui() -> void:
+	if arena_panel == null:
+		return
+	if _arena_opp_confirm_panel != null and is_instance_valid(_arena_opp_confirm_panel):
+		return
+	var p := Panel.new()
+	p.name = "ArenaOpponentConfirmPanel"
+	p.visible = false
+	p.z_index = 14
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	arena_panel.add_child(p)
+	p.anchor_left = 0.5
+	p.anchor_top = 0.5
+	p.anchor_right = 0.5
+	p.anchor_bottom = 0.5
+	p.offset_left = -340.0
+	p.offset_top = -210.0
+	p.offset_right = 340.0
+	p.offset_bottom = 210.0
+	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	p.grow_vertical = Control.GROW_DIRECTION_BOTH
+	CampUiSkin.style_panel_surface(p, CampUiSkin.CAMP_PANEL_BG_ALT, CampUiSkin.CAMP_BORDER, 20, 10)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	p.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "Start this duel?"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	CampUiSkin.style_label(title, CampUiSkin.CAMP_ACCENT_CYAN, 22, 1)
+	vbox.add_child(title)
+
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = false
+	rtl.scroll_active = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rtl.custom_minimum_size = Vector2(560, 140)
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	CampUiSkin.style_rich_label_flat(rtl, 15, false)
+	rtl.add_theme_constant_override("line_separation", 6)
+	rtl.add_theme_constant_override("outline_size", 0)
+	vbox.add_child(rtl)
+	_arena_opp_confirm_richtext = rtl
+
+	var h := HBoxContainer.new()
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_theme_constant_override("separation", 18)
+	var btn_no := Button.new()
+	btn_no.text = "Not yet"
+	CampUiSkin.style_button(btn_no, false, 17, 48, 26, 16)
+	var btn_yes := Button.new()
+	btn_yes.text = "Fight!"
+	CampUiSkin.style_button(btn_yes, true, 18, 52, 26, 16)
+	h.add_child(btn_no)
+	h.add_child(btn_yes)
+	vbox.add_child(h)
+
+	btn_no.pressed.connect(_on_arena_opp_confirm_no)
+	btn_yes.pressed.connect(_on_arena_opp_confirm_yes)
+
+	_arena_opp_confirm_panel = p
+
+
+func _show_arena_opponent_confirm(opp_data: Dictionary) -> void:
+	_ensure_arena_opponent_confirm_ui()
+	if _arena_opp_confirm_panel == null or _arena_opp_confirm_richtext == null:
+		return
+	var od: Dictionary = opp_data.duplicate(true)
+	var meta: Dictionary = od.get("metadata", {})
+	var opp_mmr: int = ArenaManager.sanitize_leaderboard_score_mmr(od.get("score", 1000))
+	od["score"] = opp_mmr
+	var local_mmr: int = ArenaManager.get_local_mmr()
+	var mmr_diff: int = opp_mmr - local_mmr
+	var detail: Dictionary = ArenaManager.get_opponent_difficulty_detail(mmr_diff)
+	var gap_hex: String = detail["color"].to_html(false)
+	var m_hex: String = CampUiSkin.CAMP_MUTED.to_html(false)
+	var t_hex: String = CampUiSkin.CAMP_TEXT.to_html(false)
+	var opp_name: String = str(meta.get("player_name", "Unknown"))
+	var abs_gap: int = absi(mmr_diff)
+	var summary: String
+	if abs_gap <= 50:
+		summary = "Similar rating — within 50 MMR."
+	elif mmr_diff > 0:
+		summary = "They are rated higher than you."
+	else:
+		summary = "You are rated higher than them."
+	var signed_gap: String = ArenaManager.format_signed(mmr_diff)
+
+	_arena_opp_confirm_richtext.text = (
+		"[center][color=#%s]%s[/color]\n\n"
+		+ "[color=#%s]Your MMR[/color]  %d   ·   [color=#%s]Their MMR[/color]  %d\n\n"
+		+ "[color=#%s]%s[/color]\n"
+		+ "[color=#%s]MMR gap: %s[/color] [color=#%s](their MMR minus yours)[/color][/center]"
+	) % [
+		t_hex, opp_name,
+		m_hex, local_mmr, m_hex, opp_mmr,
+		gap_hex, summary,
+		gap_hex, signed_gap, m_hex
+	]
+	_arena_opp_confirm_pending = od
+	_arena_opp_confirm_panel.show()
+
+
+func _on_arena_opp_confirm_yes() -> void:
+	if _arena_opp_confirm_pending.is_empty():
+		return
+	ArenaManager.current_opponent_data = _arena_opp_confirm_pending.duplicate(true)
+	_hide_arena_opponent_confirm()
+	SceneTransition.change_scene_to_file("res://Scenes/Levels/ArenaLevel.tscn")
+
+
+func _on_arena_opp_confirm_no() -> void:
+	_hide_arena_opponent_confirm()
+
 
 # --- AI/Reviewer: Builds a single arena opponent card. Entry: _create_opponent_card(opp_data).
 # Uses ArenaManager player-experience API: get_opponent_difficulty_label, get_estimated_rewards, get_rank_data.
 # Layout: rank badge, name, MMR/power, difficulty, then win/loss reward estimates.
 ## Creates a button card for one arena opponent and adds it to opponent_container.
 ##
-## Purpose: Display opponent rank, name, MMR, power, difficulty label, and estimated win/loss rewards
-## so the player can choose who to fight with full context. Uses ArenaManager.get_opponent_difficulty_label
-## and ArenaManager.get_estimated_rewards for the new player-experience data.
+## Purpose: Display opponent rank, name, MMR, power, difficulty label, optional power matchup hint
+## (ArenaManager.get_power_matchup_hint vs local_power_rating), and estimated win/loss rewards.
+## Uses ArenaManager.get_opponent_difficulty_label and ArenaManager.get_estimated_rewards.
 ##
 ## Inputs:
 ##   opp_data (Dictionary): Score entry from fetch_arena_opponents; must have "score" (MMR) and "metadata"
@@ -3202,50 +4004,93 @@ func _fetch_matches() -> void:
 ##
 ## Outputs: None.
 ##
-## Side effects: Adds a new Button to opponent_container; connects pressed to set current_opponent_data
-## and change scene to ArenaLevel.
+## Side effects: Adds a clickable PanelContainer card to opponent_container; click loads ArenaLevel.
+func _arena_opponent_card_gui_input(event: InputEvent, opp_data: Dictionary) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_show_arena_opponent_confirm(opp_data)
+
+
 func _create_opponent_card(opp_data: Dictionary) -> void:
-	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(0, 120)
+	# Panel + RichTextLabel (not a single tinted Button) — readable type, rank color only on tier name.
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	CampUiSkin.style_panel_surface(card, CampUiSkin.CAMP_PANEL_BG_SOFT, CampUiSkin.CAMP_BORDER_SOFT, 16, 0)
+	card.gui_input.connect(_arena_opponent_card_gui_input.bind(opp_data))
 
-	# Resolve opponent identity and MMR from leaderboard payload.
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(margin)
+
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = true
+	rtl.scroll_active = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	CampUiSkin.style_rich_label_flat(rtl, 14, false)
+	rtl.add_theme_constant_override("line_separation", 5)
+	rtl.add_theme_constant_override("outline_size", 0)
+	margin.add_child(rtl)
+
 	var meta: Dictionary = opp_data.get("metadata", {})
-	var opp_name: String = meta.get("player_name", "Unknown")
-	var opp_mmr: int = int(opp_data.get("score", 1000))
+	var opp_name: String = str(meta.get("player_name", "Unknown"))
+	var opp_mmr: int = ArenaManager.sanitize_leaderboard_score_mmr(opp_data.get("score", 1000))
+	opp_data["score"] = opp_mmr
 	var power: int = int(meta.get("power_rating", 0))
+	var local_power: int = int(ArenaManager.local_power_rating)
+	var power_hint: String = ArenaManager.get_power_matchup_hint(local_power, power)
 
-	# Rank display: same tier badge and color as elsewhere (get_rank_data from ArenaManager).
 	var rank_data: Dictionary = ArenaManager.get_rank_data(opp_mmr)
-	var rank_label: String = rank_data["name"].to_upper()
-
-	# Difficulty: from local player's perspective (positive diff = opponent stronger).
 	var local_mmr: int = ArenaManager.get_local_mmr()
 	var mmr_diff: int = opp_mmr - local_mmr
 	var difficulty: String = ArenaManager.get_opponent_difficulty_label(mmr_diff)
+	var diff_disp: String = difficulty.strip_edges()
+	if diff_disp.length() > 0 and diff_disp == diff_disp.to_upper():
+		diff_disp = diff_disp.to_lower().capitalize()
 
-	# Estimated rewards for win/loss so the player knows what they're playing for.
 	var rewards: Dictionary = ArenaManager.get_estimated_rewards(opp_mmr)
-	var win_mmr: int = rewards.get("mmr_on_win", 15)
-	var loss_mmr: int = rewards.get("mmr_on_loss", -5)
-	var win_gold: int = rewards.get("gold_on_win", 50)
-	# Format signed MMR for display (e.g. "+15", "-5").
+	var win_mmr: int = int(rewards.get("mmr_on_win", 15))
+	var loss_mmr: int = int(rewards.get("mmr_on_loss", -5))
+	var win_gold: int = int(rewards.get("gold_on_win", 50))
+	var win_tokens: int = int(rewards.get("tokens_on_win", 1))
 	var win_mmr_str: String = ArenaManager.format_signed(win_mmr)
 	var loss_mmr_str: String = ArenaManager.format_signed(loss_mmr)
 
-	# Assemble card text: rank, name, MMR/power, difficulty, then win | loss rewards.
-	btn.text = "[ %s ] %s\nMMR: %d | Power: %d\nDifficulty: %s\nWin: %s MMR, +%d Gold | Loss: %s MMR" % [
-		rank_label, opp_name, opp_mmr, power, difficulty,
-		win_mmr_str, win_gold, loss_mmr_str
-	]
-	btn.add_theme_color_override("font_color", rank_data["color"])
+	var m_hex: String = CampUiSkin.CAMP_MUTED.to_html(false)
+	var t_hex: String = CampUiSkin.CAMP_TEXT.to_html(false)
+	var rk_hex: String = rank_data["color"].to_html(false)
+	var rank_name: String = str(rank_data.get("name", "Unknown"))
 
-	btn.pressed.connect(func():
-		ArenaManager.current_opponent_data = opp_data
-		SceneTransition.change_scene_to_file("res://Scenes/Levels/ArenaLevel.tscn")
+	var parts: PackedStringArray = PackedStringArray()
+	parts.append("[color=#%s]Rank[/color]  [color=#%s]%s[/color]" % [m_hex, rk_hex, rank_name])
+	parts.append("[color=#%s]Gladiator[/color]  [color=#%s]%s[/color]" % [m_hex, t_hex, opp_name])
+	parts.append(
+		"[color=#%s]MMR[/color]  %d  ·  [color=#%s]Power[/color]  %d  [color=#%s](you %d)[/color]"
+		% [m_hex, opp_mmr, m_hex, power, m_hex, local_power]
 	)
-	opponent_container.add_child(btn)
+	parts.append("[color=#%s]Matchup[/color]  %s" % [m_hex, diff_disp])
+	var hint_stripped: String = power_hint.strip_edges()
+	if not hint_stripped.is_empty():
+		var hint_show: String = hint_stripped
+		if hint_show == hint_show.to_upper():
+			hint_show = hint_show.to_lower().capitalize()
+		parts.append("[color=#%s]%s[/color]" % [m_hex, hint_show])
+	parts.append(
+		"[color=#%s]Win[/color]  %s MMR · +%d gold · +%d tokens    [color=#%s]Loss[/color]  %s MMR"
+		% [m_hex, win_mmr_str, win_gold, win_tokens, m_hex, loss_mmr_str]
+	)
+	rtl.text = "\n".join(parts)
+
+	opponent_container.add_child(card)
 
 func _show_leaderboard() -> void:
+	_hide_arena_opponent_confirm()
 	leaderboard_panel.show()
 	for child in leaderboard_container.get_children(): child.queue_free()
 	status_label.text = "Fetching champions..."
@@ -3253,8 +4098,10 @@ func _show_leaderboard() -> void:
 	var top_scores = SilentWolf.Scores.scores
 	
 	if top_scores.is_empty():
-		var empty_lbl = Label.new()
+		var empty_lbl := Label.new()
 		empty_lbl.text = "The Arena is currently empty."
+		CampUiSkin.style_label(empty_lbl, CampUiSkin.CAMP_MUTED, 18, 1)
+		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		leaderboard_container.add_child(empty_lbl)
 		return
 
@@ -3263,27 +4110,36 @@ func _show_leaderboard() -> void:
 		_create_leaderboard_row(i + 1, top_scores[i])
 
 func _create_leaderboard_row(rank: int, data: Dictionary) -> void:
-	var h_box = HBoxContainer.new()
-	h_box.custom_minimum_size.y = 50
-	var rank_lbl = Label.new()
-	rank_lbl.text = "#%d " % rank
-	rank_lbl.custom_minimum_size.x = 50
-	if rank == 1: rank_lbl.add_theme_color_override("font_color", Color.GOLD)
-	
-	var name_btn = Button.new()
+	var h_box := HBoxContainer.new()
+	h_box.custom_minimum_size.y = 52
+	h_box.add_theme_constant_override("separation", 10)
+	var rank_lbl := Label.new()
+	rank_lbl.text = "#%d" % rank
+	rank_lbl.custom_minimum_size.x = 44
+	CampUiSkin.style_label(rank_lbl, CampUiSkin.CAMP_TEXT, 17, 1)
+	if rank == 1:
+		rank_lbl.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35, 1.0))
+
+	var name_btn := Button.new()
 	name_btn.text = data.metadata.get("player_name", "Anonymous")
-	name_btn.flat = true; name_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	name_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_btn.add_theme_color_override("font_color", Color.CYAN)
+	CampUiSkin.style_button(name_btn, false, 16, 44)
+	name_btn.add_theme_color_override("font_color", CampUiSkin.CAMP_ACCENT_CYAN)
+	name_btn.add_theme_color_override("font_hover_color", CampUiSkin.CAMP_TEXT)
 	name_btn.pressed.connect(func(): _inspect_ghost_team(data))
-	
-	var mmr_lbl = Label.new()
-	var mmr_val = int(data.score)
-	var rank_info = ArenaManager.get_rank_data(mmr_val)
+
+	var mmr_lbl := Label.new()
+	var mmr_val: int = int(data.score)
+	var rank_info: Dictionary = ArenaManager.get_rank_data(mmr_val)
 	mmr_lbl.text = "%d MMR" % mmr_val
-	mmr_lbl.add_theme_color_override("font_color", rank_info["color"])
-	
-	h_box.add_child(rank_lbl); h_box.add_child(name_btn); h_box.add_child(mmr_lbl)
+	CampUiSkin.style_label(mmr_lbl, rank_info["color"], 16, 1)
+	mmr_lbl.custom_minimum_size.x = 120
+	mmr_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	h_box.add_child(rank_lbl)
+	h_box.add_child(name_btn)
+	h_box.add_child(mmr_lbl)
 	leaderboard_container.add_child(h_box)
 
 func _inspect_ghost_team(data: Dictionary) -> void:
@@ -3293,15 +4149,17 @@ func _inspect_ghost_team(data: Dictionary) -> void:
 	
 	ghost_title.text = meta.get("player_name", "Gladiator") + "'s Team"
 	for unit_data in full_team:
-		var unit_btn = Button.new()
+		var unit_btn := Button.new()
 		unit_btn.custom_minimum_size = Vector2(100, 100)
-		var u_name = unit_data.get("unit_name", unit_data.get("name", "Unknown"))
-		unit_btn.text = "%s\nLv.%d" % [u_name.substr(0,8), unit_data.get("level", 1)]
-		
+		var u_name: String = unit_data.get("unit_name", unit_data.get("name", "Unknown"))
+		unit_btn.text = "%s\nLv.%d" % [u_name.substr(0, 8), unit_data.get("level", 1)]
+		CampUiSkin.style_button(unit_btn, false, 13, 100)
 		if unit_data.has("portrait_path") and ResourceLoader.exists(unit_data["portrait_path"]):
-			unit_btn.icon = load(unit_data["portrait_path"]); unit_btn.expand_icon = true
-		
+			unit_btn.icon = load(unit_data["portrait_path"])
+			unit_btn.expand_icon = true
+
 		unit_btn.mouse_entered.connect(func(): _update_unit_info(unit_data))
+		unit_btn.mouse_exited.connect(_schedule_unit_info_hide)
 		ghost_team_grid.add_child(unit_btn)
 	ghost_inspect_panel.show()	
 
@@ -3316,9 +4174,11 @@ func _refresh_gladiator_badge() -> void:
 	streak_badge.visible = CampaignManager.arena_win_streak >= 3
 
 func _close_arena() -> void:
+	_hide_arena_opponent_confirm()
 	arena_setup_panel.hide()
 	arena_panel.hide()
-	
+	_hide_unit_info_panel_immediate()
+
 	# --- SMOOTH MUSIC SWAP: Arena back to City ---
 	_crossfade_music(arena_bgm, city_bgm)
 
@@ -3583,6 +4443,7 @@ func _claim_rank_reward(rank_idx: int, btn: Button) -> void:
 # ==========================================
 func _open_tavern() -> void:
 	if select_sound: select_sound.play()
+	_hide_unit_info_panel_immediate()
 	_close_auction_house()
 	
 	# Save progress just in case before swapping scenes
@@ -3596,6 +4457,7 @@ func _open_tavern() -> void:
 # ==========================================
 func _open_scavenger_network() -> void:
 	if select_sound: select_sound.play()
+	_hide_unit_info_panel_immediate()
 	_close_auction_house()
 	
 	if scavenger_ui:

@@ -93,7 +93,6 @@ finale_center_y_ratio = 0.46
 finale_center_offset_y = -300.0
 credits_sections = Array[Resource]([SubResource("Resource_v22qd"), SubResource("Resource_l7w5s"), SubResource("Resource_m2jcn"), SubResource("Resource_6w6au")])
 studio_section_title = "Studio"
-studio_name = "Korvain Games"
 
 [node name="CreditsMusicPlayer" type="AudioStreamPlayer" parent="." unique_id=2060828791]
 volume_db = -8.0
@@ -216,6 +215,22 @@ size_flags_horizontal = 3
 custom_minimum_size = Vector2(280, 56)
 layout_mode = 2
 text = "RETURN TO ENTRY"
+
+[node name="SpeedBoostHint" type="Label" parent="." unique_id=2100000001]
+z_index = 17
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -44.0
+offset_right = 520.0
+offset_bottom = -14.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Hold Shift to speed up the roll."
+vertical_alignment = 2
+autowrap_mode = 3
 
 [node name="OpenerOverlay" type="ColorRect" parent="." unique_id=1445918870]
 z_index = 20

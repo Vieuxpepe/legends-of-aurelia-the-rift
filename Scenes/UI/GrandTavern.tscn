@@ -15,7 +15,16 @@
 [ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="14_31w6i"]
 [ext_resource type="Script" uid="uid://d0wh8hdqrhxx2" path="res://Scripts/TavernNoticeBoard.gd" id="14_qldpy"]
 [ext_resource type="Resource" uid="uid://bl8fighi5vacc" path="res://Resources/Music Discs/Disc_EpicTheme.tres" id="15_bvlwd"]
-[ext_resource type="Script" path="res://Scripts/TavernCartographer.gd" id="16_cartographer"]
+[ext_resource type="Script" uid="uid://bahg6a7ld8f2i" path="res://Scripts/TavernCartographer.gd" id="16_cartographer"]
+[ext_resource type="Texture2D" uid="uid://c841q0ne7bgmj" path="res://Assets/Portraits/BAND/Copie de Document blanc.png" id="17_2be88"]
+[ext_resource type="Resource" uid="uid://qye1pe7mnc8" path="res://Resources/Music Discs/Berserker Hero 1.tres" id="17_jfhyl"]
+[ext_resource type="Texture2D" uid="uid://5v71ylnqoa8l" path="res://Assets/Portraits/BAND/8.png" id="17_wm18l"]
+[ext_resource type="Texture2D" uid="uid://ddr0u7xjj0gha" path="res://Assets/Portraits/BAND/9.png" id="18_2be88"]
+[ext_resource type="Resource" uid="uid://de416g8cu5h1w" path="res://Resources/Music Discs/Berserker Hero 2.tres" id="18_2sn1w"]
+[ext_resource type="Texture2D" uid="uid://0rbf51vs17dq" path="res://Assets/Portraits/BAND/Tavern Background.png" id="18_ff0hb"]
+[ext_resource type="Texture2D" uid="uid://d2wra3lr17783" path="res://Assets/Portraits/BAND/10.png" id="19_ff0hb"]
+[ext_resource type="Texture2D" uid="uid://bot6jyukj6m76" path="res://Assets/Portraits/BAND/12.png" id="22_5o5e8"]
+[ext_resource type="Script" uid="uid://dbxwlt1sq2u0i" path="res://Scripts/TavernGambler.gd" id="23_gambler"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_klcnk"]
 bg_color = Color(0, 0, 0, 1)
@@ -84,10 +93,10 @@ stretch_mode = 5
 
 [node name="RosterScroll" type="ScrollContainer" parent="." unique_id=978008466]
 layout_mode = 0
-offset_left = 135.0
-offset_top = 99.0
-offset_right = 691.0
-offset_bottom = 279.0
+offset_left = 41.0
+offset_top = 41.0
+offset_right = 597.0
+offset_bottom = 221.0
 
 [node name="TavernGrid" type="GridContainer" parent="RosterScroll" unique_id=150393719]
 layout_mode = 2
@@ -250,6 +259,15 @@ offset_bottom = 402.0
 theme_override_font_sizes/font_size = 24
 text = "Cartographer"
 
+[node name="GamblerButton" type="Button" parent="." unique_id=1867189004]
+layout_mode = 0
+offset_left = 1354.0
+offset_top = 407.0
+offset_right = 1822.0
+offset_bottom = 444.0
+theme_override_font_sizes/font_size = 24
+text = "Gambler"
+
 [node name="SeraphinaController" type="Node" parent="." unique_id=1218661190 node_paths=PackedStringArray("portrait_node")]
 script = ExtResource("11_8sa06")
 portrait_node = NodePath("../SeraphinaPortrait")
@@ -257,6 +275,10 @@ portrait_node = NodePath("../SeraphinaPortrait")
 [node name="CartographerController" type="Node" parent="." unique_id=870217944 node_paths=PackedStringArray("cartographer_button")]
 script = ExtResource("16_cartographer")
 cartographer_button = NodePath("../CartographerButton")
+
+[node name="GamblerController" type="Node" parent="." unique_id=1466804211 node_paths=PackedStringArray("gambler_button")]
+script = ExtResource("23_gambler")
+gambler_button = NodePath("../GamblerButton")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1121217850]
 
@@ -310,32 +332,33 @@ layout_mode = 0
 offset_left = 691.0
 offset_top = 11.0
 offset_right = 1351.0
-offset_bottom = 332.0
+offset_bottom = 156.0
 script = ExtResource("11_ren3y")
 
 [node name="ChatScroll" type="ScrollContainer" parent="ChatPanel" unique_id=825315152]
 layout_mode = 0
+offset_left = 9.0
 offset_right = 557.0
-offset_bottom = 288.0
+offset_bottom = 123.0
 
 [node name="MessageList" type="VBoxContainer" parent="ChatPanel/ChatScroll" unique_id=1235233698]
-custom_minimum_size = Vector2(520, 250)
+custom_minimum_size = Vector2(520, 120)
 layout_mode = 2
 
 [node name="ChatInput" type="LineEdit" parent="ChatPanel" unique_id=686160370]
 layout_mode = 0
-offset_left = 7.0
-offset_top = 290.0
-offset_right = 310.0
-offset_bottom = 316.0
+offset_left = 5.0
+offset_top = 147.0
+offset_right = 308.0
+offset_bottom = 173.0
 placeholder_text = "Say something to the tavern..."
 
 [node name="SendButton" type="Button" parent="ChatPanel" unique_id=516952962]
 layout_mode = 0
-offset_left = 343.0
-offset_top = 293.0
-offset_right = 383.0
-offset_bottom = 316.0
+offset_left = 317.0
+offset_top = 148.0
+offset_right = 357.0
+offset_bottom = 171.0
 text = "Send"
 
 [node name="PollingTimer" type="Timer" parent="ChatPanel" unique_id=784783929]
@@ -353,6 +376,12 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("13_qldpy")
 reward_discs = Array[ExtResource("14_31w6i")]([ExtResource("15_bvlwd")])
+performance_setlist_discs = Array[ExtResource("14_31w6i")]([ExtResource("18_2sn1w"), ExtResource("17_jfhyl"), ExtResource("15_bvlwd")])
+tavern_music_duck_db = -100.0
+performance_lysander_texture = ExtResource("17_2be88")
+performance_stage_backdrop_texture = ExtResource("18_ff0hb")
+performance_band_member_textures = Array[Texture2D]([ExtResource("17_wm18l"), ExtResource("18_2be88"), ExtResource("19_ff0hb"), ExtResource("22_5o5e8")])
+performance_tracer_points = 30
 base_qte_speed = 2000.0
 base_sweet_spot_width = 100.0
 tier_speeds = PackedFloat32Array()

@@ -156,6 +156,14 @@ func _resolve_local_steam_id64() -> int:
 	return 0
 
 
+## Stable string id for online features (arena leaderboard row key, etc.). Empty if Steam is not ready.
+func get_local_steam_id_string() -> String:
+	var id64: int = _resolve_local_steam_id64()
+	if id64 > 0:
+		return str(id64)
+	return ""
+
+
 func _ensure_avatar_loaded_signal() -> void:
 	if _api == null or _avatar_signal_connected:
 		return

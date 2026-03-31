@@ -78,6 +78,10 @@ signal dialogue_finished(last_node_id: String)
 @export_group("Persistence")
 @export var auto_save_after_state_change: bool = true
 
+@export_group("Flow Safety")
+@export_range(4, 256, 1) var max_node_transitions_per_interaction: int = 48
+@export var debug_dialogue_logs: bool = false
+
 var parent_ui = null
 var visual_node: Control = null
 var breathing_tween: Tween = null
@@ -87,6 +91,9 @@ var _current_node_id: String = ""
 var _current_node: Dictionary = {}
 var _current_line_index: int = 0
 var _conversation_active: bool = false
+var _transition_count_this_interaction: int = 0
+var _entered_node_counts: Dictionary = {}
+var _after_lines_resolved_for_node_id: String = ""
 
 
 # ------------------------------------------------------------------------------
@@ -139,9 +146,15 @@ func _ready() -> void:
 #   - Starts a conversation sequence
 # ------------------------------------------------------------------------------
 func interact() -> void:
+	# Clean restart if the interaction key is spammed while already in dialogue.
+	if _conversation_active:
+		_end_conversation()
+
 	_database = SeraphinaDialogueDatabase.get_database()
 	_ensure_relationship_state()
-	_prepare_ui_for_dialogue()
+	if not _prepare_ui_for_dialogue():
+		return
+	_reset_runtime_for_new_interaction()
 
 	_conversation_active = true
 	_current_node_id = _resolve_entry_node_id()
@@ -167,20 +180,22 @@ func interact() -> void:
 #   - Shows dialogue panel
 #   - Hides stale choices
 # ------------------------------------------------------------------------------
-func _prepare_ui_for_dialogue() -> void:
+func _prepare_ui_for_dialogue() -> bool:
 	if parent_ui == null:
 		parent_ui = get_parent()
 
 	if parent_ui == null:
 		push_warning("SeraphinaDialogueManager could not find a valid parent UI.")
-		return
+		return false
 
-	if parent_ui.has_method("_disconnect_all_pressed"):
+	if parent_ui.has_method("_disconnect_all_pressed") and parent_ui.next_btn != null:
 		parent_ui._disconnect_all_pressed(parent_ui.next_btn)
 		for button in _get_choice_buttons():
 			parent_ui._disconnect_all_pressed(button)
 
-	parent_ui.next_btn.pressed.connect(_on_next_pressed)
+	if parent_ui.next_btn != null:
+		if not parent_ui.next_btn.pressed.is_connected(_on_next_pressed):
+			parent_ui.next_btn.pressed.connect(_on_next_pressed)
 
 	if parent_ui.dialogue_panel != null:
 		parent_ui.dialogue_panel.show()
@@ -190,13 +205,16 @@ func _prepare_ui_for_dialogue() -> void:
 	else:
 		for button in _get_choice_buttons():
 			button.hide()
-		parent_ui.choice_container.hide()
+		if parent_ui.choice_container != null:
+			parent_ui.choice_container.hide()
 
-	parent_ui.next_btn.hide()
+	if parent_ui.next_btn != null:
+		parent_ui.next_btn.hide()
 
 	# The existing tavern UI expects active speaker data in these fields.
 	parent_ui.active_character_a = {"unit_name": bartender_name}
 	parent_ui.active_character_b = {}
+	return true
 
 
 # ------------------------------------------------------------------------------
@@ -217,6 +235,10 @@ func _prepare_ui_for_dialogue() -> void:
 #   - Writes dialogue text to the UI
 # ------------------------------------------------------------------------------
 func _enter_node(node_id: String) -> void:
+	if not _can_enter_node(node_id):
+		_end_conversation()
+		return
+
 	if not _database.has("nodes") or not _database["nodes"].has(node_id):
 		push_warning("Seraphina dialogue node not found: %s" % node_id)
 		_end_conversation()
@@ -225,6 +247,7 @@ func _enter_node(node_id: String) -> void:
 	_current_node_id = node_id
 	_current_node = _database["nodes"][node_id]
 	_current_line_index = 0
+	_after_lines_resolved_for_node_id = ""
 
 	_mark_node_seen(node_id)
 	_apply_effects(_current_node.get("on_enter_effects", []))
@@ -267,7 +290,8 @@ func _show_current_line() -> void:
 		"text": _resolve_tokens(str(line.get("text", "")))
 	}
 
-	set_mood(str(line.get("portrait", "neutral")))
+	# Support either "portrait" (legacy) or "mood" tags for convenience.
+	set_mood(str(line.get("portrait", line.get("mood", "neutral"))))
 
 	if parent_ui.has_method("_hide_all_choice_buttons"):
 		parent_ui._hide_all_choice_buttons()
@@ -277,9 +301,15 @@ func _show_current_line() -> void:
 	if parent_ui.has_method("_display_line"):
 		parent_ui._display_line(payload)
 	else:
-		parent_ui.dialogue_text.text = payload["text"]
+		if parent_ui.dialogue_text != null:
+			parent_ui.dialogue_text.text = payload["text"]
 
-	parent_ui.next_btn.show()
+	# Optional per-line effects; useful for small state nudges without extra nodes.
+	_apply_effects(line.get("effects", []))
+	_persist_state_if_needed()
+
+	if parent_ui.next_btn != null:
+		parent_ui.next_btn.show()
 
 
 # ------------------------------------------------------------------------------
@@ -310,7 +340,8 @@ func _on_next_pressed() -> void:
 	# the current line before actually advancing.
 	if parent_ui != null and parent_ui.has_method("_is_text_typing"):
 		if parent_ui._is_text_typing():
-			parent_ui._finish_typing()
+			if parent_ui.has_method("_finish_typing"):
+				parent_ui._finish_typing()
 			return
 
 	var lines: Array = _current_node.get("lines", [])
@@ -340,6 +371,15 @@ func _on_next_pressed() -> void:
 #   - May end the conversation
 # ------------------------------------------------------------------------------
 func _resolve_after_lines() -> void:
+	# Protect against accidental double-resolution on the same node.
+	if _after_lines_resolved_for_node_id == _current_node_id:
+		return
+	_after_lines_resolved_for_node_id = _current_node_id
+
+	# Optional node-level exit effects (applied once when leaving line flow).
+	_apply_effects(_current_node.get("on_exit_effects", []))
+	_persist_state_if_needed()
+
 	var choice_view_models: Array = _build_choice_view_models(_current_node.get("choices", []))
 
 	if not choice_view_models.is_empty():
@@ -375,7 +415,13 @@ func _present_choices(choice_view_models: Array) -> void:
 	var buttons: Array = _get_choice_buttons()
 
 	_hide_all_choices()
-	parent_ui.next_btn.hide()
+	if parent_ui.next_btn != null:
+		parent_ui.next_btn.hide()
+
+	if buttons.is_empty():
+		push_warning("SeraphinaDialogueManager: no choice buttons available on parent UI.")
+		_end_conversation()
+		return
 
 	var visible_count: int = mini(choice_view_models.size(), buttons.size())
 
@@ -397,7 +443,7 @@ func _present_choices(choice_view_models: Array) -> void:
 
 		button.pressed.connect(_on_choice_selected.bind(choice_vm), CONNECT_ONE_SHOT)
 
-	if visible_count > 0:
+	if visible_count > 0 and parent_ui.choice_container != null:
 		parent_ui.choice_container.show()
 
 
@@ -633,13 +679,24 @@ func _build_choice_view_models(raw_choices: Array) -> Array:
 	var result: Array = []
 
 	for choice in raw_choices:
+		if typeof(choice) != TYPE_DICTIONARY:
+			continue
+
 		var unlocked: bool = _evaluate_conditions(choice.get("conditions", {}), context)
+		var hide_when_locked: bool = bool(choice.get("hide_when_locked", false))
+		if hide_when_locked and not unlocked:
+			continue
 
 		var vm: Dictionary = choice.duplicate(true)
 		vm["__locked"] = not unlocked
 		vm["__lock_reason"] = "" if unlocked else _get_choice_lock_reason(choice, context)
+		if not unlocked and vm.has("locked_text"):
+			vm["text"] = str(vm.get("locked_text", vm.get("text", "")))
 
 		result.append(vm)
+
+	# Higher priority appears first if writers annotate choices with "priority".
+	result.sort_custom(func(a, b): return int(a.get("priority", 0)) > int(b.get("priority", 0)))
 
 	return result
 
@@ -981,11 +1038,20 @@ func _get_time_of_day() -> String:
 # ------------------------------------------------------------------------------
 func _resolve_tokens(raw_text: String) -> String:
 	var player_name: String = "Commander"
+	var state: Dictionary = _get_relationship_state()
 
 	if CampaignManager.custom_avatar is Dictionary:
 		player_name = str(CampaignManager.custom_avatar.get("unit_name", "Commander"))
 
-	return raw_text.replace("{player_name}", player_name)
+	var resolved: String = raw_text
+	resolved = resolved.replace("{player_name}", player_name)
+	resolved = resolved.replace("{bartender_name}", bartender_name)
+	resolved = resolved.replace("{time_of_day}", _get_time_of_day())
+	resolved = resolved.replace("{affection}", str(int(state.get("affection", 0))))
+	resolved = resolved.replace("{trust}", str(int(state.get("trust", 0))))
+	resolved = resolved.replace("{professionalism}", str(int(state.get("professionalism", 0))))
+	resolved = resolved.replace("{times_spoken}", str(int(state.get("counters", {}).get("times_spoken", 0))))
+	return resolved
 
 
 # ------------------------------------------------------------------------------
@@ -1006,6 +1072,9 @@ func _resolve_tokens(raw_text: String) -> String:
 #   Prefers the upgraded UI helper. Falls back to direct field access.
 # ------------------------------------------------------------------------------
 func _get_choice_buttons() -> Array:
+	if parent_ui == null:
+		return []
+
 	if parent_ui != null and parent_ui.has_method("get_choice_buttons"):
 		return parent_ui.get_choice_buttons()
 
@@ -1050,7 +1119,8 @@ func _hide_all_choices() -> void:
 	for button in _get_choice_buttons():
 		button.hide()
 
-	parent_ui.choice_container.hide()
+	if parent_ui.choice_container != null:
+		parent_ui.choice_container.hide()
 
 
 # ------------------------------------------------------------------------------
@@ -1073,8 +1143,10 @@ func _end_conversation() -> void:
 	_hide_all_choices()
 
 	if parent_ui != null:
-		parent_ui.next_btn.hide()
-		parent_ui.dialogue_panel.hide()
+		if parent_ui.next_btn != null:
+			parent_ui.next_btn.hide()
+		if parent_ui.dialogue_panel != null:
+			parent_ui.dialogue_panel.hide()
 
 	reset_mood()
 	dialogue_finished.emit(_current_node_id)
@@ -1182,3 +1254,44 @@ func set_mood(mood_name: String) -> void:
 # ------------------------------------------------------------------------------
 func reset_mood() -> void:
 	set_mood("neutral")
+
+
+# ------------------------------------------------------------------------------
+# Function: _reset_runtime_for_new_interaction
+# Purpose:
+#   Clears one-interaction runtime tracking used for loop safety and node exit
+#   guards.
+# ------------------------------------------------------------------------------
+func _reset_runtime_for_new_interaction() -> void:
+	_transition_count_this_interaction = 0
+	_entered_node_counts.clear()
+	_after_lines_resolved_for_node_id = ""
+
+
+# ------------------------------------------------------------------------------
+# Function: _can_enter_node
+# Purpose:
+#   Guards against accidental infinite loops in malformed auto_next chains.
+# ------------------------------------------------------------------------------
+func _can_enter_node(node_id: String) -> bool:
+	_transition_count_this_interaction += 1
+	if _transition_count_this_interaction > max_node_transitions_per_interaction:
+		push_warning(
+			"SeraphinaDialogueManager aborted interaction after %s transitions (possible loop). Last attempted node: %s"
+			% [str(_transition_count_this_interaction), node_id]
+		)
+		return false
+
+	var current_count: int = int(_entered_node_counts.get(node_id, 0)) + 1
+	_entered_node_counts[node_id] = current_count
+	if current_count > 6:
+		push_warning(
+			"SeraphinaDialogueManager detected repeated entry into node '%s' (%s times)."
+			% [node_id, str(current_count)]
+		)
+		return false
+
+	if debug_dialogue_logs:
+		print("[SeraphinaDialogue] Enter node:", node_id, " visit=", current_count)
+
+	return true

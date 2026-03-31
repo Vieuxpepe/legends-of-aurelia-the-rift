@@ -1,7 +1,24 @@
 extends Control
 
+const TAVERN_PANEL_BG := Color(0.13, 0.097, 0.068, 0.90)
+const TAVERN_PANEL_BG_ALT := Color(0.10, 0.076, 0.052, 0.94)
+const TAVERN_BORDER := Color(0.82, 0.66, 0.24, 0.96)
+const TAVERN_BORDER_SOFT := Color(0.47, 0.38, 0.17, 0.94)
+const TAVERN_TEXT := Color(0.94, 0.91, 0.84, 1.0)
+const TAVERN_TEXT_MUTED := Color(0.76, 0.73, 0.66, 1.0)
+const TAVERN_BUTTON_BG := Color(0.28, 0.21, 0.13, 0.94)
+const TAVERN_BUTTON_HOVER := Color(0.37, 0.28, 0.17, 0.98)
+const TAVERN_BUTTON_PRESSED := Color(0.51, 0.38, 0.21, 0.98)
+
 @onready var leave_btn: Button = $LeaveButton
 @onready var tavern_grid: GridContainer = $RosterScroll/TavernGrid
+@onready var notice_board_btn: Button = get_node_or_null("NoticeBoard")
+@onready var cartographer_btn: Button = get_node_or_null("CartographerButton")
+@onready var gambler_btn: Button = get_node_or_null("GamblerButton")
+@onready var chat_panel: Panel = get_node_or_null("ChatPanel")
+@onready var chat_input: LineEdit = get_node_or_null("ChatPanel/ChatInput")
+@onready var chat_send_btn: Button = get_node_or_null("ChatPanel/SendButton")
+@onready var roster_scroll: ScrollContainer = get_node_or_null("RosterScroll")
 
 var select_sound: AudioStreamPlayer
 var blip_sound: AudioStreamPlayer
@@ -12,6 +29,19 @@ var _active_name_tween: Tween
 var _active_shake_tween: Tween
 var _active_text_tween: Tween
 var _dialogue_base_pos: Vector2 = Vector2(-1, -1) # Will be captured dynamically
+var _dialogue_overlay_layer: CanvasLayer = null
+var _dialogue_input_blocker: ColorRect = null
+var _seraphina_dialogue_active: bool = false
+var _seraphina_portrait_layout_captured: bool = false
+var _left_portrait_default_offset_top: float = 0.0
+var _left_portrait_default_offset_bottom: float = 0.0
+var _choice_layout_defaults_captured: bool = false
+var _choice_container_default_offset_left: float = 0.0
+var _choice_container_default_offset_right: float = 0.0
+var _choice_container_default_offset_top: float = 0.0
+var _choice_container_default_offset_bottom: float = 0.0
+var _choice_btn_default_min_size: Vector2 = Vector2.ZERO
+var _choice_btn_default_font_size: int = 30
 
 @onready var dialogue_panel: Control = $DialoguePanel
 @onready var dialogue_text: RichTextLabel = $DialoguePanel/DialogueText
@@ -4031,18 +4061,298 @@ var support_database = {
 func _ready() -> void:
 	if tavern_music and not tavern_music.playing:
 		tavern_music.play()
+	_ensure_dialogue_over_fx()
+	_apply_grand_tavern_theme()
 	select_sound = AudioStreamPlayer.new()
 	blip_sound = AudioStreamPlayer.new()
 	add_child(select_sound)
 	add_child(blip_sound)
 	if seraphina_portrait != null and not seraphina_portrait.pressed.is_connected(_on_seraphina_portrait_pressed):
 		seraphina_portrait.pressed.connect(_on_seraphina_portrait_pressed)
+	if seraphina_controller != null:
+		if not seraphina_controller.dialogue_started.is_connected(_on_seraphina_dialogue_started):
+			seraphina_controller.dialogue_started.connect(_on_seraphina_dialogue_started)
+		if not seraphina_controller.dialogue_finished.is_connected(_on_seraphina_dialogue_finished):
+			seraphina_controller.dialogue_finished.connect(_on_seraphina_dialogue_finished)
 	leave_btn.pressed.connect(_on_leave_pressed)
 	next_btn.pressed.connect(_advance_dialogue)
 
 	dialogue_panel.hide()
 	choice_container.hide()
+	_set_dialogue_modal_blocker(false)
 	_populate_tavern_roster()
+
+
+func _make_panel_style(bg: Color, border: Color, radius: int = 18, border_px: int = 2, pad_h: int = 14, pad_v: int = 10) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = border
+	sb.border_width_left = border_px
+	sb.border_width_top = border_px
+	sb.border_width_right = border_px
+	sb.border_width_bottom = border_px
+	sb.corner_radius_top_left = radius
+	sb.corner_radius_top_right = radius
+	sb.corner_radius_bottom_right = radius
+	sb.corner_radius_bottom_left = radius
+	sb.content_margin_left = pad_h
+	sb.content_margin_right = pad_h
+	sb.content_margin_top = pad_v
+	sb.content_margin_bottom = pad_v
+	return sb
+
+
+func _make_button_style(bg: Color, border: Color, radius: int = 14, border_px: int = 2, pad_h: int = 14, pad_v: int = 8) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = border
+	sb.border_width_left = border_px
+	sb.border_width_top = border_px
+	sb.border_width_right = border_px
+	sb.border_width_bottom = border_px
+	sb.corner_radius_top_left = radius
+	sb.corner_radius_top_right = radius
+	sb.corner_radius_bottom_right = radius
+	sb.corner_radius_bottom_left = radius
+	sb.content_margin_left = pad_h
+	sb.content_margin_right = pad_h
+	sb.content_margin_top = pad_v
+	sb.content_margin_bottom = pad_v
+	return sb
+
+
+func _style_button(btn: Button, font_size: int = 26) -> void:
+	if btn == null:
+		return
+	btn.add_theme_stylebox_override("normal", _make_button_style(TAVERN_BUTTON_BG, TAVERN_BORDER_SOFT))
+	btn.add_theme_stylebox_override("hover", _make_button_style(TAVERN_BUTTON_HOVER, TAVERN_BORDER))
+	btn.add_theme_stylebox_override("pressed", _make_button_style(TAVERN_BUTTON_PRESSED, TAVERN_BORDER))
+	btn.add_theme_stylebox_override("focus", _make_button_style(TAVERN_BUTTON_HOVER, TAVERN_BORDER))
+	btn.add_theme_stylebox_override("disabled", _make_button_style(Color(0.20, 0.20, 0.20, 0.9), Color(0.36, 0.36, 0.36, 0.9)))
+	btn.add_theme_color_override("font_color", TAVERN_TEXT)
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.78, 1.0))
+	btn.add_theme_color_override("font_pressed_color", Color(1.0, 0.93, 0.70, 1.0))
+	btn.add_theme_color_override("font_disabled_color", Color(0.62, 0.62, 0.62, 1.0))
+	btn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	btn.add_theme_constant_override("outline_size", 4)
+	btn.add_theme_font_size_override("font_size", font_size)
+
+
+func _apply_grand_tavern_theme() -> void:
+	# Main dialogue shell
+	if dialogue_panel is Panel:
+		var panel := dialogue_panel as Panel
+		panel.add_theme_stylebox_override("panel", _make_panel_style(TAVERN_PANEL_BG, TAVERN_BORDER, 20, 2, 18, 14))
+
+	if dialogue_text != null:
+		dialogue_text.add_theme_stylebox_override("normal", _make_panel_style(TAVERN_PANEL_BG_ALT, TAVERN_BORDER_SOFT, 14, 1, 18, 12))
+		dialogue_text.add_theme_color_override("default_color", TAVERN_TEXT)
+		dialogue_text.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.92))
+		dialogue_text.add_theme_constant_override("outline_size", 4)
+		dialogue_text.add_theme_font_size_override("normal_font_size", 34)
+
+	if speaker_name != null:
+		speaker_name.add_theme_color_override("font_color", Color(1.0, 0.93, 0.64, 1.0))
+		speaker_name.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		speaker_name.add_theme_constant_override("outline_size", 4)
+		speaker_name.add_theme_font_size_override("font_size", 34)
+
+	if choice_container is VBoxContainer:
+		(choice_container as VBoxContainer).add_theme_constant_override("separation", 10)
+
+	_style_button(next_btn, 30)
+	_style_button(choice_btn_1, 30)
+	_style_button(choice_btn_2, 30)
+	_style_button(choice_btn_3, 30)
+	_style_button(choice_btn_4, 30)
+	for btn in get_choice_buttons():
+		if btn != null:
+			btn.custom_minimum_size = Vector2(1200, 66)
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	# Top-right utility and side controls
+	_style_button(leave_btn, 34)
+	_style_button(notice_board_btn, 22)
+	_style_button(cartographer_btn, 22)
+	_style_button(gambler_btn, 22)
+	_style_button(chat_send_btn, 20)
+
+	if chat_panel != null:
+		chat_panel.add_theme_stylebox_override("panel", _make_panel_style(TAVERN_PANEL_BG, TAVERN_BORDER_SOFT, 16, 2, 12, 10))
+
+	if chat_input != null:
+		chat_input.add_theme_stylebox_override("normal", _make_panel_style(TAVERN_PANEL_BG_ALT, TAVERN_BORDER_SOFT, 10, 1, 10, 7))
+		chat_input.add_theme_stylebox_override("focus", _make_panel_style(TAVERN_PANEL_BG_ALT, TAVERN_BORDER, 10, 2, 10, 7))
+		chat_input.add_theme_color_override("font_color", TAVERN_TEXT)
+		chat_input.add_theme_color_override("font_placeholder_color", TAVERN_TEXT_MUTED)
+		chat_input.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		chat_input.add_theme_constant_override("outline_size", 3)
+		chat_input.add_theme_font_size_override("font_size", 20)
+
+	if roster_scroll != null:
+		roster_scroll.add_theme_stylebox_override("panel", _make_panel_style(Color(0.03, 0.03, 0.03, 0.56), TAVERN_BORDER_SOFT, 12, 1, 8, 8))
+
+
+func _ensure_dialogue_over_fx() -> void:
+	# Keep tavern VFX visible while guaranteeing dialogue choices/text are always
+	# rendered above particle and glow CanvasLayers.
+	if dialogue_panel == null:
+		return
+
+	var current_parent := dialogue_panel.get_parent()
+	if current_parent is CanvasLayer and (current_parent as CanvasLayer).layer >= 20:
+		_dialogue_overlay_layer = current_parent
+		_ensure_dialogue_input_blocker()
+		return
+
+	var overlay := CanvasLayer.new()
+	overlay.name = "DialogueOverlay"
+	overlay.layer = 20
+	add_child(overlay)
+	move_child(overlay, get_child_count() - 1)
+
+	if current_parent != null:
+		current_parent.remove_child(dialogue_panel)
+	overlay.add_child(dialogue_panel)
+	_dialogue_overlay_layer = overlay
+	_ensure_dialogue_input_blocker()
+
+
+func _ensure_dialogue_input_blocker() -> void:
+	if _dialogue_overlay_layer == null:
+		return
+
+	var existing := _dialogue_overlay_layer.get_node_or_null("DialogueInputBlocker")
+	if existing is ColorRect:
+		_dialogue_input_blocker = existing
+	else:
+		var blocker := ColorRect.new()
+		blocker.name = "DialogueInputBlocker"
+		blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
+		blocker.offset_left = 0.0
+		blocker.offset_top = 0.0
+		blocker.offset_right = 0.0
+		blocker.offset_bottom = 0.0
+		blocker.color = Color(0.03, 0.02, 0.01, 0.33)
+		blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+		_dialogue_overlay_layer.add_child(blocker)
+		_dialogue_overlay_layer.move_child(blocker, 0)
+		_dialogue_input_blocker = blocker
+
+	# Keep the interactive dialogue panel above the blocker.
+	dialogue_panel.z_as_relative = false
+	dialogue_panel.z_index = 10
+	_set_dialogue_modal_blocker(false)
+
+
+func _set_dialogue_modal_blocker(active: bool) -> void:
+	if _dialogue_input_blocker == null:
+		return
+	_dialogue_input_blocker.color = Color(0.005, 0.004, 0.003, 0.90) if _seraphina_dialogue_active else Color(0.03, 0.02, 0.01, 0.50)
+	_dialogue_input_blocker.visible = active
+
+
+func _on_seraphina_dialogue_started(_node_id: String) -> void:
+	_seraphina_dialogue_active = true
+	_assign_seraphina_to_left_portrait()
+	_apply_seraphina_choice_layout()
+	_set_dialogue_modal_blocker(true)
+
+
+func _on_seraphina_dialogue_finished(_last_node_id: String) -> void:
+	_seraphina_dialogue_active = false
+	_set_dialogue_modal_blocker(false)
+	_restore_default_choice_layout()
+	_restore_left_portrait_layout()
+	# Restore neutral portrait visibility state after Seraphina closes.
+	if right_portrait != null:
+		right_portrait.visible = true
+
+
+func _assign_seraphina_to_left_portrait() -> void:
+	if left_portrait == null:
+		return
+
+	if not _seraphina_portrait_layout_captured:
+		_left_portrait_default_offset_top = left_portrait.offset_top
+		_left_portrait_default_offset_bottom = left_portrait.offset_bottom
+		_seraphina_portrait_layout_captured = true
+
+	var seraphina_tex: Texture2D = null
+	if seraphina_portrait != null:
+		seraphina_tex = seraphina_portrait.texture_normal
+
+	if seraphina_tex != null:
+		left_portrait.texture = seraphina_tex
+	# Sit slightly lower so it overlaps the dialogue panel more naturally.
+	left_portrait.offset_top = _left_portrait_default_offset_top + 28.0
+	left_portrait.offset_bottom = _left_portrait_default_offset_bottom + 28.0
+	left_portrait.modulate = Color.WHITE
+	left_portrait.visible = true
+
+	if right_portrait != null:
+		right_portrait.texture = null
+		right_portrait.visible = false
+
+
+func _restore_left_portrait_layout() -> void:
+	if not _seraphina_portrait_layout_captured:
+		return
+	if left_portrait == null:
+		return
+	left_portrait.offset_top = _left_portrait_default_offset_top
+	left_portrait.offset_bottom = _left_portrait_default_offset_bottom
+
+
+func _capture_default_choice_layout_once() -> void:
+	if _choice_layout_defaults_captured:
+		return
+	if choice_container == null:
+		return
+
+	_choice_container_default_offset_left = choice_container.offset_left
+	_choice_container_default_offset_right = choice_container.offset_right
+	_choice_container_default_offset_top = choice_container.offset_top
+	_choice_container_default_offset_bottom = choice_container.offset_bottom
+
+	if choice_btn_1 != null:
+		_choice_btn_default_min_size = choice_btn_1.custom_minimum_size
+		_choice_btn_default_font_size = int(choice_btn_1.get_theme_font_size("font_size"))
+
+	_choice_layout_defaults_captured = true
+
+
+func _apply_seraphina_choice_layout() -> void:
+	_capture_default_choice_layout_once()
+	if choice_container == null:
+		return
+
+	# Shift choices right to preserve the left portrait readability.
+	choice_container.offset_left = _choice_container_default_offset_left + 190.0
+	choice_container.offset_right = _choice_container_default_offset_right + 190.0
+
+	for btn in get_choice_buttons():
+		if btn == null:
+			continue
+		btn.custom_minimum_size = Vector2(900, 56)
+		btn.add_theme_font_size_override("font_size", 24)
+
+
+func _restore_default_choice_layout() -> void:
+	if not _choice_layout_defaults_captured:
+		return
+	if choice_container != null:
+		choice_container.offset_left = _choice_container_default_offset_left
+		choice_container.offset_right = _choice_container_default_offset_right
+		choice_container.offset_top = _choice_container_default_offset_top
+		choice_container.offset_bottom = _choice_container_default_offset_bottom
+
+	for btn in get_choice_buttons():
+		if btn == null:
+			continue
+		btn.custom_minimum_size = _choice_btn_default_min_size
+		btn.add_theme_font_size_override("font_size", _choice_btn_default_font_size)
 
 
 func _on_leave_pressed() -> void:
@@ -4318,6 +4628,7 @@ func _play_idle_bark(char_a: Dictionary) -> void:
 	current_dialogue_index = 0
 	dialogue_panel.show()
 	choice_container.hide()
+	_set_dialogue_modal_blocker(true)
 	next_btn.show()
 	_advance_dialogue()
 	# Refresh tavern roster UI after bark/dialogue start.
@@ -4351,6 +4662,7 @@ func _start_support_conversation(char_a: Dictionary, char_b: Dictionary, bond_ke
 	current_dialogue_index = 0
 	dialogue_panel.show()
 	choice_container.hide()
+	_set_dialogue_modal_blocker(true)
 	next_btn.show()
 	_advance_dialogue()
 
@@ -4396,6 +4708,7 @@ func _advance_dialogue() -> void:
 # ==============================================================================
 func _display_line(line: Dictionary) -> void:
 	dialogue_panel.show()
+	_set_dialogue_modal_blocker(true)
 
 	var final_speaker: String = _get_display_speaker_name(String(line["speaker"]))
 	var final_text: String = str(line["text"])
@@ -4413,6 +4726,11 @@ func _display_line(line: Dictionary) -> void:
 
 	# --- 2. PORTRAIT FOCUS ---
 	var active_portrait = null
+
+	if _seraphina_dialogue_active:
+		# Keep Seraphina on the left portrait slot and hide the right side.
+		_assign_seraphina_to_left_portrait()
+		active_portrait = left_portrait
 	
 	if active_character_b.is_empty():
 		left_portrait.modulate = Color.WHITE
@@ -4483,10 +4801,38 @@ func _display_line(line: Dictionary) -> void:
 
 	# --- 5. TYPEWRITER ---
 	_start_typewriter(final_text)
+
+
+func _input(event: InputEvent) -> void:
+	if not _seraphina_dialogue_active:
+		return
+	if dialogue_panel == null or not dialogue_panel.visible:
+		return
+	if choice_container != null and choice_container.visible:
+		return
+	if next_btn == null or not next_btn.visible:
+		return
+
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and not mb.is_echo():
+			var click_pos := mb.position
+			# If clicking the actual Next button, let that button process naturally.
+			if next_btn.get_global_rect().has_point(click_pos):
+				return
+
+			# If choices are visible for any reason, do not hijack selection clicks.
+			for btn in get_choice_buttons():
+				if btn != null and btn.visible and btn.get_global_rect().has_point(click_pos):
+					return
+
+			next_btn.emit_signal("pressed")
+			get_viewport().set_input_as_handled()
 			
 func _show_choices(choices: Array) -> void:
 	is_waiting_for_choice = true
 	choice_container.show()
+	_set_dialogue_modal_blocker(true)
 	next_btn.hide()
 
 	var buttons := get_choice_buttons()
@@ -4540,6 +4886,7 @@ func _on_choice_selected(choice_data: Dictionary) -> void:
 # ==============================================================================
 func _end_conversation() -> void:
 	dialogue_panel.hide()
+	_set_dialogue_modal_blocker(false)
 
 	if active_bond_key.begins_with("FAIL_"):
 		var real_key := active_bond_key.replace("FAIL_", "")
@@ -4668,7 +5015,7 @@ func _apply_choice_button_state(button: Button, choice_view_model: Dictionary) -
 	button.show()
 
 	if is_locked:
-		button.modulate = Color(0.55, 0.55, 0.55, 1.0)
+		button.modulate = Color(0.84, 0.84, 0.84, 0.92)
 		button.mouse_default_cursor_shape = Control.CURSOR_FORBIDDEN
 	else:
 		button.modulate = Color(1, 1, 1, 1)

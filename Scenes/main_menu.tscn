@@ -584,6 +584,24 @@ autowrap_mode = 3
 clip_text = true
 text_overrun_behavior = 3
 
+[node name="MainMenuVersionFooter" type="Label" parent="." unique_id=900000099]
+z_index = 12
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 0.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -92.0
+offset_right = 564.0
+offset_bottom = -14.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+text = ""
+autowrap_mode = 3
+
 [node name="DeleteConfirmation" type="ConfirmationDialog" parent="." unique_id=1158673825]
 
 [node name="OverwriteConfirmation" type="ConfirmationDialog" parent="." unique_id=310577295]

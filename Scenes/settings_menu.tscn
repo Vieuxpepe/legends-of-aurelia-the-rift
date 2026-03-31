@@ -372,6 +372,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "AI ROLE BATCH TURNS (BUFF → FIGHT → HEAL)"
 
+[node name="DeployZoneOverlayToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "SHOW DEPLOYMENT ZONE OVERLAY (DEFAULT)"
+
+[node name="DeployAutoArmToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "AUTO-SELECT NEXT BENCH UNIT AFTER PLACING"
+
+[node name="DeployQuickFillToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox/MapViewCard/Margin/VBox"]
+layout_mode = 2
+text = "QUICK-FILL: AUTO-PLACE WHEN ONLY ONE VALID TILE"
+
 [node name="ZoomCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SettingsScroll/SettingsVBox"]
 layout_mode = 2
 
@@ -623,6 +635,21 @@ text = "SUBMIT REPORT"
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 text = "VIEW COMMUNITY REPORTS"
+
+[node name="FeedbackFooterRule" type="ColorRect" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SideColumn/FeedbackCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.384314, 0.819608, 0.980392, 0.25)
+
+[node name="SettingsVersionFooter" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SideColumn/FeedbackCard/Margin/VBox"]
+layout_mode = 2
+text = "GAME VERSION —"
+autowrap_mode = 3
+
+[node name="OpenUserDataFolderButton" type="Button" parent="CanvasLayer/ModalRoot/ModalPanel/ContentMargin/MainHBox/SideColumn/FeedbackCard/Margin/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "OPEN SAVE DATA FOLDER"
 
 [node name="PerformanceMargin" type="MarginContainer" parent="CanvasLayer/ModalRoot/ModalPanel"]
 anchors_preset = 0
@@ -939,6 +966,19 @@ text = "HUD SCALE"
 [node name="UiHudScaleOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="CursorSizeLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+layout_mode = 2
+text = "CURSOR SIZE"
+
+[node name="UiCursorSizeOption" type="OptionButton" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="UiCursorHighContrastToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "HIGH-CONTRAST CURSOR FRAME"
 
 [node name="UiShowDamageNumbersToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
 unique_name_in_owner = true

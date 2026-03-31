@@ -8,8 +8,8 @@
 script = ExtResource("2_c6x2b")
 rarity = "Rare"
 item_name = "Mysterious Disc"
-gold_cost = 100
 icon = ExtResource("1_tpth6")
+gold_cost = 100
 unlocked_music_track = ExtResource("3_tpth6")
 track_title = "Berserker Hero 2"
 metadata/_custom_type_script = "uid://67xkte2k6sun"

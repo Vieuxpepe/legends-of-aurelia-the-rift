@@ -1,0 +1,766 @@
+Available classes :
+
+Rookie Classes :
+Recruit.tres
+Apprentice.tres
+Urchin.tres
+Novice.tres
+Villager.tres
+
+Normal Classes :
+Archer.tres
+Cleric.tres
+Knight.tres
+Mage.tres
+Mercenary.tres
+Monk.tres
+Monster.tres
+Paladin.tres
+Spellblade.tres
+Thief.tres
+Warrior.tres
+flier.tres
+dancer.tres
+beastmaster.tres
+cannoneer.tres
+
+Promoted Classes :
+Assassin.tres
+Berserker.tres
+BladeMaster.tres
+BladeWeaver.tres
+BowKnight.tres
+DeathKnight.tres
+DivineSage.tres
+FireSage.tres
+General.tres
+GreatKnight.tres
+HeavyArcher.tres
+Hero.tres
+HighPaladin.tres
+FalconKnight.tres
+SkyVanguard.tres
+Muse.tres
+BladeDancer.tres
+WildWarden.tres
+PackLeader.tres
+SiegeMaster.tres
+Dreadnought.tres
+
+Ascended Classes :
+For later
+DawnExalt.tres
+VoidStrider.tres
+RiftArchon.tres
+---
+
+# 1) Les antagonistes majeurs
+
+## 1. Lady Vespera
+
+Done
+
+**Faction :** Obsidian Circle / force antagoniste principale
+**Rôle :** archimage de rupture, boss narratif majeur
+**Déploiement :** **Level 1**, **Level 18**, **Level 19**
+
+Vespera ne doit presque jamais donner l’impression d’être “juste un boss fort”. Quand elle apparaît, on sent que **la réalité elle-même plie** autour d’elle.
+Sur la map 1, elle sert de **présence terrifiante quasi intouchable**.
+Sur la map 18, elle devient le **cœur du rituel**.
+Sur la map 19, elle passe en **phase finale tragique / ascendant** avant la bascule cosmique.
+
+**Signature gameplay :** téléports rituels, zones d’âme, invocations liées aux autels, attaques qui modifient la map.
+
+---
+
+## 2. Master Enric
+
+**Faction :** Obsidian Circle
+**Rôle :** nécromancien-savant, boss de marais et d’horreur intellectuelle
+**Déploiement :** **Level 15**
+
+Enric doit être glaçant parce qu’il traite les morts, les souvenirs et les gens comme des matériaux d’étude. Il parle comme un professeur qui a oublié pourquoi une vie devrait compter.
+C’est un boss idéal pour une map où **le terrain lui-même se retourne contre le joueur**.
+
+**Signature gameplay :** réanimation, totems d’âme, marais qui s’étendent, unités mortes qui reviennent sous une forme incomplète.
+
+---
+
+## 3. Captain Selene
+
+**Faction :** force d’élite liée à Vespera
+**Rôle :** shadowblade, commandante d’assaut mobile
+**Déploiement :** **Level 13**, **Level 18**
+
+Selene doit être la lame propre et maîtrisée de l’ennemi. Là où Vespera est le cataclysme, Selene est la précision.
+Elle fonctionne très bien comme **rival mobile mid/late game**, particulièrement sur les maps ouvertes ou multi-fronts.
+
+**Signature gameplay :** dash entre les ombres, assassinats ciblés, debuffs de vision, menaces sur les backliners.
+
+---
+
+## 4. Ephrem the Zealot
+
+**Faction :** Valeron déchu / fanatique religieux
+**Rôle :** purificateur fanatique, boss doctrinal
+**Déploiement :** **Level 3**
+
+Ephrem doit incarner la foi devenue violence. Il n’est pas “maléfique” au sens classique : il croit sincèrement être un remède.
+C’est important qu’il soit **effrayant idéologiquement**, pas juste physiquement.
+
+**Signature gameplay :** braises sacrées, buffs de zèle, attaques bonus contre unités “marquées”, contrôle des autels.
+
+---
+
+# 2) Les rivaux récurrents à faire fuir au lieu de tuer trop tôt
+
+## 5. Mother Caldris Vein
+
+**Faction :** Valeron Purifiers
+**Rôle :** inquisitrice traqueuse
+**Déploiement :** **Level 2**, **Level 10**, **Level 17**
+
+Caldris est une femme polie, glaciale, extrêmement raffinée, qui considère la miséricorde comme un luxe dangereux.
+Elle fonctionne très bien comme **visage récurrent de la ligne dure de Valeron**.
+
+**Sur les maps :**
+
+* **Level 2** : commandante de poursuite dans Emberwood
+* **Level 10** : présence d’autorité doctrinale autour du procès-arène
+* **Level 17** : chef de faction hostile à la coalition
+
+**Signature gameplay :** marques de silence, anti-heal, chiens sacrés / escorte inquisitoriale, contrôle du support ennemi.
+
+---
+
+## 6. Port-Master Rhex Valcero
+
+**Faction :** Vharian Merchant League — aile prédatrice
+**Rôle :** seigneur du port, logisticien corrompu
+**Déploiement :** **Level 4**, **Level 5**
+
+Rhex doit être charmant, sale, bien habillé, et donner l’impression que **tout a un prix**, y compris une ville entière.
+Il représente parfaitement la corruption “propre” de la League.
+
+**Sur les maps :**
+
+* **Level 4** : réseau de surveillance urbaine, patrouilles, intermédiaires
+* **Level 5** : boss opérationnel du port et des alarmes
+
+**Signature gameplay :** renforts achetés, civiles manipulés, barricades mobiles, contrebandiers rapides.
+
+---
+
+## 7. Mortivar Hale, Grave Marshal of Greyspire
+
+**Faction :** Obsidian Circle / nécromancie militaire
+**Rôle :** chevalier funèbre, commandant de forteresse
+**Déploiement :** **Level 6**, **Level 14**
+
+Mortivar doit donner l’impression d’un vétéran déjà mort depuis longtemps, mais qui continue par discipline.
+Il est parfait comme **visage récurrent des forces nécromantiques “professionnelles”**.
+
+**Sur les maps :**
+
+* **Level 6** : défenseur des cryptes et du keep corrompu
+* **Level 14** : commandant de l’assaut synchronisé sur Dawnkeep
+
+**Signature gameplay :** relève de morts, aura de peur, cavalerie lourde morte-vivante, commandement défensif.
+
+---
+
+## 8. Preceptor Cassian Vow
+
+**Faction :** Valeron hardliners
+**Rôle :** diplomate-saboteur, manipulateur de la paix
+**Déploiement :** **Level 9A**, **Level 17**
+
+Cassian n’est pas un fanatique hurlant. Il est pire : il est raisonnable, impeccable, et prêt à tuer la paix si elle produit le “mauvais” ordre.
+C’est le genre d’ennemi qui rend la politique dangereuse.
+
+**Signature gameplay :** barriers sacrés, unités-escortes d’envoyés, faux drapeaux, objectifs qui punissent si un PNJ diplomatique tombe.
+
+---
+
+## 9. Auditor Nerez Sable
+
+**Faction :** Luminous Table / Vharian League
+**Rôle :** courtier en dette, maître chanteur, kidnap broker
+**Déploiement :** **Level 9B**, **Level 11**, **Level 17**
+
+Nerez doit être élégant, calme, jamais pressé, avec le ton de quelqu’un qui a déjà vendu la catastrophe avant qu’elle arrive.
+Il donne au versant League une vraie saveur de **violence administrative**.
+
+**Signature gameplay :** abductors, fumigènes, contrats de renfort, débuffs qui “verrouillent” une unité et la forcent à être extraite.
+
+---
+
+# 3) Les boss de chapitre uniques
+
+## 10. Juno Kest, Keeper of Bells
+
+**Faction :** Vharian docks security
+**Rôle :** sous-boss mobile des docks
+**Déploiement :** **Level 5**
+
+Juno est l’obsession de l’alarme, du timing, du signal. Elle ne gagne pas en combattant mieux que toi : elle gagne en **faisant arriver cinquante autres personnes**.
+Elle rend la map 5 bien plus mémorable.
+
+**Signature gameplay :** activation d’alarmes, tours, archers de couverture, lignes de vue croisées.
+
+---
+
+## 11. Lord Septen Harrow
+
+**Faction :** Edranor opportunists
+**Rôle :** seigneur-granier, parasite de famine
+**Déploiement :** **Level 7**
+
+Septen doit être l’horreur polie des gens qui profitent du manque sans jamais se salir eux-mêmes.
+C’est un excellent boss pour un chapitre sur la nourriture, la moralité et la logistique.
+
+**Signature gameplay :** wagons blindés, incendie de récoltes, unités paysannes forcées, choix moraux liés au grain.
+
+---
+
+## 12. Thorn-Captain Edda Fen
+
+**Faction :** exploitation frontalière / Edranor militarisé
+**Rôle :** capitaine forestière, occupante pragmatique
+**Déploiement :** **Level 8**
+
+Edda n’est pas une caricature de destructrice de nature. Elle pense que le bois, la route et le contrôle sont nécessaires à la survie des gens.
+Elle est idéale pour un conflit où **les deux côtés peuvent se croire protecteurs**.
+
+**Signature gameplay :** pièges de chasse, bûcherons armés, destruction de totems, contrôle du terrain boisé.
+
+---
+
+## 13. Justicar Halwen Serast
+
+**Faction :** Valeron tribunal militant
+**Rôle :** exécuteur sacré d’arène
+**Déploiement :** **Level 10**
+
+Halwen doit ressembler à la version théâtrale et officielle de la mise à mort : doré, cérémoniel, monstrueusement légitime.
+Il fait du procès-arène un vrai moment de pageantry meurtrier.
+
+**Signature gameplay :** anneaux de feu, appels de jugement, buffs si le public est “conquis”, positions élevées.
+
+---
+
+## 14. Noemi Veyr, The Fifth Mask
+
+**Faction :** assassins liés aux intérêts League
+**Rôle :** tueuse infiltrée, boss d’enquête
+**Déploiement :** **Level 11**
+
+Noemi doit être insaisissable, gracieuse, presque performative. Elle peut sourire à quelques cases du joueur avant d’ouvrir une gorge au tour suivant.
+Elle donne à la map festival une saveur très forte.
+
+**Signature gameplay :** déguisements, faux civils, clones de masque, révélations progressives.
+
+---
+
+## 15. Provost Serik Quill
+
+**Faction :** College of Seekers — aile technologue / censeur
+**Rôle :** archiviste de contrôle, gardien du savoir interdit
+**Déploiement :** **Level 12**
+
+Serik croit que la connaissance appartient à ceux capables de la contenir. Il n’aime pas brûler les livres; il préfère les **enchaîner**.
+C’est un très bon boss pour un chapitre non létal et intellectuel.
+
+**Signature gameplay :** barrières runiques, automates de bibliothèque, lifts, verrouillage de couloirs, contrôle de mobilité.
+
+---
+
+## 16. Roen Halbrecht, the Broken Castellan
+
+**Faction :** traître interne / opportuniste de forteresse
+**Rôle :** commandant de trahison
+**Déploiement :** **Level 14**
+
+Roen doit être douloureux parce qu’il n’a pas l’air d’un monstre. Il a l’air d’un homme fatigué qui a commencé à justifier l’injustifiable.
+C’est le bon visage pour un chapitre de **safehold brisé**.
+
+**Signature gameplay :** ouverture de portes, retournement de défenses, prisonniers, changements de fronts.
+
+---
+
+## 17. The Ash Adjudicator
+
+**Faction :** vestige spectral de l’Order of the Dawn
+**Rôle :** juge mort, gardien d’épreuve
+**Déploiement :** **Level 16**
+
+Ce n’est pas un simple fantôme. C’est un reste d’institution devenu test vivant. Il parle comme un verdict.
+Il est parfait pour faire sentir que le passé pèse encore sur Kaelen et sur l’Ordre.
+
+**Signature gameplay :** épreuves par salle, miroirs de stats, duplications spectrales, conditions de victoire “morales”.
+
+---
+
+## 18. Duke Alric Thornmere
+
+**Faction :** Edranor traditionalists / opportunists
+**Rôle :** noble-cavalier, briseur de coalition
+**Déploiement :** **Level 17**
+
+Alric est le type d’homme qui peut parler d’honneur pendant qu’il calcule déjà quel effondrement l’aidera le plus.
+Il apporte au chapitre diplomatique une vraie pression côté Edranor.
+
+**Signature gameplay :** charges de cavalerie, lignes de commandement, buffs de bannière, rupture d’escortes diplomatiques.
+
+---
+
+## 19. Naeva, Marrow-Seer of the Dark Tide
+
+**Faction :** Obsidian Circle / tide rite
+**Rôle :** oracle rituelle, gardienne d’autels
+**Déploiement :** **Level 18**
+
+Naeva doit être dérangeante, presque liturgique, comme si elle entendait déjà un chant que personne d’autre ne devrait entendre.
+Elle permet de diversifier la map 18 sans mettre Vespera seule au centre de tout.
+
+**Signature gameplay :** autels, zones void, invocation de marées noires, chants de buff/debuff.
+
+---
+
+## 20. The Witness Without Eyes
+
+**Faction :** manifestation de Vel’golath
+**Rôle :** entité finale secondaire / pseudo-boss cosmique
+**Déploiement :** **Level 19**
+
+Ce n’est pas un démon classique. C’est quelque chose de plus conceptuel, plus mauvais à regarder qu’à combattre.
+Il doit donner l’impression que le monde a cessé d’être fait pour les humains.
+
+**Signature gameplay :** attaques map-wide, effacement de cases, pression sur le glyph central, horreur spatiale.
+
+---
+
+# 4) Répartition map par map
+
+Voici la version la plus pratique pour ton planning :
+
+**Level 1 – The Razed Village**
+
+* **Lady Vespera**
+
+**Level 2 – Flight through Emberwood**
+
+* **Mother Caldris Vein**
+
+**Level 3 – Shattered Sanctum**
+
+* **Ephrem the Zealot**
+
+**Level 4 – Merchant’s Maze**
+
+* **Port-Master Rhex Valcero**
+
+**Level 5 – League Dock Assault**
+
+* **Port-Master Rhex Valcero**
+* **Juno Kest**
+
+**Level 6 – Siege of Greyspire**
+
+* **Mortivar Hale**
+
+**Level 7 – Famine’s Price**
+
+* **Lord Septen Harrow**
+
+**Level 8 – Edranor Crossroads**
+
+* **Thorn-Captain Edda Fen**
+
+**Level 9A – Mountain Pass Negotiation**
+
+* **Preceptor Cassian Vow**
+
+**Level 9B – League Council Skirmish**
+
+* **Auditor Nerez Sable**
+
+**Level 10 – Sunlit Trial**
+
+* **Justicar Halwen Serast**
+* présence secondaire possible de **Mother Caldris Vein**
+
+**Level 11 – Market of Masks**
+
+* **Noemi Veyr**
+* commandite cachée de **Auditor Nerez Sable**
+
+**Level 12 – Shadows in the College**
+
+* **Provost Serik Quill**
+
+**Level 13 – Storming the Black Coast**
+
+* **Captain Selene**
+
+**Level 14 – Dawnkeep Ambush**
+
+* **Roen Halbrecht**
+* **Mortivar Hale** en chef d’assaut externe
+
+**Level 15 – The Weeping Marsh**
+
+* **Master Enric**
+
+**Level 16 – Echoes of the Order**
+
+* **The Ash Adjudicator**
+
+**Level 17 – Gathering Storms**
+
+* **Preceptor Cassian Vow**
+* **Auditor Nerez Sable**
+* **Duke Alric Thornmere**
+
+**Level 18 – Ritual of the Dark Tide**
+
+* **Lady Vespera**
+* **Captain Selene**
+* **Naeva, Marrow-Seer of the Dark Tide**
+
+**Level 19 – The True Catalyst**
+
+* **Lady Vespera Ascendant**
+* **The Witness Without Eyes**
+
+---
+
+# 5) Les plus forts en termes d’identité
+
+Si tu veux des ennemis vraiment marquants, ceux que je pousserais le plus sont :
+
+* **Mother Caldris Vein** pour Valeron
+* **Port-Master Rhex Valcero** pour la League
+* **Mortivar Hale** pour la nécromancie militaire
+* **Noemi Veyr** pour les maps d’infiltration et de lecture
+* **Roen Halbrecht** pour la trahison émotionnelle
+* **The Ash Adjudicator** pour le poids mythique de l’Ordre
+* **The Witness Without Eyes** pour la vraie rupture cosmique
+
+La meilleure prochaine étape serait de transformer ça en **fiche complète par boss** avec :
+**classe**, **arme**, **skill signature**, **quote d’intro**, **quote de mort**, **palette visuelle**, et **gimmick SRPG précis**.
+
+
+Yes. Also, one small correction: this is no longer a **19-enemy bible**. It is effectively **20 named enemies**, which is better for a campaign of this size.
+
+Below is a refined version with **physical description** and a **psychological overview** for each, while keeping your map structure intact.
+
+---
+
+# Refined Enemy Bible — Physical Identity + Psychological Core
+
+## 1. Lady Vespera
+
+**Faction:** Obsidian Circle
+**Deployment:** Level 1, Level 18, Level 19
+
+**Physical description**
+Tall, unnervingly poised, and almost regal in silhouette. Vespera should wear layered ceremonial battle-robes that feel half noblewoman, half ritual weapon. Her palette should lean toward deep wine, black, ash-violet, and dim gold. Her hair should read as meticulously kept but slightly unbound, as though control is always one step from collapse. Her eyes should feel too focused, too awake, and the air around her should subtly distort with drifting ash, faint glyph-light, or a gravity-like pull.
+
+**Psychological overview**
+Vespera is not driven by appetite, but by a catastrophic moral conclusion. She has suffered enough institutional cruelty that she no longer believes reform is real. She is persuasive because her rage is intelligent, disciplined, and rooted in genuine grief. She does not think of herself as corrupted. She thinks of herself as the only one willing to become unbearable in order to break unbearable systems. The tragedy is that she still has a moral center, but it has been restructured around escalation.
+
+---
+
+## 2. Master Enric
+
+**Faction:** Obsidian Circle
+**Deployment:** Level 15
+
+**Physical description**
+Thin, elegant, and cadaverously neat. He should look like a scholar who preserved himself better than his soul. Pale hands stained by alchemical residue, immaculate layered robes, surgical instruments worn almost like jewelry, and a face that seems too calm in places where anyone else would flinch. His eyes should be tired but feverishly alive. He should always look composed, but never warm.
+
+**Psychological overview**
+Enric is what happens when intellect fully detaches from reverence for life. He is not theatrical and not openly sadistic; that makes him worse. He sees horror as procedural. He is convinced that disgust is an obstacle to understanding. He likely began as someone who wanted answers badly enough to excuse small violations, then larger ones, until his emotional vocabulary atrophied. He respects complexity, competence, and rare specimens. He does not respect ordinary limits.
+
+---
+
+## 3. Captain Selene
+
+**Faction:** Vespera-aligned elite
+**Deployment:** Level 13, Level 18
+
+**Physical description**
+Lean, athletic, and sharply economical in movement. Her armor should be built for lethal mobility: dark plated leather, asymmetrical blades, low-profile shoulder guards, and a cloak that breaks her outline in motion. Her face should be striking in a severe way rather than glamorous. Scar or shadow beneath one eye would help. She should look like someone who sleeps lightly, eats quickly, and notices exits before people.
+
+**Psychological overview**
+Selene is controlled violence. She is not a fanatic; she is a realist who chose a side because she believed its leader had the clarity to finish what others only debate. Her loyalty to Vespera should feel personal, but not blind. She distrusts chaos, sentimentality, and improvisation for its own sake. Underneath her discipline is someone who has already accepted that intimacy and longevity may be incompatible with her role. She does not want to be redeemed. She wants to be effective.
+
+---
+
+## 4. Ephrem the Zealot
+
+**Faction:** Fallen Valeron zealot
+**Deployment:** Level 3
+
+**Physical description**
+Broad-shouldered, ascetic, and burning with self-denying intensity. His armor should resemble temple ceremonial gear reforged into a weapon: white-gold gone smoke-stained, iconography cracked by overuse, braziers or censers incorporated into his silhouette. He should look like a man who fasts too much, sleeps too little, and mistakes exhaustion for revelation.
+
+**Psychological overview**
+Ephrem is terrifying because he is sincere. He truly believes purification is mercy in its harshest form. He does not enjoy cruelty in a petty sense; he sanctifies it. He is someone who could once have become a saintly protector and instead became a weaponized conscience. His fear of corruption is so absolute that he would rather scorch the world than risk letting rot persist inside it. He is emotionally fueled by certainty and secretly terrified of doubt.
+
+---
+
+# Recurring Rivals
+
+## 5. Mother Caldris Vein
+
+**Faction:** Valeron Purifiers
+**Deployment:** Level 2, Level 10, Level 17
+
+**Physical description**
+Austere, elegant, and immaculately composed. She should be dressed in severe clerical finery: layered black-and-ivory vestments, restrained gold, immaculate gloves, and a face that never appears hurried. Her beauty should be severe rather than soft. Tall, narrow silhouette, upright posture, deliberate gestures. She should look expensive, disciplined, and dangerous without needing visible armor.
+
+**Psychological overview**
+Caldris is the kind of person who mistakes restraint for moral superiority. She has genuine conviction, high intelligence, and a chilling belief that compassion becomes dangerous when applied without hierarchy. She is not loud because she never needs to be. She believes civilization survives by refusing softness at key moments. Her menace comes from moral refinement, not frenzy. She likely tells herself that all her hardness is sacrificial service, not preference, which is only partly true.
+
+---
+
+## 6. Port-Master Rhex Valcero
+
+**Faction:** Vharian Merchant League, predator bloc
+**Deployment:** Level 4, Level 5
+
+**Physical description**
+Well-fed, well-dressed, and faintly disreputable under the luxury. Rich coastal fabrics, rings, gloves, harbor-master coat cut from expensive cloth, perfume over salt and tar. He should smile easily but never warmly. A handsome face aging into smugness works well. He should look like a man who can host a gala and order a disappearance in the same breath.
+
+**Psychological overview**
+Rhex believes that morality is mostly branding. He trusts leverage, scarcity, and appetite. He is not ideologically devoted to evil; he is devoted to opportunity. What makes him dangerous is not passion, but comfort with commodifying everything. He thinks in terms of pressure points, dependencies, and who can be bought for less than they think they are worth. He is socially brilliant, emotionally shallow, and excellent at pretending the world forced his choices.
+
+---
+
+## 7. Mortivar Hale, Grave Marshal of Greyspire
+
+**Faction:** Obsidian Circle / necromantic military arm
+**Deployment:** Level 6, Level 14
+
+**Physical description**
+A towering armored figure whose silhouette reads as knightly before it reads as dead. His armor should be old, heavy, and beautifully maintained in a grim way, with traces of heraldry beneath funerary corrosion. He should move slowly but with terrible certainty. His face may be partially visible: gaunt, grave, and disciplined rather than monstrous. He should look like death trained to obey formation.
+
+**Psychological overview**
+Mortivar is not mad and not frothingly evil. He is duty after life, structure after humanity, command after grief. He believes discipline outlasts flesh. He likely once served something honorable and then continued serving after the institution became unrecognizable. That makes him sadder and more unnerving than a pure monster. He respects courage and hates waste, but those remnants of military ethic only sharpen the horror of what he has become.
+
+---
+
+## 8. Preceptor Cassian Vow
+
+**Faction:** Valeron hardliners
+**Deployment:** Level 9A, Level 17
+
+**Physical description**
+Refined, controlled, and almost infuriatingly immaculate. He should dress like a diplomat-priest: layered robes with military precision, polished iconography, minimal ornament, every fold intentional. He should be physically unassuming at first glance, which helps. Clean features, steady gaze, little wasted motion. He should look like someone designed by institutions for trust.
+
+**Psychological overview**
+Cassian is dangerous because he is reasonable in the wrong direction. He is persuasive, articulate, and capable of explaining atrocity in the language of order, stability, and regrettable necessity. He genuinely believes that chaos kills more people than selective cruelty does. He does not see himself as a villain, but as an adult in rooms full of sentimental children. He is perhaps one of the clearest examples of ideological predation disguised as moderation.
+
+---
+
+## 9. Auditor Nerez Sable
+
+**Faction:** Luminous Table / Vharian internal elite
+**Deployment:** Level 9B, Level 11, Level 17
+
+**Physical description**
+Slim, elegant, darkly polished. He should look less like a merchant and more like a legal instrument given human form. Fine gloves, understated luxury, silver or black detailing, immaculate books or tablets, and a perfectly relaxed posture. His face should be beautiful in a cold, bloodless way. He should always seem unruffled, even in danger.
+
+**Psychological overview**
+Nerez enjoys systems because systems allow violence without raising the voice. He is the embodiment of administrative cruelty: debt, compromise, signatures, disappearances, deniable pressure. He is not impulsive, and he does not need to dominate a room physically because he already assumes most people are trapped by invisible structures he understands better than they do. He believes everyone can be reduced to incentives if one is sufficiently patient.
+
+---
+
+# Chapter Bosses
+
+## 10. Juno Kest, Keeper of Bells
+
+**Faction:** Vharian dock security
+**Deployment:** Level 5
+
+**Physical description**
+Compact, quick, wiry, and always in motion. She should wear practical harbor gear modified into command attire: signal cords, bell-strikers, hook tools, short blade, weatherproof layers, and perhaps brass or copper accents that tie into bells and alarms. Her hair should be bound tight. She should look sleepless, weather-cut, and hyper-alert.
+
+**Psychological overview**
+Juno is not obsessed with honor. She is obsessed with response time. She thinks in routes, alarms, and chain reactions. To her, winning means controlling tempo, not proving superiority. She is the kind of antagonist who takes pride in systems working exactly as intended. She may even be more loyal to procedures than to the people above her. Her stress response is acceleration.
+
+---
+
+## 11. Lord Septen Harrow
+
+**Faction:** Edranor opportunists
+**Deployment:** Level 7
+
+**Physical description**
+Soft hands, layered wool and velvet, expensive riding boots that have seen more grain ledgers than mud. He should look healthy in a way that becomes offensive in a famine chapter. Well-groomed beard, signet ring, expensive cloak, polished calm. He should visually contrast starvation by looking insulated from consequence.
+
+**Psychological overview**
+Septen is not a cackling parasite. He is a man who has rationalized exploitation into stewardship. He probably tells himself that order requires difficult custodianship, that hoarding is management, that hunger is unfortunate but instructive. He does not think of himself as cruel; he thinks of himself as realistic. That self-conception makes him morally disgusting in a grounded way. He is cowardly, but never in a theatrical manner.
+
+---
+
+## 12. Thorn-Captain Edda Fen
+
+**Faction:** Frontier militarization / forest occupation
+**Deployment:** Level 8
+
+**Physical description**
+Hardened ranger-captain build, practical layered leathers, fur-lined field gear, axe or bow scars on the equipment, hands visibly calloused. She should look like she actually lives outdoors rather than posing as a frontier soldier. Hair tied back harshly, weather-marked skin, controlled expression. Her visual identity should say utility over pageantry.
+
+**Psychological overview**
+Edda is a valuable antagonist because she is not stupid and not cartoonishly destructive. She genuinely believes roads, timber, perimeter control, and enforced order keep settlements alive. She likely sees sacred claims and local resistance as luxuries of people insulated from hard logistics. She is a protector in her own mind, which makes the conflict sharper. Her flaw is that necessity has become an all-purpose excuse.
+
+---
+
+## 13. Justicar Halwen Serast
+
+**Faction:** Valeron militant tribunal
+**Deployment:** Level 10
+
+**Physical description**
+Magnificent and intimidating in ceremonial excess. Halwen should look like holy execution as public theater: radiant armor, polished white-gold surfaces, a towering spear or execution blade, blazing insignia, and a silhouette designed to be seen by crowds. He should be beautiful in the way statues of punishment are beautiful.
+
+**Psychological overview**
+Halwen is a performer of legitimacy. He believes spectacle matters because public violence teaches obedience and moral narrative at once. He is less introspective than Caldris or Cassian and more devoted to visible ritual authority. He has likely been rewarded his entire life for embodying sacred certainty. He is frightening because he truly identifies public approval with righteousness.
+
+---
+
+## 14. Noemi Veyr, The Fifth Mask
+
+**Faction:** League-linked assassin interests
+**Deployment:** Level 11
+
+**Physical description**
+Graceful, stylish, and socially unreadable. Noemi should be capable of passing for a noble guest, performer, servant, or harmless reveler depending on the costume. Slender silhouette, elegant posture, masked motifs, delicate gloves, hidden blades, and an unreadable smile. Her design should emphasize beauty as camouflage and identity as interchangeable surface.
+
+**Psychological overview**
+Noemi treats personhood like wardrobe. She is not empty, but she is deeply habituated to performance, which makes sincerity difficult even when she wants it. She likely enjoys the craft of infiltration for both practical and emotional reasons: if identity is fluid, then vulnerability is avoidable. She is dangerous because she can read social rhythm and weaponize it. She may be one of the few enemies who seems to genuinely enjoy the art of what she does.
+
+---
+
+## 15. Provost Serik Quill
+
+**Faction:** College of Seekers, censor-technologist wing
+**Deployment:** Level 12
+
+**Physical description**
+Angular, under-rested, scholarly, and severe. Fine academic robes modified with locking seals, keys, metallic bracers, and runic mechanisms. Spectacles or lens-work could help. He should look like a librarian engineered into a prison warden. His posture should be slightly stooped from study but sharpen when challenged.
+
+**Psychological overview**
+Serik is an authoritarian intellectual. He believes knowledge is too dangerous for democratic access and too important to leave unsecured. Unlike Enric, he still has a civic ethic, but it has curdled into elitist containment. He likely fears what careless revelation can do, and that fear has gradually become a justification for hoarding truth. He is rigid, proud, and more frightened than he appears.
+
+---
+
+## 16. Roen Halbrecht, the Broken Castellan
+
+**Faction:** Internal traitor / fortress opportunist
+**Deployment:** Level 14
+
+**Physical description**
+A tired military officer rather than a glamorous villain. Mid-to-late age, worn face, sleep deprivation, respectable armor that has been repaired too many times. He should still look competent, but there should be visible erosion in him: loosened straps, unshaven fatigue, hands that shake only when still. He should read as painfully human.
+
+**Psychological overview**
+Roen works because he is not built like a monster. He is a man who let fear, exhaustion, compromise, and rationalization hollow out his moral center. He may once have been deeply decent. That history should still be visible. His psychology is based on attrition: too many pressures, too few hopes, one terrible choice followed by a dozen smaller self-protective lies. He is tragic precisely because he looks salvageable.
+
+---
+
+## 17. The Ash Adjudicator
+
+**Faction:** Spectral vestige of the Order of the Dawn
+**Deployment:** Level 16
+
+**Physical description**
+An armored spectral judge with a silhouette that feels iconographic, not merely ghostly. Burnt-white ash cloak, cracked dawn heraldry, hollow visor light, floating cinders rather than mist. The figure should feel ancient, ceremonially exact, and more like a verdict than a person. Every movement should look ritualized.
+
+**Psychological overview**
+The Adjudicator is not insane. It is institutional memory with personhood barely remaining. It speaks from an era where oath, law, and sacrifice were inseparable, and it has not updated its moral framework to account for the living world’s complications. It is frightening because it still believes judgment can be pure. In emotional terms, it is a remnant that cannot grieve properly because it was never built for grief, only for standards.
+
+---
+
+## 18. Duke Alric Thornmere
+
+**Faction:** Edranor traditionalist-opportunist bloc
+**Deployment:** Level 17
+
+**Physical description**
+A handsome, imposing noble cavalry commander in late-prime years. Rich but martial attire: field-appropriate noble plate, heavy riding cloak, family colors displayed with confidence, excellent horse tack, and the bearing of someone raised to assume legitimacy. His face should be composed and attractive enough to make his cynicism more cutting.
+
+**Psychological overview**
+Alric is not a brute. He is politically adaptive, socially polished, and morally conditional. He believes in honor, but only insofar as it remains useful to preserve hierarchy and recognizable order. He can sound principled because he still values ceremony and continuity, yet he is willing to exploit collapse if it secures his position. His core flaw is that he confuses stewardship of the realm with stewardship of his class.
+
+---
+
+## 19. Naeva, Marrow-Seer of the Dark Tide
+
+**Faction:** Obsidian Circle
+**Deployment:** Level 18
+
+**Physical description**
+Striking, eerie, almost liturgical in presence. Her robes should move like wet shadow or tidal silk, layered with bone-like ornament, shell-like textures, and void-touched ritual markings. She should look half priestess, half omen. Her face should be serene in a way that makes people uncomfortable. Dark water imagery should cling to her silhouette.
+
+**Psychological overview**
+Naeva should not feel like a generic cult mystic. She is someone who has gone so far into contact with the beyond that ordinary emotional proportion has thinned out. She is not necessarily wild; she may be calmer than everyone else in the room. Her danger is devotional estrangement. She hears significance where others hear noise. She likely believes the collapse of mortal certainty is not tragedy, but unveiling.
+
+---
+
+## 20. The Witness Without Eyes
+
+**Faction:** Manifestation of Vel’golath
+**Deployment:** Level 19
+
+**Physical description**
+Do not make it too humanoid. It should feel like a failed translation of observation into matter. Towering asymmetry, impossible anatomy, surfaces that resemble bone, void glass, parchment, and flesh without committing to any of them. No conventional face. The absence of eyes should feel more invasive, not less. It should look like something that perceives without organs.
+
+**Psychological overview**
+This entity should not read as villainous in a normal emotional sense. It should not hate, rage, or gloat. It is terrifying because it does not care in human terms. If it has any readable “mind,” it is that of an incomprehensible witness to dissolution, a pressure of unmaking rather than a personality. That emotional inaccessibility is what differentiates it from Vespera and the other antagonists. It is not corruption. It is scale.
+
+---
+
+# Which enemies feel strongest now
+
+These are the ones with the clearest emotional and visual identity:
+
+**Best recurring faces**
+
+* Mother Caldris Vein
+* Port-Master Rhex Valcero
+* Mortivar Hale
+* Auditor Nerez Sable
+* Captain Selene
+
+**Best single-chapter bosses**
+
+* Lord Septen Harrow
+* Noemi Veyr
+* Roen Halbrecht
+* The Ash Adjudicator
+* Naeva
+
+**Best endgame presences**
+
+* Lady Vespera
+* The Witness Without Eyes
+
+---
+
+# Fast refinement notes
+
+A few of these are especially strong because they each embody a different kind of enemy pressure:
+
+* **Vespera** = tragic ideological cataclysm
+* **Caldris / Cassian / Halwen** = sacred order weaponized in different forms
+* **Rhex / Nerez / Noemi** = market violence, social manipulation, and elegant predation
+* **Mortivar / Enric / Naeva** = death, ritual, and metaphysical corruption
+* **Roen / Edda / Alric / Septen** = human political failure, not cosmic evil
+* **Witness Without Eyes** = the world becoming non-human
+
+The best next step would be turning these into full SRPG sheets with:
+**class**, **weapon type**, **boss skill**, **personal passive**, **intro quote**, **retreat/death quote**, and **visual palette notes**.
+

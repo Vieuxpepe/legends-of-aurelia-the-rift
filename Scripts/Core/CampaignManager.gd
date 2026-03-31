@@ -84,6 +84,13 @@ var battle_show_log: bool = true
 # not force fog onto maps that were not designed for it.
 var battle_allow_fog_of_war: bool = true
 
+## Pre-battle deployment: green zone overlay when entering deploy (F6 toggles in battle).
+var battle_deploy_zone_overlay_default: bool = true
+## After placing a benched unit, auto-arm the next benched roster unit.
+var battle_deploy_auto_arm_after_place: bool = false
+## When arming a benched unit, auto-place if exactly one legal empty tile exists.
+var battle_deploy_quick_fill: bool = false
+
 var arena_mmr: int = 1000
 
 # --- ANTI-EXPLOIT REWARD TRACKER ---
@@ -306,6 +313,9 @@ var interface_show_status_effects: bool = true
 var interface_damage_text_size: int = 1
 ## 0 = Small, 1 = Medium, 2 = Large
 var interface_combat_log_font_size: int = 1
+## 0 = 1.0x, 1 = 1.15x, 2 = 1.3x
+var interface_cursor_size: int = 0
+var interface_cursor_high_contrast: bool = false
 ## In-game display name override (menus, co-op label, feedback). Empty = Steam (if any), then avatar, then fallback.
 var player_profile_display_override: String = ""
 const PLAYER_PROFILE_DISPLAY_NAME_MAX_LEN := 48
@@ -375,10 +385,12 @@ var jukebox_last_selected_list_item: int = 0
 var jukebox_favorites_only: bool = false
 var jukebox_sort_mode: String = "unlock"
 
-# --- ARENA STREAK & TOKENS (session/campaign; not in save_data — ArenaManager/SilentWolf may hold authoritative state) ---
+# --- ARENA: streak/tokens/MMR + last locked team identity (persisted in save_game) ---
 var arena_win_streak: int = 0
 var arena_best_win_streak: int = 0
 var gladiator_tokens: int = 0
+## Fingerprint of last arena lock-in for restoring [ArenaManager.local_arena_team] after load (not the cloud snapshot).
+var arena_locked_team_identity: Array = []
 
 # --- Camp lore (one-time optional camp conversations) ---
 var seen_camp_lore: Dictionary = {}
@@ -467,8 +479,17 @@ func get_arena_gold_multiplier() -> float:
 	var bonus_steps: int = max(0, arena_win_streak - 1) 
 	return min(1.0 + (float(bonus_steps) * 0.20), 2.0) 
 
+func _clamp_arena_persistence() -> void:
+	arena_mmr = ArenaManager.clamp_mmr_int(int(arena_mmr))
+	gladiator_tokens = clampi(int(gladiator_tokens), 0, ArenaManager.GLADIATOR_TOKENS_MAX)
+	arena_win_streak = clampi(int(arena_win_streak), 0, ArenaManager.ARENA_WIN_STREAK_MAX)
+	arena_best_win_streak = clampi(int(arena_best_win_streak), 0, ArenaManager.ARENA_WIN_STREAK_MAX)
+	if arena_locked_team_identity is Array and arena_locked_team_identity.size() > ArenaManager.ARENA_MAX_SQUAD_SLOTS:
+		arena_locked_team_identity = (arena_locked_team_identity as Array).slice(0, ArenaManager.ARENA_MAX_SQUAD_SLOTS)
+
 func record_arena_win(base_gold: int = 150) -> Dictionary:
 	arena_win_streak += 1
+	arena_win_streak = mini(arena_win_streak, ArenaManager.ARENA_WIN_STREAK_MAX)
 	arena_best_win_streak = max(arena_best_win_streak, arena_win_streak)
 
 	var multiplier: float = get_arena_gold_multiplier() 
@@ -477,6 +498,7 @@ func record_arena_win(base_gold: int = 150) -> Dictionary:
 
 	global_gold += gold_reward
 	gladiator_tokens += token_reward
+	gladiator_tokens = clampi(gladiator_tokens, 0, ArenaManager.GLADIATOR_TOKENS_MAX)
 
 	return {
 		"streak": arena_win_streak,
@@ -645,7 +667,14 @@ func reset_campaign_data() -> void:
 	morgra_anger_duration = 0
 	morgra_neutral_duration = 0
 	morgra_favorite_survived_battles = 0
-	
+
+	arena_mmr = 1000
+	gladiator_tokens = 0
+	arena_win_streak = 0
+	arena_best_win_streak = 0
+	arena_locked_team_identity.clear()
+	ArenaManager.clear_local_arena_team_state()
+
 	ensure_seraphina_state()
 	_sync_seraphina_legacy_from_relationship_state()
 	ensure_camp_memory()
@@ -1034,6 +1063,11 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"unlocked_recipes": unlocked_recipes,
 		"player_structures": player_structures.duplicate(true),
 		"claimed_rank_rewards": claimed_rank_rewards.duplicate(),
+		"arena_mmr": arena_mmr,
+		"gladiator_tokens": gladiator_tokens,
+		"arena_win_streak": arena_win_streak,
+		"arena_best_win_streak": arena_best_win_streak,
+		"arena_locked_team_identity": arena_locked_team_identity.duplicate(true),
 		"player_dragons": DragonManager.player_dragons.duplicate(true),
 		
 		# Base Management
@@ -1437,11 +1471,20 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 
 		player_roster.append(unit)
 
+	arena_mmr = int(save_data.get("arena_mmr", arena_mmr))
+	gladiator_tokens = int(save_data.get("gladiator_tokens", gladiator_tokens))
+	arena_win_streak = int(save_data.get("arena_win_streak", arena_win_streak))
+	arena_best_win_streak = int(save_data.get("arena_best_win_streak", arena_best_win_streak))
+	var raw_arena_id: Variant = save_data.get("arena_locked_team_identity", [])
+	arena_locked_team_identity = raw_arena_id.duplicate(true) if raw_arena_id is Array else []
+	_clamp_arena_persistence()
+
 	claimed_rank_rewards.clear()
 	var loaded_rewards = save_data.get("claimed_rank_rewards", [])
 	for r in loaded_rewards: claimed_rank_rewards.append(r)
-	
+
 	active_save_slot = slot
+	ArenaManager.restore_local_arena_team_from_saved_identity()
 	return true
 
 func has_seen_camp_lore(lore_id: String) -> bool:
@@ -3224,6 +3267,46 @@ func format_relationship_tooltip(entry: Dictionary) -> String:
 	var hint: String = get_relationship_effect_hint(stat, value)
 	return type_name + ": " + partner_id + " (+" + hint + ")"
 
+## One bond for deploy roster / pre-battle UI (readable without color legend).
+func format_relationship_roster_line(entry: Dictionary) -> String:
+	var partner_id: String = str(entry.get("partner_id", "?"))
+	var stat: String = str(entry.get("stat", ""))
+	var type_name: String = get_relationship_type_display_name(stat)
+	return type_name + ": " + partner_id
+
+## Join top bonds for a second line under the unit name in ItemList.
+func format_relationship_roster_summary(entries: Array, max_parts: int = 3) -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	var n: int = 0
+	for e in entries:
+		if n >= max_parts:
+			break
+		if e is Dictionary:
+			parts.append(format_relationship_roster_line(e as Dictionary))
+		n += 1
+	return " · ".join(parts)
+
+## Compact tag for a small HUD strip (initial + short partner id).
+func format_relationship_strip_tag(entry: Dictionary) -> String:
+	var partner_id: String = str(entry.get("partner_id", "?"))
+	var stat: String = str(entry.get("stat", "")).to_lower()
+	var letter: String = "?"
+	match stat:
+		"trust":
+			letter = "T"
+		"mentorship":
+			letter = "M"
+		"rivalry":
+			letter = "R"
+		"fear":
+			letter = "F"
+		_:
+			letter = str(get_relationship_type_display_name(stat)).substr(0, 1)
+	var short_partner: String = partner_id
+	if short_partner.length() > 9:
+		short_partner = short_partner.substr(0, 8) + "…"
+	return letter + "·" + short_partner
+
 func format_relationship_row_bbcode(entry: Dictionary) -> String:
 	var partner_id: String = entry.get("partner_id", "?")
 	var stat: String = entry.get("stat", "")
@@ -3945,6 +4028,9 @@ func load_global_settings() -> void:
 	battle_path_invalid_ghost = bool(cfg.get_value("battle", "path_invalid_ghost", battle_path_invalid_ghost))
 	battle_show_log = bool(cfg.get_value("battle", "show_log", battle_show_log))
 	battle_allow_fog_of_war = bool(cfg.get_value("battle", "allow_fog_of_war", battle_allow_fog_of_war))
+	battle_deploy_zone_overlay_default = bool(cfg.get_value("battle", "deploy_zone_overlay_default", battle_deploy_zone_overlay_default))
+	battle_deploy_auto_arm_after_place = bool(cfg.get_value("battle", "deploy_auto_arm_after_place", battle_deploy_auto_arm_after_place))
+	battle_deploy_quick_fill = bool(cfg.get_value("battle", "deploy_quick_fill", battle_deploy_quick_fill))
 
 	performance_vsync = bool(cfg.get_value("performance", "vsync", performance_vsync))
 	performance_max_fps = sanitize_performance_max_fps(int(cfg.get_value("performance", "max_fps", performance_max_fps)))
@@ -3961,6 +4047,8 @@ func load_global_settings() -> void:
 	interface_show_status_effects = bool(cfg.get_value("interface", "show_status_effects", interface_show_status_effects))
 	interface_damage_text_size = clampi(int(cfg.get_value("interface", "damage_text_size", interface_damage_text_size)), 0, 2)
 	interface_combat_log_font_size = clampi(int(cfg.get_value("interface", "combat_log_font_size", interface_combat_log_font_size)), 0, 2)
+	interface_cursor_size = clampi(int(cfg.get_value("interface", "cursor_size", interface_cursor_size)), 0, 2)
+	interface_cursor_high_contrast = bool(cfg.get_value("interface", "cursor_high_contrast", interface_cursor_high_contrast))
 
 	player_profile_display_override = str(cfg.get_value("profile", "display_name_override", player_profile_display_override))
 	player_profile_display_override = sanitize_player_display_name(player_profile_display_override)
@@ -4005,6 +4093,9 @@ func save_global_settings() -> void:
 	cfg.set_value("battle", "path_invalid_ghost", battle_path_invalid_ghost)
 	cfg.set_value("battle", "show_log", battle_show_log)
 	cfg.set_value("battle", "allow_fog_of_war", battle_allow_fog_of_war)
+	cfg.set_value("battle", "deploy_zone_overlay_default", battle_deploy_zone_overlay_default)
+	cfg.set_value("battle", "deploy_auto_arm_after_place", battle_deploy_auto_arm_after_place)
+	cfg.set_value("battle", "deploy_quick_fill", battle_deploy_quick_fill)
 
 	cfg.set_value("performance", "vsync", performance_vsync)
 	cfg.set_value("performance", "max_fps", performance_max_fps)
@@ -4021,6 +4112,8 @@ func save_global_settings() -> void:
 	cfg.set_value("interface", "show_status_effects", interface_show_status_effects)
 	cfg.set_value("interface", "damage_text_size", interface_damage_text_size)
 	cfg.set_value("interface", "combat_log_font_size", interface_combat_log_font_size)
+	cfg.set_value("interface", "cursor_size", interface_cursor_size)
+	cfg.set_value("interface", "cursor_high_contrast", interface_cursor_high_contrast)
 
 	cfg.set_value("profile", "display_name_override", player_profile_display_override)
 
@@ -4107,6 +4200,7 @@ func _apply_windowed_resolution() -> void:
 const INTERFACE_HUD_SCALE_VALUES: Array[float] = [1.0, 1.25, 1.5, 1.75, 2.0]
 const INTERFACE_DAMAGE_TEXT_SIZES: Array[int] = [16, 22, 30]
 const INTERFACE_LOG_FONT_SIZES: Array[int] = [14, 18, 24]
+const INTERFACE_CURSOR_SCALE_VALUES: Array[float] = [1.0, 1.15, 1.30]
 
 
 func get_hud_scale_float() -> float:
@@ -4119,6 +4213,10 @@ func get_damage_text_font_size() -> int:
 
 func get_combat_log_font_size() -> int:
 	return INTERFACE_LOG_FONT_SIZES[clampi(interface_combat_log_font_size, 0, INTERFACE_LOG_FONT_SIZES.size() - 1)]
+
+
+func get_cursor_scale_float() -> float:
+	return INTERFACE_CURSOR_SCALE_VALUES[clampi(interface_cursor_size, 0, INTERFACE_CURSOR_SCALE_VALUES.size() - 1)]
 
 
 func _set_bus_volume_linear(bus_name: String, linear_vol: float) -> void:

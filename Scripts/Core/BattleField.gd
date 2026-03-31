@@ -75,6 +75,40 @@ const DEBUG_SUPPORT_COMBAT := false
 
 ## Static helpers + legacy ids (preload so BattleField does not depend on global class registration order).
 const UnitTraitsLib = preload("res://Scripts/Core/UnitTraitsDisplay.gd")
+const CoopHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopHelpers.gd")
+const CoopReplayHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopReplayHelpers.gd")
+const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
+const SupportHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSupportHelpers.gd")
+const InventoryUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryUiHelpers.gd")
+const DrawHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDrawHelpers.gd")
+const PathCursorHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPathfindingCursorHelpers.gd")
+const TradeInventoryHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTradeInventoryHelpers.gd")
+const CombatOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatOrchestrationHelpers.gd")
+const InventoryActionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryActionHelpers.gd")
+const PromotionChoiceUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionChoiceUiHelpers.gd")
+const PromotionVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionVfxHelpers.gd")
+const ObjectiveUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldObjectiveUiHelpers.gd")
+const CinematicDialogueHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCinematicDialogueHelpers.gd")
+const MinimapHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMinimapHelpers.gd")
+const StatusIconVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldStatusIconVfxHelpers.gd")
+const CombatVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatVfxHelpers.gd")
+const GoldVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldGoldVfxHelpers.gd")
+const TurnOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnOrchestrationHelpers.gd")
+const DefensiveReactionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionHelpers.gd")
+const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
+const DefensiveAbilityFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveAbilityFlowHelpers.gd")
+const AttackResolutionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldAttackResolutionHelpers.gd")
+const PostStrikeCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPostStrikeCleanupHelpers.gd")
+const ForcedMovementTacticalHelpers = preload("res://Scripts/Core/BattleField/BattleFieldForcedMovementTacticalHelpers.gd")
+const CombatCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatCleanupHelpers.gd")
+const StrikeSequenceHelpers = preload("res://Scripts/Core/BattleField/BattleFieldStrikeSequenceHelpers.gd")
+const CombatForecastHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatForecastHelpers.gd")
+const CoopCombatRequestHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopCombatRequestHelpers.gd")
+const CoopEnemyCombatNetHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopEnemyCombatNetHelpers.gd")
+const CoopOutboundSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopOutboundSyncHelpers.gd")
+const CoopRemoteSyncActionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRemoteSyncActionHelpers.gd")
+const CoopRngSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRngSyncHelpers.gd")
+const CoopMockSessionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopMockSessionHelpers.gd")
 
 # Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage → Fire Trap).
 const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
@@ -147,6 +181,16 @@ const TACTICAL_UI_SECONDARY_HOVER := Color(0.30, 0.23, 0.11, 1.0)
 const TACTICAL_UI_SECONDARY_PRESS := Color(0.14, 0.10, 0.05, 1.0)
 const TACTICAL_UI_MARGIN := 24.0
 const TACTICAL_UI_RAIL_WIDTH := 308.0
+## Pre-battle roster is wider than the tactical rail so names and the bond readout fit.
+const TACTICAL_DEPLOY_ROSTER_PANEL_WIDTH := 348.0
+const TACTICAL_DEPLOY_ROSTER_BONDS_H := 252.0
+## Min ItemList height (logical px); tuned so several units are visible without a tiny strip above the bond block.
+const TACTICAL_DEPLOY_ROSTER_MIN_LIST_H := 132.0
+## Pre-battle only: less bottom margin than tactical HUD so the deploy column can use more of the viewport.
+const TACTICAL_DEPLOY_ROSTER_VIEWPORT_BOTTOM_RESERVE := 20.0
+const META_DEPLOYMENT_RAIL_COLLAPSED := &"deployment_rail_collapsed"
+## Start Battle button alpha when deploy roster is hidden (map-first view).
+const DEPLOY_START_BATTLE_MODULATE_A_COLLAPSED := 0.58
 const TACTICAL_UI_BOTTOM_HEIGHT := 212.0
 const TACTICAL_UI_HUD_SCALE := 1.5
 const TACTICAL_UI_BOTTOM_PANEL_SCALE_MULT := 0.85
@@ -209,6 +253,8 @@ var detailed_unit_info_growth_widgets: Dictionary = {}
 var detailed_unit_info_anim_tween: Tween
 var field_log_toggle_btn: Button
 var field_log_toggle_tween: Tween
+var deploy_roster_toggle_btn: Button
+var deploy_roster_toggle_tween: Tween
 
 # =============================================================================
 # EXPORTED SCENE / AUDIO / GENERAL CONFIG
@@ -661,283 +707,101 @@ const COOP_REMOTE_AI_CAMERA_TOP_MARGIN: float = -250.0
 const COOP_REMOTE_AI_CAMERA_BOTTOM_MARGIN: float = 400.0
 
 func get_consumed_mock_coop_battle_handoff_snapshot() -> Dictionary:
-	return _consumed_mock_coop_battle_handoff.duplicate(true)
+	return CoopMockSessionHelpers.get_consumed_mock_coop_battle_handoff_snapshot(self)
 
 
 func get_mock_coop_battle_context_snapshot() -> Dictionary:
-	if _mock_coop_battle_context == null:
-		return {"active": false, "context_valid": false}
-	return _mock_coop_battle_context.get_snapshot()
+	return CoopMockSessionHelpers.get_mock_coop_battle_context_snapshot(self)
 
 
 func get_mock_coop_unit_ownership_snapshot() -> Dictionary:
-	if _mock_coop_ownership_assignments.is_empty():
-		return {"active": false}
-	return {
-		"active": true,
-		"rule": "first_half_local_ceil",
-		"assignments": _mock_coop_ownership_assignments.duplicate(true),
-	}
+	return CoopMockSessionHelpers.get_mock_coop_unit_ownership_snapshot(self)
 
 
 ## Returns MOCK_COOP_OWNER_LOCAL / MOCK_COOP_OWNER_REMOTE, or "" if unset / not mock co-op.
 func get_mock_coop_unit_owner_for_unit(unit: Node) -> String:
-	if unit == null or not is_instance_valid(unit) or not unit.has_meta(MOCK_COOP_BATTLE_OWNER_META):
-		return ""
-	return str(unit.get_meta(MOCK_COOP_BATTLE_OWNER_META))
+	return CoopMockSessionHelpers.get_mock_coop_unit_owner_for_unit(self, unit)
 
 
 func is_mock_coop_unit_ownership_active() -> bool:
-	return not _mock_coop_ownership_assignments.is_empty()
+	return CoopMockSessionHelpers.is_mock_coop_unit_ownership_active(self)
 
 
 ## True when mock co-op ownership is on and this unit is assigned to the remote partner (not locally commandable).
 func is_local_player_command_blocked_for_mock_coop_unit(unit: Node) -> bool:
-	if unit == null or not is_instance_valid(unit) or _mock_coop_ownership_assignments.is_empty():
-		return false
-	return get_mock_coop_unit_owner_for_unit(unit) == MOCK_COOP_OWNER_REMOTE
+	return CoopMockSessionHelpers.is_local_player_command_blocked_for_mock_coop_unit(self, unit)
 
 
 func notify_mock_coop_remote_command_blocked(unit: Node2D) -> void:
-	if unit == null or not is_instance_valid(unit):
-		return
-	play_ui_sfx(UISfx.INVALID)
-	var uname: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else str(unit.name)
-	if battle_log != null and battle_log.visible:
-		add_combat_log("Co-op: %s answers to your partner — you cannot command this unit here." % uname, "orange")
-	if unit is CanvasItem and (unit as CanvasItem).visible:
-		spawn_loot_text("Partner's unit", Color(1.0, 0.55, 0.2), unit.global_position + Vector2(32, -32))
+	CoopMockSessionHelpers.notify_mock_coop_remote_command_blocked(self, unit)
 
 
 func try_allow_local_player_select_unit_for_command(unit: Node2D) -> bool:
-	if is_local_player_command_blocked_for_mock_coop_unit(unit):
-		notify_mock_coop_remote_command_blocked(unit)
-		return false
-	return true
+	return CoopMockSessionHelpers.try_allow_local_player_select_unit_for_command(self, unit)
 
 
 func _infer_mock_coop_command_prefix_for_node(unit: Node2D) -> String:
-	if unit == null or not is_instance_valid(unit):
-		return ""
-	var parent: Node = unit.get_parent()
-	if parent == player_container:
-		return "player"
-	if parent == ally_container:
-		return "ally"
-	if parent == enemy_container:
-		return "enemy"
-	if parent == destructibles_container:
-		return "destructible"
-	if parent == chests_container:
-		return "chest"
-	return ""
+	return CoopMockSessionHelpers._infer_mock_coop_command_prefix_for_node(self, unit)
 
 
 func _ensure_mock_coop_command_id_for_node(unit: Node2D) -> String:
-	if unit == null or not is_instance_valid(unit):
-		return ""
-	if unit.has_meta(MOCK_COOP_COMMAND_ID_META):
-		var existing: String = str(unit.get_meta(MOCK_COOP_COMMAND_ID_META, "")).strip_edges()
-		if existing != "":
-			return existing
-	var prefix: String = _infer_mock_coop_command_prefix_for_node(unit)
-	if prefix == "":
-		return get_relationship_id(unit).strip_edges()
-	var parent: Node = unit.get_parent()
-	var sibling_index: int = -1
-	if parent != null:
-		sibling_index = parent.get_children().find(unit)
-	var base_name: String = ""
-	if unit.get("unit_name") != null:
-		base_name = str(unit.get("unit_name")).strip_edges()
-	if base_name == "":
-		base_name = str(unit.name).strip_edges()
-	if base_name == "":
-		base_name = prefix
-	base_name = base_name.replace("::", "_")
-	var stable_id: String = "%s::%03d::%s" % [prefix, maxi(sibling_index, 0), base_name]
-	unit.set_meta(MOCK_COOP_COMMAND_ID_META, stable_id)
-	return stable_id
+	return CoopMockSessionHelpers._ensure_mock_coop_command_id_for_node(self, unit)
 
 
 func _get_mock_coop_command_id(unit_or_name: Variant) -> String:
-	if unit_or_name is Node2D:
-		var unit: Node2D = unit_or_name as Node2D
-		if unit.has_meta(MOCK_COOP_COMMAND_ID_META):
-			var meta_id: String = str(unit.get_meta(MOCK_COOP_COMMAND_ID_META, "")).strip_edges()
-			if meta_id != "":
-				return meta_id
-		return _ensure_mock_coop_command_id_for_node(unit)
-	if unit_or_name is String:
-		return str(unit_or_name).strip_edges()
-	return ""
+	return CoopMockSessionHelpers._get_mock_coop_command_id(self, unit_or_name)
 
 
 func _seed_mock_coop_command_ids_for_live_battle_nodes() -> void:
-	for cont in [player_container, ally_container, enemy_container, destructibles_container, chests_container]:
-		if cont == null:
-			continue
-		for child in cont.get_children():
-			if not child is Node2D:
-				continue
-			var node: Node2D = child as Node2D
-			if not is_instance_valid(node) or node.is_queued_for_deletion():
-				continue
-			_ensure_mock_coop_command_id_for_node(node)
+	CoopMockSessionHelpers._seed_mock_coop_command_ids_for_live_battle_nodes(self)
 
 
 func _coop_focus_camera_on_world_point(world_point: Vector2, duration: float) -> void:
-	if main_camera == null or not camera_follows_enemies:
-		return
-	var cam: Camera2D = main_camera
-	var vp: Vector2 = get_viewport_rect().size
-	var target_cam_pos: Vector2 = world_point + Vector2(0, COOP_REMOTE_AI_CAMERA_OFFSET_Y)
-	if cam.anchor_mode == Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT:
-		var half_vp_world: Vector2 = (vp * 0.5) / cam.zoom
-		target_cam_pos -= half_vp_world
-	var map_limit_x: float = float(GRID_SIZE.x * CELL_SIZE.x)
-	var map_limit_y: float = float(GRID_SIZE.y * CELL_SIZE.y)
-	target_cam_pos.x = clamp(
-		target_cam_pos.x,
-		COOP_REMOTE_AI_CAMERA_LEFT_MARGIN,
-		map_limit_x + COOP_REMOTE_AI_CAMERA_RIGHT_MARGIN
-	)
-	target_cam_pos.y = clamp(
-		target_cam_pos.y,
-		COOP_REMOTE_AI_CAMERA_TOP_MARGIN,
-		map_limit_y + COOP_REMOTE_AI_CAMERA_BOTTOM_MARGIN
-	)
-	var camera_tween: Tween = create_tween()
-	camera_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	camera_tween.tween_property(cam, "global_position", target_cam_pos, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	await camera_tween.finished
+	await CoopMockSessionHelpers._coop_focus_camera_on_world_point(self, world_point, duration)
 
 
 func _coop_focus_camera_on_unit(unit: Node2D, duration: float = 0.55) -> void:
-	if unit == null or not is_instance_valid(unit):
-		return
-	await _coop_focus_camera_on_world_point(unit.global_position + Vector2(32, 32), duration)
+	await CoopMockSessionHelpers._coop_focus_camera_on_unit(self, unit, duration)
 
 
 func _coop_focus_camera_on_action(attacker: Node2D, target: Node2D, duration: float = 0.4) -> void:
-	if attacker == null or target == null:
-		return
-	if not is_instance_valid(attacker) or not is_instance_valid(target):
-		return
-	var focus_point: Vector2 = ((attacker.global_position + Vector2(32, 32)) + (target.global_position + Vector2(32, 32))) * 0.5
-	await _coop_focus_camera_on_world_point(focus_point, duration)
+	await CoopMockSessionHelpers._coop_focus_camera_on_action(self, attacker, target, duration)
 
 
 func _mock_coop_battle_sync_active() -> bool:
-	return (
-			is_mock_coop_unit_ownership_active()
-			and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
-			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-		)
+	return CoopMockSessionHelpers._mock_coop_battle_sync_active(self)
 
 
 func _mock_coop_prebattle_ready_sync_active() -> bool:
-	return _mock_coop_battle_sync_active()
+	return CoopMockSessionHelpers._mock_coop_prebattle_ready_sync_active(self)
 
 
 func _mock_coop_role_key_from_command_id(command_id: String) -> String:
-	var cid: String = str(command_id).strip_edges()
-	if cid == "":
-		return ""
-	var parts: PackedStringArray = cid.split("::", false, 1)
-	if parts.size() < 2:
-		return ""
-	return str(parts[0]).strip_edges().to_lower()
+	return CoopMockSessionHelpers._mock_coop_role_key_from_command_id(self, command_id)
 
 
 func get_mock_coop_allowed_prebattle_slots_for_command_id(command_id: String) -> Array[Vector2i]:
-	var out: Array[Vector2i] = []
-	if pre_battle_state == null:
-		return out
-	var slots: Array[Vector2i] = pre_battle_state.valid_deployment_slots
-	if slots.is_empty():
-		return out
-	if not is_mock_coop_unit_ownership_active():
-		return slots.duplicate()
-	var role_key: String = _mock_coop_role_key_from_command_id(command_id)
-	if role_key == "":
-		return slots.duplicate()
-	var party_slot_count: int = mini(MOCK_COOP_COMMANDER_DEPLOYMENT_SLOT_COUNT, slots.size())
-	if party_slot_count <= 0:
-		return out
-	var start: int = 0
-	if role_key == "guest":
-		start = party_slot_count
-	elif role_key != "host":
-		return slots.duplicate()
-	var end_exclusive: int = mini(start + party_slot_count, slots.size())
-	for i in range(start, end_exclusive):
-		out.append(slots[i])
-	return out
+	return CoopMockSessionHelpers.get_mock_coop_allowed_prebattle_slots_for_command_id(self, command_id)
 
 
 func get_mock_coop_allowed_prebattle_slots_for_unit(unit: Node2D) -> Array[Vector2i]:
-	if unit == null or not is_instance_valid(unit):
-		return []
-	return get_mock_coop_allowed_prebattle_slots_for_command_id(_get_mock_coop_command_id(unit))
+	return CoopMockSessionHelpers.get_mock_coop_allowed_prebattle_slots_for_unit(self, unit)
 
 
 func is_mock_coop_prebattle_slot_allowed_for_unit(unit: Node2D, slot: Vector2i) -> bool:
-	var allowed: Array[Vector2i] = get_mock_coop_allowed_prebattle_slots_for_unit(unit)
-	if allowed.is_empty():
-		return false
-	return slot in allowed
+	return CoopMockSessionHelpers.is_mock_coop_prebattle_slot_allowed_for_unit(self, unit, slot)
 
 
 func _reset_mock_coop_prebattle_ready_state() -> void:
-	_mock_coop_local_prebattle_ready = false
-	_mock_coop_remote_prebattle_ready = false
-	_mock_coop_prebattle_transition_pending = false
-	_update_mock_coop_start_battle_button_state()
+	CoopMockSessionHelpers._reset_mock_coop_prebattle_ready_state(self)
 
 
 func _update_mock_coop_start_battle_button_state() -> void:
-	var btn: Button = get_node_or_null("UI/StartBattleButton") as Button
-	if btn == null:
-		return
-	if _mock_coop_start_battle_button_base_text == "":
-		var live_text: String = str(btn.text).strip_edges()
-		_mock_coop_start_battle_button_base_text = live_text if live_text != "" else "Start Battle"
-	var base_text: String = _mock_coop_start_battle_button_base_text
-	if current_state != pre_battle_state or not btn.visible:
-		btn.text = base_text
-		btn.disabled = false
-		return
-	if not _mock_coop_prebattle_ready_sync_active():
-		btn.text = base_text
-		btn.disabled = false
-		return
-	if _mock_coop_local_prebattle_ready and _mock_coop_remote_prebattle_ready:
-		btn.text = "Starting..."
-		btn.disabled = true
-	elif _mock_coop_local_prebattle_ready:
-		btn.text = "Ready - Waiting"
-		btn.disabled = true
-	elif _mock_coop_remote_prebattle_ready:
-		btn.text = "Partner Ready - Start"
-		btn.disabled = false
-	else:
-		btn.text = base_text
-		btn.disabled = false
+	CoopMockSessionHelpers._update_mock_coop_start_battle_button_state(self)
 
 
 func _mock_coop_try_advance_prebattle_after_ready_sync() -> void:
-	if current_state != pre_battle_state:
-		return
-	if not _mock_coop_prebattle_ready_sync_active():
-		return
-	if not _mock_coop_local_prebattle_ready or not _mock_coop_remote_prebattle_ready:
-		return
-	if _mock_coop_prebattle_transition_pending:
-		return
-	_mock_coop_prebattle_transition_pending = true
-	_update_mock_coop_start_battle_button_state()
-	_start_battle_from_deployment()
+	CoopMockSessionHelpers._mock_coop_try_advance_prebattle_after_ready_sync(self)
 
 
 var _coop_enet_remote_sync_queue: Array = []
@@ -958,226 +822,95 @@ func _exit_tree() -> void:
 
 
 func _coop_net_reset_battle_rng_sync() -> void:
-	_coop_net_have_battle_seed = false
-	_coop_net_stored_battle_seed = 0
-	_coop_net_local_combat_seq = 0
-	_coop_net_incoming_enemy_combat_fifo.clear()
-	_coop_qte_event_seq = 0
-	_coop_qte_mirror_active = false
-	_coop_qte_mirror_dict.clear()
-	_coop_qte_capture_active = false
-	_coop_qte_capture_dict.clear()
-	_coop_combat_loot_capture_active = false
-	_coop_combat_loot_capture_events.clear()
-	_coop_guest_awaiting_combat_aid = ""
-	_coop_remote_enemy_turn_completed = false
-	_coop_remote_battle_result_applying = false
-	_coop_host_battle_result_broadcast = ""
-	_coop_finalized_battle_result = ""
-	_coop_waiting_for_host_battle_result = ""
-	_coop_battle_result_resolution_in_progress = ""
-	_coop_remote_escort_turn_completed = false
-	_coop_pending_escort_destination_victory = false
+	CoopReplayHelpers.coop_net_reset_battle_rng_sync(self)
 
 
 func coop_enet_enemy_turn_host_authority_active() -> bool:
-	return (
-		is_mock_coop_unit_ownership_active()
-		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
-		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-	)
+	return CoopReplayHelpers.coop_enet_enemy_turn_host_authority_active(self)
 
 
 func coop_enet_is_host_authority_enemy_turn_host() -> bool:
-	return coop_enet_enemy_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST
+	return CoopReplayHelpers.coop_enet_is_host_authority_enemy_turn_host(self)
 
 
 func coop_enet_should_wait_for_host_authority_enemy_turn() -> bool:
-	return coop_enet_enemy_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+	return CoopReplayHelpers.coop_enet_should_wait_for_host_authority_enemy_turn(self)
 
 
 func coop_enet_guest_wait_for_enemy_turn_end() -> void:
-	if not coop_enet_should_wait_for_host_authority_enemy_turn():
-		return
-	if _coop_remote_enemy_turn_completed:
-		_coop_remote_enemy_turn_completed = false
-		return
-	while is_inside_tree():
-		await coop_remote_enemy_turn_finished
-		if _coop_remote_enemy_turn_completed:
-			_coop_remote_enemy_turn_completed = false
-			return
+	await CoopReplayHelpers.coop_enet_guest_wait_for_enemy_turn_end(self)
 
 
 func coop_enet_escort_turn_host_authority_active() -> bool:
-	return (
-		map_objective == Objective.DEFEND_TARGET
-		and is_instance_valid(vip_target)
-		and vip_target.has_method("process_escort_turn")
-		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
-		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-	)
+	return CoopReplayHelpers.coop_enet_escort_turn_host_authority_active(self)
 
 
 func coop_enet_is_host_authority_escort_turn_host() -> bool:
-	return coop_enet_escort_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST
+	return CoopReplayHelpers.coop_enet_is_host_authority_escort_turn_host(self)
 
 
 func coop_enet_should_wait_for_host_authority_escort_turn() -> bool:
-	return coop_enet_escort_turn_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+	return CoopReplayHelpers.coop_enet_should_wait_for_host_authority_escort_turn(self)
 
 
 func coop_enet_guest_wait_for_escort_turn_end() -> void:
-	if not coop_enet_should_wait_for_host_authority_escort_turn():
-		return
-	if _coop_remote_escort_turn_completed:
-		_coop_remote_escort_turn_completed = false
-		return
-	while is_inside_tree():
-		await coop_remote_escort_turn_finished
-		if _coop_remote_escort_turn_completed:
-			_coop_remote_escort_turn_completed = false
-			return
+	await CoopReplayHelpers.coop_enet_guest_wait_for_escort_turn_end(self)
 
 
 func _coop_normalize_battle_result(result: String) -> String:
-	var normalized: String = str(result).strip_edges().to_upper()
-	if normalized == "":
-		return ""
-	return normalized
+	return CoopReplayHelpers.coop_normalize_battle_result(result)
 
 
 func coop_enet_battle_result_host_authority_active() -> bool:
-	return coop_enet_enemy_turn_host_authority_active()
+	return CoopReplayHelpers.coop_enet_battle_result_host_authority_active(self)
 
 
 func coop_enet_should_wait_for_host_authoritative_battle_result() -> bool:
-	return coop_enet_battle_result_host_authority_active() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+	return CoopReplayHelpers.coop_enet_should_wait_for_host_authoritative_battle_result(self)
 
 
 func _coop_send_host_authoritative_battle_result(result: String) -> void:
-	var normalized: String = _coop_normalize_battle_result(result)
-	if normalized == "":
-		return
-	if not coop_enet_battle_result_host_authority_active() or CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
-		return
-	if _coop_host_battle_result_broadcast == normalized:
-		return
-	_coop_host_battle_result_broadcast = normalized
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "battle_result",
-		"result": normalized,
-	})
+	CoopReplayHelpers.coop_send_host_authoritative_battle_result(self, result)
 
 
 func _coop_wait_for_host_authoritative_battle_result(result: String) -> void:
-	var normalized: String = _coop_normalize_battle_result(result)
-	if normalized == "":
-		return
-	if _coop_finalized_battle_result != "":
-		return
-	if _coop_waiting_for_host_battle_result == normalized:
-		return
-	_coop_waiting_for_host_battle_result = normalized
-	change_state(null)
-	if battle_log != null and battle_log.visible:
-		add_combat_log("Co-op: waiting for host to confirm %s." % normalized.to_lower(), "gold")
+	CoopReplayHelpers.coop_wait_for_host_authoritative_battle_result(self, result)
 
 
 func _is_loot_window_active() -> bool:
-	return loot_window != null and is_instance_valid(loot_window) and loot_window.visible
+	return CoopReplayHelpers.is_loot_window_active(self)
 
 
 func _wait_for_loot_window_close() -> void:
-	while is_inside_tree() and _is_loot_window_active():
-		await loot_window_closed
+	await CoopReplayHelpers.wait_for_loot_window_close(self)
 
 
 func _defer_battle_result_until_loot_if_needed(result: String) -> bool:
-	var normalized: String = _coop_normalize_battle_result(result)
-	if normalized == "":
-		normalized = str(result).strip_edges()
-	if normalized == "":
-		return false
-	if not _is_loot_window_active():
-		return false
-	_deferred_battle_result_after_loot = normalized
-	return true
+	return CoopReplayHelpers.defer_battle_result_until_loot_if_needed(self, result)
 
 
 func _apply_deferred_battle_result_after_loot(result: String) -> void:
-	var normalized: String = _coop_normalize_battle_result(result)
-	if normalized == "":
-		normalized = str(result).strip_edges()
-	if normalized == "" or _coop_finalized_battle_result != "":
-		return
-	if normalized == "VICTORY":
-		await _trigger_victory()
-	else:
-		trigger_game_over(normalized)
+	await CoopReplayHelpers.apply_deferred_battle_result_after_loot(self, result)
 
 
 func _coop_wire_serialize_items(items: Array) -> Array:
-	var out: Array = []
-	for item in items:
-		if not (item is Resource):
-			continue
-		var entry: Dictionary = {}
-		if CampaignManager != null and CampaignManager.has_method("_serialize_item"):
-			entry = CampaignManager._serialize_item(item as Resource)
-		if entry.is_empty():
-			var res: Resource = item as Resource
-			var path: String = res.resource_path
-			if path == "" and res.has_meta("original_path"):
-				path = str(res.get_meta("original_path", "")).strip_edges()
-			if path != "":
-				entry = {"path": path}
-		if not entry.is_empty():
-			out.append(entry)
-	return out
+	return CoopHelpers.coop_wire_serialize_items(self, items)
 
 
 func _coop_wire_deserialize_items(raw: Variant) -> Array:
-	var out: Array = []
-	if typeof(raw) != TYPE_ARRAY:
-		return out
-	for item_data in raw as Array:
-		var inst: Resource = null
-		if item_data is Dictionary and CampaignManager != null and CampaignManager.has_method("_deserialize_item"):
-			inst = CampaignManager._deserialize_item(item_data as Dictionary)
-		elif item_data is String:
-			var loaded: Resource = load(str(item_data)) as Resource
-			if loaded != null:
-				inst = CampaignManager.duplicate_item(loaded) if CampaignManager != null else loaded.duplicate(true)
-		if inst != null:
-			out.append(inst)
-	return out
+	return CoopHelpers.coop_wire_deserialize_items(self, raw)
 
 
 func _coop_wire_resource_path(res: Resource) -> String:
-	if res == null:
-		return ""
-	var path: String = str(res.resource_path).strip_edges()
-	if path == "" and res.has_meta("original_path"):
-		path = str(res.get_meta("original_path", "")).strip_edges()
-	return path
+	return CoopHelpers.coop_wire_resource_path(self, res)
 
 
 func _coop_wire_serialize_item_single(item: Resource) -> Variant:
-	if item == null:
-		return {}
-	var raw: Array = _coop_wire_serialize_items([item])
-	if raw.is_empty():
-		return {}
-	return raw[0]
+	return CoopHelpers.coop_wire_serialize_item_single(self, item)
 
 
 func _coop_wire_deserialize_item_single(raw: Variant) -> Resource:
-	var wrapped: Array = [raw]
-	var out: Array = _coop_wire_deserialize_items(wrapped)
-	if out.is_empty():
-		return null
-	return out[0] as Resource
+	return CoopHelpers.coop_wire_deserialize_item_single(self, raw)
 
 
 func _coop_capture_enemy_death_loot_for_sync(source_unit: Node2D, total_gold: int, items: Array, recipient: Node2D) -> void:
@@ -1534,206 +1267,57 @@ func _coop_apply_enemy_phase_setup_snapshot(snap: Dictionary) -> void:
 
 
 func coop_enet_sync_after_host_authority_enemy_move(unit: Node2D, path: Array, path_cost: float) -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	if unit == null or not is_instance_valid(unit):
-		return
-	var uid: String = _get_mock_coop_command_id(unit)
-	if uid == "":
-		return
-	var serial: Array = []
-	for p in path:
-		var v := Vector2i.ZERO
-		if p is Vector2i:
-			v = p as Vector2i
-		elif typeof(p) == TYPE_VECTOR2I:
-			v = p as Vector2i
-		else:
-			continue
-		serial.append([v.x, v.y])
-	if serial.size() < 2:
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "enemy_turn_move",
-		"unit_id": uid,
-		"path": serial,
-		"path_cost": float(path_cost),
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_enemy_move(self, unit, path, path_cost)
 
 
 func coop_enet_sync_after_host_authority_enemy_finish_turn(unit: Node2D) -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	if unit == null or not is_instance_valid(unit):
-		return
-	var uid: String = _get_mock_coop_command_id(unit)
-	if uid == "":
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "enemy_turn_finish",
-		"unit_id": uid,
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_enemy_finish_turn(self, unit)
 
 
 func coop_enet_sync_after_host_authority_enemy_escape(unit: Node2D) -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	if unit == null or not is_instance_valid(unit):
-		return
-	var uid: String = _get_mock_coop_command_id(unit)
-	if uid == "":
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "enemy_turn_escape",
-		"unit_id": uid,
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_enemy_escape(self, unit)
 
 
 func coop_enet_sync_after_host_authority_enemy_chest_open(opener: Node2D, chest: Node2D, stolen_items: Array) -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	if opener == null or chest == null or not is_instance_valid(opener) or not is_instance_valid(chest):
-		return
-	var opener_id: String = _get_mock_coop_command_id(opener)
-	var chest_id: String = _get_mock_coop_command_id(chest)
-	if opener_id == "" or chest_id == "":
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "enemy_turn_chest_open",
-		"opener_id": opener_id,
-		"chest_id": chest_id,
-		"stolen_items": _coop_wire_serialize_items(stolen_items),
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_enemy_chest_open(self, opener, chest, stolen_items)
 
 
 func coop_enet_sync_after_host_authority_enemy_turn_end() -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "enemy_turn_end"})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_enemy_turn_end(self)
 
 
 func coop_enet_sync_enemy_turn_batch_move(entries: Array) -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	var payload: Array = []
-	for entry: Dictionary in entries:
-		var unit: Node2D = entry.get("unit") as Node2D
-		var path: Array = entry.get("move_path", [])
-		if unit == null or not is_instance_valid(unit):
-			continue
-		var uid: String = _get_mock_coop_command_id(unit)
-		if uid == "":
-			continue
-		var serial: Array = []
-		var typed_path: Array[Vector2i] = []
-		for p in path:
-			var v := Vector2i.ZERO
-			if p is Vector2i:
-				v = p as Vector2i
-			elif typeof(p) == TYPE_VECTOR2I:
-				v = p as Vector2i
-			else:
-				continue
-			serial.append([v.x, v.y])
-			typed_path.append(v)
-		if serial.size() < 2:
-			continue
-		payload.append({
-			"unit_id": uid,
-			"path": serial,
-			"path_cost": float(get_path_move_cost(typed_path, unit)),
-		})
-	if payload.is_empty():
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "enemy_turn_batch_move",
-		"entries": payload,
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_enemy_turn_batch_move(self, entries)
 
 
 func coop_enet_sync_after_host_authority_enemy_phase_setup() -> void:
-	if not coop_enet_is_host_authority_enemy_turn_host():
-		return
-	var snap: Dictionary = _coop_build_enemy_phase_setup_snapshot()
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "enemy_phase_setup",
-		"setup": snap,
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_enemy_phase_setup(self)
 
 
 func coop_enet_sync_after_host_authoritative_battle_result(result: String) -> void:
-	_coop_send_host_authoritative_battle_result(result)
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authoritative_battle_result(self, result)
 
 
 func coop_enet_sync_after_host_authority_escort_turn(convoy: Node2D) -> void:
-	if not coop_enet_is_host_authority_escort_turn_host():
-		return
-	if convoy == null or not is_instance_valid(convoy):
-		return
-	var path_payload: Array = []
-	var path_raw: Variant = convoy.get("last_turn_path")
-	if path_raw is Array:
-		for cell in path_raw as Array:
-			if cell is Vector2i:
-				var grid: Vector2i = cell as Vector2i
-				path_payload.append([grid.x, grid.y])
-			elif cell is Array:
-				var arr: Array = cell as Array
-				if arr.size() >= 2:
-					path_payload.append([int(arr[0]), int(arr[1])])
-	var payload: Dictionary = {
-		"action": "escort_turn",
-		"path": path_payload,
-		"current_marker_idx": int(convoy.get("current_marker_idx")),
-		"current_hp": int(convoy.get("current_hp")),
-		"has_moved": bool(convoy.get("has_moved")),
-		"is_exhausted": bool(convoy.get("is_exhausted")),
-		"reached_destination": bool(convoy.get("last_turn_reached_destination")),
-	}
-	CoopExpeditionSessionManager.send_runtime_coop_action(payload)
+	CoopOutboundSyncHelpers.coop_enet_sync_after_host_authority_escort_turn(self, convoy)
 
 
 ## Called on host + guest when the session locks RNG for this battle ([method CoopExpeditionSessionManager.enet_try_publish_coop_battle_rng_seed]).
 func apply_coop_battle_net_rng_seed(s: int) -> void:
-	_coop_net_stored_battle_seed = s
-	_coop_net_have_battle_seed = true
-	_coop_net_local_combat_seq = 0
-	seed(s)
-	if OS.is_debug_build():
-		print("[CoopBattleRNG] Global seed locked (base=%d)." % s)
+	CoopRngSyncHelpers.apply_coop_battle_net_rng_seed(self, s)
 
 
 func coop_net_rng_sync_ready() -> bool:
-	return _coop_net_have_battle_seed
-
-
-func _coop_net_seed_global_for_packed_combat_id(packed_id: int) -> void:
-	if not _coop_net_have_battle_seed:
-		return
-	seed(hash(str(_coop_net_stored_battle_seed) + "#" + str(packed_id)))
+	return CoopRngSyncHelpers.coop_net_rng_sync_ready(self)
 
 
 ## Call immediately before [method execute_combat] on the attacker’s machine. Returns packed id for the wire (guest vs host ranges avoid collisions).
 func coop_enet_begin_synchronized_combat_round() -> int:
-	if not _coop_net_have_battle_seed:
-		return -1
-	if not is_mock_coop_unit_ownership_active():
-		return -1
-	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
-		return -1
-	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
-		return -1
-	_coop_net_local_combat_seq += 1
-	var hi: int = 1 if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST else 0
-	var packed: int = hi * 1_000_000_000 + _coop_net_local_combat_seq
-	_coop_net_seed_global_for_packed_combat_id(packed)
-	return packed
+	return CoopRngSyncHelpers.coop_enet_begin_synchronized_combat_round(self)
 
 
 func coop_enet_apply_remote_combat_packed_id(packed: int) -> void:
-	if packed < 0:
-		return
-	_coop_net_seed_global_for_packed_combat_id(packed)
+	CoopRngSyncHelpers.coop_enet_apply_remote_combat_packed_id(self, packed)
 
 
 ## Monotonic minigame ids for one [method execute_combat] (must match peer call order). Partner mirrors snapshot; no interactive QTE on guest.
@@ -1747,72 +1331,47 @@ var _coop_combat_loot_capture_events: Array = []
 
 
 func _coop_qte_tick_reset_for_execute_combat() -> void:
-	_coop_qte_event_seq = 0
+	CoopRuntimeSyncHelpers.coop_qte_tick_reset_for_execute_combat(self)
 
 
 func coop_net_begin_local_combat_qte_capture() -> void:
-	_coop_qte_capture_dict.clear()
-	_coop_qte_capture_active = true
+	CoopRuntimeSyncHelpers.coop_net_begin_local_combat_qte_capture(self)
 
 
 func coop_net_end_local_combat_qte_capture() -> Dictionary:
-	if not _coop_qte_capture_active:
-		return {}
-	_coop_qte_capture_active = false
-	return _coop_qte_capture_dict.duplicate(true)
+	return CoopRuntimeSyncHelpers.coop_net_end_local_combat_qte_capture(self)
 
 
 func coop_net_begin_local_combat_loot_capture() -> void:
-	_coop_combat_loot_capture_events.clear()
-	_coop_combat_loot_capture_active = true
+	CoopRuntimeSyncHelpers.coop_net_begin_local_combat_loot_capture(self)
 
 
 func coop_net_end_local_combat_loot_capture() -> Array:
-	var out: Array = []
-	if _coop_combat_loot_capture_active:
-		out = _coop_combat_loot_capture_events.duplicate(true)
-	_coop_combat_loot_capture_active = false
-	_coop_combat_loot_capture_events.clear()
-	return out
+	return CoopRuntimeSyncHelpers.coop_net_end_local_combat_loot_capture(self)
 
 
 func coop_net_apply_remote_combat_qte_snapshot(snap: Variant) -> void:
-	_coop_qte_mirror_active = true
-	_coop_qte_mirror_dict.clear()
-	if snap is Dictionary:
-		for k in snap.keys():
-			_coop_qte_mirror_dict[str(k)] = snap[k]
+	CoopRuntimeSyncHelpers.coop_net_apply_remote_combat_qte_snapshot(self, snap)
 
 
 func coop_net_clear_remote_combat_qte_snapshot() -> void:
-	_coop_qte_mirror_active = false
-	_coop_qte_mirror_dict.clear()
+	CoopRuntimeSyncHelpers.coop_net_clear_remote_combat_qte_snapshot(self)
 
 
 func _coop_qte_alloc_event_id() -> String:
-	var k := str(_coop_qte_event_seq)
-	_coop_qte_event_seq += 1
-	return k
+	return CoopRuntimeSyncHelpers.coop_qte_alloc_event_id(self)
 
 
 func _coop_qte_mirror_read_int(event_id: String, default_v: int) -> int:
-	if not _coop_qte_mirror_dict.has(event_id):
-		return default_v
-	return int(_coop_qte_mirror_dict[event_id])
+	return CoopRuntimeSyncHelpers.coop_qte_mirror_read_int(self, event_id, default_v)
 
 
 func _coop_qte_mirror_read_bool(event_id: String, default_v: bool) -> bool:
-	if not _coop_qte_mirror_dict.has(event_id):
-		return default_v
-	var v: Variant = _coop_qte_mirror_dict[event_id]
-	if v is bool:
-		return v
-	return int(v) != 0
+	return CoopRuntimeSyncHelpers.coop_qte_mirror_read_bool(self, event_id, default_v)
 
 
 func _coop_qte_capture_write(event_id: String, value: Variant) -> void:
-	if _coop_qte_capture_active:
-		_coop_qte_capture_dict[event_id] = value
+	CoopRuntimeSyncHelpers.coop_qte_capture_write(self, event_id, value)
 
 
 ## Capture alive unit relationship ids (support / Avatar name) before combat for removed-id diffing.
@@ -1856,69 +1415,7 @@ func _coop_set_unit_grid_solidity(u: Node2D, solid: bool) -> void:
 
 ## Build after local [method execute_combat] completes; peer applies with [method _coop_apply_authoritative_combat_snapshot] (skips re-simulation).
 func coop_net_build_authoritative_combat_snapshot(pre_alive_ids: Dictionary) -> Dictionary:
-	var post_alive: Dictionary = {}
-	var units_arr: Array = []
-	for cont in [player_container, ally_container, enemy_container]:
-		if cont == null:
-			continue
-		for c in cont.get_children():
-			if not c is Node2D:
-				continue
-			var u: Node2D = c as Node2D
-			if not is_instance_valid(u) or u.is_queued_for_deletion():
-				continue
-			if int(u.get("current_hp")) <= 0:
-				continue
-			var rid: String = _get_mock_coop_command_id(u)
-			if rid == "":
-				continue
-			post_alive[rid] = true
-			var gp: Vector2i = get_grid_pos(u)
-			var e: Dictionary = {
-				"id": rid,
-				"hp": int(u.current_hp),
-				"mhp": int(u.max_hp),
-				"gx": gp.x,
-				"gy": gp.y,
-			}
-			if u.get("strength") != null:
-				e["str"] = int(u.strength)
-			if u.get("magic") != null:
-				e["mag"] = int(u.magic)
-			if u.get("speed") != null:
-				e["spd"] = int(u.speed)
-			if u.get("agility") != null:
-				e["agi"] = int(u.agility)
-			if u.get("defense") != null:
-				e["def"] = int(u.defense)
-			if u.get("resistance") != null:
-				e["res"] = int(u.resistance)
-			var wpn = u.equipped_weapon
-			if wpn != null and wpn.get("current_durability") != null:
-				e["wpn_dur"] = int(wpn.current_durability)
-			if u.has_meta("ability_cooldown"):
-				e["abil_cd"] = int(u.get_meta("ability_cooldown"))
-			if u.has_meta("current_poise"):
-				e["poise"] = int(u.get_meta("current_poise"))
-			if u.has_meta("is_staggered_this_combat"):
-				e["stagger"] = bool(u.get_meta("is_staggered_this_combat"))
-			if u.get("is_defending") != null:
-				e["defending"] = bool(u.is_defending)
-			units_arr.append(e)
-	var removed: Array = []
-	for k in pre_alive_ids.keys():
-		if not post_alive.has(k):
-			removed.append(str(k))
-	return {
-		"v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
-		"units": units_arr,
-		"removed_ids": removed,
-		"gold": int(player_gold),
-		"ek": int(enemy_kills_count),
-		"pd": int(player_deaths_count),
-		"ad": int(ally_deaths_count),
-		"atc": int(ability_triggers_count),
-	}
+	return CoopHelpers.coop_net_build_authoritative_combat_snapshot(self, pre_alive_ids)
 
 
 func _coop_remove_unit_coop_peer_mirror_by_id(rid: String) -> void:
@@ -1933,81 +1430,7 @@ func _coop_remove_unit_coop_peer_mirror_by_id(rid: String) -> void:
 
 
 func _coop_apply_authoritative_combat_snapshot(snap: Dictionary) -> void:
-	if int(snap.get("v", 0)) != COOP_AUTH_BATTLE_SNAPSHOT_VER:
-		if OS.is_debug_build():
-			push_warning("Coop: reject authoritative combat snapshot (bad v).")
-		return
-	enemy_kills_count = int(snap.get("ek", enemy_kills_count))
-	player_deaths_count = int(snap.get("pd", player_deaths_count))
-	ally_deaths_count = int(snap.get("ad", ally_deaths_count))
-	ability_triggers_count = int(snap.get("atc", ability_triggers_count))
-	player_gold = int(snap.get("gold", player_gold))
-
-	var removed: Array = snap.get("removed_ids", []) as Array
-	for rid_v in removed:
-		var rs: String = str(rid_v).strip_edges()
-		if rs == "":
-			continue
-		_coop_remove_unit_coop_peer_mirror_by_id(rs)
-
-	for udat in snap.get("units", []):
-		if not udat is Dictionary:
-			continue
-		var entry: Dictionary = udat
-		var rid2: String = str(entry.get("id", "")).strip_edges()
-		if rid2 == "":
-			continue
-		var u2: Node2D = _coop_find_unit_by_relationship_id_any_side(rid2)
-		if u2 == null or not is_instance_valid(u2) or u2.is_queued_for_deletion():
-			continue
-		var gx: int = int(entry.get("gx", get_grid_pos(u2).x))
-		var gy: int = int(entry.get("gy", get_grid_pos(u2).y))
-		var old_gp: Vector2i = get_grid_pos(u2)
-		var new_gp := Vector2i(gx, gy)
-		if old_gp != new_gp:
-			_coop_clear_unit_grid_solidity(u2)
-			u2.position = Vector2(gx * CELL_SIZE.x, gy * CELL_SIZE.y)
-			_coop_set_unit_grid_solidity(u2, true)
-		if entry.has("hp"):
-			u2.current_hp = int(entry["hp"])
-		if entry.has("mhp"):
-			u2.max_hp = int(entry["mhp"])
-		if entry.has("str") and u2.get("strength") != null:
-			u2.strength = int(entry["str"])
-		if entry.has("mag") and u2.get("magic") != null:
-			u2.magic = int(entry["mag"])
-		if entry.has("spd") and u2.get("speed") != null:
-			u2.speed = int(entry["spd"])
-		if entry.has("agi") and u2.get("agility") != null:
-			u2.agility = int(entry["agi"])
-		if entry.has("def") and u2.get("defense") != null:
-			u2.defense = int(entry["def"])
-		if entry.has("res") and u2.get("resistance") != null:
-			u2.resistance = int(entry["res"])
-		var wpn2 = u2.equipped_weapon
-		if wpn2 != null and entry.has("wpn_dur") and wpn2.get("current_durability") != null:
-			wpn2.current_durability = int(entry["wpn_dur"])
-		if entry.has("abil_cd"):
-			u2.set_meta("ability_cooldown", int(entry["abil_cd"]))
-		elif u2.has_meta("ability_cooldown"):
-			u2.remove_meta("ability_cooldown")
-		if entry.has("poise"):
-			u2.set_meta("current_poise", int(entry["poise"]))
-		if entry.has("stagger"):
-			u2.set_meta("is_staggered_this_combat", bool(entry["stagger"]))
-		if entry.has("defending") and u2.get("is_defending") != null:
-			u2.is_defending = bool(entry["defending"])
-		if u2.has_method("clear_remote_coop_pending_death_visual") and int(entry.get("hp", u2.current_hp)) > 0:
-			u2.clear_remote_coop_pending_death_visual()
-		if u2.get("health_bar") != null:
-			u2.health_bar.value = u2.current_hp
-		if u2.has_method("update_poise_visuals"):
-			u2.update_poise_visuals()
-
-	rebuild_grid()
-	update_fog_of_war()
-	update_objective_ui()
-	_coop_validate_authoritative_post_combat_outcome()
+	CoopHelpers.coop_apply_authoritative_combat_snapshot(self, snap)
 
 
 func is_coop_remote_combat_replay_active() -> bool:
@@ -2060,126 +1483,11 @@ func _coop_validate_authoritative_post_combat_outcome() -> void:
 
 ## ENet co-op: host allocates [method coop_enet_begin_synchronized_combat_round] + runs combat, then broadcasts; guest waits FIFO and mirrors (crit/miss match).
 func coop_enet_buffer_incoming_enemy_combat(body: Dictionary) -> void:
-	if body.is_empty():
-		return
-	_coop_net_incoming_enemy_combat_fifo.append(body.duplicate(true))
+	CoopEnemyCombatNetHelpers.coop_enet_buffer_incoming_enemy_combat(self, body)
 
 
 func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_ability: bool = false) -> void:
-	if attacker == null or defender == null or not is_instance_valid(attacker) or not is_instance_valid(defender):
-		return
-	if not _coop_net_have_battle_seed or not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
-		await execute_combat(attacker, defender, used_ability)
-		return
-	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
-		await execute_combat(attacker, defender, used_ability)
-		return
-	var aid: String = _get_mock_coop_command_id(attacker)
-	var did: String = _get_mock_coop_command_id(defender)
-	if aid == "" or did == "":
-		await execute_combat(attacker, defender, used_ability)
-		return
-	if current_state == enemy_state and coop_enet_should_wait_for_host_authority_enemy_turn():
-		return
-	if current_state == enemy_state and coop_enet_is_host_authority_enemy_turn_host():
-		var pre_enemy_turn: Dictionary = coop_net_snapshot_alive_unit_ids()
-		var packed_enemy_turn: int = coop_enet_begin_synchronized_combat_round()
-		var defender_is_destructible: bool = defender.get_parent() == destructibles_container
-		var defender_name_before: String = str(defender.get("object_name")) if defender.get("object_name") != null else str(defender.get("unit_name"))
-		var pre_stolen_gold: int = int(attacker.get("stolen_gold")) if attacker.get("stolen_gold") != null else 0
-		var pre_stolen_loot_size: int = 0
-		if attacker.get("stolen_loot") != null:
-			pre_stolen_loot_size = (attacker.stolen_loot as Array).size()
-		coop_net_begin_local_combat_qte_capture()
-		coop_net_begin_local_combat_loot_capture()
-		await execute_combat(attacker, defender, used_ability)
-		await _wait_for_loot_window_close()
-		var qte_enemy_turn: Dictionary = coop_net_end_local_combat_qte_capture()
-		var loot_events_enemy_turn: Array = coop_net_end_local_combat_loot_capture()
-		var auth_enemy_turn: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_enemy_turn)
-		var spoils: Dictionary = {}
-		if defender_is_destructible:
-			var defender_dead: bool = not is_instance_valid(defender) or defender.is_queued_for_deletion() or int(defender.get("current_hp")) <= 0
-			if defender_dead:
-				var gold_after: int = int(attacker.get("stolen_gold")) if attacker.get("stolen_gold") != null else pre_stolen_gold
-				var gold_delta: int = maxi(0, gold_after - pre_stolen_gold)
-				var new_items: Array = []
-				if attacker.get("stolen_loot") != null:
-					var loot_after: Array = attacker.stolen_loot as Array
-					for i in range(pre_stolen_loot_size, loot_after.size()):
-						new_items.append(loot_after[i])
-				if gold_delta > 0 or not new_items.is_empty():
-					spoils = {
-						"gold": gold_delta,
-						"items": _coop_wire_serialize_items(new_items),
-					}
-		var body: Dictionary = {
-			"action": "enemy_turn_combat",
-			"attacker_id": aid,
-			"defender_id": did,
-			"used_ability": used_ability,
-			"rng_packed": packed_enemy_turn,
-			"qte_snapshot": qte_enemy_turn,
-			"auth_snapshot": auth_enemy_turn,
-			"auth_v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
-		}
-		if not loot_events_enemy_turn.is_empty():
-			body["loot_events"] = loot_events_enemy_turn.duplicate(true)
-		if not spoils.is_empty():
-			body["destructible_spoils"] = spoils
-			body["destructible_name"] = defender_name_before
-		CoopExpeditionSessionManager.send_runtime_coop_action(body)
-		return
-	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.HOST:
-		var pre_enemy: Dictionary = coop_net_snapshot_alive_unit_ids()
-		var packed: int = coop_enet_begin_synchronized_combat_round()
-		coop_net_begin_local_combat_qte_capture()
-		coop_net_begin_local_combat_loot_capture()
-		await execute_combat(attacker, defender, used_ability)
-		await _wait_for_loot_window_close()
-		var qte_enemy: Dictionary = coop_net_end_local_combat_qte_capture()
-		var loot_events_enemy: Array = coop_net_end_local_combat_loot_capture()
-		var auth_enemy: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_enemy)
-		var enemy_body: Dictionary = {
-			"action": "enemy_combat",
-			"attacker_id": aid,
-			"defender_id": did,
-			"used_ability": used_ability,
-			"rng_packed": packed,
-			"qte_snapshot": qte_enemy,
-			"auth_snapshot": auth_enemy,
-			"auth_v": COOP_AUTH_BATTLE_SNAPSHOT_VER,
-		}
-		if not loot_events_enemy.is_empty():
-			enemy_body["loot_events"] = loot_events_enemy.duplicate(true)
-		CoopExpeditionSessionManager.send_runtime_coop_action(enemy_body)
-		return
-	## Guest: wait for host-ordered strike packet, then mirror RNG + combat.
-	while is_inside_tree():
-		if not is_instance_valid(attacker) or not is_instance_valid(defender):
-			return
-		if not _coop_net_incoming_enemy_combat_fifo.is_empty():
-			var head = _coop_net_incoming_enemy_combat_fifo[0]
-			var h_aid: String = str(head.get("attacker_id", "")).strip_edges()
-			var h_did: String = str(head.get("defender_id", "")).strip_edges()
-			if h_aid == aid and h_did == did:
-				_coop_net_incoming_enemy_combat_fifo.pop_front()
-				var av: int = int(head.get("auth_v", 0))
-				var ar: Variant = head.get("auth_snapshot", {})
-				var rp: int = int(head.get("rng_packed", -1))
-				var qte_raw: Variant = head.get("qte_snapshot", {})
-				await _coop_execute_remote_combat_replay(attacker, defender, bool(head.get("used_ability", used_ability)), qte_raw, rp)
-				if ar is Dictionary and av == COOP_AUTH_BATTLE_SNAPSHOT_VER:
-					var ad: Dictionary = ar as Dictionary
-					if ad.size() > 0:
-						_coop_apply_authoritative_combat_snapshot(ad)
-				_coop_apply_remote_synced_enemy_death_loot_events(head.get("loot_events", []))
-				return
-			if OS.is_debug_build():
-				push_warning("Coop enemy combat FIFO mismatch: expected %s→%s, got %s→%s" % [aid, did, h_aid, h_did])
-			_coop_net_incoming_enemy_combat_fifo.pop_front()
-			continue
-		await get_tree().process_frame
+	await CoopEnemyCombatNetHelpers.coop_enet_ai_execute_combat(self, attacker, defender, used_ability)
 
 
 ## True when this peer is the ENet guest with battle RNG locked — player-initiated combat must be simulated on the host only.
@@ -2201,33 +1509,11 @@ func _coop_emit_guest_host_combat_resolved_if_waiting(aid: String) -> void:
 
 ## Guest: send combat intent to host, then await authoritative apply + post-combat sync.
 func coop_enet_guest_delegate_player_combat_to_host(attacker_id: String, defender_id: String, used_ability: bool) -> void:
-	if not coop_enet_should_delegate_player_combat_to_host():
-		return
-	var aid: String = str(attacker_id).strip_edges()
-	var did: String = str(defender_id).strip_edges()
-	if aid == "" or did == "":
-		return
-	_coop_guest_awaiting_combat_aid = aid
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "player_combat_request",
-		"attacker_id": aid,
-		"defender_id": did,
-		"used_ability": used_ability,
-	})
-	while _coop_guest_awaiting_combat_aid != "" and is_inside_tree():
-		await coop_guest_host_combat_resolved
+	await CoopCombatRequestHelpers.coop_enet_guest_delegate_player_combat_to_host(self, attacker_id, defender_id, used_ability)
 
 
 func coop_enet_guest_receive_combat_request_nack(body: Dictionary) -> void:
-	var aid: String = str(body.get("attacker_id", "")).strip_edges()
-	if _coop_guest_awaiting_combat_aid == "":
-		return
-	if aid != "" and aid != _coop_guest_awaiting_combat_aid:
-		return
-	_coop_guest_awaiting_combat_aid = ""
-	if OS.is_debug_build():
-		push_warning("Coop: host rejected player_combat_request (attacker_id=%s)." % aid)
-	coop_guest_host_combat_resolved.emit()
+	CoopCombatRequestHelpers.coop_enet_guest_receive_combat_request_nack(self, body)
 
 
 func coop_enet_host_handle_player_combat_request(body: Dictionary) -> void:
@@ -2235,234 +1521,40 @@ func coop_enet_host_handle_player_combat_request(body: Dictionary) -> void:
 
 
 func _coop_host_start_player_combat_request(body: Dictionary) -> void:
-	await _coop_host_resolve_player_combat_request_async(body)
+	await CoopCombatRequestHelpers.coop_host_resolve_player_combat_request_async(self, body)
 
 
 func _coop_host_send_player_combat_request_nack(attacker_id: String) -> void:
-	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
-		return
-	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "player_combat_request_nack",
-		"attacker_id": str(attacker_id).strip_edges(),
-	})
-
-
-func _coop_host_resolve_player_combat_request_async(body: Dictionary) -> void:
-	if not is_mock_coop_unit_ownership_active() or not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
-		return
-	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.HOST:
-		return
-	var aid: String = str(body.get("attacker_id", "")).strip_edges()
-	var did: String = str(body.get("defender_id", "")).strip_edges()
-	var used_ab: bool = bool(body.get("used_ability", false))
-	if aid == "" or did == "":
-		_coop_host_send_player_combat_request_nack(aid if aid != "" else "?")
-		return
-	var att: Node2D = _coop_find_unit_by_relationship_id_any_side(aid)
-	var defu: Node2D = _coop_find_unit_by_relationship_id_any_side(did)
-	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
-		_coop_host_send_player_combat_request_nack(aid)
-		return
-	if get_mock_coop_unit_owner_for_unit(att) != MOCK_COOP_OWNER_REMOTE:
-		if OS.is_debug_build():
-			push_warning("Coop: player_combat_request ignored — attacker is not guest's unit (%s)." % aid)
-		_coop_host_send_player_combat_request_nack(aid)
-		return
-	var pre_alive: Dictionary = coop_net_snapshot_alive_unit_ids()
-	var packed: int = coop_enet_begin_synchronized_combat_round()
-	coop_net_begin_local_combat_qte_capture()
-	coop_net_begin_local_combat_loot_capture()
-	await execute_combat(att, defu, used_ab)
-	var qte_snap: Dictionary = coop_net_end_local_combat_qte_capture()
-	await _wait_for_loot_window_close()
-	var loot_events: Array = coop_net_end_local_combat_loot_capture()
-	var auth: Dictionary = coop_net_build_authoritative_combat_snapshot(pre_alive)
-	var att_after: Node2D = _coop_find_player_side_unit_by_relationship_id(aid)
-	var entered_canto: bool = false
-	var canto_budget: float = 0.0
-	if att_after != null and is_instance_valid(att_after) and int(att_after.current_hp) > 0:
-		var used_f: float = float(att_after.move_points_used_this_turn)
-		var rem: float = float(att_after.move_range) - used_f
-		if unit_supports_canto(att_after) and rem > 0.001:
-			entered_canto = true
-			canto_budget = rem
-			att_after.has_moved = true
-			att_after.in_canto_phase = true
-			att_after.canto_move_budget = rem
-			if battle_log != null and battle_log.visible:
-				add_combat_log(att_after.unit_name + " — Canto (" + str(snappedf(rem, 0.1)) + " move left).", "cyan")
-			rebuild_grid()
-			calculate_ranges(att_after)
-	var alive_after: Node2D = null
-	if att_after != null and is_instance_valid(att_after) and int(att_after.current_hp) > 0:
-		alive_after = att_after
-	coop_enet_sync_local_combat_done(aid, did, used_ab, alive_after, entered_canto, canto_budget, packed, qte_snap, auth, true, loot_events)
-	if alive_after != null and is_instance_valid(alive_after) and int(alive_after.current_hp) > 0 and not entered_canto and alive_after.has_method("finish_turn"):
-		alive_after.finish_turn()
-
-
-func _coop_enet_sync_eligible_command_unit(unit: Node2D) -> bool:
-	if unit == null or not is_instance_valid(unit):
-		return false
-	if not is_mock_coop_unit_ownership_active():
-		return false
-	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
-		return false
-	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
-		return false
-	if is_local_player_command_blocked_for_mock_coop_unit(unit):
-		return false
-	return true
-
-
-func _build_local_mock_coop_prebattle_layout_snapshot() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	if player_container == null:
-		return out
-	for u in player_container.get_children():
-		if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
-			continue
-		if get_mock_coop_unit_owner_for_unit(u) != MOCK_COOP_OWNER_LOCAL:
-			continue
-		var uid: String = _get_mock_coop_command_id(u)
-		if uid == "":
-			continue
-		var entry: Dictionary = {
-			"unit_id": uid,
-			"deployed": _is_mock_coop_deployed_player_side_unit(u),
-		}
-		if bool(entry.get("deployed", false)):
-			var gp: Vector2i = get_grid_pos(u)
-			entry["grid_pos"] = {"x": gp.x, "y": gp.y}
-		out.append(entry)
-	return out
+	CoopCombatRequestHelpers.coop_host_send_player_combat_request_nack(self, attacker_id)
 
 
 func coop_enet_sync_after_local_prebattle_layout_change() -> void:
-	if current_state != pre_battle_state:
-		return
-	if not _mock_coop_battle_sync_active():
-		return
-	if _mock_coop_local_prebattle_ready:
-		_mock_coop_clear_local_prebattle_ready(true)
-	var units: Array[Dictionary] = _build_local_mock_coop_prebattle_layout_snapshot()
-	if units.is_empty():
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({
-		"action": "prebattle_layout",
-		"units": units,
-	})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_local_prebattle_layout_change(self)
 
 
 func coop_enet_sync_after_local_player_move(unit: Node2D, path: Array, _path_cost: float, finish_after_move: bool = false) -> void:
-	if not _coop_enet_sync_eligible_command_unit(unit):
-		return
-	var uid: String = _get_mock_coop_command_id(unit)
-	if uid == "":
-		return
-	var serial: Array = []
-	for p in path:
-		var v: Vector2i = Vector2i.ZERO
-		if p is Vector2i:
-			v = p as Vector2i
-		elif typeof(p) == TYPE_VECTOR2I:
-			v = p as Vector2i
-		else:
-			continue
-		serial.append([v.x, v.y])
-	if serial.size() < 2:
-		return
-	var payload: Dictionary = {"action": "player_move", "unit_id": uid, "path": serial}
-	if finish_after_move:
-		payload["finish_after_move"] = true
-	CoopExpeditionSessionManager.send_runtime_coop_action(payload)
+	CoopOutboundSyncHelpers.coop_enet_sync_after_local_player_move(self, unit, path, _path_cost, finish_after_move)
 
 
 func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
-	if not _coop_enet_sync_eligible_command_unit(unit):
-		return
-	var uid: String = _get_mock_coop_command_id(unit)
-	if uid == "":
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "player_defend", "unit_id": uid})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_local_defend(self, unit)
 
 
 ## IDs captured before [method execute_combat] so we still notify peer if the attacker dies. Post-combat packet only if [param attacker_after] is still alive.
 func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false, loot_events: Array = []) -> void:
-	if not is_mock_coop_unit_ownership_active():
-		return
-	if not CoopExpeditionSessionManager.uses_runtime_network_coop_transport():
-		return
-	if CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.NONE:
-		return
-	var aid: String = str(attacker_id).strip_edges()
-	var did: String = str(defender_id).strip_edges()
-	if aid == "" or did == "":
-		return
-	var has_followup: bool = attacker_after != null and is_instance_valid(attacker_after) and int(attacker_after.current_hp) > 0
-	var combat_body: Dictionary = {
-		"action": "player_combat",
-		"attacker_id": aid,
-		"defender_id": did,
-		"used_ability": used_ability,
-		"has_post_combat_followup": has_followup,
-	}
-	if combat_packed_rng_id >= 0:
-		combat_body["rng_packed"] = combat_packed_rng_id
-	if qte_snapshot.size() > 0:
-		combat_body["qte_snapshot"] = qte_snapshot.duplicate(true)
-	if auth_snapshot.size() > 0:
-		combat_body["auth_snapshot"] = auth_snapshot.duplicate(true)
-		combat_body["auth_v"] = COOP_AUTH_BATTLE_SNAPSHOT_VER
-	if combat_host_authority:
-		combat_body["host_authority"] = true
-	if not loot_events.is_empty():
-		combat_body["loot_events"] = loot_events.duplicate(true)
-	CoopExpeditionSessionManager.send_runtime_coop_action(combat_body)
-	if attacker_after == null or not is_instance_valid(attacker_after) or int(attacker_after.current_hp) <= 0:
-		return
-	var follow: String = "canto" if entered_canto else "finish"
-	var post: Dictionary = {
-		"action": "player_post_combat",
-		"attacker_id": aid,
-		"follow": follow,
-		"canto_budget": float(canto_budget),
-	}
-	if combat_host_authority:
-		post["host_authority"] = true
-	CoopExpeditionSessionManager.send_runtime_coop_action(post)
+	CoopOutboundSyncHelpers.coop_enet_sync_local_combat_done(self, attacker_id, defender_id, used_ability, attacker_after, entered_canto, canto_budget, combat_packed_rng_id, qte_snapshot, auth_snapshot, combat_host_authority, loot_events)
 
 
 func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
-	if not _coop_enet_sync_eligible_command_unit(unit):
-		return
-	var uid: String = _get_mock_coop_command_id(unit)
-	if uid == "":
-		return
-	CoopExpeditionSessionManager.send_runtime_coop_action({"action": "player_finish_turn", "unit_id": uid})
+	CoopOutboundSyncHelpers.coop_enet_sync_after_local_finish_turn(self, unit)
 
 
 func apply_remote_coop_enet_sync(body: Dictionary) -> void:
-	if not is_mock_coop_unit_ownership_active():
-		if OS.is_debug_build():
-			var act_no_owner: String = str(body.get("action", "")).strip_edges()
-			push_warning("BattleField: drop incoming coop sync '%s' (mock ownership inactive on this battlefield)" % act_no_owner)
-		return
-	_coop_enet_remote_sync_queue.append(body.duplicate(true))
-	_coop_enet_pump_remote_sync_queue()
+	CoopRuntimeSyncHelpers.apply_remote_coop_enet_sync(self, body)
 
 
 func _coop_enet_pump_remote_sync_queue() -> void:
-	if _coop_enet_remote_sync_busy:
-		return
-	if _coop_enet_remote_sync_queue.is_empty():
-		return
-	_coop_enet_remote_sync_busy = true
-	var next_body: Dictionary = _coop_enet_remote_sync_queue.pop_front() as Dictionary
-	var tr := get_tree().create_timer(0.0, true, true, true)
-	tr.timeout.connect(func(): _coop_run_one_remote_sync_async(next_body), CONNECT_ONE_SHOT)
+	CoopRuntimeSyncHelpers.coop_enet_pump_remote_sync_queue(self)
 
 
 func _coop_find_player_side_unit_by_relationship_id(rid: String) -> Node2D:
@@ -2499,49 +1591,7 @@ func _coop_find_unit_by_relationship_id_any_side(rid: String) -> Node2D:
 
 
 func _coop_run_one_remote_sync_async(body: Dictionary) -> void:
-	var action: String = str(body.get("action", "")).strip_edges()
-	match action:
-		"battle_result":
-			await _coop_remote_sync_battle_result(body)
-		"escort_turn":
-			await _coop_remote_sync_escort_turn(body)
-		"enemy_phase_setup":
-			_coop_remote_sync_enemy_phase_setup(body)
-		"enemy_turn_move":
-			await _coop_remote_sync_enemy_turn_move(body)
-		"enemy_turn_combat":
-			await _coop_remote_sync_enemy_turn_combat(body)
-		"enemy_turn_finish":
-			await _coop_remote_sync_enemy_turn_finish(body)
-		"enemy_turn_chest_open":
-			await _coop_remote_sync_enemy_turn_chest_open(body)
-		"enemy_turn_escape":
-			await _coop_remote_sync_enemy_turn_escape(body)
-		"enemy_turn_end":
-			_coop_remote_sync_enemy_turn_end(body)
-		"enemy_turn_batch_move":
-			await _coop_remote_sync_enemy_turn_batch_move(body)
-		"prebattle_layout":
-			_coop_remote_sync_prebattle_layout(body)
-		"prebattle_ready":
-			_coop_remote_sync_prebattle_ready(body)
-		"player_move":
-			await _coop_remote_sync_player_move(body)
-		"player_defend":
-			await _coop_remote_sync_player_defend(body)
-		"player_combat":
-			await _coop_remote_sync_player_combat(body)
-		"player_post_combat":
-			await _coop_remote_sync_player_post_combat(body)
-		"player_finish_turn":
-			await _coop_remote_sync_player_finish_turn(body)
-		"player_phase_ready":
-			_coop_remote_sync_player_phase_ready(body)
-		_:
-			if OS.is_debug_build():
-				push_warning("Coop battle sync: unknown action '%s'" % action)
-	_coop_enet_remote_sync_busy = false
-	_coop_enet_pump_remote_sync_queue()
+	await CoopRemoteSyncActionHelpers.coop_run_one_remote_sync_async(self, body)
 
 
 func _coop_wait_for_enemy_state_ready() -> void:
@@ -2550,300 +1600,47 @@ func _coop_wait_for_enemy_state_ready() -> void:
 
 
 func _coop_remote_sync_enemy_phase_setup(body: Dictionary) -> void:
-	var raw: Variant = body.get("setup", {})
-	if raw is Dictionary:
-		_coop_apply_enemy_phase_setup_snapshot(raw as Dictionary)
+	CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_phase_setup(self, body)
 
 
 func _coop_remote_sync_battle_result(body: Dictionary) -> void:
-	var normalized: String = _coop_normalize_battle_result(str(body.get("result", "")))
-	if normalized == "":
-		return
-	if _coop_finalized_battle_result != "":
-		return
-	await _wait_for_loot_window_close()
-	_coop_waiting_for_host_battle_result = ""
-	_coop_remote_battle_result_applying = true
-	if normalized == "VICTORY":
-		await _trigger_victory()
-	else:
-		trigger_game_over(normalized)
-	_coop_remote_battle_result_applying = false
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_battle_result(self, body)
 
 
 func _coop_remote_sync_escort_turn(body: Dictionary) -> void:
-	if not is_instance_valid(vip_target):
-		return
-	var path_raw: Variant = body.get("path", [])
-	var path_typed: Array[Vector2i] = []
-	if path_raw is Array:
-		for item in path_raw as Array:
-			if item is Array:
-				var arr: Array = item as Array
-				if arr.size() >= 2:
-					path_typed.append(Vector2i(int(arr[0]), int(arr[1])))
-			elif item is Dictionary:
-				var d: Dictionary = item as Dictionary
-				path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
-	var convoy: Node2D = vip_target
-	for i in range(1, path_typed.size()):
-		var step_grid: Vector2i = path_typed[i]
-		var tween := create_tween()
-		tween.tween_property(convoy, "global_position", Vector2(step_grid.x * CELL_SIZE.x, step_grid.y * CELL_SIZE.y), 0.25).set_trans(Tween.TRANS_LINEAR)
-		if select_sound != null and select_sound.stream != null:
-			select_sound.pitch_scale = 0.8
-			select_sound.play()
-		await tween.finished
-		rebuild_grid()
-	if path_typed.is_empty():
-		var marker_idx_now: int = int(body.get("current_marker_idx", int(convoy.get("current_marker_idx"))))
-		if marker_idx_now >= 0:
-			convoy.set("current_marker_idx", marker_idx_now)
-	if body.has("current_hp"):
-		convoy.set("current_hp", int(body.get("current_hp", convoy.get("current_hp"))))
-	if body.has("has_moved"):
-		convoy.set("has_moved", bool(body.get("has_moved", convoy.get("has_moved"))))
-	if body.has("is_exhausted"):
-		convoy.set("is_exhausted", bool(body.get("is_exhausted", convoy.get("is_exhausted"))))
-	if body.has("current_marker_idx"):
-		convoy.set("current_marker_idx", int(body.get("current_marker_idx", convoy.get("current_marker_idx"))))
-	if convoy.get("health_bar") != null:
-		convoy.health_bar.value = int(convoy.get("current_hp"))
-	rebuild_grid()
-	update_fog_of_war()
-	update_objective_ui()
-	_coop_remote_escort_turn_completed = true
-	coop_remote_escort_turn_finished.emit()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_escort_turn(self, body)
 
 
 func _coop_remote_sync_enemy_turn_move(body: Dictionary) -> void:
-	await _coop_wait_for_enemy_state_ready()
-	var uid: String = str(body.get("unit_id", "")).strip_edges()
-	var path_raw: Variant = body.get("path", [])
-	var path_typed: Array[Vector2i] = []
-	if path_raw is Array:
-		for item in path_raw as Array:
-			if item is Array:
-				var a: Array = item as Array
-				if a.size() >= 2:
-					path_typed.append(Vector2i(int(a[0]), int(a[1])))
-			elif item is Dictionary:
-				var d: Dictionary = item as Dictionary
-				path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
-	if path_typed.size() < 2:
-		return
-	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
-	if unit == null or not is_instance_valid(unit):
-		return
-	await _coop_focus_camera_on_unit(unit, 0.55)
-	await unit.move_along_path(path_typed)
-	unit.move_points_used_this_turn = float(body.get("path_cost", get_path_move_cost(path_typed, unit)))
-	rebuild_grid()
-	update_fog_of_war()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_move(self, body)
 
 
 func _coop_remote_sync_enemy_turn_combat(body: Dictionary) -> void:
-	await _coop_wait_for_enemy_state_ready()
-	var aid: String = str(body.get("attacker_id", "")).strip_edges()
-	var did: String = str(body.get("defender_id", "")).strip_edges()
-	var att: Node2D = _coop_find_unit_by_relationship_id_any_side(aid)
-	var defu: Node2D = _coop_find_unit_by_relationship_id_any_side(did)
-	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
-		if OS.is_debug_build():
-			push_warning("Coop enemy turn sync: combat resolve failed ids att=%s def=%s" % [aid, did])
-		return
-	await _coop_focus_camera_on_action(att, defu, 0.4)
-	var rp: int = int(body.get("rng_packed", -1))
-	var qte_raw: Variant = body.get("qte_snapshot", {})
-	await _coop_execute_remote_combat_replay(att, defu, bool(body.get("used_ability", false)), qte_raw, rp)
-	var auth_v: int = int(body.get("auth_v", 0))
-	var auth_raw: Variant = body.get("auth_snapshot", {})
-	if auth_raw is Dictionary and auth_v == COOP_AUTH_BATTLE_SNAPSHOT_VER and (auth_raw as Dictionary).size() > 0:
-		_coop_apply_authoritative_combat_snapshot(auth_raw as Dictionary)
-	_coop_apply_remote_synced_enemy_death_loot_events(body.get("loot_events", []))
-	var spoils_raw: Variant = body.get("destructible_spoils", {})
-	if spoils_raw is Dictionary and is_instance_valid(att):
-		var spoils: Dictionary = spoils_raw as Dictionary
-		var gold_delta: int = int(spoils.get("gold", 0))
-		var items: Array = _coop_wire_deserialize_items(spoils.get("items", []))
-		if gold_delta > 0 and att.get("stolen_gold") != null:
-			att.stolen_gold += gold_delta
-		if not items.is_empty() and att.get("stolen_loot") != null:
-			att.stolen_loot.append_array(items)
-		if (gold_delta > 0 or not items.is_empty()) and battle_log != null and battle_log.visible:
-			var destroyed_name: String = str(body.get("destructible_name", "a crate"))
-			add_combat_log(att.unit_name + " destroyed " + destroyed_name + " and took the loot!", "tomato")
-			spawn_loot_text("STOLEN!", Color.TOMATO, att.global_position + Vector2(32, -32))
-	await _wait_for_loot_window_close()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_combat(self, body)
 
 
 func _coop_remote_sync_enemy_turn_finish(body: Dictionary) -> void:
-	await _coop_wait_for_enemy_state_ready()
-	var uid: String = str(body.get("unit_id", "")).strip_edges()
-	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
-	if unit == null or not is_instance_valid(unit):
-		return
-	if unit.has_method("finish_turn"):
-		unit.finish_turn()
-	rebuild_grid()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_finish(self, body)
 
 
 func _coop_remote_sync_enemy_turn_chest_open(body: Dictionary) -> void:
-	await _coop_wait_for_enemy_state_ready()
-	var opener_id: String = str(body.get("opener_id", "")).strip_edges()
-	var chest_id: String = str(body.get("chest_id", "")).strip_edges()
-	var opener: Node2D = _coop_find_unit_by_relationship_id_any_side(opener_id)
-	var chest: Node2D = _coop_find_unit_by_relationship_id_any_side(chest_id)
-	if opener == null or chest == null or not is_instance_valid(opener) or not is_instance_valid(chest):
-		return
-	opener.look_at_pos(get_grid_pos(chest))
-	if chest.has_method("play_open_effect"):
-		await chest.play_open_effect()
-	elif is_instance_valid(chest):
-		chest.queue_free()
-	var stolen_items: Array = _coop_wire_deserialize_items(body.get("stolen_items", []))
-	if not stolen_items.is_empty() and opener.get("stolen_loot") != null:
-		opener.stolen_loot.append_array(stolen_items)
-	if battle_log != null and battle_log.visible:
-		add_combat_log(opener.unit_name + " picked the lock and stole the contents!", "tomato")
-		spawn_loot_text("STOLEN!", Color.TOMATO, opener.global_position + Vector2(32, -32))
-	rebuild_grid()
-	update_fog_of_war()
-	update_objective_ui()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_chest_open(self, body)
 
 
 func _coop_remote_sync_enemy_turn_escape(body: Dictionary) -> void:
-	await _coop_wait_for_enemy_state_ready()
-	var uid: String = str(body.get("unit_id", "")).strip_edges()
-	var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
-	if unit == null or not is_instance_valid(unit):
-		return
-	if battle_log != null and battle_log.visible:
-		add_combat_log(unit.unit_name + " escaped the map with the loot!", "tomato")
-	var tween := create_tween()
-	tween.tween_property(unit, "modulate:a", 0.0, 0.3)
-	await tween.finished
-	if is_instance_valid(unit):
-		unit.queue_free()
-	rebuild_grid()
-	update_fog_of_war()
-	update_objective_ui()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_escape(self, body)
 
 
 func _coop_remote_sync_enemy_turn_end(_body: Dictionary) -> void:
-	_coop_remote_enemy_turn_completed = true
-	coop_remote_enemy_turn_finished.emit()
+	CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_end(self, _body)
 
 
 func _coop_remote_sync_enemy_turn_batch_move(body: Dictionary) -> void:
-	await _coop_wait_for_enemy_state_ready()
-	var entries_raw: Variant = body.get("entries", [])
-	if not (entries_raw is Array):
-		return
-	var entries: Array = entries_raw as Array
-	# GDScript lambdas capture int locals by value — Array is a mutable box for the pending count.
-	var pending_left: Array = [0]
-
-	for entry in entries:
-		if not (entry is Dictionary):
-			continue
-		var uid: String = str((entry as Dictionary).get("unit_id", "")).strip_edges()
-		var path_raw: Variant = (entry as Dictionary).get("path", [])
-		var path_typed: Array[Vector2i] = []
-		if path_raw is Array:
-			for item in path_raw as Array:
-				if item is Array:
-					var a: Array = item as Array
-					if a.size() >= 2:
-						path_typed.append(Vector2i(int(a[0]), int(a[1])))
-				elif item is Dictionary:
-					var d: Dictionary = item as Dictionary
-					path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
-		if path_typed.size() < 2:
-			continue
-		var unit: Node2D = _coop_find_unit_by_relationship_id_any_side(uid)
-		if unit == null or not is_instance_valid(unit):
-			continue
-		pending_left[0] = int(pending_left[0]) + 1
-		_coop_do_batch_unit_move_async(unit, path_typed, (entry as Dictionary).get("path_cost", 0), func(): pending_left[0] = int(pending_left[0]) - 1)
-
-	if int(pending_left[0]) > 0:
-		while int(pending_left[0]) > 0:
-			await get_tree().process_frame
-	rebuild_grid()
-	update_fog_of_war()
-
-
-func _coop_do_batch_unit_move_async(unit: Node2D, path: Array[Vector2i], path_cost: Variant, on_done: Callable) -> void:
-	if not is_instance_valid(unit) or path.size() < 2:
-		on_done.call()
-		return
-	await unit.move_along_path(path)
-	if is_instance_valid(unit):
-		unit.move_points_used_this_turn = float(path_cost) if path_cost != null else get_path_move_cost(path, unit)
-	on_done.call()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_enemy_turn_batch_move(self, body)
 
 
 func _coop_remote_sync_prebattle_layout(body: Dictionary) -> void:
-	var raw_units: Variant = body.get("units", [])
-	if typeof(raw_units) != TYPE_ARRAY:
-		return
-	var changed_any: bool = false
-	for item in raw_units as Array:
-		if typeof(item) != TYPE_DICTIONARY:
-			continue
-		var entry: Dictionary = item as Dictionary
-		var uid: String = str(entry.get("unit_id", "")).strip_edges()
-		if uid == "":
-			continue
-		var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
-		if unit == null or not is_instance_valid(unit):
-			continue
-		if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
-			if OS.is_debug_build():
-				push_warning("Coop battle sync: refuse prebattle layout for non-partner unit '%s'" % uid)
-			continue
-		var deployed: bool = bool(entry.get("deployed", false))
-		if deployed:
-			var pos_raw: Variant = entry.get("grid_pos", {})
-			var grid_pos := Vector2i.ZERO
-			var have_pos: bool = false
-			if typeof(pos_raw) == TYPE_DICTIONARY:
-				var pos_dict: Dictionary = pos_raw as Dictionary
-				grid_pos = Vector2i(int(pos_dict.get("x", 0)), int(pos_dict.get("y", 0)))
-				have_pos = true
-			elif pos_raw is Array:
-				var pos_arr: Array = pos_raw as Array
-				if pos_arr.size() >= 2:
-					grid_pos = Vector2i(int(pos_arr[0]), int(pos_arr[1]))
-					have_pos = true
-			if not have_pos:
-				continue
-			var allowed_slots: Array[Vector2i] = get_mock_coop_allowed_prebattle_slots_for_unit(unit)
-			if not allowed_slots.is_empty() and grid_pos not in allowed_slots:
-				if OS.is_debug_build():
-					push_warning("Coop battle sync: refuse prebattle slot outside unit band '%s' -> %s" % [uid, str(grid_pos)])
-				continue
-			unit.position = Vector2(grid_pos.x * CELL_SIZE.x, grid_pos.y * CELL_SIZE.y)
-			unit.visible = true
-			unit.process_mode = Node.PROCESS_MODE_INHERIT
-		else:
-			unit.visible = false
-			unit.process_mode = Node.PROCESS_MODE_DISABLED
-			unit.position = Vector2(MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY, MOCK_COOP_PREBATTLE_BENCH_OFFSCREEN_XY)
-		changed_any = true
-	if not changed_any:
-		return
-	if _mock_coop_remote_prebattle_ready:
-		_mock_coop_remote_prebattle_ready = false
-		_mock_coop_prebattle_transition_pending = false
-		if battle_log != null and battle_log.visible:
-			add_combat_log("Co-op: partner updated deployment. Start readiness cleared until they confirm again.", "gold")
-		_update_mock_coop_start_battle_button_state()
-	rebuild_grid()
-	queue_redraw()
-	if current_state == pre_battle_state and pre_battle_state != null and pre_battle_state.has_method("_refresh_ui_list"):
-		pre_battle_state.call("_refresh_ui_list")
+	CoopRemoteSyncActionHelpers.coop_remote_sync_prebattle_layout(self, body)
 
 func _queue_tactical_ui_overhaul() -> void:
 	if not is_inside_tree():
@@ -2924,6 +1721,88 @@ func _ensure_field_log_toggle_button() -> Button:
 	if not field_log_toggle_btn.pressed.is_connected(_on_field_log_toggle_pressed):
 		field_log_toggle_btn.pressed.connect(_on_field_log_toggle_pressed)
 	return field_log_toggle_btn
+
+
+func _ensure_deploy_roster_toggle_button() -> Button:
+	var ui := get_node_or_null("UI")
+	if ui == null:
+		return null
+	if deploy_roster_toggle_btn != null and is_instance_valid(deploy_roster_toggle_btn):
+		return deploy_roster_toggle_btn
+	var btn := ui.get_node_or_null("DeployRosterToggleBtn") as Button
+	if btn == null:
+		btn = Button.new()
+		btn.name = "DeployRosterToggleBtn"
+		btn.visible = false
+		btn.focus_mode = Control.FOCUS_NONE
+		ui.add_child(btn)
+	deploy_roster_toggle_btn = btn
+	if not deploy_roster_toggle_btn.pressed.is_connected(_on_deploy_roster_toggle_pressed):
+		deploy_roster_toggle_btn.pressed.connect(_on_deploy_roster_toggle_pressed)
+	return deploy_roster_toggle_btn
+
+
+func _on_deploy_roster_toggle_pressed() -> void:
+	var rp: Panel = get_node_or_null("UI/RosterPanel") as Panel
+	if rp == null:
+		return
+	if current_state != pre_battle_state:
+		return
+	var collapsed: bool = rp.get_meta(META_DEPLOYMENT_RAIL_COLLAPSED, false)
+	rp.set_meta(META_DEPLOYMENT_RAIL_COLLAPSED, not collapsed)
+	if select_sound and select_sound.stream:
+		select_sound.pitch_scale = randf_range(0.96, 1.04)
+		select_sound.play()
+	_apply_deployment_rail_visibility(true)
+
+
+func _apply_deployment_rail_visibility(animated: bool = false) -> void:
+	var rp: Panel = get_node_or_null("UI/RosterPanel") as Panel
+	var btn: Button = _ensure_deploy_roster_toggle_button()
+	if rp == null or btn == null:
+		return
+	if current_state != pre_battle_state:
+		return
+	if not rp.visible or not rp.has_meta("deploy_rail_expanded_x"):
+		return
+	var expanded_px: float = float(rp.get_meta("deploy_rail_expanded_x"))
+	var collapsed_px: float = float(rp.get_meta("deploy_rail_collapsed_x"))
+	var expanded_bx: float = float(btn.get_meta("deploy_rail_btn_expanded_x")) if btn.has_meta("deploy_rail_btn_expanded_x") else btn.position.x
+	var collapsed_bx: float = float(btn.get_meta("deploy_rail_btn_collapsed_x")) if btn.has_meta("deploy_rail_btn_collapsed_x") else btn.position.x
+	var start_btn: Button = get_node_or_null("UI/StartBattleButton") as Button
+	var expanded_sy: float = float(start_btn.get_meta("deploy_start_expanded_y")) if start_btn != null and start_btn.has_meta("deploy_start_expanded_y") else (start_btn.position.y if start_btn != null else 0.0)
+	var collapsed_sy: float = float(start_btn.get_meta("deploy_start_collapsed_y")) if start_btn != null and start_btn.has_meta("deploy_start_collapsed_y") else expanded_sy
+	var collapsed_now: bool = rp.get_meta(META_DEPLOYMENT_RAIL_COLLAPSED, false)
+	var target_px: float = collapsed_px if collapsed_now else expanded_px
+	var target_bx: float = collapsed_bx if collapsed_now else expanded_bx
+	var target_sy: float = collapsed_sy if collapsed_now else expanded_sy
+
+	if deploy_roster_toggle_tween != null:
+		deploy_roster_toggle_tween.kill()
+	deploy_roster_toggle_tween = null
+
+	if not animated:
+		rp.position.x = target_px
+		btn.position.x = target_bx
+		if start_btn != null:
+			start_btn.position.y = target_sy
+			start_btn.modulate = Color(1, 1, 1, DEPLOY_START_BATTLE_MODULATE_A_COLLAPSED) if collapsed_now else Color.WHITE
+		_style_tactical_button(btn, "SHOW ROSTER" if collapsed_now else "HIDE ROSTER", false, 16)
+		return
+
+	deploy_roster_toggle_tween = create_tween()
+	deploy_roster_toggle_tween.set_parallel(true)
+	deploy_roster_toggle_tween.set_trans(Tween.TRANS_BACK)
+	deploy_roster_toggle_tween.set_ease(Tween.EASE_IN_OUT)
+	deploy_roster_toggle_tween.tween_property(rp, "position:x", target_px, 0.28)
+	deploy_roster_toggle_tween.tween_property(btn, "position:x", target_bx, 0.28)
+	if start_btn != null:
+		deploy_roster_toggle_tween.tween_property(start_btn, "position:y", target_sy, 0.28)
+		var target_modulate: Color = Color(1, 1, 1, DEPLOY_START_BATTLE_MODULATE_A_COLLAPSED) if collapsed_now else Color.WHITE
+		deploy_roster_toggle_tween.tween_property(start_btn, "modulate", target_modulate, 0.28)
+	await deploy_roster_toggle_tween.finished
+	deploy_roster_toggle_tween = null
+	_style_tactical_button(btn, "SHOW ROSTER" if collapsed_now else "HIDE ROSTER", false, 16)
 
 
 func _set_field_log_toggle_button_text() -> void:
@@ -3058,37 +1937,7 @@ func _style_inventory_item_info_backdrop(info_bg: Panel) -> void:
 	info_bg.z_index = -1
 
 func _apply_inventory_panel_spacing() -> void:
-	if inventory_panel == null:
-		return
-	if inventory_panel.get_meta(META_INVENTORY_UI_SPACING_APPLIED, false):
-		return
-	_resolve_inventory_ui_nodes()
-	if inv_scroll != null:
-		_inventory_scroll_apply_content_padding(inv_scroll, INVENTORY_UI_SCROLL_CONTENT_PAD)
-		var vbox := inv_scroll.get_node_or_null("InventoryVBox") as VBoxContainer
-		if vbox != null:
-			vbox.add_theme_constant_override("separation", INVENTORY_UI_VBOX_SEP)
-	if unit_grid != null:
-		unit_grid.add_theme_constant_override("h_separation", INVENTORY_UI_GRID_SEP)
-		unit_grid.add_theme_constant_override("v_separation", INVENTORY_UI_GRID_SEP)
-	if convoy_grid != null:
-		convoy_grid.add_theme_constant_override("h_separation", INVENTORY_UI_GRID_SEP)
-		convoy_grid.add_theme_constant_override("v_separation", INVENTORY_UI_GRID_SEP)
-	var info_bg := inventory_panel.get_node_or_null("Panel") as Panel
-	var outer := float(INVENTORY_UI_INFO_PANEL_OUTER_PAD)
-	if info_bg != null:
-		info_bg.offset_left += outer
-		info_bg.offset_top += outer
-		info_bg.offset_right -= outer
-		info_bg.offset_bottom -= outer
-		_style_inventory_item_info_backdrop(info_bg)
-	var dpad := float(INVENTORY_UI_DESC_TEXT_PAD)
-	if inv_desc_label != null:
-		inv_desc_label.offset_left += dpad
-		inv_desc_label.offset_top += dpad
-		inv_desc_label.offset_right -= dpad
-		inv_desc_label.offset_bottom -= dpad
-	inventory_panel.set_meta(META_INVENTORY_UI_SPACING_APPLIED, true)
+	InventoryUiHelpers.apply_inventory_panel_spacing(self)
 
 func _apply_inventory_panel_item_list_extra_margins(inv_item_list: ItemList) -> void:
 	if inv_item_list == null or inventory_panel == null:
@@ -5063,13 +3912,50 @@ func _apply_tactical_ui_overhaul() -> void:
 	var count_text := get_node_or_null("UI/RosterPanel/DeployCountLabel") as Label
 	var roster_items := get_node_or_null("UI/RosterPanel/RosterList") as ItemList
 	var build_button := get_node_or_null("UI/RosterPanel/BuildButton") as Button
+	var deploy_bond_panel: Panel = get_node_or_null("UI/RosterPanel/DeployBondPanel") as Panel
+	var deploy_bond_block_h: float = TACTICAL_DEPLOY_ROSTER_BONDS_H
+	if roster_panel != null and show_deployment_rail and roster_panel.get_meta("deploy_bond_hidden", false):
+		deploy_bond_block_h = 0.0
 	if roster_panel != null:
+		if show_deployment_rail:
+			if deploy_roster_toggle_tween != null:
+				deploy_roster_toggle_tween.kill()
+				deploy_roster_toggle_tween = null
 		roster_panel.visible = show_deployment_rail
 		roster_panel.scale = hud_scale_vec
-		var roster_top: float = max(252.0, objective_panel_render_bottom)
-		roster_panel.position = Vector2(right_x + 12.0, roster_top)
-		roster_panel.size = Vector2(TACTICAL_UI_RAIL_WIDTH - 24.0, max(180.0, (vp_size.y - roster_top - (108.0 * hud_scale)) / hud_scale))
+		# Pre-battle: objective HUD is hidden — don't force the 252px floor; use full-height column.
+		var roster_top: float = (TACTICAL_UI_MARGIN if show_deployment_rail else maxf(252.0, objective_panel_render_bottom))
+		var roster_w: float = TACTICAL_DEPLOY_ROSTER_PANEL_WIDTH if show_deployment_rail else (TACTICAL_UI_RAIL_WIDTH - 24.0)
+		var roster_bottom_px: float = (108.0 * hud_scale) if not show_deployment_rail else (TACTICAL_DEPLOY_ROSTER_VIEWPORT_BOTTOM_RESERVE * hud_scale)
+		var roster_base_h: float = max(180.0, (vp_size.y - roster_top - roster_bottom_px) / hud_scale)
+		if show_deployment_rail:
+			var min_deploy_h: float = 124.0 + deploy_bond_block_h + TACTICAL_DEPLOY_ROSTER_MIN_LIST_H
+			roster_base_h = maxf(roster_base_h, min_deploy_h)
+		roster_panel.size = Vector2(roster_w, roster_base_h)
+		var roster_visual_w: float = roster_w * hud_scale
+		var roster_left: float = clampf(right_x + 12.0, 8.0, maxf(8.0, vp_size.x - roster_visual_w - 8.0))
+		roster_panel.position.y = roster_top
+		roster_panel.set_meta("deploy_rail_expanded_x", roster_left)
+		roster_panel.set_meta("deploy_rail_collapsed_x", vp_size.x + 24.0)
 		_style_tactical_panel(roster_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
+		# Pre-battle: let the player hide the deploy column for an unobstructed map view (slide + tween, same feel as field log).
+		var d_toggle := _ensure_deploy_roster_toggle_button()
+		if d_toggle != null and show_deployment_rail:
+			d_toggle.visible = true
+			d_toggle.scale = hud_scale_vec
+			d_toggle.z_index = 28
+			var tog_w: float = 132.0 * hud_scale
+			var tog_h: float = 38.0 * hud_scale
+			d_toggle.size = Vector2(tog_w, tog_h)
+			d_toggle.position.y = roster_top
+			d_toggle.set_meta("deploy_rail_btn_expanded_x", maxf(8.0, roster_left - tog_w - 10.0))
+			d_toggle.set_meta("deploy_rail_btn_collapsed_x", vp_size.x - tog_w - TACTICAL_UI_MARGIN)
+			_apply_deployment_rail_visibility(false)
+		elif d_toggle != null:
+			if deploy_roster_toggle_tween != null:
+				deploy_roster_toggle_tween.kill()
+				deploy_roster_toggle_tween = null
+			d_toggle.visible = false
 	if count_text != null and roster_panel != null:
 		count_text.position = Vector2(16, 16)
 		count_text.size = Vector2(roster_panel.size.x - 32.0, 24.0)
@@ -5077,243 +3963,107 @@ func _apply_tactical_ui_overhaul() -> void:
 		_style_tactical_label(count_text, TACTICAL_UI_ACCENT, 21, 4)
 	if roster_items != null and roster_panel != null:
 		roster_items.position = Vector2(12, 50)
+		if show_deployment_rail:
+			# Multi-line rows: default ItemList uses trim+ellipsis (one line); that hides Lv/class/weapon/stats.
+			roster_items.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			roster_items.icon_mode = ItemList.ICON_MODE_TOP
+			roster_items.max_text_lines = 4
+			roster_items.fixed_icon_size = Vector2i(40, 40)
+			roster_items.add_theme_font_size_override("font_size", 17)
+			roster_items.add_theme_constant_override("line_separation", 2)
+			roster_items.add_theme_constant_override("v_separation", 8)
+		else:
+			roster_items.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			roster_items.icon_mode = ItemList.ICON_MODE_LEFT
+			roster_items.max_text_lines = 1
+			roster_items.fixed_icon_size = Vector2i(40, 40)
+			roster_items.add_theme_font_size_override("font_size", 19)
+			roster_items.remove_theme_constant_override("line_separation")
+			roster_items.remove_theme_constant_override("v_separation")
+		if show_deployment_rail:
+			var btn_top_r: float = roster_panel.size.y - 58.0
+			var readout_top_r: float = btn_top_r - 8.0 - deploy_bond_block_h
+			# Must not use min height larger than free space or the list draws over the bond panel.
+			var list_h_r: float = readout_top_r - 50.0 - 8.0
+			roster_items.size = Vector2(roster_panel.size.x - 24.0, maxf(40.0, list_h_r))
+			roster_items.z_index = 0
+		else:
 		roster_items.size = Vector2(roster_panel.size.x - 24.0, max(180.0, roster_panel.size.y - 122.0))
-		roster_items.fixed_icon_size = Vector2i(48, 48)
-		roster_items.add_theme_font_size_override("font_size", 20)
 	if build_button != null and roster_panel != null:
 		build_button.position = Vector2(12, roster_panel.size.y - 58.0)
 		build_button.size = Vector2(roster_panel.size.x - 24.0, 46.0)
 		_style_tactical_button(build_button, build_button.text if build_button.text != "" else "BUILD DEFENSES", false, 20)
-	var bond_rows := get_node_or_null("UI/RosterPanel/RosterBondRows") as VBoxContainer
-	if bond_rows != null and roster_panel != null:
-		bond_rows.offset_left = 16
-		bond_rows.offset_top = 56
-		bond_rows.offset_right = 72
-		bond_rows.offset_bottom = roster_panel.size.y - 68
-	var bond_strip := get_node_or_null("UI/RosterPanel/BondIconsStrip") as HBoxContainer
-	if bond_strip != null and roster_panel != null:
-		bond_strip.position = Vector2(16, roster_panel.size.y - 92.0)
-
+	# Nested under RosterPanel (CanvasLayer cannot lay out Control children reliably). PreBattleState toggles visibility.
+	if deploy_bond_panel != null and roster_panel != null and roster_panel.visible and show_deployment_rail:
+		if deploy_bond_block_h <= 0.01:
+			deploy_bond_panel.visible = false
+		else:
+			deploy_bond_panel.visible = true
+			deploy_bond_panel.scale = Vector2.ONE
+			deploy_bond_panel.clip_contents = true
+			deploy_bond_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+			deploy_bond_panel.anchor_right = 0.0
+			deploy_bond_panel.anchor_bottom = 0.0
+			var btn_top_b: float = roster_panel.size.y - 58.0
+			var readout_top_b: float = btn_top_b - 8.0 - deploy_bond_block_h
+			deploy_bond_panel.position = Vector2(12, readout_top_b)
+			deploy_bond_panel.size = Vector2(roster_panel.size.x - 24.0, deploy_bond_block_h)
+			deploy_bond_panel.z_index = 2
+			# Opaquer than TACTICAL_UI_BG_SOFT so list text cannot show through when stacking.
+			_style_tactical_panel(deploy_bond_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER_MUTED, 1, 8)
 	var start_button := get_node_or_null("UI/StartBattleButton") as Button
 	if start_button != null:
 		start_button.z_index = 26
 		start_button.scale = hud_scale_vec
-		start_button.position = Vector2((vp_size.x - (460.0 * hud_scale)) * 0.5, max(110.0, ((bottom_y - (78.0 * hud_scale)) * 0.5)))
+		var start_button_y: float = vp_size.y - (78.0 * hud_scale) - TACTICAL_UI_BOTTOM_EDGE_MARGIN - (12.0 * hud_scale)
+		start_button_y = maxf(110.0, start_button_y)
+		# When the roster is hidden, sit lower than dead-center so the map reads clearer (~200px at 1:1 HUD scale).
+		var start_button_mid_y: float = (vp_size.y - (78.0 * hud_scale)) * 0.5
+		start_button_mid_y += 200.0 * hud_scale
+		start_button_mid_y = minf(
+			start_button_mid_y,
+			vp_size.y - (78.0 * hud_scale) - TACTICAL_UI_BOTTOM_EDGE_MARGIN - (8.0 * hud_scale)
+		)
+		var start_button_x: float = ((vp_size.x - (460.0 * hud_scale)) * 0.5) + (24.0 * hud_scale)
+		start_button.position = Vector2(start_button_x, start_button_y)
 		start_button.size = Vector2(460.0, 78.0)
 		start_button.visible = show_deployment_rail
+		start_button.set_meta("deploy_start_expanded_y", start_button_y)
+		start_button.set_meta("deploy_start_collapsed_y", start_button_mid_y)
 		_style_tactical_button(start_button, start_button.text if start_button.text != "" else "START BATTLE", true, 42)
 
 
 func _coop_remote_sync_prebattle_ready(body: Dictionary) -> void:
-	var ready_now: bool = bool(body.get("ready", true))
-	if not ready_now:
-		if not _mock_coop_remote_prebattle_ready:
-			return
-		_mock_coop_remote_prebattle_ready = false
-		_mock_coop_prebattle_transition_pending = false
-		if battle_log != null and battle_log.visible:
-			add_combat_log("Co-op: partner revised deployment. Waiting for them to press Start again.", "gold")
-		_update_mock_coop_start_battle_button_state()
-		return
-	if _mock_coop_remote_prebattle_ready:
-		return
-	_mock_coop_remote_prebattle_ready = true
-	if battle_log != null and battle_log.visible:
-		if _mock_coop_local_prebattle_ready:
-			add_combat_log("Co-op: partner commander is ready. Starting the battle.", "gold")
-		else:
-			add_combat_log("Co-op: partner commander is ready to start. Finish deployment and press Start when you are ready.", "gold")
-	_update_mock_coop_start_battle_button_state()
-	_mock_coop_try_advance_prebattle_after_ready_sync()
+	CoopRemoteSyncActionHelpers.coop_remote_sync_prebattle_ready(self, body)
 
 
 func _coop_remote_sync_player_move(body: Dictionary) -> void:
-	var uid: String = str(body.get("unit_id", "")).strip_edges()
-	var path_raw: Variant = body.get("path", [])
-	var path_typed: Array[Vector2i] = []
-	if path_raw is Array:
-		for item in path_raw as Array:
-			if item is Array:
-				var a: Array = item as Array
-				if a.size() >= 2:
-					path_typed.append(Vector2i(int(a[0]), int(a[1])))
-			elif item is Dictionary:
-				var d: Dictionary = item as Dictionary
-				path_typed.append(Vector2i(int(d.get("x", 0)), int(d.get("y", 0))))
-	if path_typed.size() < 2:
-		return
-	var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
-	if unit == null or not is_instance_valid(unit):
-		if OS.is_debug_build():
-			push_warning("Coop battle sync: no unit for id '%s'" % uid)
-		return
-	if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
-		if OS.is_debug_build():
-			push_warning("Coop battle sync: refuse mirror move for non-partner unit '%s'" % uid)
-		return
-	var path_cost: float = get_path_move_cost(path_typed, unit)
-	await unit.move_along_path(path_typed)
-	if not is_instance_valid(unit) or not is_instance_valid(self):
-		return
-	unit.move_points_used_this_turn += path_cost
-	var unm: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else uid
-	if battle_log != null and battle_log.visible:
-		add_combat_log("Co-op: %s moved (partner)." % unm, "gray")
-	if bool(body.get("finish_after_move", false)) and unit.has_method("finish_turn"):
-		unit.finish_turn()
-	update_fog_of_war()
-	rebuild_grid()
-	if current_state == player_state and player_state != null:
-		var au: Node2D = player_state.active_unit
-		if au != null and au == unit:
-			player_state.clear_active_unit()
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_player_move(self, body)
 
 
 func _coop_remote_sync_player_defend(body: Dictionary) -> void:
-	var uid: String = str(body.get("unit_id", "")).strip_edges()
-	var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
-	if unit == null or not is_instance_valid(unit):
-		return
-	if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
-		return
-	if defend_sound != null and defend_sound.stream != null:
-		defend_sound.pitch_scale = randf_range(0.9, 1.1)
-		defend_sound.play()
-	unit.trigger_defend()
-	animate_shield_drop(unit)
-	if battle_log != null and battle_log.visible:
-		var unm: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else uid
-		add_combat_log("Co-op: %s defended (partner)." % unm, "gray")
-	rebuild_grid()
-	if current_state == player_state and player_state != null:
-		var au: Node2D = player_state.active_unit
-		if au != null and au == unit:
-			player_state.clear_active_unit()
+	CoopRemoteSyncActionHelpers.coop_remote_sync_player_defend(self, body)
 
 
 func _coop_remote_sync_player_combat(body: Dictionary) -> void:
-	var aid: String = str(body.get("attacker_id", "")).strip_edges()
-	var did: String = str(body.get("defender_id", "")).strip_edges()
-	var att: Node2D = _coop_find_unit_by_relationship_id_any_side(aid)
-	var defu: Node2D = _coop_find_unit_by_relationship_id_any_side(did)
-	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
-		if OS.is_debug_build():
-			push_warning("Coop battle sync: combat resolve failed ids att=%s def=%s" % [aid, did])
-		return
-	var owner_att: String = get_mock_coop_unit_owner_for_unit(att)
-	var host_auth: bool = bool(body.get("host_authority", false))
-	var i_am_guest: bool = CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
-	var partner_mirror: bool = (owner_att == MOCK_COOP_OWNER_REMOTE)
-	var guest_own_host_auth: bool = (host_auth and i_am_guest and owner_att == MOCK_COOP_OWNER_LOCAL)
-	if not partner_mirror and not guest_own_host_auth:
-		if OS.is_debug_build():
-			push_warning("Coop battle sync: refuse combat mirror — attacker ownership mismatch (aid=%s)" % aid)
-		return
-	var auth_v: int = int(body.get("auth_v", 0))
-	var auth_raw: Variant = body.get("auth_snapshot", {})
-	var has_auth: bool = auth_raw is Dictionary and auth_v == COOP_AUTH_BATTLE_SNAPSHOT_VER and (auth_raw as Dictionary).size() > 0
-	var rp: int = int(body.get("rng_packed", -1))
-	var qte_raw: Variant = body.get("qte_snapshot", {})
-	var should_replay: bool = rp >= 0 or (qte_raw is Dictionary and (qte_raw as Dictionary).size() > 0)
-	if should_replay:
-		await _coop_execute_remote_combat_replay(att, defu, bool(body.get("used_ability", false)), qte_raw, rp)
-	elif not has_auth:
-		if OS.is_debug_build():
-			push_warning("Coop battle sync: combat mirror missing replay data and auth_snapshot (aid=%s def=%s)" % [aid, did])
-		return
-	if has_auth:
-		var auth_d: Dictionary = auth_raw as Dictionary
-		_coop_apply_authoritative_combat_snapshot(auth_d)
-	_coop_apply_remote_synced_enemy_death_loot_events(body.get("loot_events", []))
-	await _wait_for_loot_window_close()
-	if battle_log != null and battle_log.visible:
-		if guest_own_host_auth:
-			add_combat_log("Co-op: your combat applied (host state).", "gray")
-		elif has_auth:
-			add_combat_log("Co-op: partner combat applied (host state).", "gray")
-		else:
-			add_combat_log("Co-op: partner combat resolved (%s)." % aid, "gray")
-	if not bool(body.get("has_post_combat_followup", true)):
-		_coop_emit_guest_host_combat_resolved_if_waiting(aid)
+	await CoopRemoteSyncActionHelpers.coop_remote_sync_player_combat(self, body)
 
 
 func _coop_remote_sync_player_post_combat(body: Dictionary) -> void:
-	var aid: String = str(body.get("attacker_id", "")).strip_edges()
-	var att: Node2D = _coop_find_player_side_unit_by_relationship_id(aid)
-	if att == null or not is_instance_valid(att):
-		return
-	var owner_att: String = get_mock_coop_unit_owner_for_unit(att)
-	var host_auth: bool = bool(body.get("host_authority", false))
-	var i_am_guest: bool = CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
-	var allow: bool = (owner_att == MOCK_COOP_OWNER_REMOTE) or (host_auth and i_am_guest and owner_att == MOCK_COOP_OWNER_LOCAL)
-	if not allow:
-		return
-	var follow: String = str(body.get("follow", "finish")).strip_edges()
-	if follow == "canto":
-		var rem: float = float(body.get("canto_budget", 0.0))
-		att.has_moved = true
-		att.in_canto_phase = true
-		att.canto_move_budget = rem
-		if battle_log != null and battle_log.visible:
-			var who: String = "co-op partner" if owner_att == MOCK_COOP_OWNER_REMOTE else "host"
-			add_combat_log(att.unit_name + " — Canto (" + who + ", " + str(snappedf(rem, 0.1)) + " move left).", "cyan")
-		calculate_ranges(att)
-	elif att.has_method("finish_turn"):
-		att.finish_turn()
-	rebuild_grid()
-	## Do not clear selection during canto — guest may still be commanding this unit after host-authority combat.
-	if follow != "canto" and current_state == player_state and player_state != null and player_state.active_unit == att:
-		player_state.clear_active_unit()
-	if host_auth and i_am_guest:
-		_coop_emit_guest_host_combat_resolved_if_waiting(aid)
+	CoopRemoteSyncActionHelpers.coop_remote_sync_player_post_combat(self, body)
 
 
 func _coop_remote_sync_player_finish_turn(body: Dictionary) -> void:
-	var uid: String = str(body.get("unit_id", "")).strip_edges()
-	var unit: Node2D = _coop_find_player_side_unit_by_relationship_id(uid)
-	if unit == null or not is_instance_valid(unit):
-		return
-	if get_mock_coop_unit_owner_for_unit(unit) != MOCK_COOP_OWNER_REMOTE:
-		return
-	if unit.has_method("finish_turn"):
-		unit.finish_turn()
-	if battle_log != null and battle_log.visible:
-		var unm: String = str(unit.get("unit_name")) if unit.get("unit_name") != null else uid
-		add_combat_log("Co-op: %s waited / ended turn (partner)." % unm, "gray")
-	rebuild_grid()
-	if current_state == player_state and player_state != null:
-		var au: Node2D = player_state.active_unit
-		if au != null and au == unit:
-			player_state.clear_active_unit()
+	CoopRemoteSyncActionHelpers.coop_remote_sync_player_finish_turn(self, body)
 
 
 func _coop_remote_sync_player_phase_ready(body: Dictionary) -> void:
-	if not bool(body.get("ready", true)):
-		return
-	if _mock_coop_remote_player_phase_ready:
-		return
-	_mock_coop_remote_player_phase_ready = true
-	if battle_log != null and battle_log.visible:
-		if _mock_coop_local_player_phase_ready:
-			add_combat_log("Co-op: partner detachment is ready. Advancing to the next phase.", "gold")
-		else:
-			add_combat_log("Co-op: partner detachment is ready. Finish your commands when you are ready.", "gold")
-	update_objective_ui(true)
-	_mock_coop_try_advance_player_phase_after_ready_sync()
+	CoopRemoteSyncActionHelpers.coop_remote_sync_player_phase_ready(self, body)
 
 
 ## Drops selection if active_unit somehow points at a partner-owned unit (mock co-op only). Skips while forecasting to avoid tearing an in-flight forecast await.
 func _sanitize_player_phase_active_unit_for_mock_coop_ownership() -> void:
-	if current_state != player_state or player_state == null:
-		return
-	if player_state.is_forecasting:
-		return
-	var au: Node2D = player_state.active_unit
-	if au == null or not is_instance_valid(au):
-		return
-	if not is_local_player_command_blocked_for_mock_coop_unit(au):
-		return
-	player_state.clear_active_unit()
+	TurnOrchestrationHelpers.sanitize_player_phase_active_unit_for_mock_coop_ownership(self)
 
 
 ## One-line BBCode for unit stats panel when mock co-op ownership applies; empty otherwise.
@@ -5379,127 +4129,39 @@ func is_mock_partner_placeholder_active() -> bool:
 
 ## Player phase: true when at least one local-commandable player unit is fielded and alive, and every such unit has finished acting (is_exhausted).
 func _local_player_fielded_commandable_units_all_exhausted() -> bool:
-	if player_container == null:
-		return false
-	var any_eligible: bool = false
-	for u in player_container.get_children():
-		if not is_instance_valid(u) or u.is_queued_for_deletion():
-			continue
-		if u.get("current_hp") == null or int(u.current_hp) <= 0:
-			continue
-		if is_local_player_command_blocked_for_mock_coop_unit(u):
-			continue
-		any_eligible = true
-		if u.get("is_exhausted") == false:
-			return false
-	return any_eligible
+	return TurnOrchestrationHelpers.local_player_fielded_commandable_units_all_exhausted(self)
 
 
 func _should_pulse_skip_button_end_turn_nudge() -> bool:
-	if current_state != player_state:
-		return false
-	if _mock_coop_player_phase_ready_sync_active() and _mock_coop_local_player_phase_ready:
-		return false
-	return _local_player_fielded_commandable_units_all_exhausted()
+	return TurnOrchestrationHelpers.should_pulse_skip_button_end_turn_nudge(self)
 
 
 func _mock_coop_set_local_prebattle_ready(send_sync: bool = true) -> void:
-	if not _mock_coop_prebattle_ready_sync_active():
-		return
-	if _mock_coop_local_prebattle_ready:
-		_mock_coop_try_advance_prebattle_after_ready_sync()
-		return
-	_mock_coop_local_prebattle_ready = true
-	if send_sync:
-		CoopExpeditionSessionManager.send_runtime_coop_action({"action": "prebattle_ready", "ready": true})
-	if battle_log != null and battle_log.visible:
-		if _mock_coop_remote_prebattle_ready:
-			add_combat_log("Co-op: your commander is ready. Starting the battle.", "gold")
-		else:
-			add_combat_log("Co-op: your commander is ready. Waiting for your partner to press Start.", "gold")
-	_update_mock_coop_start_battle_button_state()
-	_mock_coop_try_advance_prebattle_after_ready_sync()
+	CoopMockSessionHelpers._mock_coop_set_local_prebattle_ready(self, send_sync)
 
 
 func _mock_coop_clear_local_prebattle_ready(send_sync: bool = true) -> void:
-	if not _mock_coop_prebattle_ready_sync_active():
-		return
-	if not _mock_coop_local_prebattle_ready:
-		return
-	_mock_coop_local_prebattle_ready = false
-	_mock_coop_prebattle_transition_pending = false
-	if send_sync:
-		CoopExpeditionSessionManager.send_runtime_coop_action({"action": "prebattle_ready", "ready": false})
-	if battle_log != null and battle_log.visible:
-		add_combat_log("Co-op: deployment changed. Press Start again when you are ready.", "gold")
-	_update_mock_coop_start_battle_button_state()
+	CoopMockSessionHelpers._mock_coop_clear_local_prebattle_ready(self, send_sync)
 
 
 func _mock_coop_player_phase_ready_sync_active() -> bool:
-	return (
-			is_mock_coop_unit_ownership_active()
-			and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
-			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-	)
+	return TurnOrchestrationHelpers.mock_coop_player_phase_ready_sync_active(self)
 
 
 func _reset_mock_coop_player_phase_ready_state() -> void:
-	_mock_coop_local_player_phase_ready = false
-	_mock_coop_remote_player_phase_ready = false
-	_mock_coop_player_phase_transition_pending = false
+	TurnOrchestrationHelpers.reset_mock_coop_player_phase_ready_state(self)
 
 
 func _mock_coop_try_advance_player_phase_after_ready_sync() -> void:
-	if current_state != player_state:
-		return
-	if not _mock_coop_player_phase_ready_sync_active():
-		return
-	if not _mock_coop_local_player_phase_ready or not _mock_coop_remote_player_phase_ready:
-		return
-	if _mock_coop_player_phase_transition_pending:
-		return
-	_mock_coop_player_phase_transition_pending = true
-	if ally_container and ally_container.get_child_count() > 0:
-		change_state(ally_state)
-	else:
-		change_state(enemy_state)
+	TurnOrchestrationHelpers.mock_coop_try_advance_player_phase_after_ready_sync(self)
 
 
 func _mock_coop_set_local_player_phase_ready(send_sync: bool = true) -> void:
-	if not _mock_coop_player_phase_ready_sync_active():
-		return
-	if _mock_coop_local_player_phase_ready:
-		_mock_coop_try_advance_player_phase_after_ready_sync()
-		return
-	_mock_coop_local_player_phase_ready = true
-	if send_sync:
-		CoopExpeditionSessionManager.send_runtime_coop_action({"action": "player_phase_ready", "ready": true})
-	if battle_log != null and battle_log.visible and not _mock_coop_remote_player_phase_ready:
-		add_combat_log("Co-op: your detachment is ready. Waiting for your partner to end phase.", "gold")
-	update_objective_ui(true)
-	_mock_coop_try_advance_player_phase_after_ready_sync()
+	TurnOrchestrationHelpers.mock_coop_set_local_player_phase_ready(self, send_sync)
 
 
 func _process_mock_partner_placeholder_frame() -> void:
-	if not is_mock_partner_placeholder_active():
-		_mock_partner_placeholder_combat_log_done = false
-		return
-	if player_state != null and player_state.is_forecasting:
-		player_state.is_forecasting = false
-		player_state.targeted_enemy = null
-		_on_forecast_cancel()
-	if player_state != null and player_state.active_unit != null:
-		player_state.clear_active_unit()
-	if _mock_partner_placeholder_combat_log_done:
-		return
-	_mock_partner_placeholder_combat_log_done = true
-	if battle_log != null and battle_log.visible:
-		if _mock_coop_local_player_phase_ready and not _mock_coop_remote_player_phase_ready:
-			add_combat_log("Co-op: your detachment is ready. Waiting for your partner to end phase.", "gold")
-		elif _mock_coop_remote_player_phase_ready and not _mock_coop_local_player_phase_ready:
-			add_combat_log("Co-op: partner detachment is ready. End / Skip when you are ready.", "gold")
-		else:
-			add_combat_log("Mock co-op: all your units have acted. End / Skip phase when you are ready.", "gold")
+	TurnOrchestrationHelpers.process_mock_partner_placeholder_frame(self)
 
 
 ## Player phase only: BBCode for objective panel — local-owned, fielded, alive units; ready = not is_exhausted.
@@ -6095,32 +4757,7 @@ func _ready() -> void:
 	get_tree().create_timer(0.6).timeout.connect(_start_intro_sequence)
 	
 func _process(delta: float) -> void:
-	update_cursor_pos()
-	update_cursor_color()
-	update_unit_info_panel()
-	if current_state == pre_battle_state:
-		_update_mock_coop_start_battle_button_state()
-	_sanitize_player_phase_active_unit_for_mock_coop_ownership()
-	if is_mock_coop_unit_ownership_active() and current_state == player_state:
-		update_objective_ui(true)
-	_process_mock_partner_placeholder_frame()
-	_update_skip_button_visual_modulate()
-	_handle_camera_panning(delta)
-	
-	# === ADD THIS LINE ===
-	_process_fog(delta)
-	# =====================
-
-	if _danger_zone_recalc_dirty:
-		_danger_zone_recalc_dirty = false
-		if show_danger_zone:
-			calculate_full_danger_zone()
-	
-	if current_state:
-		current_state.update(delta)
-		
-	draw_preview_path()
-	queue_redraw()
+	TurnOrchestrationHelpers.process(self, delta)
 
 func _handle_camera_panning(delta: float) -> void:
 	# Allow panning during player phase and pre-battle deployment so the player can look around the map.
@@ -6176,159 +4813,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		current_state.handle_input(event)
 
 func change_state(new_state: GameState) -> void:
-	var previous_state: GameState = current_state
-	if current_state:
-		current_state.exit()
-		
-	current_state = null 
-	if previous_state == pre_battle_state and new_state != pre_battle_state:
-		_reset_mock_coop_prebattle_ready_state()
-	if new_state == player_state:
-		_reset_mock_coop_player_phase_ready_state()
-	
-	if new_state == player_state:
-		await show_phase_banner("PLAYER PHASE", Color(0.4, 0.6, 0.9))
-		await _process_spawners(2) # <--- ADDED AWAIT
-		
-	elif new_state == ally_state:
-		await show_phase_banner("ALLY PHASE", Color(0.4, 0.8, 0.5))
-		await _process_spawners(1) # <--- ADDED AWAIT
-		
-		# --- ESCORT CONVOY LOGIC ---
-		if map_objective == Objective.DEFEND_TARGET and is_instance_valid(vip_target):
-			if vip_target.has_method("process_escort_turn"):
-				var target_cam_pos = vip_target.global_position + Vector2(32, 32) 
-				if main_camera.anchor_mode == Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT:
-					var half_vp_world = (get_viewport_rect().size * 0.5) / main_camera.zoom
-					target_cam_pos -= half_vp_world
-					
-				var c_tween = create_tween()
-				c_tween.tween_property(main_camera, "global_position", target_cam_pos, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-				await c_tween.finished
-				await get_tree().create_timer(0.3).timeout
-
-				if coop_enet_is_host_authority_escort_turn_host():
-					vip_target.process_escort_turn(self)
-					await vip_target.turn_completed
-					coop_enet_sync_after_host_authority_escort_turn(vip_target)
-				elif coop_enet_should_wait_for_host_authority_escort_turn():
-					await coop_enet_guest_wait_for_escort_turn_end()
-				else:
-					vip_target.process_escort_turn(self)
-					await vip_target.turn_completed
-				_clamp_camera_position()
-				await get_tree().create_timer(0.5).timeout
-				if _coop_pending_escort_destination_victory:
-					_coop_pending_escort_destination_victory = false
-					await _trigger_victory()
-					return
-				
-	elif new_state == enemy_state:
-		await show_phase_banner("ENEMY PHASE", Color(0.85, 0.3, 0.3))
-		if coop_enet_is_host_authority_enemy_turn_host():
-			await _process_spawners(0)
-			coop_enet_sync_after_host_authority_enemy_phase_setup()
-		elif not coop_enet_should_wait_for_host_authority_enemy_turn():
-			await _process_spawners(0)
-
-	update_objective_ui(true)
-	queue_redraw()
-	if new_state == player_state:
-		_maybe_log_enemy_reinforcement_warning_for_player_phase()
-		
-	current_state = new_state
-	if current_state:
-		current_state.enter(self)
-	_queue_tactical_ui_overhaul()
+	await TurnOrchestrationHelpers.change_state(self, new_state)
 				
 func _process_spawners(faction_id: int) -> void:
-	if destructibles_container:
-		for child in destructibles_container.get_children():
-			if child.has_method("process_turn") and not child.is_queued_for_deletion():
-				# <--- ADDED AWAIT SO IT WAITS FOR THE CINEMATIC TO FINISH!
-				await child.process_turn(self, faction_id)
+	await TurnOrchestrationHelpers.process_spawners(self, faction_id)
 						
 func _on_skip_button_pressed() -> void:
-	if current_state == player_state:
-		
-		# --- QOL: AUTO-DEFEND UNUSED UNITS ---
-		var auto_defended_anyone = false
-		
-		# Loop through all player units on the board
-		if player_container != null:
-			for u in player_container.get_children():
-				# If they are alive and haven't finished their turn yet...
-				if is_instance_valid(u) and not u.is_queued_for_deletion() and u.current_hp > 0:
-					if is_local_player_command_blocked_for_mock_coop_unit(u):
-						continue
-					if u.get("is_exhausted") == false:
-						if u.has_method("trigger_defend"):
-							u.trigger_defend()
-						else:
-							u.set("is_defending", true)
-							if u.has_method("finish_turn"):
-								u.finish_turn()
-						animate_shield_drop(u)
-						coop_enet_sync_after_local_defend(u)
-						auto_defended_anyone = true
-		
-		# Play the shield sound once if anyone braced for impact!
-		if auto_defended_anyone and defend_sound != null and defend_sound.stream != null:
-			defend_sound.play()
-		# --------------------------------------
-
-		if _mock_coop_player_phase_ready_sync_active():
-			_mock_coop_set_local_player_phase_ready(true)
-			if not _mock_coop_remote_player_phase_ready:
-				return
-
-		# If we have green units, they go next. Otherwise, skip to enemies.
-		if ally_container and ally_container.get_child_count() > 0:
-			change_state(ally_state)
-		else:
-			change_state(enemy_state)
+	TurnOrchestrationHelpers.on_skip_button_pressed(self)
 			
 func _on_ally_turn_finished() -> void:
-	# Reset player units for the new turn
-	for u in player_container.get_children():
-		if is_instance_valid(u):
-			if u.has_method("reset_turn"):
-				u.reset_turn()
-				
-			# --- TICK COOLDOWNS ---
-			var cd = u.get_meta("ability_cooldown", 0)
-			if cd > 0:
-				u.set_meta("ability_cooldown", cd - 1)
-	change_state(enemy_state)
+	TurnOrchestrationHelpers.on_ally_turn_finished(self)
 
 func _on_enemy_turn_finished() -> void:
-	await _tick_burn_status_effects()
-	
-	# Tick the turn counter
-	current_turn += 1
-	tick_fire_tiles_for_new_turn()
-	
-	update_objective_ui()
-	
-	# --- CHECK 'SURVIVE' / 'DEFEND' CONDITIONS ---
-	if map_objective == Objective.SURVIVE_TURNS or map_objective == Objective.DEFEND_TARGET:
-		if current_turn > turn_limit:
-			add_combat_log("MISSION ACCOMPLISHED: Held the line.", "lime")
-			_trigger_victory() # <--- CHANGED!
-			return # Stop processing, the game is over!
-
-	# Reset player units for the new turn
-	for u in player_container.get_children():
-		if is_instance_valid(u):
-			if u.has_method("reset_turn"):
-				u.reset_turn()
-				
-			# --- TICK COOLDOWNS ---
-			var cd = u.get_meta("ability_cooldown", 0)
-			if cd > 0:
-				u.set_meta("ability_cooldown", cd - 1)
-			
-	change_state(player_state)
+	await TurnOrchestrationHelpers.on_enemy_turn_finished(self)
 
 
 func _compute_burn_tick_damage(unit: Node2D) -> int:
@@ -6771,8 +5268,8 @@ func trigger_game_over(result: String) -> void:
 	# ==========================================
 	# --- NEW: ARENA MMR, STREAKS & TOKENS ---
 	# ==========================================
-	if ArenaManager.current_opponent_data.size() > 0:
-		var opp_mmr: int = ArenaManager.current_opponent_data.get("score", 1000)
+	if is_arena_match and ArenaManager.current_opponent_data.size() > 0:
+		var opp_mmr: int = ArenaManager.sanitize_leaderboard_score_mmr(ArenaManager.current_opponent_data.get("score", 1000))
 		var my_mmr: int = ArenaManager.get_local_mmr()
 		var mmr_change: int = 0
 		
@@ -6803,7 +5300,7 @@ func trigger_game_over(result: String) -> void:
 				
 		ArenaManager.set_local_mmr(my_mmr + mmr_change)
 		ArenaManager.last_match_mmr_change = mmr_change
-		ArenaManager.last_match_new_mmr = my_mmr + mmr_change
+		ArenaManager.last_match_new_mmr = ArenaManager.get_local_mmr()
 	# ==========================================
 	
 	result_label.text = normalized_result
@@ -6914,175 +5411,37 @@ func _on_restart_button_pressed() -> void:
 
 # --- VISUALS & UTILS ---
 func update_cursor_pos() -> void:
-	var m = get_global_mouse_position()
-	var new_grid_pos = Vector2i(
-		clamp(m.x / CELL_SIZE.x, 0, GRID_SIZE.x - 1), 
-		clamp(m.y / CELL_SIZE.y, 0, GRID_SIZE.y - 1)
-	)
-
-	if new_grid_pos != cursor_grid_pos:
-		cursor_grid_pos = new_grid_pos
-		var target_pos = Vector2(cursor_grid_pos.x * CELL_SIZE.x, cursor_grid_pos.y * CELL_SIZE.y)
-		if hover_glow.position != target_pos:
-			hover_glow.position = target_pos
-			var tween = create_tween()
-			tween.tween_property(cursor, "position", target_pos, 0.07)\
-				.set_trans(Tween.TRANS_QUAD)\
-				.set_ease(Tween.EASE_OUT)
-
-	_update_locked_inspect_cursor()
+	PathCursorHelpers.update_cursor_pos(self)
 
 func update_cursor_color() -> void:
-	# 1. Start by resetting to the default white color every frame
-	cursor_sprite.modulate = Color.WHITE
-	if is_instance_valid(hover_glow):
-		hover_glow.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	
-	# 2. Check if it is the player's turn and a unit is currently selected
-	if current_state == player_state and player_state.active_unit != null:
-		
-		# 3. Check if the tile the cursor is hovering over is within attack range
-		if attackable_tiles.has(cursor_grid_pos):
-			
-			# 4. Check if there is actually an enemy on that specific tile
-			var unit_under_cursor = get_enemy_at(cursor_grid_pos)
-			if unit_under_cursor != null:
-				
-				# Tint the cursor red
-				cursor_sprite.modulate = Color(1.0, 0.3, 0.3)
-				if is_instance_valid(hover_glow):
-					hover_glow.modulate = Color(1.0, 0.35, 0.35, 1.0)
-				return
-		
-		# Valid move destination (blue range): cyan cursor + glow reads clearly vs neutral tiles
-		if (not player_state.active_unit.has_moved or player_state.active_unit.get("in_canto_phase") == true) and reachable_tiles.has(cursor_grid_pos):
-			cursor_sprite.modulate = Color(0.5, 0.92, 1.0)
-			if is_instance_valid(hover_glow):
-				hover_glow.modulate = Color(0.45, 0.88, 1.0, 0.95)
+	PathCursorHelpers.update_cursor_color(self)
 
 
 func _update_locked_inspect_cursor() -> void:
-	if not is_instance_valid(target_cursor):
-		return
-	if player_state != null and player_state.is_forecasting:
-		return
-	var locked_inspect_unit: Node2D = _get_locked_inspect_unit()
-	if locked_inspect_unit == null:
-		if is_instance_valid(target_cursor_sprite):
-			target_cursor_sprite.modulate = Color.WHITE
-		target_cursor.visible = false
-		return
-	target_cursor.z_index = 82
-	target_cursor.global_position = locked_inspect_unit.global_position
-	var tint: Color = _get_inspect_cursor_tint(locked_inspect_unit)
-	target_cursor.modulate = tint
-	if is_instance_valid(target_cursor_sprite):
-		target_cursor_sprite.modulate = tint
-	target_cursor.visible = true
+	PathCursorHelpers.update_locked_inspect_cursor(self)
 
 
 func _get_inspect_cursor_tint(unit: Node2D) -> Color:
-	if unit == null or not is_instance_valid(unit):
-		return Color(1.0, 0.85, 0.34, 1.0)
-	if _is_neutral_inspect_unit(unit):
-		return Color(0.36, 0.96, 0.50, 1.0)
-	var is_flagged_enemy: bool = unit.get("is_enemy") == true
-	if _is_friendly_unit_on_field(unit) or unit.get_parent() == ally_container or unit.get("is_enemy") == false:
-		return Color(0.36, 0.96, 0.50, 1.0)
-	if is_flagged_enemy or unit.get_parent() == enemy_container:
-		return Color(1.0, 0.28, 0.28, 1.0)
-	return Color(1.0, 0.85, 0.34, 1.0)
+	return PathCursorHelpers.get_inspect_cursor_tint(self, unit)
+
+
+func _set_cursor_state(cursor_node: Node, state_name: String) -> void:
+	PathCursorHelpers.set_cursor_state(self, cursor_node, state_name)
+
+
+func _apply_cursor_accessibility_settings() -> void:
+	PathCursorHelpers.apply_cursor_accessibility_settings(self)
 
 
 func _is_neutral_inspect_unit(unit: Node2D) -> bool:
-	if unit == null or not is_instance_valid(unit):
-		return false
-	var data_variant: Variant = unit.get("data")
-	var data_res: Resource = data_variant as Resource if data_variant is Resource else null
-	if data_res == null:
-		return false
-	var res_path: String = String(data_res.resource_path)
-	if res_path.contains("/Resources/Units/NeutralAllies/"):
-		return true
-	if res_path.contains("/Resources/Units/NeutralFactionAllies/"):
-		return true
-	return false
+	return PathCursorHelpers.is_neutral_inspect_unit(self, unit)
 
 func draw_preview_path() -> void:
-	if not CampaignManager.battle_show_path_preview:
-		_hide_path_preview_visuals()
-		return
-	if path_line == null:
-		return
-
-	_path_preview_tick_world.clear()
-	_set_path_pulse(false)
-
-	if current_state != player_state or player_state == null or player_state.active_unit == null:
-		_hide_path_preview_visuals()
-		return
-
-	var active: Node2D = player_state.active_unit
-	if active.has_moved and active.get("in_canto_phase") != true:
-		_hide_path_preview_visuals()
-		return
-
-	var start: Vector2i = get_grid_pos(active)
-	var path: Array = get_unit_path(active, start, cursor_grid_pos)
-	if path.size() <= 1:
-		_hide_path_preview_visuals()
-		return
-
-	var move_range: float = float(active.canto_move_budget) if active.get("in_canto_phase") == true else float(active.move_range)
-	var path_cost: float = get_path_move_cost(path, active)
-	var valid_path: bool = (path_cost <= move_range) and reachable_tiles.has(cursor_grid_pos)
-	var ghost: bool = (not valid_path) and CampaignManager.battle_path_invalid_ghost
-
-	if not valid_path and not ghost:
-		_hide_path_preview_visuals()
-		return
-
-	var poly: PackedVector2Array = _grid_path_to_world_polyline(path, active)
-	if path_line_under != null:
-		path_line_under.clear_points()
-		for pt in poly:
-			path_line_under.add_point(pt)
-	path_line.clear_points()
-	for pt in poly:
-		path_line.add_point(pt)
-
-	path_line.joint_mode = Line2D.LINE_JOINT_ROUND
-	path_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	path_line.end_cap_mode = Line2D.LINE_CAP_ROUND
-	if path_line_under != null:
-		path_line_under.joint_mode = path_line.joint_mode
-		path_line_under.begin_cap_mode = path_line.begin_cap_mode
-		path_line_under.end_cap_mode = path_line.end_cap_mode
-
-	_gather_path_cost_ticks(path, active)
-
-	var canto_move: bool = active.get("in_canto_phase") == true
-	_apply_path_preview_style(ghost, canto_move)
-
-	path_line.visible = true
-	if path_line_under != null:
-		path_line_under.visible = (CampaignManager.battle_path_style != CampaignManager.BATTLE_PATH_STYLE_MINIMAL)
-
-	_update_path_endpoint_marker(path, ghost, canto_move)
-
-	if CampaignManager.battle_path_preview_pulse:
-		_set_path_pulse(true)
-
-	if path_preview_ticks != null:
-		path_preview_ticks.queue_redraw()
-
-	queue_redraw()
+	PathCursorHelpers.draw_preview_path(self)
 
 
 func get_path_preview_tick_positions_for_draw() -> Array[Vector2]:
-	if not CampaignManager.battle_show_path_preview or not CampaignManager.battle_path_cost_ticks:
-		return []
-	return _path_preview_tick_world.duplicate()
+	return PathCursorHelpers.get_path_preview_tick_positions_for_draw(self)
 
 
 func _init_path_preview_nodes() -> void:
@@ -7283,9 +5642,8 @@ func _update_path_endpoint_marker(path: Array, ghost: bool, canto: bool) -> void
 
 func _draw() -> void:
 	if current_state == pre_battle_state:
-		for pos in pre_battle_state.valid_deployment_slots:
-			draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.2, 0.8, 0.2, 0.4))
-			draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.2, 1.0, 0.2, 0.8), false, 2.0)
+		var pbs: PreBattleState = pre_battle_state
+		DrawHelpers.draw_pre_battle_deployment_overlay_and_snap(self, pbs)
 
 	var player_base_color = Color(0.2, 0.4, 0.8, 0.4)
 	var enemy_base_color = Color(0.8, 0.2, 0.2, 0.4)
@@ -7307,25 +5665,13 @@ func _draw() -> void:
 		draw_unit_bases.call(enemy_container, enemy_base_color)
 		draw_unit_bases.call(ally_container, ally_base_color)
 
-	if show_danger_zone:
-		for pos in danger_zone_move_tiles:
-			if _danger_overlay_cell_drawable(pos):
-				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.5, 0.0, 0.5, 0.4))
-		for pos in danger_zone_attack_tiles:
-			if _danger_overlay_cell_drawable(pos):
-				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.4, 0.0, 0.5))
-
-	for pos in reachable_tiles:
-		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.3, 0.5, 0.9, 0.5))
-
 	var action_color = Color(0.8, 0.2, 0.2, 0.5)
 	if current_state == player_state and player_state.active_unit != null:
 		var wpn = player_state.active_unit.equipped_weapon
 		if wpn != null and (wpn.get("is_healing_staff") == true or wpn.get("is_buff_staff") == true):
 			action_color = Color(0.2, 0.8, 0.2, 0.5)
 
-	for pos in attackable_tiles:
-		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), action_color)
+	DrawHelpers.draw_danger_reachable_attackable(self, action_color)
 
 	if CampaignManager.battle_show_grid:
 		var c = Color(1, 1, 1, 0.3)
@@ -7334,23 +5680,8 @@ func _draw() -> void:
 		for y in range(GRID_SIZE.y + 1):
 			draw_line(Vector2(0, y * CELL_SIZE.y), Vector2(GRID_SIZE.x * CELL_SIZE.x, y * CELL_SIZE.y), c)
 
-	if CampaignManager.battle_show_enemy_threat:
-		for pos in enemy_reachable_tiles:
-			if _danger_overlay_cell_drawable(pos):
-				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(0.5, 0.0, 0.5, 0.4))
-
-		for pos in enemy_attackable_tiles:
-			if _danger_overlay_cell_drawable(pos):
-				draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), Color(1.0, 0.4, 0.0, 0.5))
-
-	var reinforcement_snapshot: Dictionary = _build_enemy_reinforcement_telegraph_snapshot()
-	for pos in reinforcement_snapshot.get("later_tiles", []):
-		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_LATER_FILL)
-		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_LATER_BORDER, false, 2.0)
-
-	for pos in reinforcement_snapshot.get("soon_tiles", []):
-		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_SOON_FILL)
-		draw_rect(Rect2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y, CELL_SIZE.x, CELL_SIZE.y), REINFORCEMENT_OVERLAY_SOON_BORDER, false, 4.0)
+	DrawHelpers.draw_enemy_threat(self)
+	DrawHelpers.draw_reinforcement_telegraph_overlays(self)
 
 func get_grid_pos(node: Node2D) -> Vector2i:
 	return Vector2i(int(node.position.x / CELL_SIZE.x), int(node.position.y / CELL_SIZE.y))
@@ -8133,323 +6464,7 @@ func _reset_rookie_battle_tracking() -> void:
 
 
 func show_combat_forecast(attacker: Node2D, defender: Node2D) -> Array:
-	if attacker == null or defender == null:
-		return []
-
-	if is_local_player_command_blocked_for_mock_coop_unit(attacker):
-		return []
-
-	if attacker.get("equipped_weapon") == null:
-		return []
-
-	# Defender can be forecasted even if unarmed, but must still be a combat unit
-	if attacker.get("strength") == null or attacker.get("magic") == null:
-		return []
-	if defender.get("strength") == null or defender.get("magic") == null:
-		return []
-
-	var atk_wpn = attacker.equipped_weapon
-	var def_wpn = defender.equipped_weapon
-	
-	# Adjacency check
-	var atk_adj = get_adjacency_bonus(attacker)
-	var def_adj = get_adjacency_bonus(defender)
-	
-	_ensure_forecast_support_labels()
-	if forecast_atk_support_label:
-		forecast_atk_support_label.text = _get_forecast_support_text(attacker)
-	if forecast_def_support_label:
-		forecast_def_support_label.text = _get_forecast_support_text(defender)
-		
-	var atk_terrain = get_terrain_data(get_grid_pos(attacker))
-	var def_terrain = get_terrain_data(get_grid_pos(defender))
-	
-	var atk_might = atk_wpn.might if atk_wpn else 0
-	var atk_hit_bonus = atk_wpn.hit_bonus if atk_wpn else 0
-	var def_might = def_wpn.might if def_wpn else 0
-	var def_hit_bonus = def_wpn.hit_bonus if def_wpn else 0
-
-	# --- THE BROKEN PENALTY ---
-	if atk_wpn and atk_wpn.get("current_durability") != null and atk_wpn.current_durability <= 0:
-		atk_might /= 2
-		atk_hit_bonus /= 2
-		
-	if def_wpn and def_wpn.get("current_durability") != null and def_wpn.current_durability <= 0:
-		def_might /= 2
-		def_hit_bonus /= 2
-	# -------------------------------
-
-	var atk_is_magic = atk_wpn.damage_type == WeaponData.DamageType.MAGIC if atk_wpn else false
-	var def_is_magic = def_wpn.damage_type == WeaponData.DamageType.MAGIC if def_wpn else false
-
-	var atk_offense = attacker.magic if atk_is_magic else attacker.strength
-	var def_offense = defender.magic if def_is_magic else defender.strength
-	
-	# Apply Defender's Adjacency to their Defense
-	var atk_defense_target = defender.resistance if atk_is_magic else defender.defense
-	if defender.get("is_defending") == true:
-		atk_defense_target += defender.defense_bonus	
-	atk_defense_target += def_adj["def"] 
-	atk_defense_target += def_terrain["def"]
-
-	# Apply Attacker's Adjacency to their Defense
-	var def_defense_target = attacker.resistance if def_is_magic else attacker.defense	
-	def_defense_target += atk_adj["def"] 
-	def_defense_target += atk_terrain["def"]
-	
-	var advantage = get_triangle_advantage(attacker, defender)
-	var atk_tri_dmg = advantage * 1
-	var atk_tri_hit = advantage * 15
-	var def_tri_dmg = (advantage * -1) * 1
-	var def_tri_hit = (advantage * -1) * 15
-
-	# Support-combat and relationship web (forecast must match resolution)
-	var atk_sup: Dictionary = get_support_combat_bonus(attacker)
-	var def_sup: Dictionary = get_support_combat_bonus(defender)
-	var atk_rel: Dictionary = get_relationship_combat_modifiers(attacker)
-	var def_rel: Dictionary = get_relationship_combat_modifiers(defender)
-	var atk_dmg = max(0, (atk_offense + atk_might + atk_tri_dmg) - atk_defense_target) + atk_rel.get("dmg_bonus", 0)
-	var def_dmg = max(0, (def_offense + def_might + def_tri_dmg) - def_defense_target) + def_rel.get("dmg_bonus", 0)
-	var atk_hit: int = clamp(80 + atk_hit_bonus + atk_tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100)
-	var atk_crit: int = clamp(attacker.agility / 2 + atk_rel["crit_bonus"] - def_sup["crit_avo"], 0, 100)
-	var def_hit: int = clamp(80 + def_hit_bonus + def_tri_hit + def_adj["hit"] + def_sup["hit"] - atk_sup["avo"] + def_rel["hit"] - atk_rel["avo"] + (defender.agility * 2) - (attacker.speed * 2) - atk_terrain["avo"], 0, 100)
-	var def_crit: int = clamp(defender.agility / 2 + def_rel["crit_bonus"] - atk_sup["crit_avo"], 0, 100)
-
-	if atk_wpn == null or atk_wpn.get("is_healing_staff") != true:
-		var fr_rookie: Dictionary = _forecast_rookie_class_passive_mods(attacker, defender, atk_is_magic, atk_wpn)
-		atk_hit = clampi(atk_hit + int(fr_rookie.get("hit", 0)), 0, 100)
-		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
-		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
-
-	# UI Updates (columns: left = attacker / you, right = defender / target)
-	forecast_atk_name.text = _format_forecast_name_fitted("ATK", attacker.unit_name, 17)
-	forecast_atk_weapon.text = _format_forecast_weapon_name(atk_wpn, 14)
-	forecast_atk_hp.text = "HP: %d / %d" % [attacker.current_hp, attacker.max_hp]
-	
-	forecast_def_name.text = _format_forecast_name_fitted("TARGET", defender.unit_name, 18)
-	forecast_def_weapon.text = _format_forecast_weapon_name(def_wpn, 14)
-	forecast_def_hp.text = "HP: %d / %d" % [defender.current_hp, defender.max_hp]
-	var atk_weapon_badge := forecast_panel.get_node_or_null("AtkWeaponBadgePanel/Text") as Label
-	if atk_weapon_badge != null:
-		atk_weapon_badge.text = _forecast_weapon_marker(atk_wpn)
-	var def_weapon_badge := forecast_panel.get_node_or_null("DefWeaponBadgePanel/Text") as Label
-	if def_weapon_badge != null:
-		def_weapon_badge.text = _forecast_weapon_marker(def_wpn)
-	var atk_weapon_icon_panel := forecast_panel.get_node_or_null("AtkWeaponIconPanel") as Panel
-	var atk_weapon_icon := forecast_panel.get_node_or_null("AtkWeaponIconPanel/Icon") as TextureRect
-	var atk_weapon_glow := forecast_panel.get_node_or_null("AtkWeaponIconPanel/Glow") as Panel
-	var atk_weapon_glow_color := _forecast_weapon_rarity_glow_color(atk_wpn)
-	if atk_weapon_icon_panel != null:
-		atk_weapon_icon_panel.visible = atk_wpn != null and atk_wpn.icon != null
-	if atk_weapon_icon != null:
-		atk_weapon_icon.texture = atk_wpn.icon if atk_wpn != null else null
-	if atk_weapon_glow != null:
-		atk_weapon_glow.visible = atk_wpn != null and atk_wpn.icon != null and atk_weapon_glow_color.a > 0.0
-		_style_forecast_weapon_glow(atk_weapon_glow, atk_weapon_glow_color)
-	var def_weapon_icon_panel := forecast_panel.get_node_or_null("DefWeaponIconPanel") as Panel
-	var def_weapon_icon := forecast_panel.get_node_or_null("DefWeaponIconPanel/Icon") as TextureRect
-	var def_weapon_glow := forecast_panel.get_node_or_null("DefWeaponIconPanel/Glow") as Panel
-	var def_weapon_glow_color := _forecast_weapon_rarity_glow_color(def_wpn)
-	if def_weapon_icon_panel != null:
-		def_weapon_icon_panel.visible = def_wpn != null and def_wpn.icon != null
-	if def_weapon_icon != null:
-		def_weapon_icon.texture = def_wpn.icon if def_wpn != null else null
-	if def_weapon_glow != null:
-		def_weapon_glow.visible = def_wpn != null and def_wpn.icon != null and def_weapon_glow_color.a > 0.0
-		_style_forecast_weapon_glow(def_weapon_glow, def_weapon_glow_color)
-	_ensure_forecast_hp_bars()
-	if forecast_atk_hp_bar != null:
-		forecast_atk_hp_bar.max_value = float(max(1, int(attacker.max_hp)))
-		forecast_atk_hp_bar.value = float(clampi(int(attacker.current_hp), 0, int(attacker.max_hp)))
-		_style_forecast_hp_bar(forecast_atk_hp_bar, _forecast_hp_fill_color(int(attacker.current_hp), int(attacker.max_hp)))
-	if forecast_def_hp_bar != null:
-		forecast_def_hp_bar.max_value = float(max(1, int(defender.max_hp)))
-		forecast_def_hp_bar.value = float(clampi(int(defender.current_hp), 0, int(defender.max_hp)))
-		_style_forecast_hp_bar(forecast_def_hp_bar, _forecast_hp_fill_color(int(defender.current_hp), int(defender.max_hp)))
-	
-	# --- RESET UI MODULATES ---
-	_reset_forecast_emphasis_visuals()
-	
-	# --- HEALING VS ATTACKING LOGIC ---
-	if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-		forecast_def_name.text = _format_forecast_name_fitted("TARGET", defender.unit_name, 18)
-		var heal_amount = attacker.magic + atk_wpn.might
-		forecast_atk_dmg.text = "HEAL: " + str(heal_amount)
-		forecast_atk_hit.text = "HIT: 100%"
-		forecast_atk_crit.text = "CRIT: 0%"
-		
-		forecast_def_dmg.text = "DAMAGE: --"
-		forecast_def_hit.text = ""
-		forecast_def_crit.text = ""
-		
-		forecast_atk_adv.text = ""
-		forecast_def_adv.text = ""
-		forecast_atk_double.text = ""
-		forecast_def_double.text = ""
-	else:
-		# Standard Attack UI
-		forecast_atk_dmg.text = "DMG: " + str(atk_dmg)
-		forecast_atk_hit.text = "HIT: " + str(atk_hit) + "%"
-		forecast_atk_crit.text = "CRIT: " + str(atk_crit) + "%"
-		
-		var def_is_healer = def_wpn != null and def_wpn.get("is_healing_staff") == true
-		if defender.get_parent() == enemy_container:
-			forecast_def_name.text = _format_forecast_name_fitted("DEF", defender.unit_name, 17)
-		else:
-			forecast_def_name.text = _format_forecast_name_fitted("TARGET", defender.unit_name, 18)
-		
-		if def_wpn == null or def_is_healer or not is_in_range(defender, attacker):
-			forecast_def_dmg.text = "COUNTER: NONE"
-			forecast_def_hit.text = ""
-			forecast_def_crit.text = ""
-			forecast_def_double.text = ""
-		else:
-			forecast_def_dmg.text = "COUNTER: " + str(def_dmg)
-			forecast_def_hit.text = "HIT: " + str(def_hit) + "%"
-			forecast_def_crit.text = "CRIT: " + str(def_crit) + "%"
-			var def_doubles = (defender.speed - attacker.speed) >= 4
-			forecast_def_double.text = "x2" if def_doubles else ""
-
-		# Advantage Indicators
-		if advantage == 1:
-			forecast_atk_adv.text = "Adv."
-			forecast_atk_adv.modulate = Color.CYAN
-			forecast_def_adv.text = "Disadv."
-			forecast_def_adv.modulate = Color.TOMATO
-		elif advantage == -1:
-			forecast_atk_adv.text = "Disadv."
-			forecast_atk_adv.modulate = Color.TOMATO
-			forecast_def_adv.text = "Adv."
-			forecast_def_adv.modulate = Color.CYAN
-		else:
-			forecast_atk_adv.text = ""
-			forecast_def_adv.text = ""
-		
-		# --- POISE BREAK WARNING ---
-		var raw_power = atk_offense + atk_might
-		var poise_dmg = raw_power
-		if atk_wpn and atk_wpn.get("weapon_type") == WeaponData.WeaponType.AXE:
-			poise_dmg = int(float(poise_dmg) * 1.5)
-			
-		var def_cur_poise = defender.get_current_poise() if defender.has_method("get_current_poise") else 999
-		
-		if def_cur_poise <= 0:
-			forecast_def_adv.text = "GUARD BROKEN"
-			forecast_def_adv.modulate = Color.RED
-		elif (def_cur_poise - poise_dmg) <= 0:
-			forecast_def_adv.text = "STAGGER RISK!"
-			forecast_def_adv.modulate = Color.ORANGE
-			
-		var atk_doubles = (attacker.speed - defender.speed) >= 4
-		forecast_atk_double.text = "x2" if atk_doubles else ""
-		var attacker_lethal: bool = atk_hit > 0 and atk_dmg >= int(defender.current_hp)
-		var defender_lethal: bool = forecast_def_dmg.text != "COUNTER: NONE" and def_hit > 0 and def_dmg >= int(attacker.current_hp)
-		_start_forecast_emphasis_pulse(attacker_lethal, defender_lethal, atk_crit > 0, def_crit > 0)
-
-	# --- FIGURE-8 ANIMATION TRIGGER ---
-	if forecast_atk_double.text != "" or forecast_def_double.text != "":
-		_start_double_animation()
-	else:
-		if figure_8_tween: figure_8_tween.kill()
-
-	var talk_visible: bool = false
-	if forecast_talk_btn != null:
-		if defender.get_parent() == enemy_container and defender.get("data") != null and defender.data.get("is_recruitable") == true:
-			forecast_talk_btn.visible = true
-			talk_visible = true
-			forecast_talk_btn.tooltip_text = "Recruit this unit through dialogue (ends this unit's turn)."
-		else:
-			forecast_talk_btn.visible = false
-			forecast_talk_btn.tooltip_text = ""
-	
-	# --- ABILITY BUTTON LOGIC ---
-	if forecast_ability_btn:
-		forecast_ability_btn.visible = false # Hide by default
-		
-		var abil: String = _resolve_tactical_ability_name(attacker)
-		if abil == "Shove" or abil == "Grapple Hook" or abil == "Fire Trap":
-			var cooldown = attacker.get_meta("ability_cooldown", 0)
-			
-			forecast_ability_btn.visible = true
-			if cooldown > 0:
-				forecast_ability_btn.text = abil + " (CD: " + str(cooldown) + ")"
-				forecast_ability_btn.disabled = true
-			else:
-				forecast_ability_btn.text = "USE " + abil.to_upper()
-				forecast_ability_btn.disabled = false
-	
-	if forecast_atk_support_label:
-		forecast_atk_support_label.visible = true
-	if forecast_def_support_label:
-		forecast_def_support_label.visible = true
-	
-	var fc_btn: Button = forecast_panel.get_node_or_null("ConfirmButton") as Button
-	if fc_btn != null:
-		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-			fc_btn.text = "Heal"
-		elif atk_wpn != null and atk_wpn.get("is_buff_staff") == true:
-			fc_btn.text = "Buff"
-		elif atk_wpn != null and atk_wpn.get("is_debuff_staff") == true:
-			fc_btn.text = "Debuff"
-		else:
-			fc_btn.text = "Attack"
-	
-	if forecast_instruction_label:
-		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-			forecast_instruction_label.text = "Confirm to heal. Cancel or right-click to go back."
-		else:
-			var ins := "Left: your strike · Right: enemy counter (if any). Click the defender's tile to commit."
-			if talk_visible:
-				ins += " Talk = recruit (ends turn)."
-			forecast_instruction_label.text = ins
-	
-	if forecast_reaction_label:
-		var rsum: String = _build_forecast_reaction_summary(attacker, defender, atk_wpn)
-		if rsum.is_empty():
-			forecast_reaction_label.visible = false
-			forecast_reaction_label.text = ""
-		else:
-			forecast_reaction_label.text = rsum
-			forecast_reaction_label.visible = true
-	
-	if is_instance_valid(target_cursor):
-		target_cursor.z_index = 80
-		target_cursor.modulate = Color.WHITE
-		if is_instance_valid(target_cursor_sprite):
-			target_cursor_sprite.modulate = Color.WHITE
-		# Match main Cursor: parent sits on tile top-left; child Sprite2D (~half cell + texture offset) centers the art.
-		target_cursor.global_position = defender.global_position
-		target_cursor.visible = true
-	
-	forecast_panel.visible = true
-	# --- UPDATE THE AWAIT ---
-	# We must capture BOTH variables from the array the signal now returns!
-	var result_array = await self.forecast_resolved
-	var action = result_array[0]
-	var used_ability = result_array[1]
-	
-	# --- CLEANUP AND RESET ---
-	if figure_8_tween: figure_8_tween.kill()
-	_reset_forecast_emphasis_visuals()
-	
-	if atk_double_origin != Vector2.ZERO:
-		forecast_atk_double.position = atk_double_origin
-		forecast_def_double.position = def_double_origin
-		
-	if forecast_atk_support_label:
-		forecast_atk_support_label.visible = false
-	if forecast_def_support_label:
-		forecast_def_support_label.visible = false
-	if forecast_reaction_label:
-		forecast_reaction_label.visible = false
-		forecast_reaction_label.text = ""
-	
-	forecast_panel.visible = false
-	if is_instance_valid(target_cursor):
-		if is_instance_valid(target_cursor_sprite):
-			target_cursor_sprite.modulate = Color.WHITE
-		target_cursor.visible = false
-	return [action, used_ability]
+	return await CombatForecastHelpers.show_combat_forecast(self, attacker, defender)
 	
 func _on_forecast_confirm() -> void:
 	emit_signal("forecast_resolved", "confirm", false)
@@ -8464,115 +6479,7 @@ func _on_forecast_ability_pressed() -> void:
 	emit_signal("forecast_resolved", "confirm", true) # Returns confirm, but flags the ability!
 	
 func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: bool = false) -> void:
-	# --- SAFETY CHECKS ---
-	if not _is_valid_combat_unit(attacker):
-		push_warning("execute_combat aborted: attacker is not a valid combat unit.")
-		return
-
-	if not _is_valid_combat_unit(defender):
-		push_warning("execute_combat aborted: defender is not a valid combat unit.")
-		return
-
-	var wpn = attacker.equipped_weapon
-	if wpn == null:
-		push_warning("execute_combat aborted: attacker has no equipped weapon.")
-		return
-
-	_coop_qte_tick_reset_for_execute_combat()
-
-	var is_staff: bool = wpn != null and (
-		wpn.get("is_healing_staff") == true
-		or wpn.get("is_buff_staff") == true
-		or wpn.get("is_debuff_staff") == true
-	)
-
-	# ==========================================
-	# --- FIRST COMBAT / BOSS QUOTES ---
-	# ==========================================
-	if not is_staff:
-		# 1. Did the Player attack a Boss/Recruitable Enemy?
-		if defender.get_parent() == enemy_container and not defender.has_meta("has_spoken_quote"):
-			if defender.get("data") != null and "pre_battle_quote" in defender.data and defender.data.pre_battle_quote.size() > 0:
-				defender.set_meta("has_spoken_quote", true)
-				var port = defender.data.portrait
-				await play_cinematic_dialogue(defender.unit_name, port, defender.data.pre_battle_quote)
-
-		# 2. Did the Boss/Recruitable Enemy attack the Player first?
-		elif attacker.get_parent() == enemy_container and not attacker.has_meta("has_spoken_quote"):
-			if attacker.get("data") != null and "pre_battle_quote" in attacker.data and attacker.data.pre_battle_quote.size() > 0:
-				attacker.set_meta("has_spoken_quote", true)
-				var port = attacker.data.portrait
-				await play_cinematic_dialogue(attacker.unit_name, port, attacker.data.pre_battle_quote)
-
-		# 3. Boss Personal Dialogue (V1): special pre-attack line when playable attacks supported boss pair (once per battle).
-		if defender.get_parent() == enemy_container and (attacker.get_parent() == player_container or (ally_container != null and attacker.get_parent() == ally_container)):
-			var boss_id: String = _get_boss_dialogue_id(defender)
-			var unit_id: String = _get_playable_dialogue_id(attacker)
-			var play_key: String = boss_id + "|" + unit_id
-			if not boss_id.is_empty() and not unit_id.is_empty() and not _boss_personal_dialogue_played.get(play_key, false):
-				var line: String = _get_boss_personal_line(boss_id, unit_id, "pre_attack")
-				if not line.is_empty():
-					_boss_personal_dialogue_played[play_key] = true
-					add_combat_log(defender.unit_name + ": " + line, "gold")
-					var snippet: String = line.substr(0, 24) + ("…" if line.length() > 24 else "")
-					spawn_loot_text(snippet, Color(1.0, 0.9, 0.5), defender.global_position + Vector2(32, -36))
-
-	# --- SET THE COOLDOWN IF TRIGGERED ---
-	if trigger_active_ability:
-		attacker.set_meta("ability_cooldown", 3)
-
-	_support_dual_strike_done_this_attack = false
-
-	# --- PHASE 1: THE INITIATOR ATTACKS ---
-	await _run_strike_sequence(attacker, defender, trigger_active_ability)
-
-	# --- Phase 2: DUAL STRIKE (support partner bonus strike; one per attack exchange; no chain) ---
-	if not is_staff and not _support_dual_strike_done_this_attack and is_instance_valid(defender) and _is_valid_combat_unit(defender) and defender.current_hp > 0 and is_instance_valid(attacker) and _is_valid_combat_unit(attacker) and attacker.current_hp > 0:
-		var ctx: Dictionary = get_best_support_context(attacker)
-		var partner: Node2D = ctx.get("partner", null) as Node2D
-		var rank: int = int(ctx.get("rank", 0))
-		if partner != null and rank >= 2 and ctx.get("can_react", false):
-			var dual_chance: int = SUPPORT_DUAL_STRIKE_CHANCE_RANK3 if rank >= 3 else SUPPORT_DUAL_STRIKE_CHANCE_RANK2
-			dual_chance += get_relationship_combat_modifiers(attacker).get("support_chance_bonus", 0)
-			if randi() % 100 < dual_chance:
-				_support_dual_strike_done_this_attack = true
-				if DEBUG_SUPPORT_COMBAT:
-					print("[SupportReaction] Dual Strike! ", partner.get("unit_name"), " -> bonus strike on ", defender.get("unit_name"))
-				add_combat_log("Dual Strike!", "cyan")
-				spawn_loot_text("Dual Strike!", Color(0.4, 0.9, 1.0), defender.global_position + Vector2(32, -28))
-				_award_relationship_event(attacker, partner, "dual_strike", 1)
-				await get_tree().create_timer(0.2, true, false, true).timeout
-				# Re-validate before executing: do not run if partner or defender became invalid (e.g. death cleanup).
-				if is_instance_valid(partner) and partner.current_hp > 0 and is_instance_valid(defender) and _is_valid_combat_unit(defender):
-					await _run_strike_sequence(partner, defender, false, true)
-
-	# --- PHASE 2: THE DEFENDER RETALIATES ---
-	if not is_staff \
-	and is_instance_valid(defender) \
-	and _is_valid_combat_unit(defender) \
-	and defender.current_hp > 0 \
-	and is_instance_valid(attacker) \
-	and _is_valid_combat_unit(attacker) \
-	and attacker.current_hp > 0:
-
-		# --- STAGGER CHECK ---
-		if defender.get_meta("is_staggered_this_combat", false) == true:
-			await get_tree().create_timer(0.6).timeout
-			add_combat_log(defender.unit_name + "'s guard was broken! Cannot counter-attack!", "orange")
-			spawn_loot_text("STAGGERED!", Color(1.0, 0.4, 0.0), defender.global_position + Vector2(32, -32))
-		else:
-			var def_wpn = defender.equipped_weapon
-			var defender_is_staff: bool = def_wpn != null and (
-				def_wpn.get("is_healing_staff") == true
-				or def_wpn.get("is_buff_staff") == true
-				or def_wpn.get("is_debuff_staff") == true
-			)
-
-			# Only retaliate if the defender is holding a real weapon
-			if def_wpn != null and not defender_is_staff and is_in_range(defender, attacker):
-				await get_tree().create_timer(0.5).timeout
-				add_combat_log(defender.unit_name + " retaliates", "orange")
-				await _run_strike_sequence(defender, attacker, false)
+	await CombatOrchestrationHelpers.execute_combat(self, attacker, defender, trigger_active_ability)
 
 # ============================================================================
 # 🤖 AI / DEVELOPER INSTRUCTIONS: HOW TO ADD NEW COMBAT ABILITIES 🤖
@@ -8640,2515 +6547,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 # This helper function handles the actual math and animations for a single turn of strikes.
 # When force_single_attack is true (e.g. Dual Strike), only one strike is performed.
 func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_ability: bool = false, force_single_attack: bool = false) -> void:
-	if not _is_valid_combat_unit(attacker):
-		push_warning("_run_strike_sequence aborted: attacker is not a valid combat unit.")
-		return
-
-	if not _is_valid_combat_unit(defender):
-		push_warning("_run_strike_sequence aborted: defender is not a valid combat unit.")
-		return
-
-	if attacker.get("equipped_weapon") == null:
-		push_warning("_run_strike_sequence aborted: attacker has no equipped weapon.")
-		return
-
-	_support_guard_used_this_sequence = false
-	var will_double: bool = (attacker.speed - defender.speed) >= 4 and not force_single_attack
-	var total_attacks: int = 2 if will_double else 1
-	
-	var atk_adj: Dictionary = get_adjacency_bonus(attacker)
-	var def_adj: Dictionary = get_adjacency_bonus(defender)
-	var atk_sup: Dictionary = get_support_combat_bonus(attacker)
-	var def_sup: Dictionary = get_support_combat_bonus(defender)
-	var atk_rel: Dictionary = get_relationship_combat_modifiers(attacker)
-	var def_rel: Dictionary = get_relationship_combat_modifiers(defender)
-
-	var _atk_terrain: Dictionary = get_terrain_data(get_grid_pos(attacker))
-	var def_terrain: Dictionary = get_terrain_data(get_grid_pos(defender))
-	
-	# ==========================================
-	# --- ALL QTE TEMP VARIABLES (GLOBAL SCOPE) ---
-	# ==========================================
-	var charge_bonus_damage: int = 0
-	var charge_collision_target: Node2D = null
-	var charge_collision_damage: int = 0
-	var incoming_damage_multiplier: float = 1.0
-	
-	# Archer
-	var deadeye_bonus_damage: int = 0
-	var volley_extra_hits: int = 0
-	var volley_damage_multiplier: float = 0.0
-	var volley_spread_target: Node2D = null
-	var rain_primary_bonus_damage: int = 0
-	var rain_splash_targets: Array[Node2D] = []
-	var rain_splash_damage: int = 0
-	var rain_tail_unit: Node2D = null
-	var rain_rear_extra_damage: int = 0
-	
-	# Mage + Mercenary
-	var fireball_bonus_damage: int = 0
-	var fireball_splash_targets: Array[Node2D] = []
-	var fireball_splash_damage: int = 0
-	var fireball_tail_unit: Node2D = null
-	var fireball_tail_extra_damage: int = 0
-	var meteor_storm_bonus_damage: int = 0
-	var meteor_storm_splash_targets: Array[Node2D] = []
-	var meteor_storm_splash_damage: int = 0
-	var meteor_tail_unit: Node2D = null
-	var meteor_tail_extra_damage: int = 0
-	var flurry_strike_hits: int = 0
-	var flurry_strike_damage_multiplier: float = 0.45
-	var battle_cry_bonus_damage: int = 0
-	var battle_cry_bonus_hit: int = 0
-	var blade_tempest_bonus_damage: int = 0
-	var blade_tempest_splash_targets: Array[Node2D] = []
-	var blade_tempest_splash_damage: int = 0
-	
-	# Monk + Monster
-	var chakra_bonus_damage: int = 0
-	var chakra_bonus_hit: int = 0
-	var chi_burst_bonus_damage: int = 0
-	var chi_burst_splash_targets: Array[Node2D] = []
-	var chi_burst_splash_damage: int = 0
-	var frenzy_bonus_damage: int = 0
-	var frenzy_bonus_hit: int = 0
-	var _frenzy_hit_count: int = 0
-	var frenzy_def_penalty: int = 0
-
-	# Paladin + Spellblade
-	var smite_bonus_damage: int = 0
-	var smite_splash_targets: Array[Node2D] = []
-	var smite_splash_damage: int = 0
-	var sacred_judgment_bonus_damage: int = 0
-	var sacred_judgment_splash_targets: Array[Node2D] = []
-	var sacred_judgment_splash_damage: int = 0
-	var flame_blade_bonus_damage: int = 0
-	var elemental_convergence_bonus_damage: int = 0
-	var elemental_convergence_splash_targets: Array[Node2D] = []
-	var elemental_convergence_splash_damage: int = 0
-	
-	# Thief + Warrior
-	var shadow_strike_bonus_damage: int = 0
-	var shadow_strike_armor_pierce: float = 0.0
-	var assassinate_crit_bonus: int = 0
-	var shadow_step_bonus_damage: int = 0
-	var power_strike_bonus_damage: int = 0
-	var earthshatter_bonus_damage: int = 0
-	var earthshatter_splash_targets: Array[Node2D] = []
-	var earthshatter_splash_damage: int = 0
-	
-	# Promoted Mastery Temp Vars
-	var shadow_pin_bonus_damage: int = 0
-	var shadow_pin_speed_lock: bool = false
-	var _weapon_shatter_triggered: bool = false
-	var savage_toss_distance: int = 0
-	var savage_toss_bonus_damage: int = 0
-	var vanguards_rally_bonus_damage: int = 0
-	var vanguards_rally_might_bonus: int = 0
-	
-	# Batch 2 Promoted Mastery Temp Vars
-	var severing_strike_hits: int = 0
-	var severing_strike_damage_multiplier: float = 0.5
-	var aether_bind_sparks: int = 0
-	var parting_shot_result: int = 0
-	var _parting_shot_bonus_damage: int = 0
-	var parting_shot_dodge: bool = false
-	var soul_harvest_result: int = 0
-	
-	# Final Batch Promoted Mastery Temp Vars
-	var celestial_choir_hits: int = 0
-	var hellfire_result: int = 0
-	var hellfire_bonus_damage: int = 0
-	var ballista_shot_bonus_damage: int = 0
-	var ballista_shot_pierce_targets: Array[Node2D] = []
-	var ballista_shot_pierce_damage: int = 0
-	var aegis_strike_bonus_damage: int = 0
-	
-	for i in range(total_attacks):
-		# --- BUG FIX: Ensure both units survived the previous hits! ---
-		if not is_instance_valid(defender) or defender.current_hp <= 0: break
-		if not is_instance_valid(attacker) or attacker.current_hp <= 0: break
-		
-		# Clear splash targets for the new attack phase!
-		rain_splash_targets.clear()
-		rain_tail_unit = null
-		rain_rear_extra_damage = 0
-		volley_spread_target = null
-		smite_splash_targets.clear()
-		smite_splash_damage = 0
-		fireball_splash_targets.clear()
-		fireball_tail_unit = null
-		fireball_tail_extra_damage = 0
-		meteor_storm_splash_targets.clear()
-		meteor_tail_unit = null
-		meteor_tail_extra_damage = 0
-		blade_tempest_splash_targets.clear()
-		chi_burst_splash_targets.clear()
-		sacred_judgment_splash_targets.clear()
-		elemental_convergence_splash_targets.clear()
-		earthshatter_splash_targets.clear()
-		ballista_shot_pierce_targets.clear()
-		charge_collision_target = null
-		charge_collision_damage = 0
-		
-		var wpn = attacker.equipped_weapon
-		var is_heal: bool = wpn != null and wpn.get("is_healing_staff") == true
-		var is_buff: bool = wpn != null and wpn.get("is_buff_staff") == true
-		var is_debuff: bool = wpn != null and wpn.get("is_debuff_staff") == true
-		
-		# ==========================================
-		# PHASE A: STAFF LOGIC (Heal, Buff, Debuff)
-		# ==========================================
-		if is_heal or is_buff or is_debuff:
-			var staff_orig_pos: Vector2 = attacker.global_position
-			var staff_lunge_dir: Vector2 = (defender.global_position - attacker.global_position).normalized()
-			var lunge_tween: Tween = create_tween()
-			lunge_tween.tween_property(attacker, "global_position", staff_orig_pos + (staff_lunge_dir * 16.0), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			await lunge_tween.finished
-			
-			var popup_text: String = ""
-			var text_color: Color = Color.WHITE
-			
-			if is_heal:
-				# --- CLERIC: HEALING LIGHT ---
-				var heal_amount: int = int(attacker.magic + wpn.might)
-				
-				var heal_trigger_chance: int = get_ability_trigger_chance(attacker)
-				if _attacker_has_attack_skill(attacker, "Healing Light") and randi() % 100 < heal_trigger_chance:
-					var _cqe := _coop_qte_alloc_event_id()
-					var result: int
-					if _coop_qte_mirror_active:
-						result = _coop_qte_mirror_read_int(_cqe, 0)
-					else:
-						result = await QTEManager.run_healing_light_minigame(self, attacker)
-						_coop_qte_capture_write(_cqe, result)
-					if result == 1:
-						ability_triggers_count += 1
-						heal_amount = int(round(float(heal_amount) * 1.5))
-						add_combat_log("HEALING LIGHT! Restorative power surges.", "lime")
-					elif result == 2:
-						ability_triggers_count += 1
-						heal_amount = int(round(float(heal_amount) * 2.0))
-						add_combat_log("PERFECT HEALING LIGHT! Divine restoration unleashed!", "gold")
-					else:
-						add_combat_log("Healing Light failed to amplify the spell.", "gray")
-
-				defender.current_hp = min(defender.current_hp + heal_amount, defender.max_hp)
-				if defender.get("health_bar") != null:
-					var bar_tween: Tween = create_tween()
-					bar_tween.tween_property(defender.health_bar, "value", defender.current_hp, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-					bar_tween.finished.connect(func ():
-						if is_instance_valid(defender) and defender.has_method("snap_health_delay_to_main"):
-							defender.snap_health_delay_to_main()
-					, CONNECT_ONE_SHOT)
-				popup_text = "+" + str(heal_amount)
-				text_color = Color(0.2, 1.0, 0.2)
-				add_combat_log(attacker.unit_name + " healed " + defender.unit_name + ".", "lime")
-				_add_support_points_and_check(attacker, defender, 1)
-				_award_relationship_event(attacker, defender, "heal", 1)
-				if _can_gain_mentorship(attacker, defender):
-					_award_relationship_stat_event(attacker, defender, "mentorship", "heal_mentorship", 1)
-				
-			elif is_buff:
-				var stat: String = wpn.affected_stat
-				var amt: int = wpn.effect_amount
-				defender.set(stat, defender.get(stat) + amt)
-				popup_text = stat.to_upper() + " +" + str(amt)
-				text_color = Color(0.2, 0.8, 1.0)
-				add_combat_log(attacker.unit_name + " buffed " + defender.unit_name + "'s " + stat + ".", "cyan")
-				_award_relationship_event(attacker, defender, "buff", 1)
-				if _can_gain_mentorship(attacker, defender):
-					_award_relationship_stat_event(attacker, defender, "mentorship", "buff_mentorship", 1)
-				
-			elif is_debuff:
-				var stat: String = wpn.affected_stat
-				var amt: int = wpn.effect_amount
-				defender.set(stat, max(0, defender.get(stat) - amt))
-				popup_text = stat.to_upper() + " -" + str(amt)
-				text_color = Color(0.8, 0.2, 1.0)
-				add_combat_log(attacker.unit_name + " debuffed " + defender.unit_name + "'s " + stat + ".", "purple")
-			
-			if level_up_sound.stream != null: level_up_sound.play() 
-			
-			spawn_loot_text(popup_text, text_color, defender.global_position + Vector2(32, -16), {"stack_anchor": defender})
-			
-			var return_tween: Tween = create_tween()
-			return_tween.tween_property(attacker, "global_position", staff_orig_pos, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-			await return_tween.finished
-			
-			await get_tree().create_timer(0.25).timeout
-			break
-		
-		# ==========================================
-		# PHASE B: COMBAT MATH & OFFENSIVE ABILITIES
-		# ==========================================
-		var advantage: int = get_triangle_advantage(attacker, defender)
-		var tri_dmg: int = advantage * 1
-		var tri_hit: int = advantage * 15
-		
-		var is_magic: bool = wpn.damage_type == WeaponData.DamageType.MAGIC if wpn else false
-		var offense_stat: int = int(attacker.magic) if is_magic else int(attacker.strength)
-		var defense_stat: int = int(defender.resistance) if is_magic else int(defender.defense)
-
-		if defender.get("is_defending") == true:
-			defense_stat += int(defender.defense_bonus)
-		
-		defense_stat += int(def_adj["def"]) + int(def_terrain["def"])
-		
-		# --- DEFENSIVE PENALTIES & BUFFS ---
-		if is_magic:
-			defense_stat += int(defender.get_meta("inner_peace_res_bonus_temp", 0))
-			defense_stat += int(defender.get_meta("holy_ward_res_bonus_temp", 0))
-			defense_stat -= int(defender.get_meta("frenzy_res_penalty_temp", 0))
-		else:
-			defense_stat += int(defender.get_meta("inner_peace_def_bonus_temp", 0))
-			defense_stat -= int(defender.get_meta("frenzy_def_penalty_temp", 0))
-
-		defense_stat = int(max(0, defense_stat))
-		
-		var focused_failed: bool = false
-		var lifesteal_percent: float = 0.0
-		var force_crit: bool = false
-		var force_hit: bool = false 
-		var combo_hits: int = 0 
-		
-		# --- GET DYNAMIC TRIGGER CHANCE ---
-		var atk_trigger_chance: int = get_ability_trigger_chance(attacker)
-		
-		
-		if attacker.get_parent() == player_container and defender.get_parent() == enemy_container:
-			# FOCUSED STRIKE
-			if _attacker_has_attack_skill(attacker, "Focused Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var focus_result: int
-				if _coop_qte_mirror_active:
-					focus_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					focus_result = await _run_focused_strike_minigame(attacker)
-					_coop_qte_capture_write(_cqe, focus_result)
-				if focus_result > 0:
-					ability_triggers_count += 1
-					defense_stat = 0 # Completely ignore enemy armor
-					force_hit = true 
-					if focus_result == 2:
-						add_combat_log("PERFECT FOCUS! Armor shattered & Critical blow!", "gold")
-						force_crit = true 
-						offense_stat += 5 
-					else:
-						add_combat_log("FOCUSED STRIKE! Defenses shattered!", "lime")
-				else:
-					add_combat_log("Focus Lost! Attack overextended!", "red")
-					focused_failed = true
-					
-			# BLOODTHIRSTER
-			elif _attacker_has_attack_skill(attacker, "Bloodthirster") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var hits_landed: int
-				if _coop_qte_mirror_active:
-					hits_landed = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					hits_landed = await _run_bloodthirster_minigame(attacker)
-					_coop_qte_capture_write(_cqe, hits_landed)
-				if hits_landed > 0:
-					ability_triggers_count += 1
-					lifesteal_percent = float(hits_landed) * 0.25 
-					force_hit = true 
-					add_combat_log("BLOODTHIRSTER! " + str(hits_landed) + " hits!", "crimson")
-					if hits_landed == 3: force_crit = true 
-				else:
-					add_combat_log("Bloodthirster Failed! Combo broken.", "gray")
-					
-			# HUNDRED POINT STRIKE
-			elif _attacker_has_attack_skill(attacker, "Hundred Point Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					combo_hits = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					combo_hits = await _run_hundred_point_strike_minigame(attacker)
-					_coop_qte_capture_write(_cqe, combo_hits)
-				if combo_hits > 0:
-					ability_triggers_count += 1
-					force_hit = true 
-					add_combat_log("HUNDRED POINT STRIKE! " + str(combo_hits) + " Combo!", "purple")
-				else:
-					add_combat_log("Strike Failed! Slipped up.", "gray")
-					focused_failed = true
-					
-			# --- ARCHER: DEADEYE SHOT ---
-			elif _attacker_has_attack_skill(attacker, "Deadeye Shot") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var deadeye_result: int
-				if _coop_qte_mirror_active:
-					deadeye_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					deadeye_result = await QTEManager.run_deadeye_shot_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, deadeye_result)
-				if deadeye_result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					deadeye_bonus_damage = 6 if deadeye_result == 1 else 10
-					if get_distance(attacker, defender) >= 3:
-						deadeye_bonus_damage += 4
-						add_combat_log("Deadeye: long draw — full string tension!", "aquamarine")
-					if deadeye_result == 2:
-						force_crit = true
-						add_combat_log("PERFECT DEADEYE! Critical shot lined up!", "gold")
-					else:
-						add_combat_log("DEADEYE SHOT! Precision damage boosted!", "lime")
-				else:
-					add_combat_log("Deadeye timing missed.", "gray")
-			
-			# --- ARCHER: VOLLEY (perfect: second follow-up veers to a foe adjacent to the target) ---
-			elif _attacker_has_attack_skill(attacker, "Volley") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var volley_result: int
-				if _coop_qte_mirror_active:
-					volley_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					volley_result = await QTEManager.run_volley_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, volley_result)
-				volley_spread_target = null
-				if volley_result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					volley_extra_hits = 1 if volley_result == 1 else 2
-					volley_damage_multiplier = 0.55 if volley_result == 1 else 0.72
-					if volley_result == 2:
-						add_combat_log("PERFECT VOLLEY! Three arrows loose at once!", "gold")
-						var vd: Vector2i = get_grid_pos(defender)
-						for vdir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-							var ve: Node2D = get_enemy_at(vd + vdir)
-							if ve != null and ve != defender and is_instance_valid(ve) and not ve.is_queued_for_deletion() and ve.get_parent() == enemy_container and ve.current_hp > 0:
-								volley_spread_target = ve
-								add_combat_log("One shaft veers into " + str(ve.unit_name) + "!", "lightcyan")
-								break
-					else:
-						add_combat_log("VOLLEY! Bonus arrows incoming!", "cyan")
-				else:
-					add_combat_log("Volley fizzled. Not enough arrows loosed.", "gray")
-			
-			# --- ARCHER: RAIN OF ARROWS ---
-			elif _attacker_has_attack_skill(attacker, "Rain of Arrows") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var rain_result: int
-				if _coop_qte_mirror_active:
-					rain_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					rain_result = await QTEManager.run_rain_of_arrows_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, rain_result)
-				if rain_result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					rain_primary_bonus_damage = 5 if rain_result == 1 else 9
-					rain_splash_damage = 4 if rain_result == 1 else 7
-			
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-			
-					for dir in dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not rain_splash_targets.has(splash_target):
-							rain_splash_targets.append(splash_target)
-
-					rain_tail_unit = null
-					rain_rear_extra_damage = 0
-					var r_a: Vector2i = get_grid_pos(attacker)
-					var r_d: Vector2i = get_grid_pos(defender)
-					var r_step: Vector2i = _attack_line_step(r_a, r_d)
-					if r_step != Vector2i.ZERO:
-						var r_tail: Node2D = get_enemy_at(r_d + r_step)
-						if r_tail != null and r_tail != defender and is_instance_valid(r_tail) and not r_tail.is_queued_for_deletion() and r_tail.get_parent() == enemy_container and r_tail.current_hp > 0:
-							rain_tail_unit = r_tail
-							rain_rear_extra_damage = 6 if rain_result == 2 else 3
-							if not rain_splash_targets.has(r_tail):
-								rain_splash_targets.append(r_tail)
-							add_combat_log("The volley hammers the rear rank (" + str(r_tail.unit_name) + ")!", "wheat")
-
-					if rain_result == 1 and rain_splash_targets.size() > 1:
-						if rain_tail_unit != null and rain_splash_targets.has(rain_tail_unit):
-							rain_splash_targets = [rain_tail_unit]
-						else:
-							rain_splash_targets = [rain_splash_targets[0]]
-			
-					if rain_result == 2:
-						add_combat_log("PERFECT RAIN OF ARROWS! The whole zone is covered!", "gold")
-					else:
-						add_combat_log("RAIN OF ARROWS! Nearby foes are caught in the barrage!", "khaki")
-				else:
-					add_combat_log("Rain of Arrows sequence broken.", "gray")
-
-			# --- KNIGHT: CHARGE (pin vs rear foe — extra crush when someone stands behind the target) ---
-			elif _attacker_has_attack_skill(attacker, "Charge") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_charge_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result == 2:
-					ability_triggers_count += 1
-					force_hit = true
-					force_crit = true
-					charge_bonus_damage = 12
-					add_combat_log("PERFECT CHARGE! Crushing impact!", "gold")
-				elif result == 1:
-					ability_triggers_count += 1
-					force_hit = true
-					charge_bonus_damage = 7
-					add_combat_log("CHARGE! The Knight slams through with full momentum!", "orange")
-				else:
-					add_combat_log("Charge timing failed. Momentum lost.", "gray")
-				if result > 0:
-					var ca: Vector2i = get_grid_pos(attacker)
-					var cd: Vector2i = get_grid_pos(defender)
-					var cstep: Vector2i = _attack_line_step(ca, cd)
-					if cstep != Vector2i.ZERO:
-						var pin_cell: Vector2i = cd + cstep
-						var rear: Node2D = get_enemy_at(pin_cell)
-						if rear != null and rear != defender and is_instance_valid(rear) and not rear.is_queued_for_deletion() and rear.get_parent() == enemy_container and rear.current_hp > 0:
-							charge_collision_target = rear
-							charge_collision_damage = 12 if result == 2 else 6
-							charge_bonus_damage += 5 if result == 2 else 3
-							add_combat_log(str(defender.unit_name) + " is crushed against " + str(rear.unit_name) + "!", "coral")
-
-			# --- MAGE: FIREBALL ---
-			elif _attacker_has_attack_skill(attacker, "Fireball") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_fireball_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-
-					fireball_bonus_damage = 7 if result == 1 else 11
-					fireball_splash_damage = 4 if result == 1 else 7
-
-					if result == 2:
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not fireball_splash_targets.has(splash_target):
-							fireball_splash_targets.append(splash_target)
-
-					fireball_tail_unit = null
-					fireball_tail_extra_damage = 0
-					var fa: Vector2i = get_grid_pos(attacker)
-					var fd: Vector2i = get_grid_pos(defender)
-					var fstep: Vector2i = _attack_line_step(fa, fd)
-					if fstep != Vector2i.ZERO:
-						var f_tail: Node2D = get_enemy_at(fd + fstep)
-						if f_tail != null and f_tail != defender and is_instance_valid(f_tail) and not f_tail.is_queued_for_deletion() and f_tail.get_parent() == enemy_container and f_tail.current_hp > 0:
-							fireball_tail_unit = f_tail
-							fireball_tail_extra_damage = 6 if result == 2 else 3
-							if not fireball_splash_targets.has(f_tail):
-								fireball_splash_targets.append(f_tail)
-							add_combat_log("The fireball rolls through onto " + str(f_tail.unit_name) + "!", "orangered")
-
-					if result == 2:
-						add_combat_log("PERFECT FIREBALL! The blast fully engulfs the area!", "gold")
-					else:
-						add_combat_log("FIREBALL! The explosion scorches nearby foes!", "orange")
-				else:
-					add_combat_log("Fireball fizzled. The spell landed poorly.", "gray")
-
-			# --- MAGE: METEOR STORM ---
-			elif _attacker_has_attack_skill(attacker, "Meteor Storm") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_meteor_storm_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-
-					meteor_storm_bonus_damage = 11 if result == 1 else 17
-					meteor_storm_splash_damage = 6 if result == 1 else 10
-
-					if result == 2:
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not meteor_storm_splash_targets.has(splash_target):
-							meteor_storm_splash_targets.append(splash_target)
-
-					meteor_tail_unit = null
-					meteor_tail_extra_damage = 0
-					var ma: Vector2i = get_grid_pos(attacker)
-					var md: Vector2i = get_grid_pos(defender)
-					var mstep: Vector2i = _attack_line_step(ma, md)
-					if mstep != Vector2i.ZERO:
-						var m_tail: Node2D = get_enemy_at(md + mstep)
-						if m_tail != null and m_tail != defender and is_instance_valid(m_tail) and not m_tail.is_queued_for_deletion() and m_tail.get_parent() == enemy_container and m_tail.current_hp > 0:
-							meteor_tail_unit = m_tail
-							meteor_tail_extra_damage = 8 if result == 2 else 4
-							if not meteor_storm_splash_targets.has(m_tail):
-								meteor_storm_splash_targets.append(m_tail)
-							add_combat_log("A meteor fragment streaks into " + str(m_tail.unit_name) + "!", "tomato")
-
-					if result == 2:
-						force_crit = true
-						add_combat_log("PERFECT METEOR STORM! Cataclysmic impact across the battlefield!", "gold")
-					else:
-						add_combat_log("METEOR STORM! Burning fragments rain across the target zone!", "tomato")
-				else:
-					add_combat_log("Meteor Storm sequence failed. The heavens do not answer.", "gray")
-
-			# --- MERCENARY: FLURRY STRIKE ---
-			elif _attacker_has_attack_skill(attacker, "Flurry Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_flurry_strike_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					flurry_strike_hits = result
-
-					if result >= 5:
-						flurry_strike_damage_multiplier = 0.60
-						add_combat_log("PERFECT FLURRY STRIKE! A storm of blades erupts!", "gold")
-					elif result >= 3:
-						flurry_strike_damage_multiplier = 0.50
-						add_combat_log("FLURRY STRIKE! Multiple rapid hits break through!", "cyan")
-					else:
-						flurry_strike_damage_multiplier = 0.42
-						add_combat_log("Flurry Strike lands a short combo.", "white")
-				else:
-					add_combat_log("Flurry Strike failed. The combo never began.", "gray")
-
-			# --- MERCENARY: BATTLE CRY ---
-			elif _attacker_has_attack_skill(attacker, "Battle Cry") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_battle_cry_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					var ally_count: int = 0
-					var dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-					var attacker_pos: Vector2i = get_grid_pos(attacker)
-					var attacker_is_friendly: bool = (attacker.get_parent() == player_container or attacker.get_parent() == ally_container)
-
-					for dir in dirs:
-						var check_pos: Vector2i = attacker_pos + dir
-						var nearby_unit: Node2D = null
-
-						if attacker_is_friendly:
-							nearby_unit = get_unit_at(check_pos)
-							if nearby_unit == null and ally_container != null:
-								for a in ally_container.get_children():
-									if is_instance_valid(a) and not a.is_queued_for_deletion() and get_grid_pos(a) == check_pos:
-										nearby_unit = a
-										break
-						else:
-							nearby_unit = get_enemy_at(check_pos)
-
-						if nearby_unit != null and nearby_unit != attacker:
-							ally_count += 1
-							spawn_loot_text("RALLIED!", Color(1.0, 0.95, 0.4), nearby_unit.global_position + Vector2(32, -24))
-
-					if result == 2:
-						battle_cry_bonus_damage = 5 + (ally_count * 3)
-						battle_cry_bonus_hit = 18 + (ally_count * 4)
-						add_combat_log("PERFECT BATTLE CRY! The whole formation surges with morale!", "gold")
-					else:
-						battle_cry_bonus_damage = 3 + (ally_count * 2)
-						battle_cry_bonus_hit = 10 + (ally_count * 3)
-						add_combat_log("BATTLE CRY! Nearby allies fuel the Mercenary's assault!", "orange")
-				else:
-					add_combat_log("Battle Cry falls flat. No momentum gained.", "gray")
-
-			# --- MERCENARY: BLADE TEMPEST ---
-			elif _attacker_has_attack_skill(attacker, "Blade Tempest") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_blade_tempest_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-
-					var center_tile: Vector2i = get_grid_pos(attacker)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-
-					blade_tempest_bonus_damage = 7 if result == 1 else 12
-					blade_tempest_splash_damage = 5 if result == 1 else 9
-
-					if result == 2:
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not blade_tempest_splash_targets.has(splash_target):
-							blade_tempest_splash_targets.append(splash_target)
-
-					if result == 2:
-						add_combat_log("PERFECT BLADE TEMPEST! Steel tears through everything nearby!", "gold")
-					else:
-						add_combat_log("BLADE TEMPEST! The Mercenary's spinning assault clips nearby enemies!", "cyan")
-				else:
-					add_combat_log("Blade Tempest loses rhythm before the storm begins.", "gray")
-
-			# --- MONK: CHAKRA ---
-			elif _attacker_has_attack_skill(attacker, "Chakra") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_chakra_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					var heal_amount: int = 0
-			
-					if result == 2:
-						heal_amount = int(max(8, attacker.magic + 4))
-						chakra_bonus_damage = 6
-						chakra_bonus_hit = 18
-						add_combat_log("PERFECT CHAKRA! Body and spirit are fully aligned!", "gold")
-					else:
-						heal_amount = int(max(5, attacker.magic + 1))
-						chakra_bonus_damage = 3
-						chakra_bonus_hit = 10
-						add_combat_log("CHAKRA! The Monk restores inner strength and focus.", "lime")
-			
-					attacker.current_hp = min(attacker.current_hp + heal_amount, attacker.max_hp)
-					if attacker.get("health_bar") != null:
-						attacker.health_bar.value = attacker.current_hp
-			
-					var chakra_hr: float = -1.0
-					if attacker.max_hp > 0:
-						chakra_hr = clampf(float(heal_amount) / float(attacker.max_hp), 0.0, 1.0)
-					spawn_loot_text("+" + str(heal_amount) + " HP", Color(0.35, 1.0, 0.35), attacker.global_position + Vector2(32, -30), {
-						"tier": FloatingCombatText.Tier.HEAL,
-						"hp_chunk_ratio": chakra_hr,
-						"stack_anchor": attacker,
-					})
-				else:
-					add_combat_log("Chakra faltered. The Monk failed to center their breathing.", "gray")
-
-			# --- MONK: CHI BURST ---
-			elif _attacker_has_attack_skill(attacker, "Chi Burst") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_chi_burst_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-			
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-			
-					if result == 2:
-						chi_burst_bonus_damage = 10
-						chi_burst_splash_damage = 7
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-						add_combat_log("PERFECT CHI BURST! Spiritual force erupts in every direction!", "gold")
-					else:
-						chi_burst_bonus_damage = 6
-						chi_burst_splash_damage = 4
-						add_combat_log("CHI BURST! The Monk's energy detonates outward.", "violet")
-			
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not chi_burst_splash_targets.has(splash_target):
-							chi_burst_splash_targets.append(splash_target)
-				else:
-					add_combat_log("Chi Burst collapsed before release.", "gray")
-
-			# --- MONSTER: ROAR ---
-			elif _attacker_has_attack_skill(attacker, "Roar") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_roar_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					var attacker_is_friendly: bool = (attacker.get_parent() == player_container or attacker.get_parent() == ally_container)
-					var roar_radius: int = 1 if result == 1 else 2
-					var debuff_amount: int = 1 if result == 1 else 2
-					var affected_targets: Array[Node2D] = []
-					var affected_count: int = 0
-			
-					for x in range(-roar_radius, roar_radius + 1):
-						for y in range(-roar_radius, roar_radius + 1):
-							var offset: Vector2i = Vector2i(x, y)
-							if abs(offset.x) + abs(offset.y) > roar_radius: continue
-							if offset == Vector2i.ZERO: continue
-			
-							var target_tile: Vector2i = get_grid_pos(attacker) + offset
-							var target: Node2D = get_occupant_at(target_tile)
-			
-							if target == null or not is_instance_valid(target) or target.is_queued_for_deletion(): continue
-							if affected_targets.has(target): continue
-			
-							var is_hostile: bool = false
-							if attacker_is_friendly:
-								is_hostile = target.get_parent() == enemy_container
-							else:
-								is_hostile = (target.get_parent() == player_container or target.get_parent() == ally_container)
-			
-							if not is_hostile: continue
-			
-							target.strength = int(max(0, target.strength - debuff_amount))
-							target.magic = int(max(0, target.magic - debuff_amount))
-							target.speed = int(max(0, target.speed - debuff_amount))
-							target.agility = int(max(0, target.agility - debuff_amount))
-			
-							affected_targets.append(target)
-							affected_count += 1
-							spawn_loot_text("INTIMIDATED!", Color(1.0, 0.70, 0.25), target.global_position + Vector2(32, -20))
-			
-					if result == 2:
-						add_combat_log("PERFECT ROAR! " + str(affected_count) + " enemies are shaken to the bone!", "gold")
-					else:
-						add_combat_log("ROAR! " + str(affected_count) + " enemies are rattled by the beast's cry.", "orange")
-				else:
-					add_combat_log("The Roar came out weak and uneven.", "gray")
-
-			# --- MONSTER: FRENZY ---
-			elif _attacker_has_attack_skill(attacker, "Frenzy") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_frenzy_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					_frenzy_hit_count = result
-					frenzy_bonus_damage = result * 2
-					frenzy_bonus_hit = result * 4
-					frenzy_def_penalty = 2 + int(float(result) / 2.0)
-			
-					attacker.set_meta("frenzy_def_penalty_temp", frenzy_def_penalty)
-					attacker.set_meta("frenzy_res_penalty_temp", frenzy_def_penalty)
-			
-					if result >= 6:
-						force_hit = true
-						add_combat_log("PERFECT FRENZY! The Monster goes completely berserk!", "gold")
-					elif result >= 4:
-						add_combat_log("FRENZY! The Monster's rage spikes violently!", "crimson")
-					else:
-						add_combat_log("Frenzy builds, but leaves the Monster exposed.", "tomato")
-			
-					spawn_loot_text("-" + str(frenzy_def_penalty) + " DEF", Color(1.0, 0.45, 0.45), attacker.global_position + Vector2(32, -30))
-				else:
-					add_combat_log("Frenzy never took hold.", "gray")
-
-			# --- MONSTER: RENDING CLAW ---
-			elif _attacker_has_attack_skill(attacker, "Rending Claw") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_rending_claw_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					if result == 2:
-						defense_stat = 0
-						force_crit = true
-						add_combat_log("PERFECT RENDING CLAW! Armor is shredded completely!", "gold")
-					else:
-						defense_stat = int(max(0, defense_stat - 8))
-						add_combat_log("RENDING CLAW! The Monster tears through armor plating!", "tomato")
-				else:
-					add_combat_log("Rending Claw missed the weak point.", "gray")
-					
-			# --- PALADIN: SMITE ---
-			elif _attacker_has_attack_skill(attacker, "Smite") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_smite_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				smite_splash_targets.clear()
-				smite_splash_damage = 0
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					
-					if result == 2:
-						force_crit = true
-						smite_bonus_damage = 8 + int(attacker.magic / 2)
-						smite_splash_damage = 7 + int(attacker.magic / 4)
-						add_combat_log("PERFECT SMITE! A blinding ray of holy light obliterates the target!", "gold")
-					else:
-						smite_bonus_damage = 4 + int(attacker.magic / 3)
-						smite_splash_damage = 4 + int(attacker.magic / 5)
-						add_combat_log("SMITE! Holy energy sears the enemy!", "yellow")
-					var smite_center: Vector2i = get_grid_pos(defender)
-					for sm_dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-						if smite_splash_targets.size() >= 2:
-							break
-						var sm_e: Node2D = get_enemy_at(smite_center + sm_dir)
-						if sm_e != null and sm_e != defender and is_instance_valid(sm_e) and not sm_e.is_queued_for_deletion() and sm_e.get_parent() == enemy_container and sm_e.current_hp > 0 and not smite_splash_targets.has(sm_e):
-							smite_splash_targets.append(sm_e)
-					if smite_splash_targets.size() > 0:
-						add_combat_log("Holy light splashes onto nearby foes!", "khaki")
-				else:
-					add_combat_log("Smite failed to find its mark.", "gray")
-					
-			# --- PALADIN: SACRED JUDGMENT ---
-			elif _attacker_has_attack_skill(attacker, "Sacred Judgment") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_sacred_judgment_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-
-					sacred_judgment_bonus_damage = 10 if result == 1 else 15
-					sacred_judgment_splash_damage = 5 if result == 1 else 8
-
-					if result == 2:
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not sacred_judgment_splash_targets.has(splash_target):
-							sacred_judgment_splash_targets.append(splash_target)
-
-					if result == 2:
-						add_combat_log("PERFECT SACRED JUDGMENT! A colossal cross of light engulfs the area!", "gold")
-					else:
-						add_combat_log("SACRED JUDGMENT! The heavens strike down nearby foes!", "yellow")
-				else:
-					add_combat_log("Sacred Judgment was released too early.", "gray")
-
-			# --- SPELLBLADE: FLAME BLADE ---
-			elif _attacker_has_attack_skill(attacker, "Flame Blade") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_flame_blade_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					
-					var magic_scale: int = int(float(attacker.magic) * 0.8)
-					if result == 2:
-						flame_blade_bonus_damage = 5 + magic_scale
-						force_crit = true
-						add_combat_log("PERFECT FLAME BLADE! The sword erupts into a roaring inferno!", "gold")
-					else:
-						flame_blade_bonus_damage = 2 + int(float(magic_scale) * 0.5)
-						add_combat_log("FLAME BLADE! Searing heat wraps around the strike!", "orange")
-				else:
-					add_combat_log("Flame Blade fizzled out.", "gray")
-
-			# --- SPELLBLADE: ELEMENTAL CONVERGENCE ---
-			elif _attacker_has_attack_skill(attacker, "Elemental Convergence") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_elemental_convergence_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-
-					elemental_convergence_bonus_damage = 12 if result == 1 else 20
-					elemental_convergence_splash_damage = 6 if result == 1 else 10
-
-					if result == 2:
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not elemental_convergence_splash_targets.has(splash_target):
-							elemental_convergence_splash_targets.append(splash_target)
-
-					if result == 2:
-						force_crit = true
-						add_combat_log("PERFECT CONVERGENCE! Fire, Ice, and Lightning detonate simultaneously!", "gold")
-					else:
-						add_combat_log("ELEMENTAL CONVERGENCE! A chaotic magical storm blasts the area!", "violet")
-				else:
-					add_combat_log("The elemental energies destabilized and vanished.", "gray")
-					
-			# --- THIEF: SHADOW STRIKE ---
-			elif _attacker_has_attack_skill(attacker, "Shadow Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_shadow_strike_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					if result == 2:
-						shadow_strike_bonus_damage = 10
-						shadow_strike_armor_pierce = 1.0 # Ignore 100% armor
-						add_combat_log("PERFECT SHADOW STRIKE! A flawless strike from the darkness!", "gold")
-					else:
-						shadow_strike_bonus_damage = 5
-						shadow_strike_armor_pierce = 0.5 # Ignore 50% armor
-						add_combat_log("SHADOW STRIKE! The Thief strikes from the blind spot!", "violet")
-				else:
-					add_combat_log("Shadow Strike revealed. The element of surprise is gone.", "gray")
-					
-			# --- THIEF: ASSASSINATE ---
-			elif _attacker_has_attack_skill(attacker, "Assassinate") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_assassinate_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					assassinate_crit_bonus = result * 25 # Each successful lockpick adds 25% crit chance
-					if result == 3:
-						force_crit = true
-						add_combat_log("PERFECT ASSASSINATION! All vital points struck!", "gold")
-					else:
-						add_combat_log("ASSASSINATE! " + str(result) + " vitals hit!", "crimson")
-				else:
-					add_combat_log("Assassinate failed to find an opening.", "gray")
-					
-			# --- THIEF: ULTIMATE SHADOW STEP ---
-			elif _attacker_has_attack_skill(attacker, "Ultimate Shadow Step") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_ultimate_shadow_step_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					if result == 2:
-						shadow_step_bonus_damage = 15
-						force_crit = true
-						add_combat_log("PERFECT SHADOW STEP! Absolute teleportation mastery!", "gold")
-					else:
-						shadow_step_bonus_damage = 8
-						add_combat_log("SHADOW STEP! The Thief materializes behind the enemy!", "cyan")
-				else:
-					add_combat_log("Ultimate Shadow Step collapsed. Sequence broken.", "gray")
-
-			# --- WARRIOR: POWER STRIKE ---
-			elif _attacker_has_attack_skill(attacker, "Power Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_power_strike_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					if result == 2:
-						power_strike_bonus_damage = int(float(attacker.strength) * 1.5)
-						force_crit = true
-						add_combat_log("PERFECT POWER STRIKE! Maximum kinetic energy!", "gold")
-					else:
-						power_strike_bonus_damage = int(float(attacker.strength) * 0.75)
-						add_combat_log("POWER STRIKE! A heavy, punishing blow!", "orange")
-				else:
-					add_combat_log("Power Strike whiffed entirely.", "gray")
-
-			# --- WARRIOR: ADRENALINE RUSH ---
-			elif _attacker_has_attack_skill(attacker, "Adrenaline Rush") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_adrenaline_rush_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					var buff_amt: int = 0
-					if result == 2:
-						buff_amt = 8
-						add_combat_log("PERFECT ADRENALINE RUSH! Blood boils with pure fury!", "gold")
-					else:
-						buff_amt = 4
-						add_combat_log("ADRENALINE RUSH! The Warrior pushes past their limits!", "tomato")
-					
-					attacker.strength += buff_amt
-					attacker.speed += buff_amt
-					spawn_loot_text("+" + str(buff_amt) + " STR/SPD", Color(1.0, 0.2, 0.2), attacker.global_position + Vector2(32, -32))
-				else:
-					add_combat_log("Adrenaline Rush faded.", "gray")
-
-			# --- WARRIOR: EARTHSHATTER ---
-			elif _attacker_has_attack_skill(attacker, "Earthshatter") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_earthshatter_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-
-					var center_tile: Vector2i = get_grid_pos(defender)
-					var splash_dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-
-					if result == 2:
-						earthshatter_bonus_damage = 18
-						earthshatter_splash_damage = 12
-						splash_dirs.append_array([Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)])
-						force_crit = true
-						add_combat_log("PERFECT EARTHSHATTER! The ground itself explodes!", "gold")
-					else:
-						earthshatter_bonus_damage = 10
-						earthshatter_splash_damage = 6
-						add_combat_log("EARTHSHATTER! Shockwaves tear through the terrain!", "orange")
-
-					for dir in splash_dirs:
-						var splash_target: Node2D = get_enemy_at(center_tile + dir)
-						if splash_target != null and splash_target != defender and splash_target.get_parent() == enemy_container and is_instance_valid(splash_target) and not splash_target.is_queued_for_deletion() and splash_target.current_hp > 0 and not earthshatter_splash_targets.has(splash_target):
-							earthshatter_splash_targets.append(splash_target)
-				else:
-					add_combat_log("Earthshatter miscalculated. The strike hit dirt.", "gray")
-			
-			# --- PROMOTED ASSASSIN: SHADOW PIN ---
-			elif _attacker_has_attack_skill(attacker, "Shadow Pin") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_shadow_pin_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					shadow_pin_speed_lock = true
-					
-					if result == 2:
-						shadow_pin_bonus_damage = 12
-						force_crit = true
-						add_combat_log("PERFECT SHADOW PIN! The target is completely paralyzed!", "gold")
-					else:
-						shadow_pin_bonus_damage = 6
-						add_combat_log("SHADOW PIN! The target is crippled!", "violet")
-				else:
-					add_combat_log("Shadow Pin missed the pressure point.", "gray")
-
-			# --- PROMOTED BERSERKER: SAVAGE TOSS ---
-			elif _attacker_has_attack_skill(attacker, "Savage Toss") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					savage_toss_distance = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					savage_toss_distance = await QTEManager.run_savage_toss_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, savage_toss_distance)
-				if savage_toss_distance > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					savage_toss_bonus_damage = savage_toss_distance * 3
-					
-					if savage_toss_distance == 3:
-						force_crit = true
-						add_combat_log("PERFECT SAVAGE TOSS! Sent flying across the battlefield!", "gold")
-					else:
-						add_combat_log("SAVAGE TOSS! The enemy is hurled backward!", "orange")
-				else:
-					add_combat_log("Savage Toss failed to lift the target.", "gray")
-
-			# --- PROMOTED HERO: VANGUARD'S RALLY ---
-			elif _attacker_has_attack_skill(attacker, "Vanguard's Rally") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var combos: int
-				if _coop_qte_mirror_active:
-					combos = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					combos = await QTEManager.run_vanguards_rally_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, combos)
-				if combos > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					vanguards_rally_bonus_damage = 4 + (combos * 2)
-					vanguards_rally_might_bonus = mini(combos, 4)
-					
-					if combos >= 4:
-						force_crit = true
-						add_combat_log("PERFECT VANGUARD'S RALLY! The entire army surges with power!", "gold")
-					else:
-						add_combat_log("VANGUARD'S RALLY! Inspiring strike bolsters nearby allies!", "cyan")
-				else:
-					add_combat_log("Vanguard's Rally failed to build momentum.", "gray")
-
-			# --- PROMOTED BLADE MASTER: SEVERING STRIKE ---
-			elif _attacker_has_attack_skill(attacker, "Severing Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					severing_strike_hits = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					severing_strike_hits = await QTEManager.run_severing_strike_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, severing_strike_hits)
-				if severing_strike_hits > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					
-					if severing_strike_hits == 3:
-						force_crit = true
-						severing_strike_damage_multiplier = 0.8
-						add_combat_log("PERFECT SEVERING STRIKE! Three absolute precision cuts!", "gold")
-					else:
-						severing_strike_damage_multiplier = 0.5
-						add_combat_log("SEVERING STRIKE! " + str(severing_strike_hits) + " critical points hit!", "cyan")
-				else:
-					add_combat_log("Severing Strike missed all vital points.", "gray")
-
-			# --- PROMOTED BLADE WEAVER: AETHER BIND ---
-			elif _attacker_has_attack_skill(attacker, "Aether Bind") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					aether_bind_sparks = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					aether_bind_sparks = await QTEManager.run_aether_bind_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, aether_bind_sparks)
-				if aether_bind_sparks > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					
-					var bonus: int = aether_bind_sparks * 2
-					offense_stat += bonus # Permanently boosts their magic for the rest of the attack!
-					
-					if aether_bind_sparks >= 5:
-						force_crit = true
-						add_combat_log("PERFECT AETHER BIND! Maximum magical energy harvested!", "gold")
-					else:
-						add_combat_log("AETHER BIND! Gathered " + str(aether_bind_sparks) + " sparks of raw power!", "violet")
-					
-					spawn_loot_text("+" + str(bonus) + " MAG", Color(0.8, 0.4, 1.0), attacker.global_position + Vector2(32, -32))
-				else:
-					add_combat_log("Aether Bind failed to catch any magical energy.", "gray")
-
-			# --- PROMOTED BOW KNIGHT: PARTING SHOT ---
-			elif _attacker_has_attack_skill(attacker, "Parting Shot") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					parting_shot_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					parting_shot_result = await QTEManager.run_parting_shot_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, parting_shot_result)
-				if parting_shot_result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					
-					if parting_shot_result == 2:
-						force_crit = true
-						_parting_shot_bonus_damage = 8
-						parting_shot_dodge = true
-						add_combat_log("PERFECT PARTING SHOT! Flawless strike and retreat!", "gold")
-					else:
-						_parting_shot_bonus_damage = 4
-						add_combat_log("PARTING SHOT! Arrow strikes true!", "lime")
-				else:
-					add_combat_log("Parting Shot execution failed.", "gray")
-
-			# --- PROMOTED DEATH KNIGHT: SOUL HARVEST ---
-			elif _attacker_has_attack_skill(attacker, "Soul Harvest") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					soul_harvest_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					soul_harvest_result = await QTEManager.run_soul_harvest_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, soul_harvest_result)
-				if soul_harvest_result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					
-					# Soul Harvest drains HP equal to a % of the enemy's MAX HP instead of relying on attack stat!
-					var drain_percent: float = 0.25 if soul_harvest_result == 2 else 0.10
-					var drain_amt: int = int(float(defender.max_hp) * drain_percent)
-					
-					attacker.current_hp = min(attacker.current_hp + drain_amt, attacker.max_hp)
-					if attacker.get("health_bar") != null:
-						attacker.health_bar.value = attacker.current_hp
-					spawn_loot_text("+" + str(drain_amt) + " HP", Color(0.2, 1.0, 0.2), attacker.global_position + Vector2(-32, -16))
-					
-					if soul_harvest_result == 2:
-						force_crit = true
-						add_combat_log("PERFECT SOUL HARVEST! Massive life force drained!", "gold")
-					else:
-						add_combat_log("SOUL HARVEST! Life force siphoned!", "crimson")
-				else:
-					add_combat_log("Soul Harvest grip broken.", "gray")
-
-			# --- PROMOTED FIRE SAGE: HELLFIRE ---
-			elif _attacker_has_attack_skill(attacker, "Hellfire") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					hellfire_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					hellfire_result = await QTEManager.run_hellfire_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, hellfire_result)
-				if hellfire_result == 2:
-					ability_triggers_count += 1
-					force_hit = true
-					force_crit = true
-					hellfire_bonus_damage = 15
-					add_combat_log("PERFECT HELLFIRE! The enemy is engulfed in unholy flames!", "gold")
-				else:
-					add_combat_log("Hellfire failed to reach critical mass.", "gray")
-
-			# --- CANNONEER / SIEGE: BALLISTA SHOT (overpenetration — foe behind primary target in line) ---
-			elif _attacker_has_attack_skill(attacker, "Ballista Shot") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_ballista_shot_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					if result == 2:
-						force_crit = true
-						ballista_shot_bonus_damage = 18
-						add_combat_log("PERFECT BALLISTA SHOT! An absolute bullseye!", "gold")
-					else:
-						ballista_shot_bonus_damage = 8
-						add_combat_log("BALLISTA SHOT! A heavy bolt strikes the target!", "cyan")
-					# Identity: siege bolt punches through — next enemy on the same line behind the target eats spill damage.
-					ballista_shot_pierce_damage = 0
-					var a_cell: Vector2i = get_grid_pos(attacker)
-					var d_cell: Vector2i = get_grid_pos(defender)
-					var step: Vector2i = _attack_line_step(a_cell, d_cell)
-					if step != Vector2i.ZERO:
-						var behind_cell: Vector2i = d_cell + step
-						var pierce: Node2D = get_enemy_at(behind_cell)
-						if pierce != null and pierce != defender and is_instance_valid(pierce) and not pierce.is_queued_for_deletion() and pierce.get_parent() == enemy_container and pierce.current_hp > 0:
-							ballista_shot_pierce_targets.append(pierce)
-							ballista_shot_pierce_damage = 14 if result == 2 else 7
-							add_combat_log("The bolt overpenetrates toward " + str(pierce.unit_name) + "!", "lightskyblue")
-				else:
-					add_combat_log("Ballista Shot missed the mark.", "gray")
-
-			# --- PROMOTED HIGH PALADIN: AEGIS STRIKE ---
-			elif _attacker_has_attack_skill(attacker, "Aegis Strike") and randi() % 100 < atk_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_aegis_strike_minigame(self, attacker)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					force_hit = true
-					if result == 2:
-						force_crit = true
-						aegis_strike_bonus_damage = 16
-						add_combat_log("PERFECT AEGIS STRIKE! The holy cross detonates!", "gold")
-					else:
-						aegis_strike_bonus_damage = 7
-						add_combat_log("AEGIS STRIKE! A heavy blow aligned with the heavens!", "yellow")
-				else:
-					add_combat_log("Aegis Strike lost its alignment.", "gray")
-
-		var rookie_mods: Dictionary = _compute_rookie_class_passive_mods(attacker, defender, is_magic, wpn)
-		var rookie_hit: int = int(rookie_mods.get("hit", 0))
-		var rookie_dmg: int = int(rookie_mods.get("dmg", 0))
-		var rookie_crit: int = int(rookie_mods.get("crit", 0))
-		var rookie_log: String = str(rookie_mods.get("log", ""))
-
-		# --- FINAL HIT CHANCE MATH (support-combat: atk_sup hit, def_sup avo; relationship: atk_rel hit, def_rel avo) ---
-		var hit_chance: int = int(clamp(80 + (wpn.hit_bonus if wpn else 0) + tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100))
-		hit_chance = int(clamp(hit_chance + battle_cry_bonus_hit + chakra_bonus_hit + frenzy_bonus_hit + rookie_hit - int(defender.get_meta("inner_peace_avo_bonus_temp", 0)), 0, 100))
-		if focused_failed: hit_chance = 0 
-		
-		# --- ARMOR PIERCING CALCULATION ---
-		var actual_defense: int = defense_stat
-		if shadow_strike_armor_pierce > 0.0:
-			actual_defense = int(float(actual_defense) * (1.0 - shadow_strike_armor_pierce))
-		
-		# ==========================================
-		# --- POISE & GUARD BREAK SYSTEM ---
-		# ==========================================
-		# Use unit's get_max_poise() when available so forecast, UI, and resolution stay in sync.
-		var def_max_poise: int = defender.get_max_poise() if defender.has_method("get_max_poise") else (defender.max_hp + (actual_defense * 2) + (25 if defender.get("is_defending") else 0))
-		var def_current_poise: int = defender.get_meta("current_poise", def_max_poise)
-		def_current_poise = clampi(def_current_poise, 0, def_max_poise)
-
-		# --- Are they already broken from a previous attack? ---
-		var already_staggered: bool = (def_current_poise <= 0) 
-		
-		var raw_power: int = offense_stat + (wpn.might if wpn else 0)
-		var poise_dmg: int = raw_power
-		
-		# Axes deal massive poise damage to crack shields
-		if wpn and wpn.get("weapon_type") == WeaponData.WeaponType.AXE:
-			poise_dmg = int(float(poise_dmg) * 1.5)
-			
-		if force_crit: 
-			poise_dmg *= 2
-			
-		# Only trigger the "Break" event if they weren't broken already
-		var will_stagger: bool = not already_staggered and (def_current_poise - poise_dmg) <= 0
-		
-		if will_stagger or already_staggered:
-			actual_defense = int(float(actual_defense) * 0.5) # Armor is cracked!
-			
-		# Calculate Base Damage
-		var damage: int = int(max(0, (offense_stat + (wpn.might if wpn else 0) + tri_dmg) - actual_defense))
-		
-		# If staggering/staggered, guarantee at least 20% chip damage bypassing remaining armor
-		if will_stagger or already_staggered:
-			var chip_damage = int(float(raw_power) * 0.2)
-			if damage < chip_damage: 
-				damage = chip_damage
-		# ==========================================
-		
-			
-		
-		# --- ADD QTE DAMAGE BOOSTS ---
-		damage += deadeye_bonus_damage + rain_primary_bonus_damage + charge_bonus_damage 
-		damage += fireball_bonus_damage + meteor_storm_bonus_damage + battle_cry_bonus_damage + blade_tempest_bonus_damage
-		damage += chakra_bonus_damage + chi_burst_bonus_damage + frenzy_bonus_damage
-		damage += smite_bonus_damage + sacred_judgment_bonus_damage + flame_blade_bonus_damage + elemental_convergence_bonus_damage
-		damage += shadow_strike_bonus_damage + shadow_step_bonus_damage + power_strike_bonus_damage + earthshatter_bonus_damage
-		damage += shadow_pin_bonus_damage + savage_toss_bonus_damage + vanguards_rally_bonus_damage
-		damage += atk_rel["dmg_bonus"]
-		var crit_chance: int = int(clamp((attacker.agility / 2) + assassinate_crit_bonus + atk_rel["crit_bonus"] - def_sup["crit_avo"] + rookie_crit, 0, 100))
-		damage += hellfire_bonus_damage + ballista_shot_bonus_damage + aegis_strike_bonus_damage
-		damage += rookie_dmg
-		var is_crit: bool = force_crit or (randi() % 100 < crit_chance)
-		var attack_hits: bool = force_hit or (randi() % 100 < hit_chance)
-		if not rookie_log.is_empty():
-			add_combat_log(attacker.unit_name + ": " + rookie_log, "lightblue")
-		# ==========================================
-		# PHASE C: ATTACK LUNGE OR SHOOT
-		# ==========================================
-		var orig_pos: Vector2 = attacker.global_position
-		var lunge_dir: Vector2 = (defender.global_position - attacker.global_position).normalized()
-		var did_melee_crit_animation: bool = false
-		var did_melee_normal_animation: bool = false
-
-		if wpn != null and wpn.get("is_instant_cast") == true:
-			# --- INSTANT CAST (BEAM / PILLAR) ---
-			var recoil_tween: Tween = create_tween()
-			recoil_tween.tween_property(attacker, "global_position", orig_pos - (lunge_dir * 4.0), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			await recoil_tween.finished
-			
-			if wpn.get("impact_scene") != null and wpn.impact_scene != null:
-				var impact: Node2D = wpn.impact_scene.instantiate()
-				add_child(impact)
-				impact.z_index = 115
-				impact.global_position = defender.global_position + Vector2(32, 32)
-				var p_scale: float = float(wpn.get("projectile_scale")) if wpn.get("projectile_scale") != null else 2.0
-				impact.scale = Vector2(p_scale, p_scale)
-				
-			await get_tree().create_timer(0.3).timeout
-			
-		elif wpn != null and wpn.get("projectile_scene") != null:
-			# --- RANGED PROJECTILE ---
-			var recoil_tween: Tween = create_tween()
-			recoil_tween.tween_property(attacker, "global_position", orig_pos - (lunge_dir * 8.0), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			await recoil_tween.finished
-			
-			var proj: Node2D = wpn.projectile_scene.instantiate()
-			add_child(proj)
-			proj.z_index = 110
-			
-			var p_scale: float = float(wpn.get("projectile_scale")) if wpn.get("projectile_scale") != null else 2.0
-			proj.scale = Vector2(p_scale, p_scale)
-			
-			proj.global_position = attacker.global_position + Vector2(32, 32) 
-			proj.rotation = lunge_dir.angle()
-			
-			var distance: float = attacker.global_position.distance_to(defender.global_position)
-			var travel_time: float = distance / 800.0
-			
-			var fly_tween: Tween = create_tween()
-			fly_tween.tween_property(proj, "global_position", defender.global_position + Vector2(32, 32), travel_time)
-			await fly_tween.finished
-			
-			if wpn.get("impact_scene") != null and wpn.impact_scene != null:
-				var impact: Node2D = wpn.impact_scene.instantiate()
-				add_child(impact)
-				impact.z_index = 115
-				impact.global_position = defender.global_position + Vector2(32, 32)
-				impact.scale = Vector2(p_scale * 1.2, p_scale * 1.2)
-			
-			proj.queue_free()
-			
-		else:
-			# --- MELEE ATTACK ---
-			if is_crit and attack_hits:
-				did_melee_crit_animation = true
-				await _run_melee_crit_lunge(attacker, defender, orig_pos, lunge_dir)
-			else:
-				did_melee_normal_animation = true
-				await _run_melee_normal_lunge(attacker, defender, orig_pos, lunge_dir)
-		
-		# ==========================================
-		# PHASE D: DEFENSIVE ABILITIES & PARRY
-		# ==========================================
-		var defense_resolved_and_won: bool = false
-		
-		var def_trigger_chance: int = get_ability_trigger_chance(defender)
-		var parry_chance: int = get_ability_trigger_chance(defender, true)
-
-		if attack_hits and (defender.get_parent() == player_container or defender.get_parent() == ally_container):
-
-			# --- PROMOTED GENERAL: WEAPON SHATTER ---
-			if defender.get("ability") == "Weapon Shatter" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_weapon_shatter_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result == 2:
-					ability_triggers_count += 1
-					_weapon_shatter_triggered = true
-					incoming_damage_multiplier = min(incoming_damage_multiplier, 0.5)
-					
-					spawn_loot_text("SHATTERED!", Color(1.0, 0.8, 0.2), attacker.global_position + Vector2(32, -32))
-					add_combat_log("PERFECT WEAPON SHATTER! The General completely destroyed the enemy's weapon!", "gold")
-					
-					if attacker.equipped_weapon != null and attacker.equipped_weapon.get("current_durability") != null:
-						attacker.equipped_weapon.current_durability = 0
-				else:
-					add_combat_log("Weapon Shatter failed to catch the blade.", "gray")
-
-			# --- PROMOTED DIVINE SAGE: CELESTIAL CHOIR (Map-Wide Heal) ---
-			elif defender.get("ability") == "Celestial Choir" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				if _coop_qte_mirror_active:
-					celestial_choir_hits = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					celestial_choir_hits = await QTEManager.run_celestial_choir_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, celestial_choir_hits)
-				if celestial_choir_hits > 0:
-					ability_triggers_count += 1
-					
-					# Heal is based on hits AND the Sage's Magic!
-					var aoe_heal_amount: int = celestial_choir_hits * (2 + int(float(defender.magic) * 0.2))
-					
-					var allies_healed: int = 0
-					if player_container != null:
-						for ally in player_container.get_children():
-							if is_instance_valid(ally) and ally.current_hp > 0:
-								ally.current_hp = min(ally.current_hp + aoe_heal_amount, ally.max_hp)
-								if ally.get("health_bar") != null: ally.health_bar.value = ally.current_hp
-								spawn_loot_text("+" + str(aoe_heal_amount), Color(0.4, 1.0, 0.4), ally.global_position + Vector2(32, -24))
-								allies_healed += 1
-								
-					add_combat_log("CELESTIAL CHOIR! " + str(allies_healed) + " allies restored by heavenly music!", "lime")
-				else:
-					add_combat_log("Celestial Choir faltered. The notes were lost.", "gray")
-
-			# --- PROMOTED GREAT KNIGHT: PHALANX (Map-Wide Defense) ---
-			elif defender.get("ability") == "Phalanx" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_phalanx_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result == 2:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-					incoming_damage_multiplier = min(incoming_damage_multiplier, 0.1) # Take almost 0 damage!
-					
-					var allies_buffed: int = 0
-					if player_container != null:
-						for ally in player_container.get_children():
-							if is_instance_valid(ally) and ally.current_hp > 0:
-								# Give them a temporary +10 Defense!
-								ally.set_meta("inner_peace_def_bonus_temp", 10) 
-								spawn_loot_text("PHALANX!", Color(0.8, 0.9, 1.0), ally.global_position + Vector2(32, -24))
-								allies_buffed += 1
-								
-					add_combat_log("PERFECT PHALANX! " + str(allies_buffed) + " allies raise their shields as one!", "gold")
-				else:
-					add_combat_log("Phalanx formation was broken before it could set.", "gray")
-			
-			# --- CLERIC: DIVINE PROTECTION ---
-			if defender.get("ability") == "Divine Protection" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_divine_protection_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result == 2:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-		
-					var heal_amt: int = int(max(1, round(float(defender.max_hp) * 0.10)))
-					defender.current_hp = min(defender.current_hp + heal_amt, defender.max_hp)
-					if defender.get("health_bar") != null:
-						defender.health_bar.value = defender.current_hp
-					if is_instance_valid(defender) and defender.has_method("snap_health_delay_to_main"):
-						defender.snap_health_delay_to_main()
-		
-					spawn_loot_text("BARRIER!", Color(1.0, 0.9, 0.4), defender.global_position + Vector2(32, -32))
-					var barrier_hr: float = -1.0
-					if defender.max_hp > 0:
-						barrier_hr = clampf(float(heal_amt) / float(defender.max_hp), 0.0, 1.0)
-					spawn_loot_text("+" + str(heal_amt) + " HP", Color(0.2, 1.0, 0.2), defender.global_position + Vector2(32, -56), {
-						"tier": FloatingCombatText.Tier.HEAL,
-						"hp_chunk_ratio": barrier_hr,
-						"stack_anchor": defender,
-					})
-					add_combat_log("PERFECT DIVINE PROTECTION! The attack is completely warded off!", "gold")
-				elif result == 1:
-					ability_triggers_count += 1
-					incoming_damage_multiplier = min(incoming_damage_multiplier, 0.35)
-					spawn_loot_text("BARRIER!", Color(0.8, 0.9, 1.0), defender.global_position + Vector2(32, -32))
-					add_combat_log("DIVINE PROTECTION! Most of the blow is absorbed.", "cyan")
-				else:
-					add_combat_log("Divine Protection failed to form in time.", "gray")
-
-			# --- MAGE: ARCANE SHIFT ---
-			elif defender.get("ability") == "Arcane Shift" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_arcane_shift_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-
-					spawn_loot_text("SHIFT!", Color(0.7, 0.95, 1.0), defender.global_position + Vector2(32, -32))
-
-					if result == 2:
-						var counter_dmg: int = int(max(1, round(float(defender.magic) * 0.85)))
-						if crit_sound and crit_sound.stream != null:
-							crit_sound.play()
-						attacker.take_damage(counter_dmg, defender)
-						spawn_loot_text(str(counter_dmg) + " ARCANE", Color(0.8, 0.6, 1.0), attacker.global_position + Vector2(32, -16))
-						add_combat_log("PERFECT ARCANE SHIFT! The Mage vanishes and lashes back with arcane force!", "gold")
-					else:
-						add_combat_log("ARCANE SHIFT! The attack passes harmlessly through the Mage.", "cyan")
-				else:
-					add_combat_log("Arcane Shift failed. The dodge was mistimed.", "gray")
-
-			# --- KNIGHT: SHIELD BASH ---
-			elif defender.get("ability") == "Shield Bash" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_shield_bash_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-		
-					var def_wpn = defender.equipped_weapon
-					var is_magic_counter: bool = false
-					if def_wpn != null and def_wpn.get("damage_type") != null:
-						is_magic_counter = (def_wpn.damage_type == WeaponData.DamageType.MAGIC)
-
-					var counter_offense: int = int(defender.magic) if is_magic_counter else int(defender.strength)
-					var counter_defense: int = int(attacker.resistance) if is_magic_counter else int(attacker.defense)
-					var def_might: int = int(def_wpn.might) if def_wpn != null else 0
-
-					var base_counter_dmg: int = int(max(1, (counter_offense + def_might) - counter_defense))
-					var final_counter_dmg: int = base_counter_dmg if result == 1 else int(round(float(base_counter_dmg) * 1.75))
-		
-					if crit_sound and crit_sound.stream != null and result == 2:
-						crit_sound.play()
-					elif attack_sound and attack_sound.stream != null:
-						attack_sound.play()
-		
-					attacker.take_damage(final_counter_dmg, defender)
-					spawn_loot_text(str(final_counter_dmg) + " COUNTER", Color(0.8, 0.9, 1.0), attacker.global_position + Vector2(32, -16))
-		
-					if result == 2:
-						add_combat_log("PERFECT SHIELD BASH! The enemy is smashed backward by the counter!", "gold")
-					else:
-						add_combat_log("SHIELD BASH! The attack is blocked and countered!", "cyan")
-				else:
-					add_combat_log("Shield Bash failed. Guard opened up.", "gray")
-
-			# --- KNIGHT: UNBREAKABLE BASTION ---
-			elif defender.get("ability") == "Unbreakable Bastion" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_unbreakable_bastion_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result == 2:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-					spawn_loot_text("BASTION!", Color(1.0, 0.85, 0.2), defender.global_position + Vector2(32, -32))
-					add_combat_log("PERFECT UNBREAKABLE BASTION! The blow does nothing!", "gold")
-				elif result == 1:
-					ability_triggers_count += 1
-					incoming_damage_multiplier = min(incoming_damage_multiplier, 0.15)
-					spawn_loot_text("BRACED!", Color(0.8, 0.9, 1.0), defender.global_position + Vector2(32, -32))
-					add_combat_log("UNBREAKABLE BASTION! The shield absorbs nearly everything.", "cyan")
-				else:
-					add_combat_log("Unbreakable Bastion failed to set in time.", "gray")
-
-			# --- MONK: INNER PEACE ---
-			elif defender.get("ability") == "Inner Peace" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_inner_peace_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-			
-					var avo_bonus: int = 0
-					var res_bonus: int = 0
-					var def_bonus: int = 0
-					var calm_heal: int = 0
-			
-					if result == 2:
-						avo_bonus = 35
-						res_bonus = 7
-						def_bonus = 4
-						calm_heal = int(max(2, int(round(float(defender.magic) * 0.35))))
-						add_combat_log("PERFECT INNER PEACE! The Monk slips beyond harm itself.", "gold")
-					else:
-						avo_bonus = 20
-						res_bonus = 4
-						def_bonus = 2
-						calm_heal = int(max(1, int(round(float(defender.magic) * 0.20))))
-						add_combat_log("INNER PEACE! The Monk calmly avoids the blow.", "cyan")
-			
-					defender.set_meta("inner_peace_avo_bonus_temp", avo_bonus)
-					defender.set_meta("inner_peace_res_bonus_temp", res_bonus)
-					defender.set_meta("inner_peace_def_bonus_temp", def_bonus)
-			
-					if calm_heal > 0:
-						defender.current_hp = min(defender.current_hp + calm_heal, defender.max_hp)
-						if defender.get("health_bar") != null:
-							defender.health_bar.value = defender.current_hp
-						spawn_loot_text("+" + str(calm_heal), Color(0.65, 1.0, 0.85), defender.global_position + Vector2(32, -30))
-				else:
-					add_combat_log("Inner Peace broke. The Monk lost their meditative rhythm.", "gray")
-
-			# --- PALADIN: HOLY WARD ---
-			elif defender.get("ability") == "Holy Ward" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_holy_ward_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					var is_magic_atk: bool = (wpn != null and wpn.get("damage_type") != null and wpn.damage_type == WeaponData.DamageType.MAGIC)
-					
-					if result == 2:
-						defender.set_meta("holy_ward_res_bonus_temp", 25)
-						if is_magic_atk: incoming_damage_multiplier = min(incoming_damage_multiplier, 0.1)
-						spawn_loot_text("HOLY WARD!", Color(1.0, 0.85, 0.2), defender.global_position + Vector2(32, -32))
-						add_combat_log("PERFECT HOLY WARD! Absolute divine shielding!", "gold")
-					else:
-						defender.set_meta("holy_ward_res_bonus_temp", 10)
-						if is_magic_atk: incoming_damage_multiplier = min(incoming_damage_multiplier, 0.5)
-						spawn_loot_text("WARDED!", Color(0.8, 0.9, 1.0), defender.global_position + Vector2(32, -32))
-						add_combat_log("HOLY WARD! Magical defenses raised.", "cyan")
-				else:
-					add_combat_log("Holy Ward failed to materialize.", "gray")
-
-			# --- SPELLBLADE: BLINK STEP ---
-			elif defender.get("ability") == "Blink Step" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var result: int
-				if _coop_qte_mirror_active:
-					result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					result = await QTEManager.run_blink_step_minigame(self, defender)
-					_coop_qte_capture_write(_cqe, result)
-				if result > 0:
-					ability_triggers_count += 1
-					
-					if result == 2:
-						defense_resolved_and_won = true # Dodge completely!
-						spawn_loot_text("BLINK!", Color(0.9, 0.5, 1.0), defender.global_position + Vector2(32, -32))
-						add_combat_log("PERFECT BLINK STEP! A flawless evasion!", "gold")
-					else:
-						incoming_damage_multiplier = min(incoming_damage_multiplier, 0.5) # Half damage
-						spawn_loot_text("GLANCING!", Color(0.7, 0.5, 0.9), defender.global_position + Vector2(32, -32))
-						add_combat_log("BLINK STEP! Only partially evaded the attack.", "violet")
-				else:
-					add_combat_log("Blink Step was too slow. Struck fully.", "gray")
-
-			# --- OLD SHIELD CLASH ---
-			elif defender.get("ability") == "Shield Clash" and randi() % 100 < def_trigger_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var clash_result: int
-				if _coop_qte_mirror_active:
-					clash_result = _coop_qte_mirror_read_int(_cqe, 0)
-				else:
-					clash_result = await _run_shield_clash_minigame(defender, attacker)
-					_coop_qte_capture_write(_cqe, clash_result)
-				
-				if clash_result > 0:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-					
-					var heal_amt = int(defender.max_hp * 0.25)
-					defender.current_hp = min(defender.current_hp + heal_amt, defender.max_hp)
-					if defender.get("health_bar") != null: defender.health_bar.value = defender.current_hp
-					var clash_hr: float = -1.0
-					if defender.max_hp > 0:
-						clash_hr = clampf(float(heal_amt) / float(defender.max_hp), 0.0, 1.0)
-					spawn_loot_text("+" + str(heal_amt) + " HP", Color(0.2, 1.0, 0.2), defender.global_position + Vector2(32, -32), {
-						"tier": FloatingCombatText.Tier.HEAL,
-						"hp_chunk_ratio": clash_hr,
-						"stack_anchor": defender,
-					})
-					
-					if clash_result == 2:
-						add_combat_log("PERFECT CLASH! Devastating Counter!", "gold")
-						var def_wpn = defender.equipped_weapon
-						var base_counter_dmg = max(1, (defender.strength + (def_wpn.might if def_wpn else 0)) - attacker.defense)
-						var final_counter_dmg = base_counter_dmg * 3 
-						
-						screen_shake(15.0, 0.4)
-						if crit_sound.stream != null: crit_sound.play()
-						attacker.take_damage(final_counter_dmg, defender)
-						var sc_chunk: float = -1.0
-						if attacker.max_hp > 0:
-							sc_chunk = clampf(float(final_counter_dmg) / float(attacker.max_hp), 0.0, 1.0)
-						spawn_loot_text(str(final_counter_dmg) + " CRIT!", Color(1.0, 0.2, 0.2), attacker.global_position + Vector2(32, -16), {
-							"tier": FloatingCombatText.Tier.CRIT,
-							"hp_chunk_ratio": sc_chunk,
-							"stack_anchor": attacker,
-						})
-					else:
-						add_combat_log("SHIELD CLASH WON! Attack deflected.", "lime")
-				else:
-					add_combat_log("Shield Clash Failed! Guard broken!", "red")			
-			
-			# --- UNIVERSAL PARRY ---
-			elif randi() % 100 < parry_chance:
-				var _cqe := _coop_qte_alloc_event_id()
-				var won_parry: bool
-				if _coop_qte_mirror_active:
-					won_parry = _coop_qte_mirror_read_bool(_cqe, false)
-				else:
-					won_parry = await _run_parry_minigame(defender)
-					_coop_qte_capture_write(_cqe, won_parry)
-				if won_parry:
-					ability_triggers_count += 1
-					defense_resolved_and_won = true
-					add_combat_log("PARRY SUCCESSFUL!", "lime")
-					
-					var def_wpn = defender.equipped_weapon
-					var is_magic_counter = def_wpn != null and def_wpn.damage_type == WeaponData.DamageType.MAGIC
-					var counter_offense = defender.magic if is_magic_counter else defender.strength
-					var counter_defense = attacker.resistance if is_magic_counter else attacker.defense
-					var base_counter_dmg = max(1, (counter_offense + (def_wpn.might if def_wpn else 0)) - counter_defense)
-					
-					if crit_sound.stream != null: crit_sound.play()
-					attacker.take_damage(base_counter_dmg, defender)
-					spawn_loot_text(str(base_counter_dmg) + " DMG", Color(1.0, 1.0, 1.0), attacker.global_position + Vector2(32, -16))
-				else:
-					add_combat_log("Parry Failed! Timing missed!", "red")
-		
-		# ==========================================
-		# PHASE E: NORMAL ATTACK RESOLUTION
-		# ==========================================
-		
-		# Apply defensive damage reductions
-		damage = int(round(float(damage) * incoming_damage_multiplier))
-		
-		if not defense_resolved_and_won:
-			if attack_hits:
-				_rookie_register_apprentice_magic_hit(attacker, wpn, is_magic, true)
-				# ==========================================
-				# --- IMPACT JUICE (HIT-STOP & ZOOM) ---
-				# ==========================================
-				var impact_focus: Vector2 = defender.global_position + Vector2(32, 32)
-
-				if attack_hits and is_crit:
-					await _play_critical_impact(impact_focus)
-				elif already_staggered or will_stagger:
-					await _play_guard_break_impact(impact_focus)
-				elif did_melee_normal_animation:
-					# Light hit-stop on normal melee only — ranged/magic keep prior pacing
-					await _do_hit_stop(0.007, 0.22, 0.04)
-				# ==========================================
-				
-				var final_dmg: int = damage * 3 if is_crit else damage
-				
-				# --- 1. APPLY POISE REDUCTION ALWAYS (Even on 0 DMG!) ---
-				if will_stagger:
-					defender.set_meta("current_poise", 0)
-					defender.set_meta("is_staggered_this_combat", true)
-				elif not already_staggered:
-					defender.set_meta("current_poise", clampi(def_current_poise - poise_dmg, 0, def_max_poise))
-
-				if defender.has_method("update_poise_visuals"): 
-					defender.update_poise_visuals()
-
-				# --- 2. NO DAMAGE CHECK ---
-				if final_dmg <= 0:
-					if no_damage_sound and no_damage_sound.stream:
-						no_damage_sound.play()
-					spawn_loot_text("NO DAMAGE", Color.LIGHT_GRAY, defender.global_position + Vector2(32, -16))
-					add_combat_log(attacker.unit_name + " attacked " + defender.unit_name + " but dealt no damage!", "gray")
-					screen_shake(3.0, 0.15)
-					
-					# Edge case: If they had exactly 1 Poise left and a 0 DMG attack broke it
-					if will_stagger:
-						spawn_loot_text("GUARD BREAK!", Color.ORANGE, defender.global_position + Vector2(32, -40))
-						screen_shake(12.0, 0.2)
-						if defender.has_method("set_staggered_visuals"):
-							defender.set_staggered_visuals(true)
-							
-				else:
-					var is_lethal: bool = final_dmg >= defender.current_hp
-					var death_defied: bool = false
-					
-					# --- CLERIC: MIRACLE ---
-					if is_lethal and defender.get("ability") == "Miracle" and (defender.get_parent() == player_container or defender.get_parent() == ally_container):
-						var _cqe := _coop_qte_alloc_event_id()
-						var result: int
-						if _coop_qte_mirror_active:
-							result = _coop_qte_mirror_read_int(_cqe, 0)
-						else:
-							result = await QTEManager.run_miracle_minigame(self, defender)
-							_coop_qte_capture_write(_cqe, result)
-						if result > 0:
-							death_defied = true
-							ability_triggers_count += 1
-					
-							if result == 2:
-								defender.current_hp = max(1, int(round(defender.max_hp * 0.25)))
-								spawn_loot_text("PERFECT MIRACLE!", Color(1.0, 0.85, 0.2), defender.global_position + Vector2(32, -16))
-								add_combat_log(defender.unit_name + " invoked a PERFECT MIRACLE and cheated death!", "gold")
-							else:
-								defender.current_hp = 1
-								spawn_loot_text("MIRACLE!", Color(1.0, 1.0, 0.6), defender.global_position + Vector2(32, -16))
-								add_combat_log(defender.unit_name + " survived the fatal blow with Miracle!", "khaki")
-					
-							if defender.get("health_bar") != null:
-								defender.health_bar.value = defender.current_hp
-					
-					# --- THE LAST STAND (Lethal Blow Protection) ---
-					if not death_defied and is_lethal and defender.get("is_custom_avatar") == true:
-						var _cqe_ls := _coop_qte_alloc_event_id()
-						if _coop_qte_mirror_active:
-							death_defied = _coop_qte_mirror_read_bool(_cqe_ls, false)
-						else:
-							death_defied = await _run_last_stand_minigame(defender)
-							_coop_qte_capture_write(_cqe_ls, death_defied)
-						if death_defied:
-							final_dmg = 0
-							is_crit = false
-							ability_triggers_count += 2
-							add_combat_log(defender.unit_name + " defied death!", "gold")
-							spawn_loot_text("DEATH DEFIED!", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -16))
-							
-					var actually_dies: bool = is_lethal and not death_defied
-					
-					# --- 3. GUARD BREAK VISUALS (Only if they survive!) ---
-					if will_stagger and not actually_dies:
-						spawn_loot_text("GUARD BREAK!", Color.ORANGE, defender.global_position + Vector2(32, -40))
-						screen_shake(12.0, 0.2)
-						if defender.has_method("set_staggered_visuals"):
-							defender.set_staggered_visuals(true)
-
-					if not death_defied:
-						# --- HUNDRED POINT STRIKE FLURRY ---
-						if combo_hits > 0:
-							for hit_idx in range(combo_hits):
-								if not is_instance_valid(defender) or defender.current_hp <= 0: break
-								var current_hit_dmg: int = int(max(1.0, float(damage) * 0.5)) 
-								if hit_idx >= 5: current_hit_dmg = int(float(current_hit_dmg) * pow(0.75, hit_idx - 4))
-								current_hit_dmg = int(max(1, current_hit_dmg)) 
-								
-								if attack_sound.stream != null: attack_sound.play()
-								screen_shake(4.0, 0.05)
-								attacker.position += lunge_dir * 4.0
-								var snap = create_tween()
-								snap.tween_property(attacker, "position", attacker.position - (lunge_dir * 4.0), 0.05)
-								
-								spawn_loot_text(str(current_hit_dmg), Color(0.9, 0.2, 1.0), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-24,24), randf_range(-24,24)))
-								
-								spawn_slash_effect(defender.global_position, attacker.global_position, false)
-								spawn_blood_splatter(defender, attacker.global_position, false)
-								
-								var exp_tgt = attacker if (defender.current_hp <= current_hit_dmg or hit_idx == combo_hits - 1) else null
-								_apply_hit_with_support_reactions(defender, current_hit_dmg, attacker, exp_tgt, false)
-								# --- PROMOTED FIRE SAGE POST-HIT (Permanent Burn) ---
-							if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
-								defender.set_meta("is_burning", true)
-								add_combat_log(attacker.unit_name + " ignited " + defender.unit_name + "!", "orange")
-								spawn_loot_text("IGNITED!", Color(1.0, 0.4, 0.1), defender.global_position + Vector2(32, -40))
-								
-								await get_tree().create_timer(0.1).timeout
-						
-						# --- STANDARD ATTACK ---
-						else:
-							if attack_hits and is_crit:
-								if not did_melee_crit_animation and crit_sound.stream != null:
-									crit_sound.play()
-								screen_shake(15.0, 0.4)
-							else:
-								if wpn != null and wpn.get("custom_hit_sound") != null:
-									var custom_audio = AudioStreamPlayer.new()
-									custom_audio.stream = wpn.custom_hit_sound
-									add_child(custom_audio)
-									custom_audio.play()
-									custom_audio.finished.connect(custom_audio.queue_free)
-								else:
-									if attack_sound.stream != null: attack_sound.play()
-
-							add_combat_log(attacker.unit_name + " hit " + defender.unit_name + " for " + str(final_dmg) + (" (CRIT)" if is_crit else ""), "gold" if is_crit else "white")
-							if is_crit and atk_rel.get("crit_bonus", 0) > 0 and attacker.get("unit_name") != null:
-								add_combat_log("Rivalry sharpens " + str(attacker.unit_name) + "'s strike!", "yellow")
-							var chunk_r: float = -1.0
-							if defender.max_hp > 0:
-								chunk_r = clampf(float(final_dmg) / float(defender.max_hp), 0.0, 1.0)
-							var floater_tier: int = FloatingCombatText.Tier.CRIT if is_crit else FloatingCombatText.Tier.NORMAL
-							spawn_loot_text(str(final_dmg) + (" CRIT" if is_crit else ""), Color(1.0, 0.2, 0.2) if is_crit else Color.WHITE, defender.global_position + Vector2(32, -16), {
-								"tier": floater_tier,
-								"hp_chunk_ratio": chunk_r,
-								"stack_anchor": defender,
-							})
-							spawn_slash_effect(defender.global_position, attacker.global_position, is_crit)
-							spawn_blood_splatter(defender, attacker.global_position, is_crit)
-							
-							# =========================================================
-							# --- EARN SUPPORT POINTS (Includes Green Allies!) ---
-							# =========================================================
-							if attacker.get_parent() == player_container or attacker.get_parent() == ally_container:
-								var directions = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-								var current_pos = get_grid_pos(attacker)
-								
-								for dir in directions:
-									var n_pos = current_pos + dir
-									var support_ally = get_unit_at(n_pos)
-									
-									if support_ally == null and ally_container != null:
-										for a in ally_container.get_children():
-											if get_grid_pos(a) == n_pos and not a.is_queued_for_deletion():
-												support_ally = a
-												break
-												
-									if support_ally != null and support_ally != attacker:
-										_add_support_points_and_check(attacker, support_ally, 1)
-							
-							if attacker.get_parent() == player_container:
-								loot_recipient = attacker
-							else:
-								loot_recipient = null
-								
-							_apply_hit_with_support_reactions(defender, final_dmg, attacker, attacker, false)
-							if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
-								defender.set_meta("is_burning", true)
-								add_combat_log(attacker.unit_name + " ignited " + defender.unit_name + "!", "orange")
-								spawn_loot_text("IGNITED!", Color(1.0, 0.4, 0.1), defender.global_position + Vector2(32, -40))
-							# --- PROMOTED BLADE MASTER POST-HIT (Multi-slash) ---
-							if severing_strike_hits > 1 and is_instance_valid(defender) and defender.current_hp > 0:
-								for hit_idx in range(severing_strike_hits - 1): # -1 because the first hit was the main attack
-									await get_tree().create_timer(0.15).timeout
-									if not is_instance_valid(defender) or defender.current_hp <= 0: break
-									
-									var slash_dmg: int = int(max(1.0, float(damage) * severing_strike_damage_multiplier))
-									if attack_sound and attack_sound.stream != null: attack_sound.play()
-									spawn_loot_text(str(slash_dmg), Color(0.70, 0.90, 1.00), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
-									spawn_slash_effect(defender.global_position, attacker.global_position, force_crit)
-									_apply_hit_with_support_reactions(defender, slash_dmg, attacker, attacker, false)
-
-							# --- PROMOTED BOW KNIGHT POST-HIT (Tactical Retreat) ---
-							if parting_shot_dodge and is_instance_valid(attacker) and attacker.current_hp > 0:
-								# Move the attacker 1 tile backward
-								var b_pos: Vector2i = get_grid_pos(attacker)
-								var back_dir: Vector2i = Vector2i(round(-lunge_dir.x), round(-lunge_dir.y))
-								var safe_tile: Vector2i = b_pos + back_dir
-								
-								if safe_tile.x >= 0 and safe_tile.x < GRID_SIZE.x and safe_tile.y >= 0 and safe_tile.y < GRID_SIZE.y:
-									if not astar.is_point_solid(safe_tile) and get_occupant_at(safe_tile) == null:
-										var backflip: Tween = create_tween()
-										backflip.tween_property(attacker, "global_position", Vector2(safe_tile.x * CELL_SIZE.x, safe_tile.y * CELL_SIZE.y), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-										astar.set_point_solid(b_pos, false)
-										astar.set_point_solid(safe_tile, true)
-										spawn_loot_text("RETREAT!", Color.CYAN, attacker.global_position + Vector2(32, -40))
-										
-							# --- PROMOTED ASSASSIN POST-HIT ---
-							if shadow_pin_speed_lock and is_instance_valid(defender):
-								defender.speed = 0
-								spawn_loot_text("PINNED!", Color(0.6, 0.3, 0.9), defender.global_position + Vector2(32, -40))
-								
-							# --- PROMOTED HERO POST-HIT ---
-							if vanguards_rally_might_bonus > 0:
-								if player_container != null:
-									for ally in player_container.get_children():
-										if is_instance_valid(ally) and ally.current_hp > 0:
-											ally.strength += vanguards_rally_might_bonus
-											ally.magic += vanguards_rally_might_bonus
-											spawn_loot_text("RALLIED!", Color(1.0, 0.9, 0.4), ally.global_position + Vector2(32, -24))
-											
-							# --- PROMOTED BERSERKER POST-HIT ---
-							if savage_toss_distance > 0 and is_instance_valid(defender) and defender.current_hp > 0:
-								var t_pos: Vector2i = get_grid_pos(defender)
-								for step in range(savage_toss_distance):
-									var next_tile: Vector2i = t_pos + Vector2i(round(lunge_dir.x), round(lunge_dir.y))
-									if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
-										if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
-											t_pos = next_tile
-										else:
-											var crash_dmg: int = 15
-											_apply_hit_with_support_reactions(defender, crash_dmg, attacker, attacker, false)
-											screen_shake(12.0, 0.2)
-											spawn_loot_text("CRASH!", Color.RED, defender.global_position + Vector2(32, -40))
-											break
-									else:
-										break
-										
-								if t_pos != get_grid_pos(defender):
-									var toss_tween: Tween = create_tween()
-									toss_tween.tween_property(defender, "global_position", Vector2(t_pos.x * CELL_SIZE.x, t_pos.y * CELL_SIZE.y), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-									astar.set_point_solid(get_grid_pos(defender), false)
-									astar.set_point_solid(t_pos, true)
-									await toss_tween.finished
-									
-							if lifesteal_percent > 0.0 and is_instance_valid(attacker) and attacker.current_hp > 0:
-								var heal: int = int(final_dmg * lifesteal_percent)
-								if heal > 0:
-									attacker.current_hp = min(attacker.current_hp + heal, attacker.max_hp)
-									if attacker.get("health_bar") != null: attacker.health_bar.value = attacker.current_hp
-									await get_tree().create_timer(0.2).timeout
-									if is_instance_valid(attacker): spawn_loot_text("+" + str(heal) + " HP", Color(0.2, 1.0, 0.2), attacker.global_position + Vector2(-32, -16))
-									
-							# --- ARCHER QTE: VOLLEY FOLLOW-UP HITS ---
-							if volley_extra_hits > 0 and is_instance_valid(defender) and defender.current_hp > 0:
-								for volley_idx in range(volley_extra_hits):
-									await get_tree().create_timer(0.10).timeout
-									var vol_tgt: Node2D = defender
-									if volley_idx == 1 and volley_spread_target != null and is_instance_valid(volley_spread_target) and not volley_spread_target.is_queued_for_deletion() and volley_spread_target.current_hp > 0 and volley_spread_target.get_parent() == enemy_container:
-										vol_tgt = volley_spread_target
-									elif not is_instance_valid(defender) or defender.current_hp <= 0:
-										break
-							
-									var volley_dmg: int = int(round(max(1.0, float(damage)) * volley_damage_multiplier))
-							
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-							
-									spawn_loot_text(str(volley_dmg), Color(0.70, 0.90, 1.00), vol_tgt.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
-									add_combat_log(attacker.unit_name + "'s Volley arrow hits " + str(vol_tgt.unit_name) + " for " + str(volley_dmg) + ".", "cyan")
-									_apply_hit_with_support_reactions(vol_tgt, volley_dmg, attacker, attacker, false)
-							
-							# --- ARCHER QTE: RAIN OF ARROWS SPLASH ---
-							if rain_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-							
-								for splash_target in rain_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-							
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									var rain_d: int = rain_splash_damage
-									if rain_tail_unit != null and splash_target == rain_tail_unit and rain_rear_extra_damage > 0:
-										rain_d += rain_rear_extra_damage
-							
-									spawn_loot_text(str(rain_d) + " SPLASH", Color(1.0, 0.86, 0.45), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is struck by falling arrows for " + str(rain_d) + ".", "khaki")
-									splash_target.take_damage(rain_d, attacker)
-
-							# --- MAGE QTE: FIREBALL SPLASH ---
-							if fireball_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-
-								for splash_target in fireball_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									var fb_splash: int = fireball_splash_damage
-									if fireball_tail_unit != null and splash_target == fireball_tail_unit:
-										fb_splash += fireball_tail_extra_damage
-									spawn_loot_text(str(fb_splash) + " BURN", Color(1.0, 0.65, 0.25), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is caught in the Fireball blast for " + str(fb_splash) + ".", "orange")
-									splash_target.take_damage(fb_splash, attacker)
-
-							# --- MAGE QTE: METEOR STORM SPLASH ---
-							if meteor_storm_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-
-								for splash_target in meteor_storm_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									var met_splash: int = meteor_storm_splash_damage
-									if meteor_tail_unit != null and splash_target == meteor_tail_unit:
-										met_splash += meteor_tail_extra_damage
-									spawn_loot_text(str(met_splash) + " METEOR", Color(1.0, 0.45, 0.25), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is smashed by falling meteors for " + str(met_splash) + ".", "tomato")
-									splash_target.take_damage(met_splash, attacker)
-
-							# --- MERCENARY QTE: FLURRY STRIKE FOLLOW-UP HITS ---
-							if flurry_strike_hits > 0 and is_instance_valid(defender) and defender.current_hp > 0:
-								for flurry_idx in range(flurry_strike_hits):
-									await get_tree().create_timer(0.08).timeout
-									if not is_instance_valid(defender) or defender.current_hp <= 0:
-										break
-
-									var flurry_dmg: int = int(round(max(1.0, float(damage)) * flurry_strike_damage_multiplier))
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									spawn_loot_text(str(flurry_dmg), Color(0.90, 0.95, 1.00), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
-									add_combat_log(attacker.unit_name + "'s Flurry Strike follow-up hits for " + str(flurry_dmg) + ".", "white")
-									_apply_hit_with_support_reactions(defender, flurry_dmg, attacker, attacker, false)
-
-							# --- MERCENARY QTE: BLADE TEMPEST SPLASH ---
-							if blade_tempest_splash_targets.size() > 0:
-								await get_tree().create_timer(0.10).timeout
-
-								for splash_target in blade_tempest_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									spawn_loot_text(str(blade_tempest_splash_damage) + " TEMPEST", Color(0.75, 0.90, 1.00), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is slashed by Blade Tempest for " + str(blade_tempest_splash_damage) + ".", "cyan")
-									splash_target.take_damage(blade_tempest_splash_damage, attacker)
-
-							# --- MONK QTE: CHI BURST SPLASH ---
-							if chi_burst_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-
-								for splash_target in chi_burst_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									spawn_loot_text(str(chi_burst_splash_damage) + " CHI", Color(0.75, 0.55, 1.0), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is struck by the Chi Burst for " + str(chi_burst_splash_damage) + ".", "violet")
-									splash_target.take_damage(chi_burst_splash_damage, attacker)
-									
-							# --- PALADIN QTE: SMITE HOLY SPLASH (ortho neighbors of target) ---
-							if smite_splash_targets.size() > 0 and smite_splash_damage > 0:
-								await get_tree().create_timer(0.10).timeout
-								for sm_sp in smite_splash_targets:
-									if sm_sp == null or not is_instance_valid(sm_sp) or sm_sp.is_queued_for_deletion():
-										continue
-									if sm_sp.current_hp <= 0:
-										continue
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-									spawn_loot_text(str(smite_splash_damage) + " HOLY", Color(1.0, 0.95, 0.55), sm_sp.global_position + Vector2(32, -16))
-									add_combat_log(sm_sp.unit_name + " is scorched by Smite's holy spill for " + str(smite_splash_damage) + ".", "yellow")
-									sm_sp.take_damage(smite_splash_damage, attacker)
-
-							# --- PALADIN QTE: SACRED JUDGMENT SPLASH ---
-							if sacred_judgment_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-
-								for splash_target in sacred_judgment_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									spawn_loot_text(str(sacred_judgment_splash_damage) + " HOLY", Color(1.0, 0.9, 0.4), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is scorched by Sacred Judgment for " + str(sacred_judgment_splash_damage) + ".", "yellow")
-									splash_target.take_damage(sacred_judgment_splash_damage, attacker)
-									
-							# --- SPELLBLADE QTE: ELEMENTAL CONVERGENCE SPLASH ---
-							if elemental_convergence_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-
-								for splash_target in elemental_convergence_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									spawn_loot_text(str(elemental_convergence_splash_damage) + " MAGIC", Color(0.4, 0.8, 1.0), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is hit by the Elemental Convergence blast for " + str(elemental_convergence_splash_damage) + ".", "cyan")
-									splash_target.take_damage(elemental_convergence_splash_damage, attacker)
-									
-							# --- CHARGE: COLLISION DAMAGE (rear foe pinned in the charge line) ---
-							if charge_collision_target != null and charge_collision_damage > 0:
-								await get_tree().create_timer(0.08).timeout
-								var cc: Node2D = charge_collision_target
-								if is_instance_valid(cc) and not cc.is_queued_for_deletion() and cc.current_hp > 0 and cc.get_parent() == enemy_container:
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-									spawn_loot_text(str(charge_collision_damage) + " PIN", Color(1.0, 0.55, 0.35), cc.global_position + Vector2(32, -16))
-									add_combat_log(cc.unit_name + " is slammed by the pinned charge for " + str(charge_collision_damage) + ".", "coral")
-									cc.take_damage(charge_collision_damage, attacker)
-
-							# --- BALLISTA SHOT: LINE OVERPENETRATION (behind primary target) ---
-							if ballista_shot_pierce_targets.size() > 0 and ballista_shot_pierce_damage > 0:
-								await get_tree().create_timer(0.10).timeout
-								for pierce_target in ballista_shot_pierce_targets:
-									if pierce_target == null or not is_instance_valid(pierce_target) or pierce_target.is_queued_for_deletion():
-										continue
-									if pierce_target.current_hp <= 0:
-										continue
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-									spawn_loot_text(str(ballista_shot_pierce_damage) + " PIERCE", Color(0.55, 0.85, 1.0), pierce_target.global_position + Vector2(32, -16))
-									add_combat_log(pierce_target.unit_name + " is struck by the overpenetrating bolt for " + str(ballista_shot_pierce_damage) + ".", "lightskyblue")
-									pierce_target.take_damage(ballista_shot_pierce_damage, attacker)
-
-							# --- WARRIOR QTE: EARTHSHATTER SPLASH ---
-							if earthshatter_splash_targets.size() > 0:
-								await get_tree().create_timer(0.12).timeout
-
-								for splash_target in earthshatter_splash_targets:
-									if splash_target == null or not is_instance_valid(splash_target) or splash_target.is_queued_for_deletion():
-										continue
-									if splash_target.current_hp <= 0:
-										continue
-
-									if attack_sound and attack_sound.stream != null:
-										attack_sound.play()
-
-									spawn_loot_text(str(earthshatter_splash_damage) + " SHOCK", Color(1.0, 0.6, 0.2), splash_target.global_position + Vector2(32, -16))
-									add_combat_log(splash_target.unit_name + " is caught in the Earthshatter shockwave for " + str(earthshatter_splash_damage) + ".", "orange")
-									splash_target.take_damage(earthshatter_splash_damage, attacker)
-
-			else:
-				# --- MISS LOGIC ---
-				if miss_sound.stream != null: miss_sound.play()
-				add_combat_log(attacker.unit_name + " missed " + defender.unit_name, "gray")
-				spawn_loot_text("Miss", Color(0.7, 0.7, 0.7), defender.global_position + Vector2(32, -16), {
-					"tier": FloatingCombatText.Tier.MISS,
-					"stack_anchor": defender,
-				})
-		
-		# ==========================================
-		# PHASE F: DURABILITY & RETURN
-		# ==========================================
-		if is_instance_valid(attacker):
-			if not did_melee_normal_animation:
-				var return_tween: Tween = create_tween()
-				return_tween.tween_property(attacker, "global_position", orig_pos, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-				await return_tween.finished
-			
-			# --- DEGRADE WEAPON AFTER STRIKE ---
-			if wpn and wpn.get("current_durability") != null and wpn.current_durability > 0:
-				wpn.current_durability -= 1
-				if wpn.current_durability <= 0:
-					spawn_loot_text("BROKEN!", Color.RED, attacker.global_position + Vector2(32, -40))
-					screen_shake(15.0, 0.3) # Heavy shake for impact
-					if miss_sound.stream != null: miss_sound.play() # Play a negative sound
-
-		# ==========================================
-		# PHASE G: FORCED MOVEMENT (SHOVE & PULL) + FIRE TRAP
-		# ==========================================
-		if force_active_ability and attack_hits and is_instance_valid(defender) and defender.current_hp > 0:
-			var abil: String = _resolve_tactical_ability_name(attacker)
-
-			if abil == "Fire Trap":
-				var _cqe_ft := _coop_qte_alloc_event_id()
-				var is_perfect_ft: bool
-				if _coop_qte_mirror_active:
-					is_perfect_ft = _coop_qte_mirror_read_bool(_cqe_ft, false)
-				else:
-					is_perfect_ft = await _run_tactical_action_minigame(attacker, abil)
-					_coop_qte_capture_write(_cqe_ft, is_perfect_ft)
-				var trap_cell: Vector2i = get_grid_pos(defender)
-				var mag: int = int(attacker.get("magic")) if attacker.get("magic") != null else 0
-				var ft_dmg: int = default_fire_tile_damage + mag / 3
-				ft_dmg = maxi(1, ft_dmg)
-				if is_perfect_ft:
-					ft_dmg += 2
-				var ft_dur: int = 5 if is_perfect_ft else 3
-				spawn_fire_tile(trap_cell, ft_dmg, ft_dur)
-				add_combat_log(attacker.unit_name + " sears the ground under " + defender.unit_name + "!", "orange")
-				spawn_loot_text("FIRE TRAP!", Color(1.0, 0.35, 0.12), defender.global_position + Vector2(32, -32))
-			elif abil == "Shove" or abil == "Grapple Hook":
-				var _cqe_tac := _coop_qte_alloc_event_id()
-				var is_perfect: bool
-				if _coop_qte_mirror_active:
-					is_perfect = _coop_qte_mirror_read_bool(_cqe_tac, false)
-				else:
-					is_perfect = await _run_tactical_action_minigame(attacker, abil)
-					_coop_qte_capture_write(_cqe_tac, is_perfect)
-				var max_distance: int = 2 if is_perfect else 1
-
-				var a_pos: Vector2i = get_grid_pos(attacker)
-				var d_pos: Vector2i = get_grid_pos(defender)
-				var push_dir: Vector2i = Vector2i.ZERO
-
-				if d_pos.x > a_pos.x: push_dir = Vector2i(1, 0)
-				elif d_pos.x < a_pos.x: push_dir = Vector2i(-1, 0)
-				elif d_pos.y > a_pos.y: push_dir = Vector2i(0, 1)
-				elif d_pos.y < a_pos.y: push_dir = Vector2i(0, -1)
-
-				var target_tile: Vector2i = d_pos
-				var tiles_moved: int = 0
-				var crashed: bool = false
-
-				if abil == "Shove":
-					add_combat_log(attacker.unit_name + " shoved " + defender.unit_name + "!", "yellow")
-					spawn_loot_text("SHOVE!", Color.ORANGE, defender.global_position + Vector2(32, -32))
-
-					for step in range(max_distance):
-						var next_tile: Vector2i = target_tile + push_dir
-						if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
-							if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
-								target_tile = next_tile
-								tiles_moved += 1
-							else:
-								crashed = true
-								break
-						else:
-							crashed = true
-							break
-
-				elif abil == "Grapple Hook":
-					add_combat_log(attacker.unit_name + " hooked " + defender.unit_name + "!", "purple")
-					spawn_loot_text("PULLED!", Color.VIOLET, defender.global_position + Vector2(32, -32))
-
-					for step in range(max_distance):
-						var next_tile: Vector2i = target_tile - push_dir
-						if next_tile == a_pos:
-							break
-						if next_tile.x >= 0 and next_tile.x < GRID_SIZE.x and next_tile.y >= 0 and next_tile.y < GRID_SIZE.y:
-							if not astar.is_point_solid(next_tile) and get_occupant_at(next_tile) == null:
-								target_tile = next_tile
-								tiles_moved += 1
-							else:
-								crashed = true
-								break
-						else:
-							crashed = true
-							break
-
-				if tiles_moved > 0:
-					var slide_tween: Tween = create_tween()
-					slide_tween.tween_property(defender, "global_position", Vector2(target_tile.x * CELL_SIZE.x, target_tile.y * CELL_SIZE.y), 0.15 * tiles_moved).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-					astar.set_point_solid(d_pos, false)
-					astar.set_point_solid(target_tile, true)
-					await slide_tween.finished
-
-				if crashed:
-					spawn_loot_text("CRASH!", Color.RED, defender.global_position + Vector2(32, -16))
-					screen_shake(18.0 if is_perfect else 12.0, 0.25)
-					if attack_sound.stream != null: attack_sound.play()
-					var crash_dmg: int = 10 if is_perfect else 5
-					_apply_hit_with_support_reactions(defender, crash_dmg, attacker, attacker, false)
-					add_combat_log(defender.unit_name + " crashed into an obstacle for " + str(crash_dmg) + " damage!", "tomato")
-					
-		await get_tree().create_timer(0.25).timeout
-		
-	# ==========================================
-	# PHASE H: COMBAT CLEANUP
-	# ==========================================
-	for unit in [attacker, defender]:
-		if unit == null or not is_instance_valid(unit):
-			continue
-	
-		if unit.has_meta("inner_peace_avo_bonus_temp"): unit.remove_meta("inner_peace_avo_bonus_temp")
-		if unit.has_meta("inner_peace_res_bonus_temp"): unit.remove_meta("inner_peace_res_bonus_temp")
-		if unit.has_meta("inner_peace_def_bonus_temp"): unit.remove_meta("inner_peace_def_bonus_temp")
-		if unit.has_meta("frenzy_def_penalty_temp"): unit.remove_meta("frenzy_def_penalty_temp")
-		if unit.has_meta("frenzy_res_penalty_temp"): unit.remove_meta("frenzy_res_penalty_temp")
-		if unit.has_meta("holy_ward_res_bonus_temp"): unit.remove_meta("holy_ward_res_bonus_temp")
+	await StrikeSequenceHelpers.run_strike_sequence(self, attacker, defender, force_active_ability, force_single_attack)
 								
 func screen_shake(intensity: float = 12.0, duration: float = 0.4) -> void:
 	if main_camera == null:
@@ -11259,196 +6658,16 @@ func _on_open_inv_pressed() -> void:
 	inventory_panel.visible = true
 
 func _populate_convoy_list() -> void:
-	if convoy_grid == null or inv_scroll == null:
-		return
-	_clear_grids()
-	if inv_desc_label:
-		inv_desc_label.text = "Select an item to view details."
-		_queue_refit_item_description_panels()
-	
-	# 1. Build the Main Convoy Grid
-	_build_grid_items(convoy_grid, player_inventory, "convoy", null)
-	
-	# 2. Dynamically build a mini-grid for EVERY unit on the board!
-	var vbox = inv_scroll.get_node_or_null("InventoryVBox")
-	if vbox == null:
-		return
-	
-	for unit in player_container.get_children():
-		if unit.is_queued_for_deletion() or unit.current_hp <= 0: continue
-		
-		# Create a visual header with the unit's name
-		var header = Label.new()
-		header.text = "\n--- " + unit.unit_name.to_upper() + "'S BACKPACK ---"
-		header.add_theme_color_override("font_color", Color.CYAN)
-		header.add_theme_font_size_override("font_size", 18)
-		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		header.set_meta("is_dynamic", true) # Tag it so we can delete it later
-		vbox.add_child(header)
-		
-		# Create a new 5-column grid just for this unit
-		var u_grid = GridContainer.new()
-		u_grid.columns = 5
-		u_grid.add_theme_constant_override("h_separation", INVENTORY_UI_GRID_SEP)
-		u_grid.add_theme_constant_override("v_separation", INVENTORY_UI_GRID_SEP)
-		u_grid.set_meta("is_dynamic", true) # Tag it so we can delete it later
-		vbox.add_child(u_grid)
-		
-		var inv = []
-		if "inventory" in unit: inv = unit.inventory
-		
-		# Fill their specific grid with their items!
-		_build_grid_items(u_grid, inv, "unit_personal", unit, 5)
+	TradeInventoryHelpers.populate_convoy_list(self)
 
 func _populate_unit_inventory_list() -> void:
-	if unit_grid == null:
-		return
-	_clear_grids()
-	if inv_desc_label:
-		inv_desc_label.text = "Select an item to view details."
-		_queue_refit_item_description_panels()
-	var inv = []
-	if "inventory" in unit_managing_inventory:
-		inv = unit_managing_inventory.inventory
-	_build_grid_items(unit_grid, inv, "unit_personal", unit_managing_inventory, 5)
-	_battle_try_flash_pending_inv_slot(unit_grid)
+	InventoryUiHelpers.populate_unit_inventory_list(self)
 
 func _clear_grids() -> void:
-	# 1. Clear static grids
-	if unit_grid != null:
-		for child in unit_grid.get_children():
-			child.queue_free()
-	if convoy_grid != null:
-		for child in convoy_grid.get_children():
-			child.queue_free()
-	
-	# 2. Clear dynamically generated unit grids
-	if inv_scroll == null:
-		return
-	var vbox = inv_scroll.get_node_or_null("InventoryVBox")
-	if vbox == null:
-		return
-	for child in vbox.get_children():
-		if child.has_meta("is_dynamic"):
-			child.queue_free()
-			
-	selected_inventory_meta.clear()
-	equip_button.disabled = true
-	use_button.disabled = true
+	TradeInventoryHelpers.clear_grids(self)
 
 func _build_grid_items(grid: GridContainer, item_array: Array, source_type: String, owner_unit: Node2D = null, min_slots: int = 0) -> void:
-	var display_items = []
-	
-	# 1. Compress the array for stacking
-	for i in range(item_array.size()):
-		var item = item_array[i]
-		if item == null:
-			continue
-			
-		var can_stack = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
-		var found_stack = false
-		
-		# We only stack in the Convoy! Personal backpacks remain 1 slot = 1 item.
-		if can_stack and source_type == "convoy":
-			for d in display_items:
-				var d_name = d.item.get("weapon_name") if d.item.get("weapon_name") != null else d.item.get("item_name")
-				var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-				
-				if d_name != null and i_name != null and d_name == i_name:
-					d.count += 1
-					d.indices.append(i)
-					found_stack = true
-					break
-					
-		if not found_stack:
-			display_items.append({"item": item, "count": 1, "indices": [i]})
-			
-	# 2. Pad with empty slots to meet min_slots
-	var total_slots = max(display_items.size(), min_slots)
-	
-	for i in range(total_slots):
-		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(64, 64)
-		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color(0.1, 0.1, 0.1, 0.8)
-		style.border_width_bottom = 2
-		style.border_color = Color(0.3, 0.3, 0.3)
-		btn.add_theme_stylebox_override("normal", style)
-		
-		grid.add_child(btn)
-		
-		if i < display_items.size():
-			var d = display_items[i]
-			var item = d.item
-			var count = d.count
-			var real_index = d.indices[0]
-			
-			if item.get("icon") != null:
-				btn.icon = item.icon
-				btn.expand_icon = true
-			else:
-				var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-				btn.text = str(i_name).substr(0, 3) if i_name else "???"
-				
-			# Stack counter
-			if count > 1:
-				var count_lbl = Label.new()
-				count_lbl.text = "x" + str(count)
-				count_lbl.add_theme_font_size_override("font_size", 18)
-				count_lbl.add_theme_color_override("font_color", Color.WHITE)
-				count_lbl.add_theme_constant_override("outline_size", 6)
-				count_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-				
-				btn.add_child(count_lbl)
-				count_lbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-				count_lbl.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-				count_lbl.grow_vertical = Control.GROW_DIRECTION_BEGIN
-				count_lbl.offset_right = -4
-				count_lbl.offset_bottom = -2
-			
-			var meta = {
-				"source": source_type,
-				"index": real_index,
-				"item": item,
-				"unit": owner_unit,
-				"count": count
-			}
-			btn.set_meta("inv_data", meta)
-			
-			var is_usable_for_owner: bool = true
-			if owner_unit != null and item is WeaponData:
-				is_usable_for_owner = _unit_can_use_item_for_ui(owner_unit, item)
-			
-			if not is_usable_for_owner:
-				btn.modulate = Color(1.0, 0.55, 0.55, 0.95)
-
-				var unusable_badge = Label.new()
-				unusable_badge.text = "X"
-				unusable_badge.add_theme_font_size_override("font_size", 18)
-				unusable_badge.add_theme_color_override("font_color", Color.RED)
-				unusable_badge.add_theme_constant_override("outline_size", 6)
-				unusable_badge.add_theme_color_override("font_outline_color", Color.BLACK)
-				btn.add_child(unusable_badge)
-				unusable_badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-				unusable_badge.position = Vector2(-10, 2)
-			
-			if owner_unit != null and item == owner_unit.get("equipped_weapon"):
-				var eq_style = style.duplicate()
-				eq_style.border_color = Color.GOLD
-				eq_style.border_width_left = 2
-				eq_style.border_width_top = 2
-				eq_style.border_width_right = 2
-				btn.add_theme_stylebox_override("normal", eq_style)
-				_add_equipped_badge_to_inv_button(btn)
-
-			btn.pressed.connect(func(): _on_grid_item_clicked(btn, meta))
-		else:
-			btn.disabled = true
-			var empty_style = style.duplicate()
-			empty_style.bg_color = Color(0.05, 0.05, 0.05, 0.5)
-			btn.add_theme_stylebox_override("disabled", empty_style)
+	TradeInventoryHelpers.build_grid_items(self, grid, item_array, source_type, owner_unit, min_slots)
 							
 func _on_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 	if select_sound and select_sound.stream != null:
@@ -11477,25 +6696,7 @@ func _on_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 	use_button.disabled = false
 	
 func _on_equip_pressed() -> void:
-	if selected_inventory_meta.is_empty():
-		return
-
-	var meta = selected_inventory_meta
-	if meta["source"] != "unit_personal":
-		return
-
-	var item = meta["item"]
-	if item is WeaponData:
-		if not _unit_can_equip_weapon(unit_managing_inventory, item):
-			play_ui_sfx(UISfx.INVALID)
-			return
-
-		unit_managing_inventory.equipped_weapon = item
-		_battle_inv_flash_item = item
-		calculate_ranges(unit_managing_inventory)
-		update_unit_info_panel()
-		_populate_unit_inventory_list()
-		play_ui_sfx(UISfx.INVENTORY_EQUIP)
+	InventoryActionHelpers.on_equip_pressed(self)
 
 func _on_close_inv_pressed() -> void:
 	inventory_panel.visible = false
@@ -11504,57 +6705,7 @@ func _on_close_inv_pressed() -> void:
 	unit_managing_inventory = null
 
 func _on_use_pressed() -> void:
-	if selected_inventory_meta.is_empty(): return
-	var meta = selected_inventory_meta
-	if meta["source"] != "unit_personal": return
-	
-	var item = meta["item"]
-	var real_index = meta["index"]
-	
-	if item is ConsumableData:
-		var unit = unit_managing_inventory
-		if item.get("is_promotion_item") == true:
-			var current_class = unit.get("active_class_data")
-			if unit.level >= 1 and current_class != null and current_class.get("promotion_options") != null and current_class.promotion_options.size() > 0:
-				unit.inventory.remove_at(real_index)
-				play_ui_sfx(UISfx.INVENTORY_USE)
-				_on_close_inv_pressed()
-				var chosen_advanced_class = await _ask_for_promotion_choice(current_class.promotion_options)
-				if chosen_advanced_class != null:
-					execute_promotion(unit, chosen_advanced_class)
-					update_unit_info_panel()
-					unit.finish_turn()
-					player_state.active_unit = null
-					rebuild_grid()
-					clear_ranges()
-				else:
-					unit.inventory.insert(real_index, item)
-					_on_open_inv_pressed()
-			else:
-				play_ui_sfx(UISfx.INVALID)
-				spawn_loot_text("Cannot Promote!", Color.RED, unit.global_position + Vector2(32, -32))
-			return 
-			
-		var gains = {
-			"hp": item.hp_boost, "str": item.str_boost, "mag": item.mag_boost,
-			"def": item.def_boost, "res": item.res_boost, "spd": item.spd_boost, "agi": item.agi_boost
-		}
-		apply_stat_gains(unit, gains)
-		if item.heal_amount > 0:
-			unit.current_hp = min(unit.current_hp + item.heal_amount, unit.max_hp)
-			if unit.get("health_bar") != null: unit.health_bar.value = unit.current_hp
-		unit.inventory.remove_at(real_index)
-		play_ui_sfx(UISfx.INVENTORY_USE)
-		_on_close_inv_pressed()
-		var is_permanent = false
-		for val in gains.values():
-			if val > 0: is_permanent = true
-		if is_permanent: await run_theatrical_stat_reveal(unit, item.item_name, gains)
-		update_unit_info_panel()
-		unit.finish_turn()
-		player_state.active_unit = null
-		rebuild_grid()
-		clear_ranges()
+	await InventoryActionHelpers.on_use_pressed(self)
 
 func _get_item_display_text(item: Resource) -> String:
 	var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
@@ -11901,328 +7052,10 @@ func spawn_loot_text(text: String, color: Color, pos: Vector2, meta = null) -> v
 	f_text.global_position = pos + Vector2(0.0, nudge)
 
 func show_loot_window() -> void:
-	_ensure_loot_item_info_ui()
-	loot_item_list.clear()
-	if loot_desc_label:
-		loot_desc_label.text = "Select an item to view details."
-	# Lock the map
-	if player_state: player_state.is_forecasting = true
-	get_tree().paused = true 
-	
-	# Ensure the UI keeps running while the game is paused
-	loot_window.process_mode = Node.PROCESS_MODE_ALWAYS
-	
-	# 1. Setup for the Elastic Pop-in
-	loot_window.scale = Vector2(0.5, 0.5)
-	loot_window.modulate.a = 0.0
-	loot_window.visible = true
-	
-	if close_loot_button: close_loot_button.disabled = true
-	
-	var open_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	open_tween.tween_property(loot_window, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	open_tween.tween_property(loot_window, "modulate:a", 1.0, 0.2)
-	
-	await open_tween.finished
-	await get_tree().create_timer(0.2, true, false, true).timeout
-	
-	# --- NEW: GROUP STACKABLE LOOT FOR THE REVEAL ---
-	var display_items = []
-	for item in pending_loot:
-		var can_stack = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
-		var found_stack = false
-		if can_stack:
-			for d in display_items:
-				if d.item.get("item_name") != null and d.item.get("item_name") == item.get("item_name"):
-					d.count += 1
-					found_stack = true
-					break
-		if not found_stack:
-			display_items.append({"item": item, "count": 1})
-	# ------------------------------------------------
-	
-	# 2. The Sequential Item Reveal with Rarity!
-	var current_pitch = 1.0
-	
-	for d in display_items:
-		var item = d.item
-		var display_text = _get_item_display_text(item)
-		
-		# Add the (x3) multiplier text if there is more than 1
-		if d.count > 1:
-			display_text += " (x" + str(d.count) + ")"
-			
-		var img = item.icon if "icon" in item else null
-		
-		var rarity = item.get("rarity") if item.get("rarity") != null else "Common"
-		var item_color = Color.WHITE
-		var is_legendary_or_epic = false
-		
-		match rarity:
-			"Uncommon": item_color = Color(0.2, 1.0, 0.2) # Green
-			"Rare": item_color = Color(0.2, 0.5, 1.0) # Blue
-			"Epic": 
-				item_color = Color(0.8, 0.2, 1.0) # Purple
-				is_legendary_or_epic = true
-			"Legendary": 
-				item_color = Color(1.0, 0.8, 0.2) # Gold
-				is_legendary_or_epic = true
-				
-		# Add the item to the UI list and paint it the rarity color
-		var idx = loot_item_list.add_item(display_text, img)
-		loot_item_list.set_item_custom_fg_color(idx, item_color)
-		
-		# --- SAVE THE METADATA SO IT CAN BE CLICKED ---
-		loot_item_list.set_item_metadata(idx, {"item": item, "count": d.count})
-		
-		# --- THE REVEAL JUICE ---
-		if is_legendary_or_epic:
-			if epic_level_up_sound != null and epic_level_up_sound.stream != null:
-				epic_level_up_sound.play()
-				
-			screen_shake(15.0, 0.4)
-			
-			var flash_rect = ColorRect.new()
-			flash_rect.size = get_viewport_rect().size
-			flash_rect.color = item_color
-			flash_rect.modulate.a = 0.5
-			flash_rect.process_mode = Node.PROCESS_MODE_ALWAYS
-			get_node("UI").add_child(flash_rect)
-			
-			var hit_flash = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-			hit_flash.tween_property(flash_rect, "modulate:a", 0.0, 0.5)
-			hit_flash.tween_callback(flash_rect.queue_free)
-			
-			await get_tree().create_timer(0.8, true, false, true).timeout 
-		else:
-			if select_sound.stream != null:
-				select_sound.pitch_scale = current_pitch
-				select_sound.play()
-				current_pitch = min(current_pitch + 0.15, 2.0)
-				
-			screen_shake(3.0, 0.1)
-			await get_tree().create_timer(0.3, true, false, true).timeout
-		
-	if select_sound.stream != null:
-		select_sound.pitch_scale = 1.0
-		
-	if close_loot_button: close_loot_button.disabled = false
-	
-	if loot_item_list.item_count > 0:
-		loot_item_list.select(0)
-		_on_loot_item_selected(0)
-	else:
-		_queue_refit_item_description_panels()
+	await InventoryUiHelpers.show_loot_window(self)
 	
 func _on_close_loot_pressed() -> void:
-	# 1. Immediately hide the popup UI to clear the screen
-	var close_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	close_tween.tween_property(loot_window, "scale", Vector2(0.5, 0.5), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	close_tween.tween_property(loot_window, "modulate:a", 0.0, 0.2)
-	close_tween.chain().tween_callback(func(): loot_window.visible = false)
-	
-	close_loot_button.disabled = true 
-
-	# 2. Distribute Loot & Keep track of the EXACT items we added
-	var recipient = loot_recipient if is_instance_valid(loot_recipient) else player_state.active_unit
-	var looted_items_refs = []
-	
-	for item in pending_loot:
-		looted_items_refs.append(item) # Save the reference to animate later!
-		var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-		
-		if item is MaterialData:
-			player_inventory.append(item)
-			add_combat_log(str(i_name) + " sent to Convoy.", "gray")
-		else:
-			if is_instance_valid(recipient) and recipient.get_parent() == player_container:
-				if recipient.inventory.size() < 5:
-					recipient.inventory.append(item)
-					add_combat_log(recipient.unit_name + " pocketed " + str(i_name) + ".", "cyan")
-				else:
-					player_inventory.append(item)
-					add_combat_log(recipient.unit_name + "'s pockets full. Sent to Convoy.", "gray")
-			else:
-				player_inventory.append(item)
-				add_combat_log(str(i_name) + " sent to Convoy.", "gray")
-
-	await close_tween.finished
-	
-	# 3. Open the Convoy view so we can see all grids
-	unit_managing_inventory = null 
-	_populate_convoy_list()
-	
-	equip_button.visible = false
-	use_button.visible = false
-	inventory_panel.visible = true
-	
-	await get_tree().process_frame
-	await get_tree().process_frame 
-	
-	# 4. THE FIX: Perfectly match the looted items to their UI buttons in order!
-	var target_buttons = []
-	var available_buttons = []
-	
-	var all_grids: Array = []
-	if convoy_grid != null:
-		all_grids.append(convoy_grid)
-	var vbox = inv_scroll.get_node_or_null("InventoryVBox") if inv_scroll != null else null
-	if vbox != null:
-		for child in vbox.get_children():
-			if child is GridContainer:
-				all_grids.append(child)
-			
-	for grid in all_grids:
-		for btn in grid.get_children():
-			if btn.has_meta("inv_data"):
-				available_buttons.append(btn)
-				
-	for item in looted_items_refs:
-		var found_btn = null
-		var is_stackable = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
-		var item_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-		
-		for i in range(available_buttons.size()):
-			var btn = available_buttons[i]
-			var btn_item = btn.get_meta("inv_data").get("item")
-			
-			if btn_item == item:
-				found_btn = btn
-				if not is_stackable: 
-					available_buttons.remove_at(i) # Uniques consume the slot permanently
-				break
-			elif is_stackable and btn_item != null:
-				var b_name = btn_item.get("weapon_name") if btn_item.get("weapon_name") != null else btn_item.get("item_name")
-				if b_name == item_name:
-					found_btn = btn
-					# Do NOT remove it from available_buttons, so the next stackable item can also fly here!
-					break
-				
-		if found_btn == null:
-			found_btn = convoy_button # Failsafe
-			
-		target_buttons.append(found_btn)
-		if found_btn is Button and found_btn != convoy_button:
-			found_btn.modulate.a = 0.0 # Hide it until the flying icon hits it
-				
-	# 5. Spawn and Fly the Icons!
-	var vp_center = get_viewport_rect().size / 2.0
-	
-	var fly_layer = CanvasLayer.new()
-	fly_layer.layer = 150 
-	fly_layer.process_mode = Node.PROCESS_MODE_ALWAYS 
-	add_child(fly_layer)
-	
-	for i in range(looted_items_refs.size()):
-		var item = looted_items_refs[i]
-		var target_btn = target_buttons[i]
-		
-		var flying_icon = TextureRect.new()
-		flying_icon.texture = item.get("icon")
-		flying_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		flying_icon.custom_minimum_size = Vector2(64, 64)
-		flying_icon.pivot_offset = Vector2(32, 32)
-		fly_layer.add_child(flying_icon)
-		
-		flying_icon.global_position = vp_center + Vector2(randf_range(-100, 100), randf_range(-100, 100))
-		
-		var fly_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		fly_tween.tween_interval(i * 0.15) 
-		fly_tween.tween_property(flying_icon, "global_position", target_btn.global_position, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-		
-		# THE BIND FIX: We force Godot to remember EXACTLY which item is attached to this animation
-		var impact_func = func(cb_item: Resource, cb_btn: Button, cb_icon: TextureRect):
-			cb_icon.queue_free()
-			
-			var rarity = cb_item.get("rarity") if cb_item.get("rarity") != null else "Common"
-			var is_high_tier = (rarity == "Epic" or rarity == "Legendary")
-			
-			if is_high_tier:
-				if crit_sound and crit_sound.stream != null:
-					var p = AudioStreamPlayer.new()
-					p.stream = crit_sound.stream
-					p.pitch_scale = randf_range(1.2, 1.4) 
-					p.volume_db = -2.0
-					add_child(p)
-					p.play()
-					p.finished.connect(p.queue_free)
-					
-				var crack_node = Node2D.new()
-				crack_node.position = cb_btn.size / 2.0
-				cb_btn.add_child(crack_node)
-				
-				var angles = [0.5, 2.1, 3.8, 5.0, 1.2]
-				for a in angles:
-					var line = Line2D.new()
-					line.width = 3.0
-					line.default_color = Color(0.05, 0.05, 0.05, 0.9) 
-					line.add_point(Vector2.ZERO)
-					line.add_point(Vector2(cos(a) * 15, sin(a) * 15))
-					line.add_point(Vector2(cos(a) * 35 + randf_range(-10, 10), sin(a) * 35 + randf_range(-10, 10)))
-					crack_node.add_child(line)
-				
-				var flash = ColorRect.new()
-				flash.set_anchors_preset(Control.PRESET_FULL_RECT)
-				flash.color = Color(0.8, 0.2, 1.0) if rarity == "Epic" else Color(1.0, 0.8, 0.2)
-				cb_btn.add_child(flash)
-				
-				cb_btn.modulate.a = 1.0
-				cb_btn.scale = Vector2(1.5, 1.5) 
-				cb_btn.pivot_offset = cb_btn.size / 2.0
-				
-				var bounce = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-				bounce.tween_property(cb_btn, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BOUNCE)
-				bounce.tween_property(flash, "modulate:a", 0.0, 0.4)
-				
-				var crack_fade = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-				crack_fade.tween_interval(1.0) 
-				crack_fade.tween_property(crack_node, "modulate:a", 0.0, 0.3)
-				crack_fade.chain().tween_callback(func(): 
-					if is_instance_valid(crack_node): crack_node.queue_free()
-					if is_instance_valid(flash): flash.queue_free()
-				)
-				screen_shake(12.0, 0.25)
-				
-			else:
-				if select_sound and select_sound.stream != null:
-					var p = AudioStreamPlayer.new()
-					p.stream = select_sound.stream
-					p.pitch_scale = randf_range(1.5, 1.8) 
-					p.volume_db = -5.0
-					add_child(p)
-					p.play()
-					p.finished.connect(p.queue_free)
-					
-				cb_btn.modulate.a = 1.0
-				cb_btn.scale = Vector2(1.2, 1.2)
-				cb_btn.pivot_offset = cb_btn.size / 2.0
-				var bounce = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-				bounce.tween_property(cb_btn, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_BOUNCE)
-				
-		# Attach the bound variables!
-		fly_tween.tween_callback(impact_func.bind(item, target_btn, flying_icon))
-
-	# 6. Wait for all animations to finish
-	var max_wait_time = 0.4 + (looted_items_refs.size() * 0.15) + 1.5
-	await get_tree().create_timer(max_wait_time, true, false, true).timeout
-	
-	fly_layer.queue_free()
-	
-	# 7. Close everything
-	inventory_panel.visible = false
-	pending_loot.clear()
-	loot_recipient = null
-	close_loot_button.disabled = false
-	
-	if player_state: player_state.is_forecasting = false
-	get_tree().paused = false
-	var deferred_result: String = _deferred_battle_result_after_loot
-	_deferred_battle_result_after_loot = ""
-	loot_window_closed.emit()
-	if deferred_result != "":
-		call_deferred("_apply_deferred_battle_result_after_loot", deferred_result)
-	
-	update_unit_info_panel()
+	await TradeInventoryHelpers.on_close_loot_pressed(self)
 				
 func add_combat_log(message: String, color: String = "white") -> void:
 	if battle_log == null:
@@ -12463,7 +7296,6 @@ func _on_continue_button_pressed() -> void:
 	
 	# --- NEW: ARENA VICTORY LOGIC ---
 	if is_arena_match:
-		ArenaManager.last_match_result = "VICTORY" # Save the win!
 		ArenaManager.current_opponent_data = {} 
 		get_tree().change_scene_to_file("res://Scenes/CityMenu.tscn")
 		return
@@ -12991,341 +7823,103 @@ func _apply_camera_zoom(direction: int) -> void:
 	)
 	
 # --- ABILITY 1: THE UNIVERSAL PARRY (Timing QTE) ---
+func _apply_battlefield_qte_ui_polish(
+	qte_layer: CanvasLayer,
+	screen_dimmer: ColorRect,
+	bar_bg: ColorRect,
+	help_text: Label,
+	top_bar: ColorRect,
+	bottom_bar: ColorRect,
+	accent: Color,
+	title_text: String
+) -> void:
+	if qte_layer == null or not is_instance_valid(qte_layer):
+		return
+	var vp_size: Vector2 = get_viewport_rect().size
+
+	if screen_dimmer != null and is_instance_valid(screen_dimmer):
+		screen_dimmer.color = Color(
+			clampf(accent.r * 0.12, 0.0, 0.25),
+			clampf(accent.g * 0.08, 0.0, 0.20),
+			clampf(accent.b * 0.15, 0.0, 0.30),
+			0.66
+		)
+
+	var atmosphere := ColorRect.new()
+	atmosphere.name = "QteBattleAtmosphere"
+	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	atmosphere.size = vp_size
+	atmosphere.color = Color(
+		clampf(accent.r * 0.10, 0.0, 0.18),
+		clampf(accent.g * 0.08, 0.0, 0.14),
+		clampf(accent.b * 0.12, 0.0, 0.20),
+		0.28
+	)
+	atmosphere.z_index = -3
+	qte_layer.add_child(atmosphere)
+	qte_layer.move_child(atmosphere, 1)
+
+	if top_bar != null:
+		top_bar.color = Color(0.0, 0.0, 0.0, 0.90)
+	if bottom_bar != null:
+		bottom_bar.color = Color(0.0, 0.0, 0.0, 0.90)
+
+	var title := Label.new()
+	title.text = title_text
+	title.position = Vector2(0.0, bar_bg.position.y - 124.0)
+	title.size = Vector2(vp_size.x, 52.0)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 44)
+	title.add_theme_color_override("font_color", Color(minf(accent.r + 0.10, 1.0), minf(accent.g + 0.10, 1.0), minf(accent.b + 0.10, 1.0), 1.0))
+	title.add_theme_constant_override("outline_size", 7)
+	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	qte_layer.add_child(title)
+
+	var frame := Panel.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.position = bar_bg.position + Vector2(-26.0, -20.0)
+	frame.size = bar_bg.size + Vector2(52.0, 40.0)
+	frame.z_index = -1
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.05, 0.06, 0.09, 0.80)
+	frame_style.border_color = Color(accent.r, accent.g, accent.b, 0.72)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(14)
+	frame_style.shadow_size = 20
+	frame_style.shadow_color = Color(0.0, 0.0, 0.0, 0.50)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	qte_layer.add_child(frame)
+
+	var frame_glow := ColorRect.new()
+	frame_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame_glow.size = Vector2(frame.size.x - 22.0, 4.0)
+	frame_glow.position = Vector2(11.0, 10.0)
+	frame_glow.color = Color(accent.r, accent.g, accent.b, 0.56)
+	frame.add_child(frame_glow)
+
+	if help_text != null and is_instance_valid(help_text):
+		help_text.add_theme_font_size_override("font_size", 28)
+		help_text.add_theme_color_override("font_color", Color(0.94, 0.96, 1.0, 0.98))
+		help_text.add_theme_constant_override("outline_size", 5)
+		help_text.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.88))
+		var help_tw := qte_layer.create_tween().set_loops()
+		help_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		help_tw.tween_property(help_text, "modulate:a", 0.74, 0.45)
+		help_tw.tween_property(help_text, "modulate:a", 0.98, 0.45)
+
+	var title_tw := qte_layer.create_tween().set_loops()
+	title_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	title_tw.tween_property(title, "modulate:a", 0.86, 0.66)
+	title_tw.tween_property(title, "modulate:a", 1.0, 0.66)
+
+
 func _run_parry_minigame(defender: Node2D) -> bool:
-	if defender == null or not is_instance_valid(defender):
-		return false
-
-	# 1) TELEGRAPH
-	var clang = get_node_or_null("ClangSound")
-	if clang != null and clang.stream != null:
-		clang.pitch_scale = randf_range(0.85, 0.95)
-		clang.play()
-
-	spawn_loot_text("PARRY!", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
-
-	screen_shake(6.0, 0.2)
-	await get_tree().create_timer(0.45).timeout
-
-	# --- CINEMATIC LOCK (Freeze the game) ---
-	var prev_paused = get_tree().paused
-	get_tree().paused = true
-
-	# 2) UI POP (cinematic letterbox + flash + pop-in)
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS # Keeps running while paused
-	add_child(qte_layer)
-
-	var vp_size = get_viewport_rect().size
-
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0, 0, 0, 0.35)
-	qte_layer.add_child(screen_dimmer)
-
-	# Letterbox bars
-	var letterbox_h = 56.0
-	var top_bar = ColorRect.new()
-	top_bar.color = Color(0, 0, 0, 0.85)
-	top_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(top_bar)
-
-	var bottom_bar = ColorRect.new()
-	bottom_bar.color = Color(0, 0, 0, 0.85)
-	bottom_bar.position = Vector2(0.0, vp_size.y)
-	bottom_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(bottom_bar)
-
-	# Use qte_layer.create_tween() so the animations play while the game is paused
-	var lb_in = qte_layer.create_tween().set_parallel(true)
-	lb_in.tween_property(top_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "position:y", vp_size.y - letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-	# Screen flash
-	var flash_rect = ColorRect.new()
-	flash_rect.size = vp_size
-	flash_rect.color = Color.WHITE
-	flash_rect.modulate = Color(1, 1, 1, 0)
-	qte_layer.add_child(flash_rect)
-
-	var intro_flash = qte_layer.create_tween()
-	intro_flash.tween_property(flash_rect, "modulate:a", 0.18, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	intro_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-
-	# Bar
-	var bar_bg = ColorRect.new()
-	bar_bg.size = Vector2(420, 34)
-	bar_bg.pivot_offset = bar_bg.size / 2.0
-	bar_bg.position = (vp_size - bar_bg.size) / 2.0
-	bar_bg.position.y -= 100.0
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.95)
-	bar_bg.scale = Vector2(0.86, 0.86)
-	bar_bg.modulate.a = 0.0
-	qte_layer.add_child(bar_bg)
-
-	var bar_pop = qte_layer.create_tween().set_parallel(true)
-	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-	# Target zone
-	var target_zone = ColorRect.new()
-	target_zone.size = Vector2(92, 34)
-	target_zone.color = Color(0.2, 0.8, 0.2, 0.85)
-	var rand_max = bar_bg.size.x - target_zone.size.x
-	target_zone.position = Vector2(randf_range(100.0, rand_max), 0.0)
-	bar_bg.add_child(target_zone)
-
-	var perfect_zone = ColorRect.new()
-	perfect_zone.size = Vector2(26, 34)
-	perfect_zone.position = Vector2((target_zone.size.x - perfect_zone.size.x) / 2.0, 0.0)
-	perfect_zone.color = Color(1.0, 0.85, 0.2, 0.9)
-	target_zone.add_child(perfect_zone)
-
-	# Pulse the target zone
-	var pulse = qte_layer.create_tween().set_loops()
-	pulse.tween_property(target_zone, "modulate", Color(1.2, 1.2, 1.2, 1.0), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	pulse.tween_property(target_zone, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-	var qte_cursor = ColorRect.new()
-	qte_cursor.size = Vector2(10, 56)
-	qte_cursor.position = Vector2(0, -11)
-	qte_cursor.color = Color.WHITE
-	bar_bg.add_child(qte_cursor)
-
-	var help_text = Label.new()
-	help_text.text = "PRESS SPACE"
-	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help_text.add_theme_font_size_override("font_size", 26)
-	bar_bg.add_child(help_text)
-	help_text.position = Vector2(0, -52)
-	help_text.size.x = bar_bg.size.x
-
-	# 3) TIMING LOOP (Uses Time.get_ticks_msec so it works while paused)
-	var total_ms = 650
-	var start_ms = Time.get_ticks_msec()
-	var success = false
-	var pressed = false
-	var perfect = false
-
-	while true:
-		await get_tree().process_frame
-		var elapsed_ms = Time.get_ticks_msec() - start_ms
-
-		if elapsed_ms >= total_ms:
-			break
-
-		var progress = float(elapsed_ms) / float(total_ms)
-		qte_cursor.position.x = progress * bar_bg.size.x
-
-		if Input.is_action_just_pressed("ui_accept"):
-			pressed = true
-
-			var cursor_center = qte_cursor.position.x + (qte_cursor.size.x / 2.0)
-			var tz_start = target_zone.position.x
-			var tz_end = tz_start + target_zone.size.x
-			var p_start = tz_start + perfect_zone.position.x
-			var p_end = p_start + perfect_zone.size.x
-
-			if cursor_center >= tz_start and cursor_center <= tz_end:
-				success = true
-				perfect = (cursor_center >= p_start and cursor_center <= p_end)
-
-				qte_cursor.color = Color(1.0, 0.85, 0.2)
-				target_zone.color = Color(1.0, 1.0, 1.0, 0.85)
-
-				screen_shake(24.0 if perfect else 14.0, 0.30 if perfect else 0.25)
-
-				if clang != null and clang.stream != null:
-					clang.pitch_scale = randf_range(1.25, 1.45) if perfect else randf_range(1.15, 1.30)
-					clang.play()
-
-				flash_rect.modulate.a = 0.0
-				var win_flash = qte_layer.create_tween()
-				win_flash.tween_property(flash_rect, "modulate:a", 0.28 if perfect else 0.20, 0.05)
-				win_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.15)
-				
-				help_text.text = "PERFECT!" if perfect else "NICE!"
-				help_text.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2) if perfect else Color(0.2, 1.0, 0.2))
-
-			else:
-				success = false
-				qte_cursor.color = Color(0.9, 0.25, 0.25)
-				screen_shake(10.0, 0.18)
-
-				if miss_sound.stream != null:
-					miss_sound.play()
-
-				flash_rect.modulate.a = 0.0
-				var fail_flash = qte_layer.create_tween()
-				fail_flash.tween_property(flash_rect, "modulate:a", 0.10, 0.03)
-				fail_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.10)
-				
-				help_text.text = "MISS!"
-				help_text.add_theme_color_override("font_color", Color.RED)
-
-			break
-
-	if not pressed:
-		success = false
-		if miss_sound.stream != null:
-			miss_sound.play()
-		help_text.text = "TOO SLOW!"
-		help_text.add_theme_color_override("font_color", Color.RED)
-
-	await get_tree().create_timer(0.45, true, false, true).timeout # Pause-safe timer
-
-	# Letterbox out
-	var lb_out = qte_layer.create_tween().set_parallel(true)
-	lb_out.tween_property(top_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "position:y", vp_size.y, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await lb_out.finished
-
-	qte_layer.queue_free()
-	get_tree().paused = prev_paused
-	return success
+	return await DefensiveReactionHelpers.run_parry_minigame(self, defender)
 
 # --- ABILITY 2: SHIELD CLASH (Mashing QTE) ---
 # Returns 0 (Fail), 1 (Block), 2 (Perfect Counter)
 func _run_shield_clash_minigame(defender: Node2D, attacker: Node2D) -> int:
-	# 1. CALCULATE WEIGHT ADVANTAGE
-	# MoveType Enum: INFANTRY=0, ARMORED=1, FLYING=2, CAVALRY=3
-	var def_type = defender.get("move_type") if defender.get("move_type") != null else 0
-	var atk_type = attacker.get("move_type") if attacker.get("move_type") != null else 0
-	
-	# Convert MoveTypes into "Weight/Mass"
-	var get_weight = func(m_type: int) -> int:
-		if m_type == 1: return 3   # ARMORED (Heaviest)
-		if m_type == 3: return 2   # CAVALRY (Heavy)
-		if m_type == 0: return 1   # INFANTRY (Standard)
-		if m_type == 2: return 0   # FLYING (Lightest)
-		return 1
-		
-	var weight_diff = get_weight.call(def_type) - get_weight.call(atk_type)
-	
-	# Adjust the difficulty math based on the weight difference!
-	var mash_power = 12.0 + (weight_diff * 1.5)  # Heavy defenders gain more per tap
-	var enemy_pushback = 35.0 - (weight_diff * 5.0) # Heavy attackers push the bar down faster
-
-	# 2. THE TELEGRAPH (Warning Phase)
-	screen_shake(10.0, 0.3)
-	
-	if has_node("ShieldBashSound") and get_node("ShieldBashSound").stream != null:
-		get_node("ShieldBashSound").pitch_scale = randf_range(0.85, 0.95)
-		get_node("ShieldBashSound").play()
-		
-	spawn_loot_text("SHIELD CLASH!", Color(0.8, 0.9, 1.0), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
-	
-	await get_tree().create_timer(1.2).timeout 
-	
-	# 3. THE UI POP
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100 
-	add_child(qte_layer)
-	
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = get_viewport_rect().size
-	screen_dimmer.color = Color(0, 0, 0, 0.3)
-	qte_layer.add_child(screen_dimmer)
-	
-	var bar = ProgressBar.new()
-	bar.max_value = 100
-	bar.value = 50.0 
-	bar.custom_minimum_size = Vector2(400, 40)
-	bar.show_percentage = false
-	bar.position = (get_viewport_rect().size - bar.size) / 2.0
-	bar.position.y -= 100 
-	
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.8, 0.1, 0.1, 0.9) 
-	var fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.2, 0.5, 1.0, 1.0) 
-	bar.add_theme_stylebox_override("background", bg_style)
-	bar.add_theme_stylebox_override("fill", fill_style)
-	
-	qte_layer.add_child(bar)
-	
-	var help_text = Label.new()
-	help_text.text = "MASH SPACE!"
-	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help_text.add_theme_font_size_override("font_size", 32)
-	help_text.add_theme_color_override("font_color", Color(1.0, 0.4, 0.0))
-	qte_layer.add_child(help_text)
-	help_text.position = bar.position + Vector2(0, -50)
-	help_text.size.x = bar.size.x
-	
-	# --- NEW: SHOW WEIGHT ADVANTAGE UI ---
-	var adv_text = Label.new()
-	if weight_diff > 0:
-		adv_text.text = "WEIGHT ADVANTAGE"
-		adv_text.add_theme_color_override("font_color", Color(0.2, 1.0, 0.2)) # Green
-	elif weight_diff < 0:
-		adv_text.text = "WEIGHT DISADVANTAGE!"
-		adv_text.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2)) # Red
-	else:
-		adv_text.text = "EVEN MATCH"
-		adv_text.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7)) # Gray
-		
-	adv_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	adv_text.add_theme_font_size_override("font_size", 18)
-	qte_layer.add_child(adv_text)
-	adv_text.position = bar.position + Vector2(0, 45)
-	adv_text.size.x = bar.size.x
-	
-	# 4. THE TUG-OF-WAR LOOP
-	var time_left = 3.0 
-	var final_result = 0 
-	
-	while time_left > 0:
-		await get_tree().process_frame
-		var delta = get_process_delta_time()
-		time_left -= delta
-		
-		# The enemy constantly pushes back (using the weight math!)
-		bar.value -= enemy_pushback * delta 
-		
-		if Input.is_action_just_pressed("ui_accept"): 
-			bar.value += mash_power # Player pushes forward (using weight math!)
-			
-			bar.modulate = Color(2.0, 2.0, 2.0)
-			var flash = create_tween()
-			flash.tween_property(bar, "modulate", Color.WHITE, 0.05)
-			
-		if bar.value >= 100.0:
-			if time_left >= 1.5:
-				final_result = 2 
-			else:
-				final_result = 1
-			break
-			
-		if bar.value <= 0.0:
-			final_result = 0
-			break
-			
-	# 5. RESOLUTION FEEDBACK
-	if final_result > 0:
-		var is_perfect = (final_result == 2)
-		help_text.text = "PERFECT COUNTER!" if is_perfect else "GUARD HELD!"
-		help_text.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2) if is_perfect else Color(0.2, 1.0, 0.2))
-		adv_text.text = "" # Clear the advantage text on win
-		
-		screen_shake(25.0 if is_perfect else 15.0, 0.35)
-		
-		if has_node("ShieldBashSound") and get_node("ShieldBashSound").stream != null:
-			get_node("ShieldBashSound").pitch_scale = randf_range(1.1, 1.25) if is_perfect else randf_range(0.95, 1.05)
-			get_node("ShieldBashSound").play()
-	else:
-		help_text.text = "GUARD BROKEN!"
-		help_text.add_theme_color_override("font_color", Color.RED)
-		adv_text.text = ""
-		if miss_sound.stream != null:
-			miss_sound.play()
-			
-	await get_tree().create_timer(0.4).timeout
-	
-	qte_layer.queue_free()
-	return final_result
+	return await DefensiveReactionHelpers.run_shield_clash_minigame(self, defender, attacker)
 	
 # --- ABILITY 3: FOCUSED STRIKE (Offensive Hold & Release QTE) ---
 func _run_focused_strike_minigame(attacker: Node2D) -> int:
@@ -13898,171 +8492,7 @@ func apply_stat_gains(unit: Node2D, gains: Dictionary) -> void:
 
 # --- ABILITY 6: LAST STAND (Lethal Blow Survival) ---
 func _run_last_stand_minigame(defender: Node2D) -> bool:
-	if defender == null or not is_instance_valid(defender):
-		return false
-
-	# 1) THE EXTENDED TELEGRAPH (The Heartbeat)
-	# We use 1.5 seconds to build tension so the player can get their thumb ready
-	var clang = get_node_or_null("ClangSound")
-	
-	# Heartbeat 1
-	screen_shake(8.0, 0.2)
-	if clang:
-		clang.pitch_scale = 0.4
-		clang.play()
-	
-	spawn_loot_text("LETHAL BLOW!", Color(1.0, 0.1, 0.1), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
-	
-	await get_tree().create_timer(0.6).timeout
-
-	# Heartbeat 2 (Faster, Higher pitch, New Text)
-	screen_shake(12.0, 0.2)
-	if clang:
-		clang.pitch_scale = 0.6
-		clang.play()
-		
-	spawn_loot_text("GET READY...", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -80), {"stack_anchor": defender})
-
-	# Final pause to let the player focus
-	await get_tree().create_timer(0.7).timeout
-
-	# --- CINEMATIC LOCK ---
-	var prev_paused = get_tree().paused
-	get_tree().paused = true
-
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(qte_layer)
-
-	var vp_size = get_viewport_rect().size
-
-	# 2) UI SETUP
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0.4, 0.0, 0.0, 0.7) 
-	qte_layer.add_child(screen_dimmer)
-
-	var letterbox_h = 56.0
-	var top_bar = ColorRect.new()
-	top_bar.color = Color(0, 0, 0, 0.85)
-	top_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(top_bar)
-
-	var bottom_bar = ColorRect.new()
-	bottom_bar.color = Color(0, 0, 0, 0.85)
-	bottom_bar.position = Vector2(0.0, vp_size.y)
-	bottom_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(bottom_bar)
-
-	var lb_in = qte_layer.create_tween().set_parallel(true)
-	lb_in.tween_property(top_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "position:y", vp_size.y - letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-	var flash_rect = ColorRect.new()
-	flash_rect.size = vp_size
-	flash_rect.color = Color.RED
-	flash_rect.modulate = Color(1, 1, 1, 0)
-	qte_layer.add_child(flash_rect)
-
-	var bar_bg = ColorRect.new()
-	bar_bg.size = Vector2(420, 34)
-	bar_bg.pivot_offset = bar_bg.size / 2.0
-	bar_bg.position = (vp_size - bar_bg.size) / 2.0
-	bar_bg.position.y -= 100.0
-	bar_bg.color = Color(0.05, 0.05, 0.05, 0.95)
-	bar_bg.scale = Vector2(0.86, 0.86)
-	bar_bg.modulate.a = 0.0
-	qte_layer.add_child(bar_bg)
-
-	var bar_pop = qte_layer.create_tween().set_parallel(true)
-	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-	var target_zone = ColorRect.new()
-	target_zone.size = Vector2(40, 34) 
-	target_zone.color = Color(1.0, 0.8, 0.2, 0.9) 
-	var rand_max = bar_bg.size.x - target_zone.size.x
-	target_zone.position = Vector2(randf_range(150.0, rand_max), 0.0)
-	bar_bg.add_child(target_zone)
-
-	var qte_cursor = ColorRect.new()
-	qte_cursor.size = Vector2(10, 56)
-	qte_cursor.position = Vector2(0, -11)
-	qte_cursor.color = Color.WHITE
-	bar_bg.add_child(qte_cursor)
-
-	var help_text = Label.new()
-	help_text.text = "DEFY DEATH!"
-	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help_text.add_theme_font_size_override("font_size", 32)
-	help_text.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
-	bar_bg.add_child(help_text)
-	help_text.position = Vector2(0, -55)
-	help_text.size.x = bar_bg.size.x
-
-	# 3) TIMING LOOP (Speed is still the same: 0.45s)
-	var total_ms = 600 
-	var start_ms = Time.get_ticks_msec()
-	var success = false
-	var pressed = false
-
-	while true:
-		await get_tree().process_frame
-		var elapsed_ms = Time.get_ticks_msec() - start_ms
-
-		if elapsed_ms >= total_ms:
-			break
-
-		var progress = float(elapsed_ms) / float(total_ms)
-		qte_cursor.position.x = progress * bar_bg.size.x
-
-		if Input.is_action_just_pressed("ui_accept"):
-			pressed = true
-			var cursor_center = qte_cursor.position.x + (qte_cursor.size.x / 2.0)
-			var tz_start = target_zone.position.x
-			var tz_end = tz_start + target_zone.size.x
-
-			if cursor_center >= tz_start and cursor_center <= tz_end:
-				success = true
-				qte_cursor.color = Color(1.0, 1.0, 1.0)
-				target_zone.color = Color(1.0, 1.0, 1.0, 1.0)
-				help_text.text = "SURVIVED!"
-				help_text.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
-				screen_shake(30.0, 0.4)
-				if clang:
-					clang.pitch_scale = 1.5
-					clang.play()
-				flash_rect.color = Color.WHITE
-				flash_rect.modulate.a = 0.6
-				var win_flash = qte_layer.create_tween()
-				win_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.25)
-			else:
-				success = false
-				qte_cursor.color = Color(0.3, 0.0, 0.0)
-				help_text.text = "FAILED"
-				flash_rect.color = Color.BLACK
-				flash_rect.modulate.a = 0.5
-				var fail_flash = qte_layer.create_tween()
-				fail_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.15)
-			break
-
-	if not pressed:
-		success = false
-		help_text.text = "TOO SLOW"
-
-	await get_tree().create_timer(0.5, true, false, true).timeout 
-
-	var lb_out = qte_layer.create_tween().set_parallel(true)
-	lb_out.tween_property(top_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "position:y", vp_size.y, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await lb_out.finished
-
-	qte_layer.queue_free()
-	get_tree().paused = prev_paused
-	return success
+	return await DefensiveReactionHelpers.run_last_stand_minigame(self, defender)
 	
 func _start_double_animation():
 	# Capture original positions if not already set
@@ -14491,29 +8921,7 @@ func _on_trade_item_clicked(index: int, side: String) -> void:
 	refresh_trade_window()
 
 func _execute_trade_swap(side1: String, idx1: int, side2: String, idx2: int) -> void:
-	# 1. Normalize both arrays to exactly 5 slots (prevents crash on empty slot clicks)
-	var inv_a = trade_unit_a.inventory.duplicate()
-	var inv_b = trade_unit_b.inventory.duplicate()
-	inv_a.resize(5)
-	inv_b.resize(5)
-	
-	# 2. Point to the correct arrays based on the click
-	var target_inv1 = inv_a if side1 == "left" else inv_b
-	var target_inv2 = inv_a if side2 == "left" else inv_b
-	
-	# 3. Swap the data
-	var temp = target_inv1[idx1]
-	target_inv1[idx1] = target_inv2[idx2]
-	target_inv2[idx2] = temp
-	
-	# 4. Strip the empty slots out and save it back to the units
-	trade_unit_a.inventory.clear()
-	for item in inv_a: 
-		if item != null: trade_unit_a.inventory.append(item)
-		
-	trade_unit_b.inventory.clear()
-	for item in inv_b: 
-		if item != null: trade_unit_b.inventory.append(item)
+	TradeInventoryHelpers.execute_trade_swap(self, side1, idx1, side2, idx2)
 
 func _on_trade_window_close() -> void:
 	trade_window.visible = false
@@ -14929,58 +9337,13 @@ func _show_defy_death_savior_portrait(savior: Node2D, savior_name: String, rescu
 
 # Normalizes support rank from bond data to 0..3. Handles int, string "C"/"B"/"A", null/missing; malformed => 0.
 func _normalize_support_rank(bond: Variant) -> int:
-	if bond == null or not (bond is Dictionary):
-		return 0
-	var r: Variant = bond.get("rank", null)
-	if r == null:
-		return 0
-	if r is int:
-		return clampi(int(r), 0, 3)
-	if r is String:
-		var s := (r as String).strip_edges().to_upper()
-		if s == "C": return 1
-		if s == "B": return 2
-		if s == "A": return 3
-		return 0
-	return 0
+	return SupportHelpers.normalize_support_rank(self, bond)
 
 # --- Support-combat: Phase 1 passive bonuses; Phase 2 reactions (Guard, Defy Death, Dual Strike) via get_best_support_context + _apply_hit_with_support_reactions. ---
 # Returns passive combat bonuses from the single best support partner within SUPPORT_COMBAT_RANGE_MANHATTAN.
 # Only applies to player/ally units; uses CampaignManager.support_bonds; missing/legacy data => no bonus.
 func get_support_combat_bonus(unit: Node2D) -> Dictionary:
-	var out := {"hit": 0, "avo": 0, "crit_avo": 0}
-	if unit == null or unit.get_parent() == destructibles_container:
-		return out
-	var is_allied := (unit.get_parent() == player_container or (ally_container != null and unit.get_parent() == ally_container))
-	if not is_allied:
-		return out
-	var my_pos: Vector2i = get_grid_pos(unit)
-	var my_name: String = get_support_name(unit)
-	var best_rank: int = 0
-	var allies: Array[Node2D] = []
-	var collect := func(container: Node) -> void:
-		if container == null: return
-		for c in container.get_children():
-			if not (c is Node2D) or c == unit: continue
-			if not is_instance_valid(c) or c.is_queued_for_deletion(): continue
-			if c.get("current_hp") != null and int(c.current_hp) <= 0: continue
-			allies.append(c)
-	collect.call(player_container)
-	if ally_container: collect.call(ally_container)
-	for ally in allies:
-		var dist: int = abs(get_grid_pos(ally).x - my_pos.x) + abs(get_grid_pos(ally).y - my_pos.y)
-		if dist > SUPPORT_COMBAT_RANGE_MANHATTAN:
-			continue
-		var bond: Dictionary = CampaignManager.get_support_bond(my_name, get_support_name(ally))
-		var rank: int = _normalize_support_rank(bond)
-		if rank > best_rank:
-			best_rank = rank
-	if best_rank <= 0 or not SUPPORT_COMBAT_RANK_BONUSES.has(best_rank):
-		return out
-	out = SUPPORT_COMBAT_RANK_BONUSES[best_rank].duplicate()
-	if DEBUG_SUPPORT_COMBAT and unit.get("unit_name") != null:
-		print("[SupportCombat] ", unit.unit_name, " rank ", best_rank, " -> +", out["hit"], " hit +", out["avo"], " avo +", out["crit_avo"], " c.avo")
-	return out
+	return SupportHelpers.get_support_combat_bonus(self, unit)
 
 # --- Phase 2: support reaction context (partner node, rank, can_react). Used by Guard, Defy Death, Dual Strike. ---
 ## Returns the best support partner and rank for reaction checks. Reuses Phase 1 range and identity.
@@ -15027,66 +9390,7 @@ func get_best_support_context(unit: Node2D) -> Dictionary:
 ## Outputs: None.
 ## Side effects: May apply damage to victim or to guard partner; may cap damage and set _defy_death_used; sets _support_guard_used_this_sequence when Guard triggers.
 func _apply_hit_with_support_reactions(victim: Node2D, damage: int, source: Node2D, exp_tgt: Node2D, is_redirected: bool) -> void:
-	if victim == null or not is_instance_valid(victim):
-		return
-	# Rivalry: record ally damager of this enemy (for contested-kill rivalry later).
-	if victim.get_parent() == enemy_container and source != null and is_instance_valid(source):
-		var src_parent: Node = source.get_parent()
-		if src_parent == player_container or (ally_container != null and src_parent == ally_container):
-			var eid: int = victim.get_instance_id()
-			if not _enemy_damagers.has(eid):
-				_enemy_damagers[eid] = []
-			var rid: String = get_relationship_id(source)
-			if rid != "" and rid not in _enemy_damagers[eid]:
-				_enemy_damagers[eid].append(rid)
-	if is_redirected:
-		victim.take_damage(damage, source)
-		return
-	# Guard: one redirect per sequence; rank >= 2; redirect this hit to partner (partner cannot be victim).
-	if not _support_guard_used_this_sequence:
-		var ctx: Dictionary = get_best_support_context(victim)
-		var partner: Node2D = ctx.get("partner", null) as Node2D
-		var rank: int = int(ctx.get("rank", 0))
-		if partner != null and partner != victim and rank >= 2 and ctx.get("can_react", false):
-			var guard_chance: int = SUPPORT_GUARD_CHANCE_RANK3 if rank >= 3 else SUPPORT_GUARD_CHANCE_RANK2
-			guard_chance += get_relationship_combat_modifiers(victim).get("support_chance_bonus", 0)
-			if randi() % 100 < guard_chance:
-				_support_guard_used_this_sequence = true
-				if DEBUG_SUPPORT_COMBAT:
-					print("[SupportReaction] Guard! ", victim.get("unit_name"), " -> partner takes hit")
-				var guard_log: String = "Guard!"
-				if get_relationship_combat_modifiers(victim).get("support_chance_bonus", 0) > 0 and victim.get("unit_name") != null and partner.get("unit_name") != null:
-					guard_log = str(partner.unit_name) + " guarded " + str(victim.unit_name) + " out of trust."
-				add_combat_log(guard_log, "lime")
-				spawn_loot_text("Guard!", Color(0.2, 1.0, 0.4), partner.global_position + Vector2(32, -24))
-				_award_relationship_event(partner, victim, "guard", 1)
-				if _can_gain_mentorship(partner, victim):
-					_award_relationship_stat_event(partner, victim, "mentorship", "guard_mentorship", 1)
-				_apply_hit_with_support_reactions(partner, damage, source, null, true)
-				return
-	# Defy Death: rank 3 only; lethal hit; once per unit per battle; Guard did not fire.
-	var victim_instance_id: int = victim.get_instance_id()
-	var would_be_lethal: bool = (victim.get("current_hp") != null and (int(victim.current_hp) - damage <= 0))
-	if would_be_lethal:
-		var ctx: Dictionary = get_best_support_context(victim)
-		var partner: Node2D = ctx.get("partner", null) as Node2D
-		var rank: int = int(ctx.get("rank", 0))
-		if rank >= 3 and partner != null and not _defy_death_used.get(victim_instance_id, false):
-			_defy_death_used[victim_instance_id] = true
-			var capped: int = int(victim.current_hp) - 1
-			if capped < 0:
-				capped = 0
-			if DEBUG_SUPPORT_COMBAT:
-				print("[SupportReaction] Defy Death! ", victim.get("unit_name"), " saved at 1 HP")
-			var victim_name: String = get_support_name(victim)
-			var rescue_line: String = _get_defy_death_rescue_line(partner, victim_name)
-			var savior_name: String = partner.get("unit_name") if partner.get("unit_name") != null else "Ally"
-			await _show_defy_death_savior_portrait(partner, savior_name, rescue_line)
-			add_combat_log(savior_name + ": " + rescue_line, "gold")
-			spawn_loot_text("Defied Death!", Color(1.0, 0.84, 0.0), victim.global_position + Vector2(32, -32))
-			victim.take_damage(capped, source)
-			return
-	victim.take_damage(damage, exp_tgt)
+	await SupportHelpers.apply_hit_with_support_reactions(self, victim, damage, source, exp_tgt, is_redirected)
 
 func _on_support_btn_pressed() -> void:
 	if select_sound and select_sound.stream != null: select_sound.play()
@@ -15360,167 +9664,7 @@ func execute_promotion(unit: Node2D, advanced_class: Resource) -> void:
 # BRANCHING PROMOTION UI
 # ==========================================
 func _ask_for_promotion_choice(options: Array) -> Resource:
-	var promo_layer = CanvasLayer.new()
-	promo_layer.layer = 110 # Keep it on top of everything
-	add_child(promo_layer)
-
-	var vp_size = get_viewport_rect().size
-	
-	# Dim the background
-	var dimmer = ColorRect.new()
-	dimmer.color = Color(0, 0, 0, 0.85)
-	dimmer.size = vp_size
-	promo_layer.add_child(dimmer)
-	
-	var title = Label.new()
-	title.text = "CHOOSE YOUR PATH"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 80)
-	title.add_theme_color_override("font_color", Color.GOLD)
-	title.position = Vector2(0, 80)
-	title.size.x = vp_size.x
-	promo_layer.add_child(title)
-	
-	# The container holding the class cards
-	var hbox = HBoxContainer.new()
-	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.add_theme_constant_override("separation", 60)
-	hbox.size = Vector2(vp_size.x, 600)
-	hbox.position = Vector2(0, 200)
-	promo_layer.add_child(hbox)
-	
-	# Build a card for each option in the array
-	for class_res in options:
-		if class_res == null: continue
-		
-		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(450, 650) 
-		
-		# Set pivot to the center for smooth scaling!
-		btn.pivot_offset = btn.custom_minimum_size / 2.0
-		
-		var vbox = VBoxContainer.new()
-		vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
-		vbox.add_theme_constant_override("separation", 15)
-		# Tell the VBox to ignore the parent's scale so it doesn't double-scale the text weirdly
-		vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE 
-		btn.add_child(vbox)
-		
-		var c_name = Label.new()
-		c_name.text = class_res.get("job_name") if class_res.get("job_name") else "Unknown"
-		c_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		c_name.add_theme_font_size_override("font_size", 56) 
-		c_name.add_theme_color_override("font_color", Color.CYAN)
-		vbox.add_child(c_name)
-		
-		var sep = HSeparator.new()
-		vbox.add_child(sep)
-		
-		var stats = Label.new()
-		var m_range = str(class_res.get("move_range")) if class_res.get("move_range") != null else "N/A"
-		stats.text = "\n[ MOVE: " + m_range + " ]\n\n"
-		
-		# Safely extract stats 
-		var p_hp = class_res.get("promo_hp_bonus") if class_res.get("promo_hp_bonus") != null else 0
-		var p_str = class_res.get("promo_str_bonus") if class_res.get("promo_str_bonus") != null else 0
-		var p_mag = class_res.get("promo_mag_bonus") if class_res.get("promo_mag_bonus") != null else 0
-		var p_def = class_res.get("promo_def_bonus") if class_res.get("promo_def_bonus") != null else 0
-		var p_res = class_res.get("promo_res_bonus") if class_res.get("promo_res_bonus") != null else 0
-		var p_spd = class_res.get("promo_spd_bonus") if class_res.get("promo_spd_bonus") != null else 0
-		var p_agi = class_res.get("promo_agi_bonus") if class_res.get("promo_agi_bonus") != null else 0
-		
-		# Format stat bonuses dynamically
-		stats.text += "HP:  +" + str(p_hp) + "    STR: +" + str(p_str) + "\n"
-		stats.text += "MAG: +" + str(p_mag) + "    DEF: +" + str(p_def) + "\n"
-		stats.text += "RES: +" + str(p_res) + "    SPD: +" + str(p_spd) + "\n"
-		stats.text += "AGI: +" + str(p_agi) + "\n"
-		
-		stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		stats.add_theme_font_size_override("font_size", 32) 
-		vbox.add_child(stats)
-		
-		var weapons_label = RichTextLabel.new()
-		weapons_label.bbcode_enabled = true
-		weapons_label.fit_content = true
-		weapons_label.scroll_active = false
-		weapons_label.custom_minimum_size = Vector2(0, 120)
-		weapons_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		weapons_label.bbcode_text = "[center][color=gold]" + _format_class_weapon_permissions(class_res) + "[/color][/center]"
-		vbox.add_child(weapons_label)
-		
-		var new_sprite_tex = class_res.get("promoted_battle_sprite")
-		if new_sprite_tex != null:
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(0, 20)
-			vbox.add_child(spacer)
-			
-			var icon_rect = TextureRect.new()
-			icon_rect.texture = new_sprite_tex
-			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon_rect.custom_minimum_size = Vector2(160, 160)
-			icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			vbox.add_child(icon_rect)
-		
-		# --- NEW: HOVER EFFECTS ---
-		btn.mouse_entered.connect(func():
-			var tween = create_tween().set_parallel(true)
-			# Pop the scale up slightly
-			tween.tween_property(btn, "scale", Vector2(1.05, 1.05), 0.1).set_ease(Tween.EASE_OUT)
-			# Shift to a glowing, warm golden tint
-			tween.tween_property(btn, "modulate", Color(1.2, 1.15, 1.0), 0.1)
-			
-			# Optional: If you want a tick sound on hover, uncomment this!
-			# if select_sound and select_sound.stream: select_sound.play()
-		)
-		
-		btn.mouse_exited.connect(func():
-			var tween = create_tween().set_parallel(true)
-			# Return to normal
-			tween.tween_property(btn, "scale", Vector2(1.0, 1.0), 0.1).set_ease(Tween.EASE_OUT)
-			tween.tween_property(btn, "modulate", Color.WHITE, 0.1)
-		)
-		
-		# Hook up the button click
-		btn.pressed.connect(func():
-			if select_sound and select_sound.stream: select_sound.play()
-			emit_signal("promotion_chosen", class_res)
-		)
-		hbox.add_child(btn)
-
-	# Cancel button at the bottom
-	var cancel_btn = Button.new()
-	cancel_btn.text = "Cancel"
-	cancel_btn.add_theme_font_size_override("font_size", 36)
-	cancel_btn.custom_minimum_size = Vector2(300, 80)
-	cancel_btn.pivot_offset = cancel_btn.custom_minimum_size / 2.0
-	cancel_btn.position = Vector2((vp_size.x - 300)/2, vp_size.y - 120)
-	
-	# Cancel button hover effect (subtle red tint)
-	cancel_btn.mouse_entered.connect(func():
-		var tween = create_tween().set_parallel(true)
-		tween.tween_property(cancel_btn, "scale", Vector2(1.05, 1.05), 0.1).set_ease(Tween.EASE_OUT)
-		tween.tween_property(cancel_btn, "modulate", Color(1.2, 0.9, 0.9), 0.1)
-	)
-	cancel_btn.mouse_exited.connect(func():
-		var tween = create_tween().set_parallel(true)
-		tween.tween_property(cancel_btn, "scale", Vector2.ONE, 0.1).set_ease(Tween.EASE_OUT)
-		tween.tween_property(cancel_btn, "modulate", Color.WHITE, 0.1)
-	)
-	
-	cancel_btn.pressed.connect(func():
-		if select_sound and select_sound.stream: select_sound.play()
-		emit_signal("promotion_chosen", null)
-	)
-	promo_layer.add_child(cancel_btn)
-
-	# Wait for the player to click a card or Cancel
-	var final_choice = await self.promotion_chosen
-	
-	# Destroy the UI once a choice is made
-	promo_layer.queue_free()
-	
-	return final_choice
+	return await PromotionChoiceUiHelpers.ask_for_promotion_choice(self, options)
 	
 # ==========================================
 # --- NEW VFX HELPER FUNCTIONS ---
@@ -15528,58 +9672,11 @@ func _ask_for_promotion_choice(options: Array) -> Resource:
 
 # Creates rising energy particles (The Buildup)
 func _create_evolution_buildup_vfx(target_pos: Vector2) -> CPUParticles2D:
-	var vfx = CPUParticles2D.new()
-	add_child(vfx)
-	vfx.global_position = target_pos
-	vfx.amount = 50
-	vfx.lifetime = 1.5
-	vfx.preprocess = 0.5 # Start already looking full
-	vfx.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	vfx.emission_sphere_radius = 20.0
-	vfx.gravity = Vector2(0, -98) # Float upwards
-	vfx.direction = Vector2(0, -1)
-	vfx.spread = 20.0
-	vfx.initial_velocity_min = 30.0
-	vfx.initial_velocity_max = 60.0
-	# Start small and yellow, end big and transparent orange
-	vfx.scale_amount_min = 2.0
-	vfx.scale_amount_max = 5.0
-	var gradient = Gradient.new()
-	gradient.set_color(0, Color(1, 0.8, 0.2, 1)) # Yellow
-	gradient.set_color(1, Color(1, 0.4, 0, 0))   # Fade to Orange transparent
-	vfx.color_ramp = gradient
-	return vfx
+	return PromotionVfxHelpers.create_evolution_buildup_vfx(self, target_pos)
 
 # Creates an outward burst of particles (The Reveal)
 func _create_evolution_burst_vfx(target_pos: Vector2) -> CPUParticles2D:
-	var vfx = CPUParticles2D.new()
-	add_child(vfx)
-	vfx.global_position = target_pos
-	vfx.emitting = false
-	vfx.one_shot = true
-	
-	# --- 1. TRIPLE THE PARTICLES ---
-	vfx.amount = 300 
-	vfx.lifetime = 1.5 # Give them time to fly off screen before dying
-	vfx.explosiveness = 1.0 # All at once
-	vfx.direction = Vector2(0, -1)
-	vfx.spread = 180.0 # Full circle burst
-	vfx.gravity = Vector2(0, 0)
-	
-	# --- 2. MASSIVE VELOCITY (Blasts off the screen!) ---
-	vfx.initial_velocity_min = 800.0
-	vfx.initial_velocity_max = 1600.0 
-	
-	# --- 3. HUGE PARTICLES ---
-	vfx.scale_amount_min = 8.0
-	vfx.scale_amount_max = 25.0 
-	
-	var gradient = Gradient.new()
-	gradient.set_color(0, Color(1, 1, 1, 1)) # White hot center
-	gradient.set_color(1, Color(1, 0.7, 0, 0)) # Fade to rich gold transparent
-	vfx.color_ramp = gradient
-	
-	return vfx
+	return PromotionVfxHelpers.create_evolution_burst_vfx(self, target_pos)
 
 func _start_battle_from_deployment() -> void:
 	if select_sound.stream != null: select_sound.play()
@@ -15612,324 +9709,29 @@ var objective_toggle_btn: Button
 var is_objective_expanded: bool = true
 
 func _setup_objective_ui() -> void:
-	var vp_size = get_viewport_rect().size
-	
-	# 1. THE TOGGLE BUTTON (Foundation for a Quest Log)
-	objective_toggle_btn = Button.new()
-	objective_toggle_btn.name = "ObjectiveToggleBtn"
-	objective_toggle_btn.text = "Hide Goals"
-	objective_toggle_btn.add_theme_font_size_override("font_size", 20)
-	objective_toggle_btn.size = Vector2(140, 40)
-	objective_toggle_btn.position = Vector2(vp_size.x - 160, 20)
-	objective_toggle_btn.pressed.connect(_on_objective_toggle_pressed)
-	
-	# Style the button so it matches the UI
-	var btn_style = StyleBoxFlat.new()
-	btn_style.bg_color = Color(0.1, 0.1, 0.1, 0.8)
-	btn_style.border_width_bottom = 2
-	btn_style.border_color = Color(0.8, 0.6, 0.2, 0.8)
-	objective_toggle_btn.add_theme_stylebox_override("normal", btn_style)
-	$UI.add_child(objective_toggle_btn)
-
-	# 2. THE BACKGROUND BOX (Goldilocks size: 400x120)
-	objective_panel = Panel.new()
-	objective_panel.name = "ObjectivePanel"
-	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.1, 0.85)
-	style.border_width_left = 3
-	style.border_width_top = 3
-	style.border_width_right = 3
-	style.border_width_bottom = 3
-	style.border_color = Color(0.8, 0.6, 0.2, 0.8) 
-	objective_panel.add_theme_stylebox_override("panel", style)
-	
-	objective_panel.size = Vector2(400, 120)
-	objective_panel.position = Vector2(vp_size.x - 420, 70) # Sits just below the toggle button
-	objective_panel.pivot_offset = objective_panel.size / 2.0 
-	
-	# 3. THE TEXT LABEL (Medium fonts)
-	objective_label = RichTextLabel.new()
-	objective_label.bbcode_enabled = true
-	objective_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
-	objective_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
-	objective_label.add_theme_font_size_override("normal_font_size", 22)
-	objective_label.add_theme_font_size_override("bold_font_size", 26)
-	
-	objective_panel.add_child(objective_label)
-	$UI.add_child(objective_panel)
-	
-	update_objective_ui(true) # Pass true so it doesn't do the bounce animation right when the level loads
+	ObjectiveUiHelpers.setup_objective_ui(self)
 
 func _on_objective_toggle_pressed() -> void:
-	is_objective_expanded = !is_objective_expanded
-	var target_x: float = 0.0
-	if objective_panel != null and objective_panel.has_meta("objective_expanded_x") and objective_panel.has_meta("objective_collapsed_x"):
-		target_x = float(objective_panel.get_meta("objective_expanded_x")) if is_objective_expanded else float(objective_panel.get_meta("objective_collapsed_x"))
-	else:
-		var vp_size = get_viewport_rect().size
-		target_x = vp_size.x - 420 if is_objective_expanded else vp_size.x + 50
-	
-	var tween = create_tween()
-	tween.tween_property(objective_panel, "position:x", target_x, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN_OUT)
-	
-	objective_toggle_btn.text = "Hide Goals" if is_objective_expanded else "Show Goals"
-	if select_sound and select_sound.stream: select_sound.play()
+	ObjectiveUiHelpers.on_objective_toggle_pressed(self)
 
 func update_objective_ui(skip_animation: bool = false) -> void:
-	if objective_label == null: return
-	
-	var txt = "[center][b][color=gold]--- CURRENT OBJECTIVE ---[/color][/b]\n"
-	var target_height = 120 # Default panel height
-	
-	match map_objective:
-		Objective.ROUT_ENEMY:
-			var e_count = 0
-			if enemy_container:
-				for e in enemy_container.get_children():
-					if not e.is_queued_for_deletion() and e.current_hp > 0: e_count += 1
-			
-			var spawner_count = 0
-			if destructibles_container:
-				for d in destructibles_container.get_children():
-					if d.has_method("process_turn") and d.get("spawner_faction") == 0 and not d.is_queued_for_deletion():
-						spawner_count += 1
-			
-			var instruction = custom_objective_text if custom_objective_text != "" else "Defeat all enemies!"
-			
-			if spawner_count > 0:
-				txt += instruction + "\n[color=gray](Remaining: " + str(e_count) + " + " + str(spawner_count) + " Spawners)[/color]"
-			else:
-				txt += instruction + "\n[color=gray](Remaining: " + str(e_count) + ")[/color]"
-				
-		Objective.SURVIVE_TURNS:
-			var instruction = custom_objective_text if custom_objective_text != "" else "Survive the assault!"
-			txt += instruction + "\n[color=cyan]Turn: " + str(current_turn) + " / " + str(turn_limit) + "[/color]"
-			
-		Objective.DEFEND_TARGET:
-			var vip_name = "Target"
-			var vip_hp_str = "?/?"
-			var hp_color = "white"
-			
-			if is_instance_valid(vip_target) and not vip_target.is_queued_for_deletion():
-				vip_name = vip_target.get("unit_name") if vip_target.get("unit_name") != null else "VIP"
-				var chp = vip_target.get("current_hp")
-				var mhp = vip_target.get("max_hp")
-				
-				if chp != null and mhp != null:
-					vip_hp_str = str(chp) + "/" + str(mhp)
-					var ratio = float(chp) / float(mhp)
-					if ratio <= 0.3: hp_color = "red"
-					elif ratio <= 0.6: hp_color = "yellow"
-					else: hp_color = "lime"
-						
-			var instruction = custom_objective_text if custom_objective_text != "" else "Escort " + vip_name + " to the exit!"
-			txt += instruction + " (Turn " + str(current_turn) + "/" + str(turn_limit) + ")\n"
-			txt += "[color=gray]Convoy Status: [/color][color=" + hp_color + "]" + vip_hp_str + "[/color]"
-
-	var reinforcement_line: String = _build_enemy_reinforcement_objective_bbcode()
-	if reinforcement_line != "":
-		txt += "\n" + reinforcement_line
-		target_height += 28
-	
-	if CampaignManager.merchant_quest_active:
-		target_height = 190 + (28 if reinforcement_line != "" else 0) # Expand the panel to fit quest + telegraph text
-		
-		var target_item = CampaignManager.merchant_quest_item_name
-		var target_amt = CampaignManager.merchant_quest_target_amount
-		var current_amt = 0
-		
-		# 1. Check the Global Convoy
-		for item in player_inventory:
-			var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-			if i_name == target_item: current_amt += 1
-				
-		# 2. Check personal pockets (in case they just picked it up!)
-		if player_container:
-			for unit in player_container.get_children():
-				if "inventory" in unit:
-					for item in unit.inventory:
-						if item != null:
-							var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-							if i_name == target_item: current_amt += 1
-							
-		# 3. Format the UI Text
-		txt += "\n\n[b][color=orange]--- BOUNTY ---[/color][/b]\n"
-		if current_amt >= target_amt:
-			txt += "[color=lime]" + target_item + ": " + str(current_amt) + " / " + str(target_amt) + " (Ready!)[/color]"
-		else:
-			txt += "[color=gray]" + target_item + ": " + str(current_amt) + " / " + str(target_amt) + "[/color]"
-
-	txt += _build_mock_coop_player_phase_readiness_bbcode_suffix()
-	txt += "\n[color=gray][font_size=15]Shift: enemy threat · Side panel: goals[/font_size][/color]\n[/center]"
-	
-	# Dynamically resize the panel based on whether a quest is active
-	if objective_panel.size.y != target_height:
-		create_tween().tween_property(objective_panel, "size:y", target_height, 0.3).set_trans(Tween.TRANS_BACK)
-	
-	# --- NORMAL TEXT UPDATE ---
-	if objective_label.text != txt:
-		objective_label.text = txt
-		
-		if not skip_animation and is_objective_expanded:
-			objective_panel.scale = Vector2(1.10, 1.10)
-			objective_panel.modulate = Color(1.5, 1.5, 1.5, 1.0)
-			
-			var tween = create_tween().set_parallel(true)
-			tween.tween_property(objective_panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-			tween.tween_property(objective_panel, "modulate", Color.WHITE, 0.3).set_trans(Tween.TRANS_SINE)
-			
-			if select_sound and select_sound.stream != null:
-				var tick_player = AudioStreamPlayer.new()
-				tick_player.stream = select_sound.stream
-				tick_player.pitch_scale = 1.6
-				tick_player.volume_db = -5.0
-				add_child(tick_player)
-				tick_player.play()
-				tick_player.finished.connect(tick_player.queue_free)
-
-	queue_redraw()
+	ObjectiveUiHelpers.update_objective_ui(self, skip_animation)
 				
 # ==========================================
 # --- EPIC VFX SPAWNERS ---
 # ==========================================
 func spawn_dash_effect(start_pos: Vector2, target_pos: Vector2) -> void:
-	if dash_fx_scene == null: 
-		print("WARNING: Dash FX Scene is missing! Assign it in the Battlefield Inspector!")
-		return
-	
-	var fx = dash_fx_scene.instantiate()
-	add_child(fx)
-	
-	fx.z_index = 100 
-	
-	# Position exactly at the unit's feet
-	fx.global_position = start_pos + Vector2(32, 60)
-	
-	# --- FIX: NO ROTATION! ---
-	# We force rotation to 0 so the dust never looks like it's falling sideways.
-	fx.rotation = 0 
-	
-	# --- FIX: SMART HORIZONTAL FLIPPING ---
-	var move_dir_x = target_pos.x - start_pos.x
-	
-	if move_dir_x > 0:
-		# Moving RIGHT: Inverted for your specific sprite sheet
-		fx.flip_h = false 
-	elif move_dir_x < 0:
-		# Moving LEFT: Inverted for your specific sprite sheet
-		fx.flip_h = true
-	else:
-		# Moving purely UP or DOWN: 
-		# Randomly flip it horizontally so it doesn't look identical every time!
-		fx.flip_h = randf() > 0.5
-		
-	fx.scale = Vector2(randf_range(1.0, 1.3), randf_range(0.8, 1.2))
+	CombatVfxHelpers.spawn_dash_effect(self, start_pos, target_pos)
 
 func spawn_slash_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false) -> void:
-	if slash_fx_scene == null: 
-		print("WARNING: Slash FX Scene is missing! Assign it in the Battlefield Inspector!")
-		return
-	
-	var fx = slash_fx_scene.instantiate()
-	add_child(fx)
-	
-	fx.z_index = 110 # Make sure it draws above the units!
-	
-	# Center it on the defender's chest
-	fx.global_position = target_pos + Vector2(32, 32)
-	
-	# Point the slash so it cuts FROM the attacker TO the defender
-	var dir = (target_pos - attacker_pos).normalized()
-	
-	# Add a tiny bit of random angle so combo hits don't look perfectly identical
-	fx.rotation = dir.angle() + randf_range(-0.3, 0.3)
-	
-	# Randomly flip the "blade" orientation
-	if randf() > 0.5:
-		fx.flip_v = true
-		
-	# --- THE JUICE: MAKE CRITS ENORMOUS ---
-	if is_crit:
-		fx.scale = Vector2(2.5, 2.5)
-		fx.modulate = Color(1.5, 1.2, 1.2, 1.0) # Over-brighten it
-	else:
-		fx.scale = Vector2(1.3, 1.3)
+	CombatVfxHelpers.spawn_slash_effect(self, target_pos, attacker_pos, is_crit)
 
 func spawn_level_up_effect(target_pos: Vector2) -> void:
-	if level_up_fx_scene == null: 
-		print("WARNING: Level Up FX Scene is missing! Assign it in the Battlefield Inspector!")
-		return
-	
-	var fx = level_up_fx_scene.instantiate()
-	add_child(fx)
-	
-	fx.z_index = 110 # Draw above units
-	
-	# CRITICAL: Force the code to also ignore the pause state just in case!
-	fx.process_mode = Node.PROCESS_MODE_ALWAYS
-	
-	# Position it at the unit's feet. 
-	# (Adjust the Y value if the beam needs to go higher/lower based on your sprite sheet cuts)
-	fx.global_position = target_pos + Vector2(32, 48)
-	
-	# Make it large enough to encompass the whole unit!
-	fx.scale = Vector2(3.0, 3.0)
+	CombatVfxHelpers.spawn_level_up_effect(self, target_pos)
 
 
 func spawn_blood_splatter(target_unit: Node2D, attacker_pos: Vector2, is_crit: bool = false) -> void:
-	var target_name = target_unit.get("unit_name")
-	if target_name == null: return
-	
-	# 1. THE LOGIC CHECK: Remove "Skeleton" from this list if you want them to bleed!
-	var no_blood_types = ["Wooden Crate", "Spawner Tent", "Portable Fort", "Skeleton", "Risen Dead"]
-	if no_blood_types.has(target_name):
-		return 
-
-	var blood = CPUParticles2D.new()
-	add_child(blood)
-	
-	blood.z_index = 105
-	blood.global_position = target_unit.global_position + Vector2(32, 32)
-	blood.emitting = false
-	blood.one_shot = true
-	
-	# ==========================================
-	# --- 2. THE BURST UPGRADE ---
-	# ==========================================
-	# 1.0 means ALL particles spawn instantly on the exact same frame!
-	blood.explosiveness = 1.0 
-	
-	# Increased the amount of droplets for a thicker spray
-	blood.amount = 60 if is_crit else 25 
-	
-	var dir = (target_unit.global_position - attacker_pos).normalized()
-	blood.direction = dir
-	
-	# Widened from 35 to 75 so it sprays out in a wide, violent fan
-	blood.spread = 75.0 
-	
-	# Heavier gravity and much faster velocity so it whips out and drops fast
-	blood.gravity = Vector2(0, 800) 
-	blood.initial_velocity_min = 250.0
-	blood.initial_velocity_max = 550.0 if is_crit else 350.0
-	
-	blood.scale_amount_min = 3.0
-	blood.scale_amount_max = 7.0
-	
-	# --- NEW: SHRINK OVER TIME ---
-	# This makes the droplets shrink as they fly, making it look like real liquid dispersing!
-	var curve = Curve.new()
-	curve.add_point(Vector2(0, 1)) # Start at 100% size
-	curve.add_point(Vector2(1, 0)) # End at 0% size
-	blood.scale_amount_curve = curve
-	
-	# Brighter crimson color so it pops against the dark backgrounds
-	blood.color = Color(0.8, 0.0, 0.0, 1.0)
-	
-	blood.restart()
-	get_tree().create_timer(1.5, true, false, true).timeout.connect(blood.queue_free)
+	CombatVfxHelpers.spawn_blood_splatter(self, target_unit, attacker_pos, is_crit)
 
 # ==========================================
 # --- LEVEL INTRO CINEMATICS ---
@@ -15977,270 +9779,23 @@ func _start_intro_sequence() -> void:
 	change_state(pre_battle_state)
 	
 func _capture_ui_visibility_snapshot() -> Array[Dictionary]:
-	var snapshot: Array[Dictionary] = []
-	if ui_root == null:
-		return snapshot
-	for child in ui_root.get_children():
-		if child is CanvasItem:
-			snapshot.append({
-				"node": child,
-				"visible": (child as CanvasItem).visible,
-			})
-	return snapshot
+	return CinematicDialogueHelpers.capture_ui_visibility_snapshot(self)
 
 func _set_ui_children_visible(visible: bool) -> void:
-	if ui_root == null:
-		return
-	for child in ui_root.get_children():
-		if child is CanvasItem:
-			(child as CanvasItem).visible = visible
+	CinematicDialogueHelpers.set_ui_children_visible(self, visible)
 
 func _restore_ui_visibility_snapshot(snapshot: Array[Dictionary]) -> void:
-	for entry in snapshot:
-		var node_variant: Variant = entry.get("node")
-		if node_variant is CanvasItem and is_instance_valid(node_variant):
-			(node_variant as CanvasItem).visible = bool(entry.get("visible", true))
+	CinematicDialogueHelpers.restore_ui_visibility_snapshot(self, snapshot)
 
 func play_cinematic_dialogue(speaker_name: String, portrait_tex: Texture2D, lines: Array, hide_gameplay_ui: bool = false) -> void:
-	# 1. Freeze the game so nothing moves in the background
-	get_tree().paused = true
-	var vp_size = get_viewport_rect().size
-	var ui_visibility_snapshot: Array[Dictionary] = []
-	if hide_gameplay_ui:
-		ui_visibility_snapshot = _capture_ui_visibility_snapshot()
-		_set_ui_children_visible(false)
-	
-	# ==========================================
-	# --- FIX: ROBUST NAME MATCHING & CAMERA WAKEUP ---
-	# ==========================================
-	# Force the camera to stay awake while the game is paused!
-	main_camera.process_mode = Node.PROCESS_MODE_ALWAYS 
-	
-	var target_unit: Node2D = null
-	var all_units = player_container.get_children()
-	if ally_container: all_units += ally_container.get_children()
-	if enemy_container: all_units += enemy_container.get_children()
-	
-	var s_name_lower = speaker_name.to_lower()
-	
-	# Find the speaker on the board
-	for u in all_units:
-		if not is_instance_valid(u): continue
-		
-		# Check both the custom RPG name and the internal Node name
-		var u_name = ""
-		if u.get("unit_name") != null:
-			u_name = str(u.get("unit_name")).to_lower()
-			
-		var node_name = u.name.to_lower()
-		
-		# Smarter check: Matches "Malakor" even if the node is called "EnemyUnit"
-		if u_name == s_name_lower or s_name_lower in u_name or s_name_lower in node_name:
-			target_unit = u
-			break
-			
-	# Fallback for Bartholomew! (Point the camera at the Donkey Cart)
-	if target_unit == null and "bartholomew" in s_name_lower and is_instance_valid(vip_target):
-		target_unit = vip_target
-		
-	var highlight: ColorRect = null
-	if target_unit != null:
-		# Pan Camera to the speaker
-		var target_cam_pos = target_unit.global_position + Vector2(32, 32)
-		if main_camera.anchor_mode == Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT:
-			target_cam_pos -= (vp_size * 0.5) / main_camera.zoom
-			
-		var cam_tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		cam_tw.tween_property(main_camera, "global_position", target_cam_pos, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		
-		# Flash their tile (Red for enemies, Blue for players, Green for Allies)
-		highlight = ColorRect.new()
-		highlight.size = Vector2(64, 64)
-		highlight.position = target_unit.global_position
-		highlight.z_index = 50 # <-- FIX: Make sure it draws ABOVE the map tiles!
-		
-		if target_unit.get_parent() == enemy_container: 
-			highlight.color = Color(1.0, 0.2, 0.2)
-		elif target_unit.get_parent() == ally_container: 
-			highlight.color = Color(0.2, 1.0, 0.2)
-		else: 
-			highlight.color = Color(0.2, 0.6, 1.0)
-			
-		highlight.modulate.a = 0.0
-		highlight.process_mode = Node.PROCESS_MODE_ALWAYS # Run while paused
-		add_child(highlight)
-		
-		# Make it pulse!
-		# --- THE FIX: Attach the tween directly to the highlight node! ---
-		var hl_tw = highlight.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_loops()
-		hl_tw.tween_property(highlight, "modulate:a", 0.6, 0.5).set_trans(Tween.TRANS_SINE)
-		hl_tw.tween_property(highlight, "modulate:a", 0.1, 0.5).set_trans(Tween.TRANS_SINE)
-	# ==========================================
-
-	# 2. Setup the Canvas Layer
-	var cine_layer = CanvasLayer.new()
-	cine_layer.layer = 120 # Put it above everything!
-	cine_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(cine_layer)
-	
-	# Background Dimmer (Lightened to 0.4 so you can clearly see the map behind the dialogue!)
-	var dimmer = ColorRect.new()
-	dimmer.size = vp_size
-	dimmer.color = Color(0, 0, 0, 0.4)
-	dimmer.modulate.a = 0.0
-	cine_layer.add_child(dimmer)
-	
-	# The Giant Portrait
-	var portrait = TextureRect.new()
-	portrait.texture = portrait_tex
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.custom_minimum_size = Vector2(500, 500) # Make it huge!
-	portrait.position = Vector2(-200, vp_size.y - 650)
-	portrait.modulate.a = 0.0
-	cine_layer.add_child(portrait)
-	
-	# The Dialogue Box
-	var box_h = 220.0
-	var box = ColorRect.new()
-	box.color = Color(0.05, 0.05, 0.05, 0.95)
-	box.size = Vector2(vp_size.x, box_h)
-	box.position = Vector2(0, vp_size.y) # Start off-screen at the bottom
-	cine_layer.add_child(box)
-	
-	var border = ColorRect.new()
-	border.color = Color(0.8, 0.6, 0.2) # Gold border
-	border.size = Vector2(vp_size.x, 4)
-	box.add_child(border)
-	
-	var name_lbl = Label.new()
-	name_lbl.text = speaker_name
-	name_lbl.add_theme_font_size_override("font_size", 42)
-	name_lbl.add_theme_color_override("font_color", Color.CYAN)
-	name_lbl.position = Vector2(400, 20) # Push text right to make room for portrait
-	box.add_child(name_lbl)
-	
-	var text_lbl = RichTextLabel.new()
-	text_lbl.bbcode_enabled = true
-	text_lbl.size = Vector2(vp_size.x - 450, 100)
-	text_lbl.position = Vector2(400, 80)
-	box.add_child(text_lbl)
-	
-	# Invisible Full-Screen Button to catch clicks to advance text
-	var click_catcher = Button.new()
-	click_catcher.set_anchors_preset(Control.PRESET_FULL_RECT)
-	click_catcher.flat = true
-	click_catcher.pressed.connect(func(): emit_signal("dialogue_advanced"))
-	cine_layer.add_child(click_catcher)
-	
-	# The Skip Button
-	var skip_flag = [false]
-	var skip_btn = Button.new()
-	skip_btn.text = "Skip >>"
-	skip_btn.add_theme_font_size_override("font_size", 24)
-	skip_btn.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-	skip_btn.add_theme_color_override("font_hover_color", Color.WHITE)
-	skip_btn.flat = true
-	skip_btn.position = Vector2(vp_size.x - 120, 20)
-	skip_btn.pressed.connect(func():
-		skip_flag[0] = true
-		emit_signal("dialogue_advanced") 
-	)
-	cine_layer.add_child(skip_btn)
-	
-	# 3. Animate Everything In
-	var intro_tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	intro_tw.tween_property(dimmer, "modulate:a", 1.0, 0.4).set_ease(Tween.EASE_OUT)
-	intro_tw.tween_property(portrait, "modulate:a", 1.0, 0.4).set_ease(Tween.EASE_OUT)
-	intro_tw.tween_property(portrait, "position:x", 50.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	intro_tw.tween_property(box, "position:y", vp_size.y - box_h, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await intro_tw.finished
-	
-	# 4. Loop through the Dialogue Lines
-	for line in lines:
-		if skip_flag[0]: break 
-		
-		text_lbl.text = "[font_size=36]" + line + "[/font_size]"
-		text_lbl.visible_ratio = 0.0
-		
-		if select_sound and select_sound.stream != null:
-			select_sound.pitch_scale = 0.9
-			select_sound.play()
-			
-		var type_speed = line.length() * 0.025
-		var type_tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		type_tw.tween_property(text_lbl, "visible_ratio", 1.0, type_speed)
-		
-		await self.dialogue_advanced
-		if skip_flag[0]: 
-			type_tw.kill()
-			break
-		
-		# If they clicked while typing, skip to the end of the line
-		if type_tw.is_running():
-			type_tw.kill()
-			text_lbl.visible_ratio = 1.0
-			await self.dialogue_advanced
-			if skip_flag[0]: break
-			
-		if select_sound and select_sound.stream != null:
-			select_sound.pitch_scale = 1.1
-			select_sound.play()
-			
-	# 5. Animate Everything Out
-	skip_btn.visible = false 
-	var outro_tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	outro_tw.tween_property(dimmer, "modulate:a", 0.0, 0.3)
-	outro_tw.tween_property(portrait, "modulate:a", 0.0, 0.3)
-	outro_tw.tween_property(portrait, "position:x", -200.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	outro_tw.tween_property(box, "position:y", vp_size.y, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await outro_tw.finished
-	
-	# ==========================================
-	# --- CLEANUP ---
-	# ==========================================
-	if highlight != null:
-		highlight.queue_free()
-		
-	cine_layer.queue_free()
-	if hide_gameplay_ui:
-		_restore_ui_visibility_snapshot(ui_visibility_snapshot)
-	get_tree().paused = false
+	await CinematicDialogueHelpers.play_cinematic_dialogue(self, speaker_name, portrait_tex, lines, hide_gameplay_ui)
 	
 func animate_shield_drop(unit: Node2D) -> void:
-	var shield_icon = unit.get_node_or_null("DefendIcon") 
-	if shield_icon != null:
-		# Capture designed position
-		var target_pos = shield_icon.position
-		
-		# Reset for animation
-		shield_icon.position = target_pos + Vector2(0, -60)
-		shield_icon.modulate.a = 0.0
-		shield_icon.visible = true
-		
-		# The satisfying bounce!
-		var drop_tween = create_tween().set_parallel(true)
-		drop_tween.tween_property(shield_icon, "position", target_pos, 0.4).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-		drop_tween.tween_property(shield_icon, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_SINE)
+	StatusIconVfxHelpers.animate_shield_drop(self, unit)
 
 # Helper function to handle the toggle logic
 func _toggle_minimap() -> void:
-	if minimap_container == null: return
-	
-	minimap_container.visible = not minimap_container.visible
-	
-	if minimap_container.visible:
-		# Play a cool high-tech open sound if you have one!
-		if select_sound: 
-			select_sound.pitch_scale = 1.2
-			select_sound.play()
-		# Force the drawer to update its visuals based on the current grid state
-		map_drawer.queue_redraw()
-	else:
-		# Play a close sound
-		if select_sound: 
-			select_sound.pitch_scale = 0.8
-			select_sound.play()
+	MinimapHelpers.toggle_minimap(self)
 
 # ==========================================
 # --- OUTRO CINEMATIC & VICTORY ---
@@ -16493,81 +10048,7 @@ func _process_fog(delta: float) -> void:
 		fog_drawer.queue_redraw()
 
 func animate_flying_gold(world_pos: Vector2, amount: int) -> void:
-	# 1. Bring back the floating text so you still see the big number instantly!
-	spawn_loot_text("+ " + str(amount) + " G", Color(1.0, 0.9, 0.2), world_pos + Vector2(32, -32))
-	
-	# 2. Convert the 2D World Map position into Screen/UI coordinates
-	var screen_pos = get_global_transform_with_canvas() * world_pos
-	gold_label.pivot_offset = gold_label.size / 2.0
-	
-	# 3. THE FIX: 1-to-1 coin mapping, capped at 20 coins max!
-	var coin_count = amount
-	if amount > 20:
-		coin_count = 20 # Hard cap so massive drops don't lag or take forever to finish
-
-	# 4. Setup the Visual Counter (ref so lambda can update it)
-	var visual_gold_ref: Array = [player_gold - amount]
-	var gold_per_coin = int(ceil(float(amount) / float(coin_count)))
-	
-	# 5. Spawn the fountain of coins!
-	for i in range(coin_count):
-		var coin = Panel.new()
-		coin.custom_minimum_size = Vector2(16, 16)
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color(1.0, 0.85, 0.1) # Shiny Gold
-		style.border_width_bottom = 2
-		style.border_color = Color(0.7, 0.4, 0.0) # Shadow for depth
-		style.corner_radius_top_left = 8
-		style.corner_radius_top_right = 8
-		style.corner_radius_bottom_left = 8
-		style.corner_radius_bottom_right = 8
-		coin.add_theme_stylebox_override("panel", style)
-		
-		get_node("UI").add_child(coin)
-		coin.global_position = screen_pos
-		
-		var t = create_tween()
-		
-		# Phase A: The Burst (All coins explode out simultaneously)
-		var burst_offset = Vector2(randf_range(-70, 70), randf_range(-90, -30))
-		t.tween_property(coin, "global_position", screen_pos + burst_offset, 0.3).set_trans(Tween.TRANS_CIRC).set_ease(Tween.EASE_OUT)
-		
-		# Phase B: The STAGGERED Hangtime
-		t.tween_interval(0.1 + (i * 0.05)) 
-		
-		# Phase C: Fly to the Bank!
-		var target_pos = gold_label.global_position + (gold_label.size / 2.0) - (coin.custom_minimum_size / 2.0)
-		t.tween_property(coin, "global_position", target_pos, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-		
-		# Phase D: Impact!
-		var is_last_coin = (i == coin_count - 1)
-		
-		t.tween_callback(func():
-			coin.queue_free() 
-			
-			# Tick up the UI number sequentially
-			visual_gold_ref[0] += gold_per_coin
-			if is_last_coin or visual_gold_ref[0] > player_gold:
-				visual_gold_ref[0] = player_gold 
-				
-			gold_label.text = "Gold: " + str(visual_gold_ref[0])
-			
-			# Play a rapid "clinking" sound
-			if select_sound and select_sound.stream != null:
-				var p = AudioStreamPlayer.new()
-				p.stream = select_sound.stream
-				p.pitch_scale = randf_range(1.8, 2.3) 
-				p.volume_db = -12.0 
-				add_child(p)
-				p.play()
-				p.finished.connect(p.queue_free)
-				
-			# Micro-bounce the UI Label
-			gold_label.scale = Vector2(1.1, 1.1)
-			var pulse = create_tween()
-			pulse.tween_property(gold_label, "scale", Vector2.ONE, 0.1).set_trans(Tween.TRANS_BOUNCE)
-		)
+	GoldVfxHelpers.animate_flying_gold(self, world_pos, amount)
 		
 func _on_fog_draw() -> void:
 	if not use_fog_of_war or fow_texture == null: return
@@ -17073,7 +10554,7 @@ func _play_arena_vs_screen() -> void:
 	var my_rank = ArenaManager.get_rank_data(my_mmr)
 
 	var enemy_meta = ArenaManager.current_opponent_data.get("metadata", {})
-	var opp_mmr = int(ArenaManager.current_opponent_data.get("score", 1000))
+	var opp_mmr: int = ArenaManager.sanitize_leaderboard_score_mmr(ArenaManager.current_opponent_data.get("score", 1000))
 	var opp_rank = ArenaManager.get_rank_data(opp_mmr)
 
 	arena_vs_left_portrait.texture = p_leader.get("portrait") if p_leader else null
@@ -18330,6 +11811,7 @@ func _ensure_forecast_support_labels() -> void:
 
 func apply_campaign_settings() -> void:
 	camera_follows_enemies = CampaignManager.battle_follow_enemy_camera
+	_apply_cursor_accessibility_settings()
 
 	zoom_step = CampaignManager.battle_zoom_step
 	min_zoom = CampaignManager.battle_min_zoom

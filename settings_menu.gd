@@ -43,6 +43,7 @@ const PERF_FPS_VALUES: Array[int] = [0, 30, 60, 90, 120, 144, 240]
 const PERF_WINDOW_MODE_LABELS: Array[String] = ["FULLSCREEN", "WINDOWED", "BORDERLESS FULLSCREEN"]
 const PERF_MSAA_LABELS: Array[String] = ["DISABLED", "2X MSAA", "4X MSAA", "8X MSAA"]
 const UI_HUD_SCALE_LABELS: Array[String] = ["1.0x", "1.25x", "1.5x", "1.75x", "2.0x"]
+const UI_CURSOR_SIZE_LABELS: Array[String] = ["1.0x", "1.15x", "1.3x"]
 const UI_TEXT_SIZE_LABELS: Array[String] = ["SMALL", "MEDIUM", "LARGE"]
 
 var _overlay_panel: int = PANEL_SETTINGS
@@ -94,6 +95,8 @@ func _find_ui(node_name: String) -> Node:
 @onready var ui_show_status_effects_toggle: CheckBox = _find_ui("UiShowStatusEffectsToggle") as CheckBox
 @onready var ui_damage_text_size_option: OptionButton = _find_ui("UiDamageTextSizeOption") as OptionButton
 @onready var ui_combat_log_font_option: OptionButton = _find_ui("UiCombatLogFontOption") as OptionButton
+@onready var ui_cursor_size_option: OptionButton = _find_ui("UiCursorSizeOption") as OptionButton
+@onready var ui_cursor_high_contrast_toggle: CheckBox = _find_ui("UiCursorHighContrastToggle") as CheckBox
 @onready var pause_interface_btn: Button = _find_ui("PauseInterfaceButton") as Button
 
 # --- EXISTING SETTINGS ---
@@ -130,6 +133,9 @@ func _find_ui(node_name: String) -> Node:
 @onready var show_battle_log_toggle: CheckBox = _find_ui("ShowBattleLogToggle") as CheckBox
 @onready var allow_fog_toggle: CheckBox = _find_ui("AllowFogToggle") as CheckBox
 @onready var ai_role_batch_toggle: CheckBox = _find_ui("AiRoleBatchToggle") as CheckBox
+@onready var deploy_zone_overlay_toggle: CheckBox = _find_ui("DeployZoneOverlayToggle") as CheckBox
+@onready var deploy_auto_arm_toggle: CheckBox = _find_ui("DeployAutoArmToggle") as CheckBox
+@onready var deploy_quick_fill_toggle: CheckBox = _find_ui("DeployQuickFillToggle") as CheckBox
 
 @onready var reset_defaults_btn: Button = _find_ui("ResetDefaultsButton") as Button
 
@@ -162,6 +168,9 @@ func _find_ui(node_name: String) -> Node:
 @onready var feedback_list: VBoxContainer = _find_ui("FeedbackList") as VBoxContainer
 @onready var refresh_board_button: Button = _find_ui("RefreshBoardButton") as Button
 @onready var close_board_button: Button = _find_ui("CloseBoardButton") as Button
+
+@onready var settings_version_footer: Label = _find_ui("SettingsVersionFooter") as Label
+@onready var open_user_data_folder_button: Button = _find_ui("OpenUserDataFolderButton") as Button
 
 
 func _enter_tree() -> void:
@@ -209,6 +218,7 @@ func _ready() -> void:
 		settings_scroll.add_child(scroll_pad)
 	_layout_menu()
 	_connect_all_signals()
+	_refresh_version_footer()
 	_sync_ui_from_settings()
 	_apply_settings_to_runtime()
 	hide_menu()
@@ -657,6 +667,7 @@ func _apply_theme() -> void:
 	_style_secondary_action_button(reset_defaults_btn, "RESTORE FIELD DEFAULTS", 20)
 	_style_button(submit_feedback_btn, "SUBMIT REPORT", true, 20)
 	_style_button(view_feedback_btn, "VIEW COMMUNITY REPORTS", false, 18)
+	_style_secondary_action_button(open_user_data_folder_button, "OPEN SAVE DATA FOLDER", 18)
 	_style_button(refresh_board_button, "REFRESH", false, 18)
 	_style_button(close_board_button, "CLOSE", true, 18)
 
@@ -678,7 +689,7 @@ func _apply_theme() -> void:
 	for subtitle_name in ["AudioLevelsSubtitle", "AudioBehaviorSubtitle", "AudioCameraSubtitle", "MapViewSubtitle", "ZoomSubtitle", "QuickActionsSubtitle", "FeedbackSubtitleLabel", "PerformanceCardSubtitle", "RenderingCardSubtitle", "HudOverlaysCardSubtitle", "CombatTextCardSubtitle"]:
 		_style_label(_find_ui(subtitle_name) as Label, SETTINGS_TEXT_MUTED, 16, 1)
 	var subtle_rule := SETTINGS_BORDER_MUTED.lerp(SETTINGS_ACCENT, 0.18)
-	for rule_name in ["AudioLevelsRule", "AudioBehaviorRule", "AudioCameraRule", "MapViewRule", "ZoomRule", "QuickActionsRule", "FeedbackRule", "FeedbackBoardRule", "PerformanceCardRule", "RenderingCardRule", "HudOverlaysCardRule", "CombatTextCardRule"]:
+	for rule_name in ["AudioLevelsRule", "AudioBehaviorRule", "AudioCameraRule", "MapViewRule", "ZoomRule", "QuickActionsRule", "FeedbackRule", "FeedbackFooterRule", "FeedbackBoardRule", "PerformanceCardRule", "RenderingCardRule", "HudOverlaysCardRule", "CombatTextCardRule"]:
 		_style_rule(_find_ui(rule_name) as ColorRect, subtle_rule, 2)
 
 	for accent_rect_name in ["HeaderAccentLeft", "HeaderAccentRight"]:
@@ -700,7 +711,7 @@ func _apply_theme() -> void:
 	if pause_quit_btn:
 		_style_button(pause_quit_btn, "QUIT TO TITLE", false, 20)
 
-	for label_name in ["AudioMasterLabel", "AudioMusicLabel", "AudioSfxLabel", "CameraLabel", "MoveSpeedLabel", "GameSpeedLabel", "MinimapOpacityLabel", "ZoomStepLabel", "MinZoomLabel", "MaxZoomLabel", "EdgeMarginLabel", "PathStyleLabel", "PathCornerLabel", "MaxFpsLabel", "WindowModeLabel", "ResolutionLabel", "MsaaLabel", "HudScaleLabel", "DamageTextSizeLabel", "CombatLogFontLabel"]:
+	for label_name in ["AudioMasterLabel", "AudioMusicLabel", "AudioSfxLabel", "CameraLabel", "MoveSpeedLabel", "GameSpeedLabel", "MinimapOpacityLabel", "ZoomStepLabel", "MinZoomLabel", "MaxZoomLabel", "EdgeMarginLabel", "PathStyleLabel", "PathCornerLabel", "MaxFpsLabel", "WindowModeLabel", "ResolutionLabel", "MsaaLabel", "HudScaleLabel", "CursorSizeLabel", "DamageTextSizeLabel", "CombatLogFontLabel"]:
 		_style_label(_find_ui(label_name) as Label, SETTINGS_TEXT, 19, 2)
 
 	for value_label in [audio_master_value_label, audio_music_value_label, audio_sfx_value_label, camera_value_label, move_speed_value_label, minimap_opacity_value_label, zoom_step_value_label, min_zoom_value_label, max_zoom_value_label, edge_margin_value_label]:
@@ -723,6 +734,7 @@ func _apply_theme() -> void:
 	_style_option_button(perf_resolution_option)
 	_style_option_button(perf_msaa_option)
 	_style_option_button(ui_hud_scale_option)
+	_style_option_button(ui_cursor_size_option)
 	_style_option_button(ui_damage_text_size_option)
 	_style_option_button(ui_combat_log_font_option)
 	_style_checkbox(path_endpoint_toggle)
@@ -731,6 +743,9 @@ func _apply_theme() -> void:
 	_style_checkbox(show_battle_log_toggle)
 	_style_checkbox(allow_fog_toggle)
 	_style_checkbox(ai_role_batch_toggle)
+	_style_checkbox(deploy_zone_overlay_toggle)
+	_style_checkbox(deploy_auto_arm_toggle)
+	_style_checkbox(deploy_quick_fill_toggle)
 	_style_checkbox(perf_vsync_toggle)
 	_style_checkbox(perf_show_fps_toggle)
 	_style_checkbox(perf_screen_shake_toggle)
@@ -739,6 +754,7 @@ func _apply_theme() -> void:
 	_style_checkbox(ui_show_health_bars_toggle)
 	_style_checkbox(ui_show_phase_banner_toggle)
 	_style_checkbox(ui_show_status_effects_toggle)
+	_style_checkbox(ui_cursor_high_contrast_toggle)
 
 	_style_slider(audio_master_slider, SETTINGS_ACCENT)
 	_style_slider(audio_music_slider, SETTINGS_ACCENT_SOFT)
@@ -756,6 +772,8 @@ func _apply_theme() -> void:
 	_style_label(feedback_category_label, SETTINGS_TEXT_MUTED, 15, 1)
 	_style_label(feedback_filter_label, SETTINGS_TEXT_MUTED, 15, 1)
 	_style_label(feedback_status_label, SETTINGS_TEXT_MUTED, 15, 1)
+	if settings_version_footer != null:
+		_style_label(settings_version_footer, SETTINGS_TEXT_MUTED, 14, 1)
 	_sync_feedback_category_buttons()
 
 	_style_scrollbars(settings_scroll, SETTINGS_ACCENT)
@@ -859,6 +877,8 @@ func _connect_all_signals() -> void:
 		submit_feedback_btn.pressed.connect(_on_submit_feedback_pressed)
 	if view_feedback_btn and not view_feedback_btn.pressed.is_connected(_open_feedback_board):
 		view_feedback_btn.pressed.connect(_open_feedback_board)
+	if open_user_data_folder_button and not open_user_data_folder_button.pressed.is_connected(_on_open_user_data_folder_pressed):
+		open_user_data_folder_button.pressed.connect(_on_open_user_data_folder_pressed)
 	if close_board_button and not close_board_button.pressed.is_connected(_close_feedback_board):
 		close_board_button.pressed.connect(_close_feedback_board)
 	if refresh_board_button and not refresh_board_button.pressed.is_connected(_fetch_all_feedback):
@@ -898,6 +918,9 @@ func _connect_all_signals() -> void:
 		path_corner_option.item_selected.connect(_on_path_corner_selected)
 	_connect_toggle_signal(allow_fog_toggle, _on_allow_fog_toggled)
 	_connect_toggle_signal(ai_role_batch_toggle, _on_ai_role_batch_toggled)
+	_connect_toggle_signal(deploy_zone_overlay_toggle, _on_deploy_zone_overlay_toggled)
+	_connect_toggle_signal(deploy_auto_arm_toggle, _on_deploy_auto_arm_toggled)
+	_connect_toggle_signal(deploy_quick_fill_toggle, _on_deploy_quick_fill_toggled)
 	if pause_resume_btn and not pause_resume_btn.pressed.is_connected(_on_pause_resume_pressed):
 		pause_resume_btn.pressed.connect(_on_pause_resume_pressed)
 	if pause_settings_btn and not pause_settings_btn.pressed.is_connected(_on_pause_settings_pressed):
@@ -923,6 +946,8 @@ func _connect_all_signals() -> void:
 		pause_interface_btn.pressed.connect(_on_pause_interface_pressed)
 	if ui_hud_scale_option and not ui_hud_scale_option.item_selected.is_connected(_on_ui_hud_scale_selected):
 		ui_hud_scale_option.item_selected.connect(_on_ui_hud_scale_selected)
+	if ui_cursor_size_option and not ui_cursor_size_option.item_selected.is_connected(_on_ui_cursor_size_selected):
+		ui_cursor_size_option.item_selected.connect(_on_ui_cursor_size_selected)
 	if ui_damage_text_size_option and not ui_damage_text_size_option.item_selected.is_connected(_on_ui_damage_text_size_selected):
 		ui_damage_text_size_option.item_selected.connect(_on_ui_damage_text_size_selected)
 	if ui_combat_log_font_option and not ui_combat_log_font_option.item_selected.is_connected(_on_ui_combat_log_font_selected):
@@ -931,6 +956,7 @@ func _connect_all_signals() -> void:
 	_connect_toggle_signal(ui_show_health_bars_toggle, _on_ui_show_health_bars_toggled)
 	_connect_toggle_signal(ui_show_phase_banner_toggle, _on_ui_show_phase_banner_toggled)
 	_connect_toggle_signal(ui_show_status_effects_toggle, _on_ui_show_status_effects_toggled)
+	_connect_toggle_signal(ui_cursor_high_contrast_toggle, _on_ui_cursor_high_contrast_toggled)
 
 func _sync_ui_from_settings() -> void:
 	_is_syncing_ui = true
@@ -996,6 +1022,12 @@ func _sync_ui_from_settings() -> void:
 		allow_fog_toggle.button_pressed = CampaignManager.battle_allow_fog_of_war
 	if ai_role_batch_toggle:
 		ai_role_batch_toggle.button_pressed = CampaignManager.battle_ai_role_batch_turns
+	if deploy_zone_overlay_toggle:
+		deploy_zone_overlay_toggle.button_pressed = CampaignManager.battle_deploy_zone_overlay_default
+	if deploy_auto_arm_toggle:
+		deploy_auto_arm_toggle.button_pressed = CampaignManager.battle_deploy_auto_arm_after_place
+	if deploy_quick_fill_toggle:
+		deploy_quick_fill_toggle.button_pressed = CampaignManager.battle_deploy_quick_fill
 
 	_refresh_value_labels()
 	_set_feedback_status("", SETTINGS_TEXT_MUTED)
@@ -1261,13 +1293,25 @@ func _ensure_ui_text_size_items(opt: OptionButton) -> void:
 		opt.add_item(t)
 
 
+func _ensure_ui_cursor_size_items() -> void:
+	if ui_cursor_size_option == null or ui_cursor_size_option.item_count > 0:
+		return
+	for t in UI_CURSOR_SIZE_LABELS:
+		ui_cursor_size_option.add_item(t)
+
+
 func _sync_interface_ui_from_campaign() -> void:
 	_is_syncing_ui = true
 	_ensure_ui_hud_scale_items()
+	_ensure_ui_cursor_size_items()
 	_ensure_ui_text_size_items(ui_damage_text_size_option)
 	_ensure_ui_text_size_items(ui_combat_log_font_option)
 	if ui_hud_scale_option:
 		ui_hud_scale_option.select(clampi(CampaignManager.interface_hud_scale, 0, ui_hud_scale_option.item_count - 1))
+	if ui_cursor_size_option:
+		ui_cursor_size_option.select(clampi(CampaignManager.interface_cursor_size, 0, ui_cursor_size_option.item_count - 1))
+	if ui_cursor_high_contrast_toggle:
+		ui_cursor_high_contrast_toggle.button_pressed = CampaignManager.interface_cursor_high_contrast
 	if ui_show_damage_numbers_toggle:
 		ui_show_damage_numbers_toggle.button_pressed = CampaignManager.interface_show_damage_numbers
 	if ui_show_health_bars_toggle:
@@ -1285,12 +1329,27 @@ func _sync_interface_ui_from_campaign() -> void:
 
 func _persist_interface() -> void:
 	CampaignManager.save_global_settings()
+	_apply_settings_to_runtime()
 
 
 func _on_ui_hud_scale_selected(index: int) -> void:
 	if _is_syncing_ui:
 		return
 	CampaignManager.interface_hud_scale = clampi(index, 0, 4)
+	_persist_interface()
+
+
+func _on_ui_cursor_size_selected(index: int) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_size = clampi(index, 0, 2)
+	_persist_interface()
+
+
+func _on_ui_cursor_high_contrast_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_high_contrast = toggled_on
 	_persist_interface()
 
 
@@ -1541,6 +1600,28 @@ func _on_ai_role_batch_toggled(toggled_on: bool) -> void:
 	CampaignManager.battle_ai_role_batch_turns = toggled_on
 	_persist_and_apply()
 
+
+func _on_deploy_zone_overlay_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.battle_deploy_zone_overlay_default = toggled_on
+	_persist_and_apply()
+
+
+func _on_deploy_auto_arm_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.battle_deploy_auto_arm_after_place = toggled_on
+	_persist_and_apply()
+
+
+func _on_deploy_quick_fill_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.battle_deploy_quick_fill = toggled_on
+	_persist_and_apply()
+
+
 func _on_reset_defaults_pressed() -> void:
 	CampaignManager.audio_master_volume = 1.0
 	CampaignManager.audio_music_volume = 1.0
@@ -1574,11 +1655,40 @@ func _on_reset_defaults_pressed() -> void:
 	CampaignManager.battle_show_log = true
 	CampaignManager.battle_allow_fog_of_war = true
 	CampaignManager.battle_ai_role_batch_turns = false
+	CampaignManager.battle_deploy_zone_overlay_default = true
+	CampaignManager.battle_deploy_auto_arm_after_place = false
+	CampaignManager.battle_deploy_quick_fill = false
+	CampaignManager.interface_cursor_size = 0
+	CampaignManager.interface_cursor_high_contrast = false
 
 	_sync_ui_from_settings()
 	_sync_audio_ui_from_campaign()
+	_sync_interface_ui_from_campaign()
 	_persist_and_apply()
 	_set_feedback_status("Field defaults restored.", SETTINGS_SUCCESS)
+
+func _refresh_version_footer() -> void:
+	if settings_version_footer == null:
+		return
+	settings_version_footer.text = "GAME VERSION %s\n%s\n%s · %s" % [
+		GameVersion.get_display_string(),
+		GameVersion.get_game_copyright_line(),
+		GameVersion.get_godot_version_label(),
+		GameVersion.get_godot_attribution_short(),
+	]
+
+
+func _on_open_user_data_folder_pressed() -> void:
+	if OS.has_feature("web"):
+		_set_feedback_status("Save data folder is not available in the web build.", SETTINGS_WARNING)
+		return
+	var path := ProjectSettings.globalize_path("user://")
+	var err := OS.shell_open(path)
+	if err != OK:
+		_set_feedback_status("Could not open save folder. Path: %s" % path, SETTINGS_ERROR)
+	else:
+		_set_feedback_status("Opened save data folder in your file manager.", SETTINGS_SUCCESS)
+
 
 # ==============================================================================
 # FEEDBACK BOARD
@@ -1649,7 +1759,7 @@ func _create_feedback_row(entry: Dictionary, populate_index: int = 0) -> void:
 	var subject: String = str(info.get("subject", "Legacy Report"))
 	var message: String = str(info.get("message", "..."))
 	var sender: String = str(entry.get("player_name", "Anonymous"))
-	var version_text: String = str(info.get("version", "1.0.4"))
+	var version_text: String = str(info.get("version", GameVersion.get_version()))
 	var timestamp_text: String = _format_feedback_timestamp(str(info.get("timestamp", "Unknown Date")))
 	var category_key := _resolve_feedback_category(info)
 	var report_profile := _get_feedback_report_profile(category_key)
@@ -1746,7 +1856,7 @@ func _on_submit_feedback_pressed() -> void:
 		"category": _feedback_submit_category,
 		"subject": title,
 		"message": body,
-		"version": "1.0.4",
+		"version": GameVersion.get_report_metadata_version(),
 		"mmr": CampaignManager.arena_mmr,
 		"timestamp": Time.get_datetime_string_from_system()
 	}

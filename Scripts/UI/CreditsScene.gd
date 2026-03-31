@@ -1,6 +1,7 @@
 extends Control
 const CREDITS_SECTION_DATA_SCRIPT: GDScript = preload("res://Scripts/UI/Credits/CreditsSectionData.gd")
 const CREDITS_CONTRIBUTOR_DATA_SCRIPT: GDScript = preload("res://Scripts/UI/Credits/CreditsContributorData.gd")
+const ATMOSPHERE_SHADER_PATH := "res://Scripts/UI/studio_intro_atmosphere.gdshader"
 
 const MENU_BG := Color(0.12, 0.10, 0.07, 0.96)
 const MENU_BG_ALT := Color(0.17, 0.13, 0.09, 0.96)
@@ -38,6 +39,27 @@ const MENU_ACCENT_SOFT := Color(0.58, 0.87, 1.0, 1.0)
 @export var finale_hold_seconds: float = 1.45
 @export var finale_fade_out_seconds: float = 0.34
 @export var hold_seconds_before_finale: float = 0.08
+@export_group("Pre-finale handoff")
+## Brief duck + full-screen hold before the finale card so the ending does not feel like a loop cut.
+@export var pre_finale_handoff_enabled: bool = true
+@export_range(0.0, 24.0) var pre_finale_music_duck_db: float = 10.0
+@export_range(0.05, 2.5) var pre_finale_music_duck_seconds: float = 0.45
+@export_range(0.0, 3.0) var pre_finale_hold_seconds: float = 0.75
+@export_range(0.05, 1.5) var pre_finale_overlay_fade_in_seconds: float = 0.18
+@export_range(0.05, 1.5) var pre_finale_overlay_fade_out_seconds: float = 0.22
+## Off by default so the only “thank you” line is on the finale card (with logo). Enable for a separate interim line on the black hold.
+@export var pre_finale_show_line: bool = false
+@export var pre_finale_line_text: String = "Thank you for playing"
+@export var pre_finale_duck_ambient_bed: bool = true
+@export_range(0.2, 6.0) var pre_finale_restore_music_seconds: float = 1.1
+@export_group("Scroll speed boost")
+@export var credits_speed_boost_enabled: bool = true
+@export_range(1.2, 10.0) var scroll_speed_boost_multiplier: float = 3.0
+## One-line hint in the bottom-left while credits roll (Shift to fast-forward). When on, the suffix is not repeated under the header.
+@export var show_speed_boost_corner_hint: bool = true
+@export_range(0.25, 1.0) var speed_boost_corner_hint_alpha: float = 0.5
+@export var show_speed_boost_hint: bool = true
+@export var speed_boost_hint_suffix: String = "Hold Shift to speed up the roll."
 @export_group("Finale Logo")
 @export var finale_logo_texture: Texture2D
 @export var finale_logo_max_size: Vector2 = Vector2(560, 280)
@@ -55,10 +77,56 @@ const MENU_ACCENT_SOFT := Color(0.58, 0.87, 1.0, 1.0)
 @export_group("Studio Spotlight")
 @export var show_studio_spotlight: bool = true
 @export var studio_section_title: String = "Studio Spotlight"
-@export var studio_name: String = "Rooktide Games"
+@export var studio_name: String = "Korvain Games"
 @export_multiline var studio_section_details: String = "Independent tactical RPG studio focused on expressive combat systems, strong atmosphere, and player-driven stories."
 @export_multiline var studio_name_details: String = "Founding studio behind Legends of Aurelia, leading worldbuilding, gameplay architecture, and long-term creative direction."
 
+@export_group("Eerie atmosphere")
+## Matches the studio intro: cold mist + vignette grain. Turn off to use the classic warm credits look.
+@export var eerie_atmosphere_enabled: bool = true
+@export var deep_backdrop_color: Color = Color(0.004, 0.007, 0.014, 1.0)
+@export var cold_mist_color: Color = Color(0.025, 0.048, 0.072, 0.58)
+## Replaces the warm gold wash when eerie mode is on.
+@export var eerie_ambient_aura_color: Color = Color(0.06, 0.10, 0.16, 0.14)
+@export_range(0.0, 0.05) var breathing_strength: float = 0.0035
+@export_range(0.05, 1.5) var breathing_hz: float = 0.2
+@export_range(0.0, 1.2) var unease_sway_degrees: float = 0.06
+@export_range(0.02, 0.45) var unease_sway_hz: float = 0.075
+@export_range(0.0, 1.0) var eerie_sparkle_sink_bias: float = 0.38
+@export var eerie_sparkles_tint: Color = Color(0.30, 0.44, 0.58, 1.0)
+@export_group("Atmosphere phases")
+@export var atmosphere_phase_tween_enabled: bool = true
+@export_range(0.05, 3.0) var atmosphere_phase_tween_seconds: float = 0.85
+## Opener card (title splash): coldest / heaviest frame.
+@export var atmosphere_opener_mist_color: Color = Color(0.02, 0.05, 0.085, 0.66)
+@export_range(0.08, 0.75) var atmosphere_opener_vignette_inner: float = 0.28
+@export_range(0.55, 1.0) var atmosphere_opener_vignette_outer: float = 0.93
+@export_range(0.7, 1.35) var atmosphere_opener_vignette_strength: float = 1.06
+@export var atmosphere_opener_deep_tint: Color = Color(0.008, 0.022, 0.045, 1.0)
+@export_range(0.0, 0.12) var atmosphere_opener_grain: float = 0.048
+## Rolling credits: balanced read.
+@export var atmosphere_scroll_mist_color: Color = Color(0.03, 0.055, 0.088, 0.38)
+@export_range(0.08, 0.75) var atmosphere_scroll_vignette_inner: float = 0.36
+@export_range(0.55, 1.0) var atmosphere_scroll_vignette_outer: float = 0.94
+@export_range(0.7, 1.35) var atmosphere_scroll_vignette_strength: float = 0.72
+@export var atmosphere_scroll_deep_tint: Color = Color(0.01, 0.028, 0.052, 1.0)
+@export_range(0.0, 0.12) var atmosphere_scroll_grain: float = 0.042
+## Finale “thank you” card: slightly warmer spotlight.
+@export var atmosphere_finale_mist_color: Color = Color(0.038, 0.065, 0.098, 0.52)
+@export_range(0.08, 0.75) var atmosphere_finale_vignette_inner: float = 0.34
+@export_range(0.55, 1.0) var atmosphere_finale_vignette_outer: float = 0.955
+@export_range(0.7, 1.35) var atmosphere_finale_vignette_strength: float = 0.94
+@export var atmosphere_finale_deep_tint: Color = Color(0.014, 0.034, 0.062, 1.0)
+@export_range(0.0, 0.12) var atmosphere_finale_grain: float = 0.036
+
+@export_group("Credits ambient bed")
+## Optional loop under the main credits music (assign a stream). Uses its own bus so you can low-pass (e.g. IntroAtmos).
+@export var credits_ambient_bed_enabled: bool = false
+@export var credits_ambient_bed_stream: AudioStream
+@export var credits_ambient_bed_volume_db: float = -24.0
+@export var credits_ambient_bed_bus: String = "IntroAtmos"
+
+@onready var center_area: Control = $Center
 @onready var backdrop: ColorRect = $Backdrop
 @onready var card: Control = $Center/Card
 @onready var header_overline: Label = $Center/Card/Margin/Root/Header/Overline
@@ -75,12 +143,16 @@ const MENU_ACCENT_SOFT := Color(0.58, 0.87, 1.0, 1.0)
 @onready var opener_overlay: ColorRect = $OpenerOverlay
 @onready var opener_label: Label = $OpenerOverlay/OpenerLabel
 @onready var transition_flash: ColorRect = $TransitionFlash
+@onready var speed_boost_corner_hint: Label = $SpeedBoostHint
 
 var _end_hold_timer: float = 0.0
 var _top_spacer: Control = null
 var _bottom_spacer: Control = null
 var _scroll_pos: float = 0.0
 var _sparkles: Array[ColorRect] = []
+var _eerie_sparkle_vel: Array[Vector2] = []
+var _eerie_sparkle_base_alpha: Array[float] = []
+var _eerie_sparkle_phase: Array[float] = []
 var _scroll_enabled: bool = false
 var _time_accum: float = 0.0
 var _loop_transitioning: bool = false
@@ -97,23 +169,56 @@ var _finale_logo_target_size: Vector2 = Vector2.ZERO
 var _finale_title_label: Label = null
 var _finale_subtitle_label: Label = null
 
+var _cold_mist_layer: ColorRect = null
+var _atmosphere_shader_rect: ColorRect = null
+var _atmosphere_mat: ShaderMaterial = null
+var _atmosphere_tween: Tween = null
+var _sparkle_field: Control = null
+var _credits_ambient_player: AudioStreamPlayer = null
+var _atmosphere_phase: String = "scroll"
+var _intro_elapsed: float = 0.0
+var _center_pivot_ready: bool = false
+var _header_hint_base_text: String = ""
+var _saved_credits_music_db: float = 0.0
+var _saved_ambient_bed_db: float = 0.0
+var _pre_finale_layer: ColorRect = null
+var _pre_finale_label: Label = null
+
 func _ready() -> void:
+	if card != null:
+		var legacy_panel: Node = card.get_node_or_null("EerieReadabilityPanel")
+		if legacy_panel != null:
+			legacy_panel.queue_free()
 	if credits_music_player != null:
 		credits_music_player.bus = "Music"
 	if credits_sections.is_empty() and use_default_sections_if_empty:
 		credits_sections = _build_default_sections()
+	_ensure_atmosphere_layers()
 	_style_ui()
 	_rebuild_credits()
 	call_deferred("_finalize_credits_layout")
 	if back_button != null:
 		back_button.pressed.connect(_on_back_pressed)
 	_play_credits_music()
+	_start_credits_ambient_bed()
 	_start_theatrical_pass()
 	_spawn_sparkles()
 	call_deferred("_play_opener")
+	var vp := get_viewport()
+	if vp != null and not vp.size_changed.is_connected(_on_viewport_resized_for_center_pivot):
+		vp.size_changed.connect(_on_viewport_resized_for_center_pivot)
+	call_deferred("_refresh_center_pivot")
 
 func _process(delta: float) -> void:
 	_time_accum += delta
+	_intro_elapsed += delta
+	_update_speed_boost_corner_hint_visibility()
+	if eerie_atmosphere_enabled and center_area != null and _center_pivot_ready:
+		var breathe := 1.0 + breathing_strength * sin(_intro_elapsed * TAU * breathing_hz)
+		center_area.scale = Vector2(breathe, breathe)
+		center_area.rotation_degrees = unease_sway_degrees * sin(_intro_elapsed * TAU * unease_sway_hz)
+	if eerie_atmosphere_enabled and not _sparkles.is_empty():
+		_update_eerie_sparkle_drift(delta)
 	if not _scroll_enabled:
 		return
 	if scroll == null:
@@ -143,7 +248,11 @@ func _process(delta: float) -> void:
 			_restart_credits_cycle()
 			_end_hold_timer = 0.0
 		return
-	_scroll_pos = minf(float(max_scroll), _scroll_pos + scroll_speed * delta)
+	var spd: float = scroll_speed
+	if credits_speed_boost_enabled and not _loop_transitioning:
+		if Input.is_physical_key_pressed(KEY_SHIFT):
+			spd *= scroll_speed_boost_multiplier
+	_scroll_pos = minf(float(max_scroll), _scroll_pos + spd * delta)
 	scroll.scroll_vertical = int(_scroll_pos)
 	_end_hold_timer = 0.0
 	_update_entry_emphasis()
@@ -177,8 +286,10 @@ func _notification(what: int) -> void:
 		call_deferred("_update_scroll_spacers")
 		call_deferred("_layout_detail_panel")
 		call_deferred("_layout_finale_card")
+		call_deferred("_refresh_center_pivot")
 
 func _on_back_pressed() -> void:
+	_fade_credits_ambient_out()
 	if Engine.has_singleton("SceneTransition"):
 		SceneTransition.change_scene_to_file("res://Scenes/main_menu.tscn")
 	else:
@@ -197,19 +308,342 @@ func _finalize_credits_layout() -> void:
 	_update_scroll_spacers()
 	_layout_detail_panel()
 	_reset_scroll_to_start()
+	call_deferred("_refresh_center_pivot")
+
+
+func _on_viewport_resized_for_center_pivot() -> void:
+	_center_pivot_ready = false
+	call_deferred("_refresh_center_pivot")
+
+
+func _refresh_center_pivot() -> void:
+	if center_area == null:
+		return
+	if center_area.size.x < 8.0 or center_area.size.y < 8.0:
+		return
+	center_area.pivot_offset = center_area.size * 0.5
+	_center_pivot_ready = true
+
+
+func _ensure_atmosphere_layers() -> void:
+	if backdrop == null:
+		return
+	if not eerie_atmosphere_enabled:
+		if _cold_mist_layer != null:
+			_cold_mist_layer.visible = false
+		if _atmosphere_shader_rect != null:
+			_atmosphere_shader_rect.visible = false
+		_restack_credits_visual_layers()
+		return
+	backdrop.color = deep_backdrop_color
+	if _cold_mist_layer == null:
+		_cold_mist_layer = ColorRect.new()
+		_cold_mist_layer.name = "ColdMist"
+		_cold_mist_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_cold_mist_layer.layout_mode = 1
+		_cold_mist_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_cold_mist_layer.anchor_right = 1.0
+		_cold_mist_layer.anchor_bottom = 1.0
+		add_child(_cold_mist_layer)
+	else:
+		_cold_mist_layer.visible = true
+	_cold_mist_layer.color = cold_mist_color
+	_cold_mist_layer.z_index = 1
+	if _atmosphere_shader_rect == null and ResourceLoader.exists(ATMOSPHERE_SHADER_PATH):
+		var sh: Shader = load(ATMOSPHERE_SHADER_PATH) as Shader
+		if sh != null:
+			_atmosphere_shader_rect = ColorRect.new()
+			_atmosphere_shader_rect.name = "AtmosphereVignette"
+			_atmosphere_shader_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_atmosphere_shader_rect.layout_mode = 1
+			_atmosphere_shader_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+			_atmosphere_shader_rect.anchor_right = 1.0
+			_atmosphere_shader_rect.anchor_bottom = 1.0
+			var mat := ShaderMaterial.new()
+			mat.shader = sh
+			_atmosphere_shader_rect.material = mat
+			_atmosphere_mat = mat
+			add_child(_atmosphere_shader_rect)
+	elif _atmosphere_shader_rect != null:
+		_atmosphere_shader_rect.visible = true
+		_atmosphere_mat = _atmosphere_shader_rect.material as ShaderMaterial
+	if _atmosphere_shader_rect != null:
+		_atmosphere_shader_rect.z_index = 2
+	if _sparkle_field == null:
+		_sparkle_field = Control.new()
+		_sparkle_field.name = "SparkleField"
+		_sparkle_field.layout_mode = 1
+		_sparkle_field.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_sparkle_field.anchor_right = 1.0
+		_sparkle_field.anchor_bottom = 1.0
+		_sparkle_field.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_sparkle_field.z_index = 3
+		add_child(_sparkle_field)
+	_atmosphere_phase = "opener"
+	if eerie_atmosphere_enabled:
+		_apply_atmosphere_immediate("opener")
+	_restack_credits_visual_layers()
+
+
+func _restack_credits_visual_layers() -> void:
+	if backdrop != null and backdrop.get_parent() == self:
+		move_child(backdrop, 0)
+	var idx := 1
+	if _cold_mist_layer != null and _cold_mist_layer.get_parent() == self and _cold_mist_layer.visible:
+		move_child(_cold_mist_layer, mini(idx, get_child_count() - 1))
+		idx = _cold_mist_layer.get_index() + 1
+	if _atmosphere_shader_rect != null and _atmosphere_shader_rect.get_parent() == self and _atmosphere_shader_rect.visible:
+		move_child(_atmosphere_shader_rect, mini(idx, get_child_count() - 1))
+		idx = _atmosphere_shader_rect.get_index() + 1
+	if _sparkle_field != null and _sparkle_field.get_parent() == self:
+		move_child(_sparkle_field, mini(idx, get_child_count() - 1))
+		idx = _sparkle_field.get_index() + 1
+	if ambient_aura != null and ambient_aura.get_parent() == self:
+		move_child(ambient_aura, mini(idx, get_child_count() - 1))
+		idx = ambient_aura.get_index() + 1
+	if center_area != null and center_area.get_parent() == self:
+		move_child(center_area, mini(idx, get_child_count() - 1))
+		idx = center_area.get_index() + 1
+	if credits_music_player != null and credits_music_player.get_parent() == self:
+		move_child(credits_music_player, mini(idx, get_child_count() - 1))
+		idx = credits_music_player.get_index() + 1
+	if opener_overlay != null and opener_overlay.get_parent() == self:
+		move_child(opener_overlay, mini(idx, get_child_count() - 1))
+		idx = opener_overlay.get_index() + 1
+	if transition_flash != null and transition_flash.get_parent() == self:
+		move_child(transition_flash, mini(idx, get_child_count() - 1))
+
+
+func _atmosphere_targets_for_phase(phase_id: String) -> Dictionary:
+	match phase_id:
+		"opener":
+			return {
+				"mist": atmosphere_opener_mist_color,
+				"inner": atmosphere_opener_vignette_inner,
+				"outer": atmosphere_opener_vignette_outer,
+				"strength": atmosphere_opener_vignette_strength,
+				"deep_tint": atmosphere_opener_deep_tint,
+				"grain": atmosphere_opener_grain,
+			}
+		"finale":
+			return {
+				"mist": atmosphere_finale_mist_color,
+				"inner": atmosphere_finale_vignette_inner,
+				"outer": atmosphere_finale_vignette_outer,
+				"strength": atmosphere_finale_vignette_strength,
+				"deep_tint": atmosphere_finale_deep_tint,
+				"grain": atmosphere_finale_grain,
+			}
+		_:
+			return {
+				"mist": atmosphere_scroll_mist_color,
+				"inner": atmosphere_scroll_vignette_inner,
+				"outer": atmosphere_scroll_vignette_outer,
+				"strength": atmosphere_scroll_vignette_strength,
+				"deep_tint": atmosphere_scroll_deep_tint,
+				"grain": atmosphere_scroll_grain,
+			}
+
+
+func _apply_atmosphere_immediate(phase_id: String) -> void:
+	_atmosphere_phase = phase_id
+	var t: Dictionary = _atmosphere_targets_for_phase(phase_id)
+	if _cold_mist_layer != null:
+		_cold_mist_layer.color = t["mist"] as Color
+	if _atmosphere_mat != null:
+		_atmosphere_mat.set_shader_parameter("inner_radius", t["inner"])
+		_atmosphere_mat.set_shader_parameter("outer_radius", t["outer"])
+		_atmosphere_mat.set_shader_parameter("vignette_strength", t["strength"])
+		_atmosphere_mat.set_shader_parameter("grain_amount", t["grain"])
+		var tc: Color = t["deep_tint"] as Color
+		_atmosphere_mat.set_shader_parameter("deep_tint", Vector3(tc.r, tc.g, tc.b))
+
+
+func _kill_atmosphere_tween() -> void:
+	if _atmosphere_tween != null and is_instance_valid(_atmosphere_tween):
+		if _atmosphere_tween.is_running():
+			_atmosphere_tween.kill()
+	_atmosphere_tween = null
+
+
+func _tween_atmosphere_to_phase(phase_id: String) -> void:
+	if not eerie_atmosphere_enabled:
+		return
+	_kill_atmosphere_tween()
+	if not atmosphere_phase_tween_enabled:
+		_apply_atmosphere_immediate(phase_id)
+		return
+	var t: Dictionary = _atmosphere_targets_for_phase(phase_id)
+	var dur: float = maxf(0.02, atmosphere_phase_tween_seconds)
+	var mat := _atmosphere_mat
+	if _cold_mist_layer == null and mat == null:
+		_apply_atmosphere_immediate(phase_id)
+		return
+	var tw := create_tween()
+	_atmosphere_tween = tw
+	_atmosphere_phase = phase_id
+	tw.set_parallel(true)
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if _cold_mist_layer != null:
+		tw.tween_property(_cold_mist_layer, "color", t["mist"] as Color, dur)
+	if mat != null:
+		var cur_inner: float = float(mat.get_shader_parameter("inner_radius"))
+		var cur_outer: float = float(mat.get_shader_parameter("outer_radius"))
+		var cur_strength: float = float(mat.get_shader_parameter("vignette_strength"))
+		var cur_grain: float = float(mat.get_shader_parameter("grain_amount"))
+		var cur_tint_var: Variant = mat.get_shader_parameter("deep_tint")
+		var cur_v3: Vector3
+		if cur_tint_var is Vector3:
+			cur_v3 = cur_tint_var as Vector3
+		elif cur_tint_var is Color:
+			var cc: Color = cur_tint_var as Color
+			cur_v3 = Vector3(cc.r, cc.g, cc.b)
+		else:
+			var dc: Color = t["deep_tint"] as Color
+			cur_v3 = Vector3(dc.r, dc.g, dc.b)
+		var dc2: Color = t["deep_tint"] as Color
+		var end_v3 := Vector3(dc2.r, dc2.g, dc2.b)
+		tw.tween_method(
+			func(v: float) -> void: mat.set_shader_parameter("inner_radius", v),
+			cur_inner, float(t["inner"]), dur
+		)
+		tw.tween_method(
+			func(v: float) -> void: mat.set_shader_parameter("outer_radius", v),
+			cur_outer, float(t["outer"]), dur
+		)
+		tw.tween_method(
+			func(v: float) -> void: mat.set_shader_parameter("vignette_strength", v),
+			cur_strength, float(t["strength"]), dur
+		)
+		tw.tween_method(
+			func(v: float) -> void: mat.set_shader_parameter("grain_amount", v),
+			cur_grain, float(t["grain"]), dur
+		)
+		tw.tween_method(
+			func(v: Vector3) -> void: mat.set_shader_parameter("deep_tint", v),
+			cur_v3, end_v3, dur
+		)
+
+
+func _safe_audio_bus_name(bus_name: String, fallback: String) -> String:
+	if AudioServer.get_bus_index(bus_name) >= 0:
+		return bus_name
+	if AudioServer.get_bus_index(fallback) >= 0:
+		return fallback
+	return "Master"
+
+
+func _try_enable_seamless_loop(stream: AudioStream) -> void:
+	if stream is AudioStreamWAV:
+		(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
+	elif stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
+
+
+func _start_credits_ambient_bed() -> void:
+	if not credits_ambient_bed_enabled or credits_ambient_bed_stream == null:
+		return
+	if _credits_ambient_player == null:
+		_credits_ambient_player = AudioStreamPlayer.new()
+		_credits_ambient_player.name = "CreditsAmbientBed"
+		add_child(_credits_ambient_player)
+	_try_enable_seamless_loop(credits_ambient_bed_stream)
+	_credits_ambient_player.stream = credits_ambient_bed_stream
+	_credits_ambient_player.bus = _safe_audio_bus_name(credits_ambient_bed_bus, "Music")
+	_credits_ambient_player.volume_db = credits_ambient_bed_volume_db
+	_credits_ambient_player.play()
+
+
+func _fade_credits_ambient_out() -> void:
+	if _credits_ambient_player == null or not _credits_ambient_player.playing:
+		return
+	var tw := create_tween()
+	tw.tween_property(_credits_ambient_player, "volume_db", -80.0, 0.35)
+
+
+func _accent_for_eerie() -> Color:
+	if eerie_atmosphere_enabled:
+		return Color(1.0, 0.97, 0.82, 1.0)
+	return MENU_ACCENT
+
+
+func _accent_soft_for_eerie() -> Color:
+	if eerie_atmosphere_enabled:
+		return Color(0.90, 0.97, 1.0, 1.0)
+	return MENU_ACCENT_SOFT
+
+
+func _body_text_for_eerie() -> Color:
+	if eerie_atmosphere_enabled:
+		return Color(1.0, 0.985, 0.96, 1.0)
+	return MENU_TEXT
+
+
+func _muted_text_for_eerie() -> Color:
+	if eerie_atmosphere_enabled:
+		return Color(0.96, 0.94, 0.90, 1.0)
+	return MENU_TEXT_MUTED
+
+
+func _update_eerie_sparkle_drift(delta: float) -> void:
+	var twinkle_time: float = Time.get_ticks_msec() / 1000.0
+	var vp_size: Vector2 = get_viewport_rect().size
+	for i in _sparkles.size():
+		var dot: ColorRect = _sparkles[i]
+		if dot == null:
+			continue
+		if i >= _eerie_sparkle_vel.size():
+			continue
+		var vel: Vector2 = _eerie_sparkle_vel[i]
+		dot.position += vel * delta
+		var wisp: float = sin(twinkle_time * 0.62 + float(i) * 1.17) * 5.0
+		dot.position.x += wisp * delta
+		if dot.position.y > vp_size.y + 8.0:
+			dot.position.y = -8.0
+			dot.position.x = randf_range(0.0, maxf(vp_size.x, 1.0))
+		var base_alpha: float = _eerie_sparkle_base_alpha[i]
+		var phase: float = _eerie_sparkle_phase[i]
+		var twinkle: float = 0.94 + 0.06 * sin((twinkle_time * 1.1) + phase)
+		dot.color = Color(
+			eerie_sparkles_tint.r,
+			eerie_sparkles_tint.g,
+			eerie_sparkles_tint.b,
+			clampf(base_alpha * twinkle, 0.0, 1.0)
+		)
 
 func _style_ui() -> void:
 	if backdrop != null:
-		backdrop.color = Color(0.01, 0.01, 0.02, 0.96)
+		if eerie_atmosphere_enabled:
+			backdrop.color = deep_backdrop_color
+		else:
+			backdrop.color = Color(0.01, 0.01, 0.02, 0.96)
 	if ambient_aura != null:
-		ambient_aura.color = Color(0.42, 0.28, 0.10, 0.16)
+		if eerie_atmosphere_enabled:
+			ambient_aura.color = eerie_ambient_aura_color
+		else:
+			ambient_aura.color = Color(0.42, 0.28, 0.10, 0.16)
 
 	if card != null:
 		card.modulate.a = 1.0
 
-	_style_label(header_overline, MENU_TEXT_MUTED, 16, 1)
-	_style_label(header_title, MENU_ACCENT, 46, 3)
-	_style_label(header_hint, MENU_ACCENT_SOFT.lerp(MENU_TEXT_MUTED, 0.55), 18, 1)
+	_style_label(header_overline, _muted_text_for_eerie(), 16, 2)
+	_style_label(header_title, _accent_for_eerie(), 46, 3)
+	if header_hint != null:
+		if _header_hint_base_text.is_empty():
+			_header_hint_base_text = header_hint.text
+		var hint_build: String = _header_hint_base_text
+		var append_shift_to_header: bool = show_speed_boost_hint and credits_speed_boost_enabled and not show_speed_boost_corner_hint and not speed_boost_hint_suffix.strip_edges().is_empty()
+		if append_shift_to_header:
+			hint_build = _header_hint_base_text + "\n" + speed_boost_hint_suffix
+		header_hint.text = hint_build
+		_style_label(header_hint, _accent_soft_for_eerie().lerp(_muted_text_for_eerie(), 0.22), 18, 2)
+	if speed_boost_corner_hint != null:
+		speed_boost_corner_hint.text = speed_boost_hint_suffix.strip_edges()
+		var corner_col: Color = _muted_text_for_eerie().lerp(_accent_soft_for_eerie(), 0.12)
+		_style_label(speed_boost_corner_hint, corner_col, 14, 2)
+		speed_boost_corner_hint.modulate = Color(1.0, 1.0, 1.0, speed_boost_corner_hint_alpha)
 	if content_root != null:
 		content_root.modulate.a = 0.0
 
@@ -244,12 +678,15 @@ func _style_ui() -> void:
 		bottom_fade.visible = false
 		bottom_fade.color = Color(0.0, 0.0, 0.0, 0.0)
 	if opener_overlay != null:
-		opener_overlay.color = Color(0.01, 0.01, 0.02, 0.88)
+		if eerie_atmosphere_enabled:
+			opener_overlay.color = Color(0.005, 0.008, 0.016, 0.92)
+		else:
+			opener_overlay.color = Color(0.01, 0.01, 0.02, 0.88)
 		opener_overlay.visible = true
 		opener_overlay.modulate.a = 0.0
 	if opener_label != null:
 		opener_label.text = opener_text
-		_style_label(opener_label, MENU_ACCENT_SOFT.lerp(MENU_ACCENT, 0.4), 56, 3)
+		_style_label(opener_label, _accent_soft_for_eerie().lerp(_accent_for_eerie(), 0.4), 56, 3)
 		opener_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		opener_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		opener_label.modulate.a = 0.0
@@ -259,12 +696,30 @@ func _style_ui() -> void:
 		transition_flash.visible = false
 	_setup_finale_card()
 
+func _update_speed_boost_corner_hint_visibility() -> void:
+	if speed_boost_corner_hint == null:
+		return
+	var show: bool = (
+		show_speed_boost_corner_hint
+		and credits_speed_boost_enabled
+		and not speed_boost_hint_suffix.strip_edges().is_empty()
+		and _scroll_enabled
+		and not _loop_transitioning
+		and not _detail_visible
+	)
+	speed_boost_corner_hint.visible = show
+
 func _style_label(label: Label, color: Color, font_size: int, outline_size: int = 2) -> void:
 	if label == null:
 		return
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
-	label.add_theme_constant_override("outline_size", outline_size)
+	var ol: Color = Color(0.02, 0.02, 0.02, 0.94)
+	var os: int = outline_size
+	if eerie_atmosphere_enabled:
+		ol = Color(0.0, 0.0, 0.0, 0.98)
+		os = maxi(outline_size, 3)
+	label.add_theme_color_override("font_outline_color", ol)
+	label.add_theme_constant_override("outline_size", os)
 	label.add_theme_font_size_override("font_size", font_size)
 
 func _style_button(btn: Button, label_text: String) -> void:
@@ -273,15 +728,20 @@ func _style_button(btn: Button, label_text: String) -> void:
 	btn.text = label_text
 	btn.custom_minimum_size = Vector2(0, 56)
 	btn.add_theme_font_size_override("font_size", 20)
-	btn.add_theme_color_override("font_color", MENU_TEXT)
-	btn.add_theme_color_override("font_hover_color", MENU_TEXT)
-	btn.add_theme_color_override("font_pressed_color", MENU_TEXT)
-	btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
-	btn.add_theme_constant_override("outline_size", 2)
+	var label_col: Color = _body_text_for_eerie()
+	btn.add_theme_color_override("font_color", label_col)
+	btn.add_theme_color_override("font_hover_color", label_col)
+	btn.add_theme_color_override("font_pressed_color", label_col)
+	if eerie_atmosphere_enabled:
+		btn.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.98))
+		btn.add_theme_constant_override("outline_size", 3)
+	else:
+		btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
+		btn.add_theme_constant_override("outline_size", 2)
 	btn.add_theme_stylebox_override("normal", _button_style(Color(0.20, 0.16, 0.11, 0.98), MENU_BORDER_MUTED))
 	btn.add_theme_stylebox_override("hover", _button_style(Color(0.28, 0.22, 0.14, 0.98), MENU_BORDER))
 	btn.add_theme_stylebox_override("pressed", _button_style(Color(0.16, 0.13, 0.09, 0.98), MENU_BORDER))
-	btn.add_theme_stylebox_override("focus", _button_style(Color(0.28, 0.22, 0.14, 0.98), MENU_ACCENT_SOFT))
+	btn.add_theme_stylebox_override("focus", _button_style(Color(0.28, 0.22, 0.14, 0.98), _accent_soft_for_eerie()))
 
 func _button_style(fill: Color, border: Color) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
@@ -393,7 +853,7 @@ func _add_credit_section_block(section_title: String, section_details: String, m
 	var title_label := Label.new()
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.text = section_title.to_upper()
-	_style_label(title_label, MENU_ACCENT_SOFT, 28, 2)
+	_style_label(title_label, _accent_soft_for_eerie(), 28, 2)
 	title_label.set_meta("credit_phase", randf_range(0.0, TAU))
 	title_label.set_meta("credit_content", true)
 	title_label.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -413,7 +873,7 @@ func _add_credit_section_block(section_title: String, section_details: String, m
 	rule_wrap.add_child(left_pad)
 	var rule := ColorRect.new()
 	rule.custom_minimum_size = Vector2(340, 2)
-	rule.color = MENU_BORDER.lerp(MENU_ACCENT_SOFT, 0.25)
+	rule.color = MENU_BORDER.lerp(_accent_soft_for_eerie(), 0.25)
 	rule_wrap.add_child(rule)
 	var right_pad := Control.new()
 	right_pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -429,7 +889,7 @@ func _add_credit_section_block(section_title: String, section_details: String, m
 		var name_label := Label.new()
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_label.text = entry_name
-		_style_label(name_label, MENU_TEXT, 34, 2)
+		_style_label(name_label, _body_text_for_eerie(), 34, 2)
 		name_label.set_meta("credit_phase", randf_range(0.0, TAU))
 		name_label.set_meta("credit_content", true)
 		name_label.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -500,6 +960,16 @@ func _build_default_sections() -> Array[Resource]:
 	])
 	sections.append(thanks)
 
+	var legal: Resource = CREDITS_SECTION_DATA_SCRIPT.new()
+	var game_title: String = str(ProjectSettings.get_setting("application/config/name", "This game"))
+	legal.set("title", "Legal & acknowledgements")
+	legal.set("details", "Copyright, engine attribution, and where to find further notices.")
+	legal.set("members", [
+		_make_credit_member(game_title, GameVersion.get_game_legal_summary()),
+		_make_credit_member("Godot Engine", GameVersion.get_godot_credits_body()),
+	])
+	sections.append(legal)
+
 	return sections
 
 func _make_credit_member(name_text: String, detail_text: String) -> Resource:
@@ -557,18 +1027,18 @@ func _setup_detail_panel() -> void:
 	_detail_title_label = Label.new()
 	_detail_title_label.text = "CONTRIBUTOR"
 	_detail_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_style_label(_detail_title_label, MENU_ACCENT, 30, 2)
+	_style_label(_detail_title_label, _accent_for_eerie(), 30, 2)
 	panel_vbox.add_child(_detail_title_label)
 
 	_detail_subtitle_label = Label.new()
 	_detail_subtitle_label.text = "Section"
 	_detail_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_style_label(_detail_subtitle_label, MENU_ACCENT_SOFT, 20, 1)
+	_style_label(_detail_subtitle_label, _accent_soft_for_eerie(), 20, 1)
 	panel_vbox.add_child(_detail_subtitle_label)
 
 	var separator := ColorRect.new()
 	separator.custom_minimum_size = Vector2(0, 2)
-	separator.color = MENU_BORDER.lerp(MENU_ACCENT_SOFT, 0.25)
+	separator.color = MENU_BORDER.lerp(_accent_soft_for_eerie(), 0.25)
 	panel_vbox.add_child(separator)
 
 	var body_scroll := ScrollContainer.new()
@@ -589,9 +1059,13 @@ func _setup_detail_panel() -> void:
 	_detail_body_label.selection_enabled = false
 	_detail_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_detail_body_label.add_theme_font_size_override("normal_font_size", 18)
-	_detail_body_label.add_theme_color_override("default_color", MENU_TEXT)
-	_detail_body_label.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
-	_detail_body_label.add_theme_constant_override("outline_size", 1)
+	_detail_body_label.add_theme_color_override("default_color", _body_text_for_eerie())
+	if eerie_atmosphere_enabled:
+		_detail_body_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.98))
+		_detail_body_label.add_theme_constant_override("outline_size", 2)
+	else:
+		_detail_body_label.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
+		_detail_body_label.add_theme_constant_override("outline_size", 1)
 	body_scroll.add_child(_detail_body_label)
 
 	_detail_close_button = Button.new()
@@ -648,13 +1122,13 @@ func _setup_finale_card() -> void:
 
 	_finale_title_label = Label.new()
 	_finale_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(_finale_title_label, MENU_ACCENT, 44, 3)
+	_style_label(_finale_title_label, _accent_for_eerie(), 44, 3)
 	vbox.add_child(_finale_title_label)
 
 	_finale_subtitle_label = Label.new()
 	_finale_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_finale_subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_style_label(_finale_subtitle_label, MENU_ACCENT_SOFT.lerp(MENU_TEXT, 0.38), 20, 1)
+	_style_label(_finale_subtitle_label, _accent_soft_for_eerie().lerp(_body_text_for_eerie(), 0.38), 20, 1)
 	vbox.add_child(_finale_subtitle_label)
 
 	_layout_finale_card()
@@ -776,6 +1250,7 @@ func _play_opener() -> void:
 	)
 
 func _start_credits_content_fade_in() -> void:
+	_tween_atmosphere_to_phase("scroll")
 	if content_root == null:
 		_scroll_enabled = true
 		return
@@ -812,10 +1287,35 @@ func _restart_credits_cycle() -> void:
 		_scroll_enabled = true
 	)
 
-func _play_finale_then_restart() -> void:
-	if content_root == null or _finale_card == null:
-		_loop_transitioning = false
-		_restart_credits_cycle()
+func _ensure_pre_finale_layer() -> void:
+	if _pre_finale_layer != null:
+		return
+	_pre_finale_layer = ColorRect.new()
+	_pre_finale_layer.name = "PreFinaleLayer"
+	_pre_finale_layer.layout_mode = 1
+	_pre_finale_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pre_finale_layer.anchor_right = 1.0
+	_pre_finale_layer.anchor_bottom = 1.0
+	_pre_finale_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pre_finale_layer.color = Color(0.0, 0.0, 0.0, 1.0)
+	_pre_finale_layer.modulate.a = 0.0
+	_pre_finale_layer.visible = false
+	_pre_finale_layer.z_index = 250
+	add_child(_pre_finale_layer)
+	_pre_finale_label = Label.new()
+	_pre_finale_label.name = "PreFinaleLine"
+	_pre_finale_label.layout_mode = 1
+	_pre_finale_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pre_finale_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pre_finale_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_pre_finale_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pre_finale_label.add_theme_font_size_override("font_size", 40)
+	_style_label(_pre_finale_label, _accent_for_eerie(), 40, 3)
+	_pre_finale_layer.add_child(_pre_finale_label)
+
+
+func _prepare_finale_card_for_sequence() -> void:
+	if _finale_title_label == null:
 		return
 	_finale_title_label.text = finale_title_text.strip_edges()
 	_finale_subtitle_label.text = finale_subtitle_text.strip_edges()
@@ -827,11 +1327,7 @@ func _play_finale_then_restart() -> void:
 	_layout_finale_card()
 	_finale_card.visible = true
 	_finale_card.modulate.a = 0.0
-	var tween := create_tween()
-	tween.tween_property(content_root, "modulate:a", 0.0, loop_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	tween.parallel().tween_property(_finale_card, "modulate:a", 1.0, finale_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	if _finale_logo_rect != null and _finale_logo_rect.visible:
-		var logo_fade_duration: float = minf(finale_logo_pop_duration, maxf(0.08, finale_fade_in_seconds))
 		var clamped_start_scale: float = clampf(finale_logo_pop_start_scale, 0.65, 1.15)
 		var start_size: Vector2 = _finale_logo_target_size * clamped_start_scale
 		_finale_logo_rect.custom_minimum_size = start_size
@@ -841,35 +1337,121 @@ func _play_finale_then_restart() -> void:
 			finale_logo_modulate.b,
 			0.0
 		)
+
+
+func _append_finale_tail_to_tween(tw: Tween) -> void:
+	tw.tween_interval(finale_hold_seconds)
+	tw.tween_callback(func() -> void:
+		_stop_finale_logo_glow_pulse()
+	)
+	tw.tween_property(_finale_card, "modulate:a", 0.0, finale_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func() -> void:
+		_stop_finale_logo_glow_pulse()
+		if _pre_finale_layer != null:
+			_pre_finale_layer.visible = false
+			_pre_finale_layer.modulate.a = 0.0
+		if _finale_card != null:
+			_finale_card.visible = false
+		_reset_scroll_to_start()
+		_update_entry_emphasis()
+		_tween_atmosphere_to_phase("scroll")
+	)
+	tw.tween_interval(0.05)
+	tw.tween_property(content_root, "modulate:a", 1.0, loop_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func() -> void:
+		_loop_transitioning = false
+		_scroll_enabled = true
+	)
+
+
+func _pre_finale_run_overlay_hold_then_finale_entrance() -> void:
+	if _pre_finale_layer == null:
+		return
+	_pre_finale_layer.visible = true
+	_pre_finale_layer.modulate.a = 0.0
+	if _pre_finale_label != null:
+		_pre_finale_label.visible = pre_finale_show_line
+		_pre_finale_label.text = pre_finale_line_text
+		_pre_finale_label.modulate.a = 0.0
+	var tw_in := create_tween()
+	tw_in.tween_property(_pre_finale_layer, "modulate:a", 1.0, pre_finale_overlay_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if pre_finale_show_line and _pre_finale_label != null:
+		tw_in.parallel().tween_property(_pre_finale_label, "modulate:a", 1.0, pre_finale_overlay_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw_in.tween_callback(func() -> void:
+		var tw_hold := create_tween()
+		tw_hold.tween_interval(pre_finale_hold_seconds)
+		tw_hold.tween_callback(func() -> void: _pre_finale_run_finale_card_entrance())
+	)
+
+
+func _pre_finale_run_finale_card_entrance() -> void:
+	_prepare_finale_card_for_sequence()
+	_tween_atmosphere_to_phase("finale")
+	var tw := create_tween()
+	tw.tween_property(_pre_finale_layer, "modulate:a", 0.0, pre_finale_overlay_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	if pre_finale_show_line and _pre_finale_label != null:
+		tw.parallel().tween_property(_pre_finale_label, "modulate:a", 0.0, pre_finale_overlay_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(_finale_card, "modulate:a", 1.0, finale_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if credits_music_player != null and credits_music_player.playing:
+		tw.parallel().tween_property(credits_music_player, "volume_db", _saved_credits_music_db, pre_finale_restore_music_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if pre_finale_duck_ambient_bed and _credits_ambient_player != null and _credits_ambient_player.playing:
+		tw.parallel().tween_property(_credits_ambient_player, "volume_db", _saved_ambient_bed_db, pre_finale_restore_music_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if _finale_logo_rect != null and _finale_logo_rect.visible:
+		var logo_fade_duration: float = minf(finale_logo_pop_duration, maxf(0.08, finale_fade_in_seconds))
+		tw.parallel().tween_property(_finale_logo_rect, "custom_minimum_size", _finale_logo_target_size, logo_fade_duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(_finale_logo_rect, "modulate:a", finale_logo_modulate.a, logo_fade_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func() -> void:
+		_start_finale_logo_glow_pulse()
+	)
+	_append_finale_tail_to_tween(tw)
+
+
+func _play_finale_then_restart() -> void:
+	if content_root == null or _finale_card == null:
+		_loop_transitioning = false
+		_restart_credits_cycle()
+		return
+	if pre_finale_handoff_enabled:
+		_ensure_pre_finale_layer()
+		_saved_credits_music_db = credits_music_player.volume_db if credits_music_player != null else -6.0
+		if pre_finale_duck_ambient_bed and _credits_ambient_player != null and _credits_ambient_player.playing:
+			_saved_ambient_bed_db = _credits_ambient_player.volume_db
+		var tw0 := create_tween()
+		tw0.tween_property(content_root, "modulate:a", 0.0, loop_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		var duck_dur: float = maxf(loop_fade_out_seconds, pre_finale_music_duck_seconds)
+		if credits_music_player != null and credits_music_player.playing:
+			tw0.parallel().tween_property(credits_music_player, "volume_db", _saved_credits_music_db - pre_finale_music_duck_db, duck_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		if pre_finale_duck_ambient_bed and _credits_ambient_player != null and _credits_ambient_player.playing:
+			tw0.parallel().tween_property(_credits_ambient_player, "volume_db", _saved_ambient_bed_db - pre_finale_music_duck_db * 0.65, duck_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw0.tween_callback(func() -> void:
+			_pre_finale_run_overlay_hold_then_finale_entrance()
+		)
+		return
+	_play_finale_then_restart_legacy()
+
+
+func _play_finale_then_restart_legacy() -> void:
+	_tween_atmosphere_to_phase("finale")
+	_prepare_finale_card_for_sequence()
+	var tween := create_tween()
+	tween.tween_property(content_root, "modulate:a", 0.0, loop_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(_finale_card, "modulate:a", 1.0, finale_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if _finale_logo_rect != null and _finale_logo_rect.visible:
+		var logo_fade_duration: float = minf(finale_logo_pop_duration, maxf(0.08, finale_fade_in_seconds))
 		tween.parallel().tween_property(_finale_logo_rect, "custom_minimum_size", _finale_logo_target_size, logo_fade_duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		tween.parallel().tween_property(_finale_logo_rect, "modulate:a", finale_logo_modulate.a, logo_fade_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tween.tween_callback(func() -> void:
 			_start_finale_logo_glow_pulse()
 		)
-	tween.tween_interval(finale_hold_seconds)
-	tween.tween_callback(func() -> void:
-		_stop_finale_logo_glow_pulse()
-	)
-	tween.tween_property(_finale_card, "modulate:a", 0.0, finale_fade_out_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	tween.tween_callback(func() -> void:
-		_stop_finale_logo_glow_pulse()
-		if _finale_card != null:
-			_finale_card.visible = false
-		_reset_scroll_to_start()
-		_update_entry_emphasis()
-	)
-	tween.tween_interval(0.05)
-	tween.tween_property(content_root, "modulate:a", 1.0, loop_fade_in_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.tween_callback(func() -> void:
-		_loop_transitioning = false
-		_scroll_enabled = true
-	)
+	_append_finale_tail_to_tween(tween)
 
 func _start_finale_logo_glow_pulse() -> void:
 	if _finale_logo_rect == null or not _finale_logo_rect.visible:
 		return
 	_stop_finale_logo_glow_pulse()
 	var pulse_strength: float = clampf(finale_logo_glow_strength, 0.0, 0.5)
+	if eerie_atmosphere_enabled:
+		pulse_strength *= 0.22
 	if pulse_strength <= 0.0:
 		return
 	var pulse_duration: float = maxf(0.12, finale_logo_glow_pulse_seconds)
@@ -907,12 +1489,22 @@ func _play_transition_flash() -> void:
 
 func _start_theatrical_pass() -> void:
 	if ambient_aura != null:
-		ambient_aura.modulate.a = 0.12
-		var aura_tween := create_tween()
-		aura_tween.set_loops()
-		aura_tween.tween_property(ambient_aura, "modulate:a", 0.28, 3.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		aura_tween.tween_property(ambient_aura, "modulate:a", 0.12, 5.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		if eerie_atmosphere_enabled:
+			ambient_aura.modulate.a = 0.13
+			var aura_subtle := create_tween()
+			aura_subtle.set_loops()
+			aura_subtle.tween_property(ambient_aura, "modulate:a", 0.16, 6.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			aura_subtle.tween_property(ambient_aura, "modulate:a", 0.13, 7.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		else:
+			ambient_aura.modulate.a = 0.12
+			var aura_tween := create_tween()
+			aura_tween.set_loops()
+			aura_tween.tween_property(ambient_aura, "modulate:a", 0.28, 3.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			aura_tween.tween_property(ambient_aura, "modulate:a", 0.12, 5.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	if card != null:
+		if eerie_atmosphere_enabled:
+			card.scale = Vector2.ONE
+			return
 		card.scale = Vector2(0.995, 0.995)
 		var card_tween := create_tween()
 		card_tween.set_loops()
@@ -926,17 +1518,35 @@ func _spawn_sparkles() -> void:
 		if old_dot != null and is_instance_valid(old_dot):
 			old_dot.queue_free()
 	_sparkles.clear()
+	_eerie_sparkle_vel.clear()
+	_eerie_sparkle_base_alpha.clear()
+	_eerie_sparkle_phase.clear()
+	var parent: Control = backdrop
+	if eerie_atmosphere_enabled and _sparkle_field != null:
+		parent = _sparkle_field
 	var vp_size: Vector2 = get_viewport_rect().size
 	for i in range(maxi(0, sparkles_count)):
 		var dot := ColorRect.new()
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var size_px: float = randf_range(1.0, 2.8)
 		dot.custom_minimum_size = Vector2(size_px, size_px)
-		dot.color = MENU_ACCENT_SOFT.lerp(MENU_ACCENT, randf())
-		dot.modulate.a = randf_range(0.12, 0.42)
+		if eerie_atmosphere_enabled:
+			dot.color = eerie_sparkles_tint
+			var base_alpha: float = randf_range(0.08, 0.32)
+			dot.modulate.a = base_alpha
+			_eerie_sparkle_base_alpha.append(base_alpha)
+			_eerie_sparkle_phase.append(randf_range(0.0, TAU))
+			var vx := randf_range(-5.0, 5.0)
+			var vy := randf_range(10.0, 28.0)
+			_eerie_sparkle_vel.append(Vector2(vx, vy + eerie_sparkle_sink_bias * 8.0))
+		else:
+			dot.color = MENU_ACCENT_SOFT.lerp(MENU_ACCENT, randf())
+			dot.modulate.a = randf_range(0.12, 0.42)
 		dot.position = Vector2(randf_range(0.0, maxf(vp_size.x - 4.0, 1.0)), randf_range(0.0, maxf(vp_size.y - 4.0, 1.0)))
-		backdrop.add_child(dot)
+		parent.add_child(dot)
 		_sparkles.append(dot)
+		if eerie_atmosphere_enabled:
+			continue
 		var drift := create_tween()
 		drift.set_loops()
 		var drift_x: float = randf_range(-26.0, 26.0)
@@ -967,14 +1577,30 @@ func _update_entry_emphasis() -> void:
 		var control_top: float = control.global_position.y
 		var control_bottom: float = control_top + control.size.y
 		if control_bottom <= viewport_top or control_top >= viewport_bottom:
-			control.modulate.a = 0.0
+			control.modulate = Color(1.0, 1.0, 1.0, 0.0)
 			continue
 		var distance_ratio: float = clampf(absf(local_center_y - viewport_center_y) / falloff, 0.0, 1.0)
 		var highlight: float = 1.0 - distance_ratio
+		var hovered: bool = bool(control.get_meta("credit_hovered", false))
+		var hover_strength: float = float(control.get_meta("credit_hover_strength", 0.0))
+		var hover_target: float = 1.0 if hovered else 0.0
+		hover_strength = lerpf(hover_strength, hover_target, clampf(hover_pulse_smoothing, 0.01, 1.0))
+		control.set_meta("credit_hover_strength", hover_strength)
+		# Alpha-based dimming reads as grey on black; in eerie mode keep full opacity and use scale only.
+		if eerie_atmosphere_enabled:
+			control.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			var scale_eerie: float = lerpf(0.992, center_highlight_scale, highlight)
+			if hover_strength > 0.001:
+				scale_eerie *= (1.0 + (hover_pulse_scale_bonus * hover_strength))
+			control.scale = Vector2(scale_eerie, scale_eerie)
+			continue
 		var phase_variant: Variant = control.get_meta("credit_phase", 0.0)
 		var phase: float = float(phase_variant)
 		var pulse: float = 0.74 + (0.26 * (0.5 + 0.5 * sin((_time_accum * 1.65) + phase)))
-		var alpha_val: float = clampf((0.42 + (highlight * center_highlight_strength)) * pulse, 0.22, 1.0)
+		var alpha_floor: float = 0.22
+		var emphasis_base: float = 0.42
+		var hl_strength: float = center_highlight_strength
+		var alpha_val: float = clampf((emphasis_base + (highlight * hl_strength)) * pulse, alpha_floor, 1.0)
 		# Fast edge fade (center-based) so lines fully dissolve before clipping.
 		var top_factor: float = clampf((local_center_y - viewport_top) / edge_band, 0.0, 1.0)
 		var bottom_factor: float = clampf((viewport_bottom - local_center_y) / edge_band, 0.0, 1.0)
@@ -982,11 +1608,6 @@ func _update_entry_emphasis() -> void:
 		alpha_val *= edge_factor
 		control.modulate.a = alpha_val
 		var scale_val: float = lerpf(0.98, center_highlight_scale, highlight)
-		var hovered: bool = bool(control.get_meta("credit_hovered", false))
-		var hover_strength: float = float(control.get_meta("credit_hover_strength", 0.0))
-		var hover_target: float = 1.0 if hovered else 0.0
-		hover_strength = lerpf(hover_strength, hover_target, clampf(hover_pulse_smoothing, 0.01, 1.0))
-		control.set_meta("credit_hover_strength", hover_strength)
 		if hover_strength > 0.001:
 			scale_val *= (1.0 + (hover_pulse_scale_bonus * hover_strength))
 			control.modulate.a = minf(1.0, control.modulate.a + (hover_pulse_alpha_bonus * hover_strength))

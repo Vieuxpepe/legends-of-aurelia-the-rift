@@ -1,12 +1,10 @@
-[gd_resource type="AudioBusLayout" format=3 uid="uid://b8audio_bus_layout01"]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://e5vvflvlsf20"]
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_introlp"]
+cutoff_hz = 2200.0
+resonance = 0.45
 
 [resource]
-bus/0/name = &"Master"
-bus/0/solo = false
-bus/0/mute = false
-bus/0/bypass_fx = false
-bus/0/volume_db = 0.0
-bus/0/send = &""
 bus/1/name = &"Music"
 bus/1/solo = false
 bus/1/mute = false
@@ -19,3 +17,11 @@ bus/2/mute = false
 bus/2/bypass_fx = false
 bus/2/volume_db = 0.0
 bus/2/send = &"Master"
+bus/3/name = &"IntroAtmos"
+bus/3/solo = false
+bus/3/mute = false
+bus/3/bypass_fx = false
+bus/3/volume_db = 0.0
+bus/3/send = &"Master"
+bus/3/effect/0/effect = SubResource("AudioEffectLowPassFilter_introlp")
+bus/3/effect/0/enabled = true
