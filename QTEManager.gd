@@ -13,15 +13,130 @@ func _begin_qte(bf: Node2D) -> Dictionary:
 	tree.paused = true
 	return {"was_paused": was_paused, "old_pitch": old_select_pitch}
 
-func _end_qte(bf: Node2D, qte_layer: CanvasLayer, state: Dictionary) -> void:
+func _end_qte(bf: Node2D, qte_layer: CanvasLayer, state: Dictionary, restore_select_pitch: bool = true) -> void:
 	if is_instance_valid(qte_layer):
 		qte_layer.queue_free()
 		
 	var tree: SceneTree = bf.get_tree()
 	tree.paused = state["was_paused"]
 	
-	if bf.select_sound and bf.select_sound.stream != null:
+	if restore_select_pitch and bf.select_sound and bf.select_sound.stream != null:
 		bf.select_sound.pitch_scale = state["old_pitch"]
+
+
+func begin_battlefield_qte(
+	bf: Node2D,
+	dimmer_color: Color,
+	layer: int = 100,
+	with_letterbox: bool = false,
+	letterbox_height: float = 56.0
+) -> Dictionary:
+	var state: Dictionary = _begin_qte(bf)
+	var qte_layer: CanvasLayer = CanvasLayer.new()
+	qte_layer.layer = layer
+	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	bf.add_child(qte_layer)
+
+	var vp_size: Vector2 = bf.get_viewport_rect().size
+	var screen_dimmer: ColorRect = ColorRect.new()
+	screen_dimmer.name = "qte_dimmer"
+	screen_dimmer.size = vp_size
+	screen_dimmer.color = dimmer_color
+	qte_layer.add_child(screen_dimmer)
+
+	var top_bar: ColorRect = null
+	var bottom_bar: ColorRect = null
+	if with_letterbox:
+		top_bar = ColorRect.new()
+		top_bar.name = "qte_letterbox_top"
+		top_bar.color = Color(0, 0, 0, 0.85)
+		top_bar.size = Vector2(vp_size.x, 0.0)
+		qte_layer.add_child(top_bar)
+
+		bottom_bar = ColorRect.new()
+		bottom_bar.name = "qte_letterbox_bottom"
+		bottom_bar.color = Color(0, 0, 0, 0.85)
+		bottom_bar.position = Vector2(0.0, vp_size.y)
+		bottom_bar.size = Vector2(vp_size.x, 0.0)
+		qte_layer.add_child(bottom_bar)
+
+		var lb_in: Tween = qte_layer.create_tween().set_parallel(true)
+		lb_in.tween_property(top_bar, "size:y", letterbox_height, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		lb_in.tween_property(bottom_bar, "size:y", letterbox_height, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		lb_in.tween_property(bottom_bar, "position:y", vp_size.y - letterbox_height, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	return {
+		"state": state,
+		"qte_layer": qte_layer,
+		"vp_size": vp_size,
+		"screen_dimmer": screen_dimmer,
+		"top_bar": top_bar,
+		"bottom_bar": bottom_bar,
+		"letterbox_height": letterbox_height
+	}
+
+
+func create_qte_flash_rect(qte_layer: CanvasLayer, vp_size: Vector2, flash_color: Color) -> ColorRect:
+	var flash_rect: ColorRect = ColorRect.new()
+	flash_rect.name = "qte_flash"
+	flash_rect.size = vp_size
+	flash_rect.color = flash_color
+	flash_rect.modulate = Color(1, 1, 1, 0)
+	qte_layer.add_child(flash_rect)
+	return flash_rect
+
+
+func create_qte_pop_bar(
+	qte_layer: CanvasLayer,
+	vp_size: Vector2,
+	bar_size: Vector2,
+	y_offset: float,
+	bar_color: Color,
+	start_scale: Vector2,
+	center_pivot: bool = false
+) -> ColorRect:
+	var bar_bg: ColorRect = ColorRect.new()
+	bar_bg.name = "bar_bg"
+	bar_bg.size = bar_size
+	if center_pivot:
+		bar_bg.pivot_offset = bar_bg.size / 2.0
+	bar_bg.position = (vp_size - bar_bg.size) / 2.0
+	bar_bg.position.y += y_offset
+	bar_bg.color = bar_color
+	bar_bg.scale = start_scale
+	bar_bg.modulate.a = 0.0
+	qte_layer.add_child(bar_bg)
+
+	var bar_pop: Tween = qte_layer.create_tween().set_parallel(true)
+	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	return bar_bg
+
+
+func wait_pause_safe_qte_hold(bf: Node2D, duration: float) -> void:
+	await bf.get_tree().create_timer(duration, true, false, true).timeout
+
+
+func close_battlefield_qte(
+	bf: Node2D,
+	qte_host: Dictionary,
+	animate_letterbox_out: bool = true,
+	letterbox_out_duration: float = 0.10
+) -> void:
+	var qte_layer: CanvasLayer = qte_host.get("qte_layer", null)
+	var state: Dictionary = qte_host.get("state", {})
+	var top_bar: ColorRect = qte_host.get("top_bar", null)
+	var bottom_bar: ColorRect = qte_host.get("bottom_bar", null)
+	var vp_size: Vector2 = qte_host.get("vp_size", Vector2.ZERO)
+
+	if animate_letterbox_out and is_instance_valid(qte_layer) and is_instance_valid(top_bar) and is_instance_valid(bottom_bar):
+		var lb_out: Tween = qte_layer.create_tween().set_parallel(true)
+		lb_out.tween_property(top_bar, "size:y", 0.0, letterbox_out_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		lb_out.tween_property(bottom_bar, "size:y", 0.0, letterbox_out_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		lb_out.tween_property(bottom_bar, "position:y", vp_size.y, letterbox_out_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		await lb_out.finished
+
+	_end_qte(bf, qte_layer, state, false)
 
 
 func _apply_qte_visual_overhaul(qte_layer: CanvasLayer, title: Label, help: Label) -> void:
@@ -106,6 +221,97 @@ func _apply_qte_visual_overhaul(qte_layer: CanvasLayer, title: Label, help: Labe
 		help_tw.tween_property(help, "modulate:a", 0.96, 0.48)
 
 	call_deferred("_polish_qte_controls_deferred", qte_layer, accent)
+
+
+func apply_battlefield_qte_ui_polish(
+	bf: Node2D,
+	qte_layer: CanvasLayer,
+	screen_dimmer: ColorRect,
+	bar_bg: ColorRect,
+	help_text: Label,
+	top_bar: ColorRect,
+	bottom_bar: ColorRect,
+	accent: Color,
+	title_text: String
+) -> void:
+	if qte_layer == null or not is_instance_valid(qte_layer):
+		return
+	var vp_size: Vector2 = bf.get_viewport_rect().size
+
+	if screen_dimmer != null and is_instance_valid(screen_dimmer):
+		screen_dimmer.color = Color(
+			clampf(accent.r * 0.12, 0.0, 0.25),
+			clampf(accent.g * 0.08, 0.0, 0.20),
+			clampf(accent.b * 0.15, 0.0, 0.30),
+			0.66
+		)
+
+	var atmosphere := ColorRect.new()
+	atmosphere.name = "QteBattleAtmosphere"
+	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	atmosphere.size = vp_size
+	atmosphere.color = Color(
+		clampf(accent.r * 0.10, 0.0, 0.18),
+		clampf(accent.g * 0.08, 0.0, 0.14),
+		clampf(accent.b * 0.12, 0.0, 0.20),
+		0.28
+	)
+	atmosphere.z_index = -3
+	qte_layer.add_child(atmosphere)
+	qte_layer.move_child(atmosphere, 1)
+
+	if top_bar != null:
+		top_bar.color = Color(0.0, 0.0, 0.0, 0.90)
+	if bottom_bar != null:
+		bottom_bar.color = Color(0.0, 0.0, 0.0, 0.90)
+
+	var title := Label.new()
+	title.text = title_text
+	title.position = Vector2(0.0, bar_bg.position.y - 124.0)
+	title.size = Vector2(vp_size.x, 52.0)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 44)
+	title.add_theme_color_override("font_color", Color(minf(accent.r + 0.10, 1.0), minf(accent.g + 0.10, 1.0), minf(accent.b + 0.10, 1.0), 1.0))
+	title.add_theme_constant_override("outline_size", 7)
+	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	qte_layer.add_child(title)
+
+	var frame := Panel.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.position = bar_bg.position + Vector2(-26.0, -20.0)
+	frame.size = bar_bg.size + Vector2(52.0, 40.0)
+	frame.z_index = -1
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.05, 0.06, 0.09, 0.80)
+	frame_style.border_color = Color(accent.r, accent.g, accent.b, 0.72)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(14)
+	frame_style.shadow_size = 20
+	frame_style.shadow_color = Color(0.0, 0.0, 0.0, 0.50)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	qte_layer.add_child(frame)
+
+	var frame_glow := ColorRect.new()
+	frame_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame_glow.size = Vector2(frame.size.x - 22.0, 4.0)
+	frame_glow.position = Vector2(11.0, 10.0)
+	frame_glow.color = Color(accent.r, accent.g, accent.b, 0.56)
+	frame.add_child(frame_glow)
+
+	if help_text != null and is_instance_valid(help_text):
+		help_text.add_theme_font_size_override("font_size", 28)
+		help_text.add_theme_color_override("font_color", Color(0.94, 0.96, 1.0, 0.98))
+		help_text.add_theme_constant_override("outline_size", 5)
+		help_text.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.88))
+		var help_tw := qte_layer.create_tween().set_loops()
+		help_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		help_tw.tween_property(help_text, "modulate:a", 0.74, 0.45)
+		help_tw.tween_property(help_text, "modulate:a", 0.98, 0.45)
+
+	var title_tw := qte_layer.create_tween().set_loops()
+	title_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	title_tw.tween_property(title, "modulate:a", 0.86, 0.66)
+	title_tw.tween_property(title, "modulate:a", 1.0, 0.66)
 
 
 func _polish_qte_controls_deferred(qte_layer: CanvasLayer, accent: Color) -> void:
