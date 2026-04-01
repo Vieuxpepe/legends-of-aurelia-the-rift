@@ -97,6 +97,8 @@ const TurnOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleF
 const BattleFieldTurnFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnFlowHelpers.gd")
 const TacticalHudLayoutHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTacticalHudLayoutHelpers.gd")
 const DefensiveReactionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionHelpers.gd")
+const BattleFieldQteMinigameHelpers = preload("res://Scripts/Core/BattleField/BattleFieldQteMinigameHelpers.gd")
+const BattleFieldGridRangeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldGridRangeHelpers.gd")
 const DetailedUnitInfoHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoHelpers.gd")
 const DetailedUnitInfoRuntimeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoRuntimeHelpers.gd")
 const DialogueInteractionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd")
@@ -2973,23 +2975,17 @@ func _draw() -> void:
 func get_grid_pos(node: Node2D) -> Vector2i:
 	return Vector2i(int(node.position.x / CELL_SIZE.x), int(node.position.y / CELL_SIZE.y))
 
+
+
+
 func get_unit_at(pos: Vector2i) -> Node2D:
-	for u in player_container.get_children():
-		if u.visible and not u.is_queued_for_deletion():
-			if u.has_method("get_occupied_tiles"):
-				if pos in u.get_occupied_tiles(self): return u
-			elif get_grid_pos(u) == pos: return u
-	return null
+	return BattleFieldGridRangeHelpers.get_unit_at(self, pos)
+
 
 ## One step from `from_cell` toward `to_cell` on the grid (-1/0/1 each axis). Zero if cells coincide.
 func _attack_line_step(from_cell: Vector2i, to_cell: Vector2i) -> Vector2i:
-	var dx: int = to_cell.x - from_cell.x
-	var dy: int = to_cell.y - from_cell.y
-	var sx: int = 0 if dx == 0 else (1 if dx > 0 else -1)
-	var sy: int = 0 if dy == 0 else (1 if dy > 0 else -1)
-	if sx == 0 and sy == 0:
-		return Vector2i.ZERO
-	return Vector2i(sx, sy)
+	return BattleFieldGridRangeHelpers.attack_line_step(from_cell, to_cell)
+
 
 
 func get_enemy_at(pos: Vector2i) -> Node2D:
@@ -3061,231 +3057,33 @@ func unit_supports_canto(unit: Node2D) -> bool:
 
 
 func rebuild_grid() -> void:
-	astar.fill_solid_region(astar.region, false)
-	flying_astar.fill_solid_region(flying_astar.region, false)
+	BattleFieldGridRangeHelpers.rebuild_grid(self)
 
-	for x in range(GRID_SIZE.x):
-		for y in range(GRID_SIZE.y):
-			var pos = Vector2i(x, y)
-			var t_data = get_terrain_data(pos)
-			astar.set_point_weight_scale(pos, t_data["move_cost"])
-			flying_astar.set_point_weight_scale(pos, 1.0)
 
-	# --- MULTI-TILE SOLIDITY HELPER ---
-	var apply_solidity = func(node: Node2D, default_block_fliers: bool = false):
-		if node == null or node.is_queued_for_deletion():
-			return
-
-		var should_block_movement: bool = true
-		var should_block_fliers: bool = default_block_fliers
-
-		if node.has_method("blocks_movement"):
-			should_block_movement = node.blocks_movement()
-
-		if node.has_method("blocks_fliers"):
-			should_block_fliers = node.blocks_fliers()
-
-		if not should_block_movement and not should_block_fliers:
-			return
-
-		var tiles = [get_grid_pos(node)]
-		if node.has_method("get_occupied_tiles"):
-			tiles = node.get_occupied_tiles(self)
-
-		for t in tiles:
-			if t.x >= 0 and t.x < GRID_SIZE.x and t.y >= 0 and t.y < GRID_SIZE.y:
-				if should_block_movement:
-					astar.set_point_solid(t, true)
-				if should_block_fliers:
-					flying_astar.set_point_solid(t, true)
-
-	# --- SOLID OBJECTS (Only block walking units unless overridden) ---
-	for w in walls_container.get_children():
-		apply_solidity.call(w, false)
-
-	if destructibles_container:
-		for d in destructibles_container.get_children():
-			apply_solidity.call(d, false)
-
-	if chests_container:
-		for c in chests_container.get_children():
-			if not c.is_queued_for_deletion() and c.is_locked:
-				astar.set_point_solid(get_grid_pos(c), true)
-
-	# --- ENEMIES (Block BOTH walkers and fliers unless overridden) ---
-	if enemy_container:
-		for e in enemy_container.get_children():
-			apply_solidity.call(e, true)
-
-	# --- PLAYER & ALLIES ---
-	var all_units = player_container.get_children()
-	if ally_container:
-		all_units += ally_container.get_children()
-
-	for u in all_units:
-		apply_solidity.call(u, false)
-
-	if show_danger_zone:
-		_danger_zone_recalc_dirty = true
-		
 func get_occupant_at(pos: Vector2i) -> Node2D:
-	var containers = [player_container, enemy_container, ally_container, destructibles_container, chests_container]
-
-	for c in containers:
-		if c != null:
-			for child in c.get_children():
-				if child == null or child.is_queued_for_deletion():
-					continue
-
-				if child.has_method("is_targetable") and not child.is_targetable():
-					continue
-
-				if child.has_method("get_occupied_tiles"):
-					if pos in child.get_occupied_tiles(self):
-						return child
-				else:
-					if get_grid_pos(child) == pos:
-						return child
-
-	return null
+	return BattleFieldGridRangeHelpers.get_occupant_at(self, pos)
 
 
 func _unit_footprint_tiles(unit: Node2D) -> Array[Vector2i]:
-	if unit != null and unit.has_method("get_occupied_tiles"):
-		var raw: Array = unit.get_occupied_tiles(self)
-		var out: Array[Vector2i] = []
-		for t in raw:
-			if t is Vector2i:
-				out.append(t as Vector2i)
-		if out.size() > 0:
-			return out
-	return [get_grid_pos(unit)]
+	return BattleFieldGridRangeHelpers.unit_footprint_tiles(self, unit)
 
 
 func _danger_overlay_cell_drawable(cell: Vector2i) -> bool:
-	if not use_fog_of_war:
-		return true
-	return fow_grid.has(cell) and fow_grid[cell] == 2
+	return BattleFieldGridRangeHelpers.danger_overlay_cell_drawable(self, cell)
 
 
 func _attack_has_clear_los(from_tile: Vector2i, to_tile: Vector2i) -> bool:
-	if from_tile == to_tile:
-		return true
-	var dist: int = abs(from_tile.x - to_tile.x) + abs(from_tile.y - to_tile.y)
-	if dist <= 1:
-		return true
-	return _check_line_of_sight(from_tile, to_tile)
+	return BattleFieldGridRangeHelpers.attack_has_clear_los(self, from_tile, to_tile)
 
 
 func clear_ranges() -> void:
-	reachable_tiles.clear()
-	attackable_tiles.clear()
-	enemy_reachable_tiles.clear() # Added
-	enemy_attackable_tiles.clear() # Added
-	queue_redraw()
+	BattleFieldGridRangeHelpers.clear_ranges(self)
+
 
 func calculate_ranges(unit: Node2D) -> void:
-	clear_ranges()
-	if unit == null: return
+	BattleFieldGridRangeHelpers.calculate_ranges(self, unit)
 
-	var footprint: Array[Vector2i] = _unit_footprint_tiles(unit)
-	var move_range: int = unit.get("move_range") if unit.get("move_range") != null else 0
-	var in_canto: bool = unit.get("in_canto_phase") == true
-	var eff_budget: float = float(move_range)
-	if in_canto:
-		eff_budget = float(unit.get("canto_move_budget"))
-	var budget_shape: int = maxi(int(ceil(eff_budget)), 1)
 
-	# 1. Walkable Tiles (Blue): full phase, or Canto pivot (move only), or footprint-only for post-move attacks
-	if not unit.has_moved or in_canto:
-		var saved: Dictionary = {}
-		for t in footprint:
-			saved[t] = {"w": astar.is_point_solid(t), "fl": flying_astar.is_point_solid(t)}
-			astar.set_point_solid(t, false)
-			flying_astar.set_point_solid(t, false)
-
-		var reach_accum: Dictionary = {}
-		for start in footprint:
-			var x0: int = maxi(0, start.x - budget_shape)
-			var x1: int = mini(GRID_SIZE.x, start.x + budget_shape + 1)
-			var y0: int = maxi(0, start.y - budget_shape)
-			var y1: int = mini(GRID_SIZE.y, start.y + budget_shape + 1)
-			for x in range(x0, x1):
-				for y in range(y0, y1):
-					var target = Vector2i(x, y)
-					if abs(start.x - target.x) + abs(start.y - target.y) > budget_shape:
-						continue
-
-					var is_solid = flying_astar.is_point_solid(target) if unit.get("move_type") == 2 else astar.is_point_solid(target)
-
-					if target != start and is_solid:
-						continue
-					var path = get_unit_path(unit, start, target)
-					if path.size() > 0:
-						var path_cost = get_path_move_cost(path, unit)
-						if path_cost <= eff_budget:
-							reach_accum[target] = true
-
-		for t in footprint:
-			var rec: Variant = saved.get(t, null)
-			if rec != null:
-				astar.set_point_solid(t, rec.w)
-				flying_astar.set_point_solid(t, rec.fl)
-
-		for k in reach_accum.keys():
-			reachable_tiles.append(k)
-	else:
-		for t in footprint:
-			reachable_tiles.append(t)
-
-	# --- FILTER LANDING ZONES ---
-	# Ensure fliers don't end their turn hovering inside a wall, and no one lands on friends!
-	var final_reachable: Array[Vector2i] = []
-	for tile in reachable_tiles:
-		var valid = true
-		var occupant = get_unit_at(tile)
-		if occupant != null and occupant != unit: valid = false
-		
-		if unit.get("move_type") == 2: # FLYING
-			for w in walls_container.get_children():
-				if get_grid_pos(w) == tile: valid = false
-			for d in destructibles_container.get_children():
-				if get_grid_pos(d) == tile and not d.is_queued_for_deletion(): valid = false
-			for c in chests_container.get_children():
-				if get_grid_pos(c) == tile and not c.is_queued_for_deletion(): valid = false
-
-		if valid: final_reachable.append(tile)
-			
-	reachable_tiles = final_reachable
-
-	# 2. Attackable Tiles (Red) â€” not during Canto (no second attack)
-	if not in_canto:
-		var min_r = 1
-		var max_r = 1
-		var wpn_res: Resource = unit.equipped_weapon
-		var use_attack_los: bool = true
-		if wpn_res != null:
-			min_r = wpn_res.min_range
-			max_r = wpn_res.max_range
-			if wpn_res.get("is_healing_staff") == true or wpn_res.get("is_buff_staff") == true or wpn_res.get("is_debuff_staff") == true:
-				use_attack_los = false
-
-		for r_tile in reachable_tiles:
-			for x in range(-max_r, max_r + 1):
-				for y in range(-max_r, max_r + 1):
-					var dist = abs(x) + abs(y)
-					if dist >= min_r and dist <= max_r:
-						var n = r_tile + Vector2i(x, y)
-						if n.x >= 0 and n.x < GRID_SIZE.x and n.y >= 0 and n.y < GRID_SIZE.y:
-							if not reachable_tiles.has(n) and not attackable_tiles.has(n):
-								if use_attack_los and not _attack_has_clear_los(r_tile, n):
-									continue
-								attackable_tiles.append(n)
-
-	if unit.has_moved and not in_canto:
-		reachable_tiles.clear()
-	queue_redraw()
-		
 func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 	# 1. Reset and Modulate the Banner
 	phase_banner.self_modulate = phase_color
@@ -4819,7 +4617,8 @@ func _apply_camera_zoom(direction: int) -> void:
 		_clamp_camera_position()
 	)
 	
-# --- ABILITY 1: THE UNIVERSAL PARRY (Timing QTE) ---
+
+# Shared battlefield QTE polish (defensive reaction UI + cinematic layers).
 func _apply_battlefield_qte_ui_polish(
 	qte_layer: CanvasLayer,
 	screen_dimmer: ColorRect,
@@ -4830,84 +4629,10 @@ func _apply_battlefield_qte_ui_polish(
 	accent: Color,
 	title_text: String
 ) -> void:
-	if qte_layer == null or not is_instance_valid(qte_layer):
-		return
-	var vp_size: Vector2 = get_viewport_rect().size
+	BattleFieldQteMinigameHelpers.apply_battlefield_qte_ui_polish(self, qte_layer, screen_dimmer, bar_bg, help_text, top_bar, bottom_bar, accent, title_text)
 
-	if screen_dimmer != null and is_instance_valid(screen_dimmer):
-		screen_dimmer.color = Color(
-			clampf(accent.r * 0.12, 0.0, 0.25),
-			clampf(accent.g * 0.08, 0.0, 0.20),
-			clampf(accent.b * 0.15, 0.0, 0.30),
-			0.66
-		)
 
-	var atmosphere := ColorRect.new()
-	atmosphere.name = "QteBattleAtmosphere"
-	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	atmosphere.size = vp_size
-	atmosphere.color = Color(
-		clampf(accent.r * 0.10, 0.0, 0.18),
-		clampf(accent.g * 0.08, 0.0, 0.14),
-		clampf(accent.b * 0.12, 0.0, 0.20),
-		0.28
-	)
-	atmosphere.z_index = -3
-	qte_layer.add_child(atmosphere)
-	qte_layer.move_child(atmosphere, 1)
-
-	if top_bar != null:
-		top_bar.color = Color(0.0, 0.0, 0.0, 0.90)
-	if bottom_bar != null:
-		bottom_bar.color = Color(0.0, 0.0, 0.0, 0.90)
-
-	var title := Label.new()
-	title.text = title_text
-	title.position = Vector2(0.0, bar_bg.position.y - 124.0)
-	title.size = Vector2(vp_size.x, 52.0)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 44)
-	title.add_theme_color_override("font_color", Color(minf(accent.r + 0.10, 1.0), minf(accent.g + 0.10, 1.0), minf(accent.b + 0.10, 1.0), 1.0))
-	title.add_theme_constant_override("outline_size", 7)
-	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
-	qte_layer.add_child(title)
-
-	var frame := Panel.new()
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.position = bar_bg.position + Vector2(-26.0, -20.0)
-	frame.size = bar_bg.size + Vector2(52.0, 40.0)
-	frame.z_index = -1
-	var frame_style := StyleBoxFlat.new()
-	frame_style.bg_color = Color(0.05, 0.06, 0.09, 0.80)
-	frame_style.border_color = Color(accent.r, accent.g, accent.b, 0.72)
-	frame_style.set_border_width_all(2)
-	frame_style.set_corner_radius_all(14)
-	frame_style.shadow_size = 20
-	frame_style.shadow_color = Color(0.0, 0.0, 0.0, 0.50)
-	frame.add_theme_stylebox_override("panel", frame_style)
-	qte_layer.add_child(frame)
-
-	var frame_glow := ColorRect.new()
-	frame_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame_glow.size = Vector2(frame.size.x - 22.0, 4.0)
-	frame_glow.position = Vector2(11.0, 10.0)
-	frame_glow.color = Color(accent.r, accent.g, accent.b, 0.56)
-	frame.add_child(frame_glow)
-
-	if help_text != null and is_instance_valid(help_text):
-		help_text.add_theme_font_size_override("font_size", 28)
-		help_text.add_theme_color_override("font_color", Color(0.94, 0.96, 1.0, 0.98))
-		help_text.add_theme_constant_override("outline_size", 5)
-		help_text.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.88))
-		var help_tw := qte_layer.create_tween().set_loops()
-		help_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		help_tw.tween_property(help_text, "modulate:a", 0.74, 0.45)
-		help_tw.tween_property(help_text, "modulate:a", 0.98, 0.45)
-
-	var title_tw := qte_layer.create_tween().set_loops()
-	title_tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	title_tw.tween_property(title, "modulate:a", 0.86, 0.66)
-	title_tw.tween_property(title, "modulate:a", 1.0, 0.66)
+# --- ABILITY 1: THE UNIVERSAL PARRY (Timing QTE) ---
 
 
 func _run_parry_minigame(defender: Node2D) -> bool:
@@ -4920,549 +4645,20 @@ func _run_shield_clash_minigame(defender: Node2D, attacker: Node2D) -> int:
 	
 # --- ABILITY 3: FOCUSED STRIKE (Offensive Hold & Release QTE) ---
 func _run_focused_strike_minigame(attacker: Node2D) -> int:
-	if attacker == null or not is_instance_valid(attacker):
-		return 0
+	return await BattleFieldQteMinigameHelpers.run_focused_strike_minigame(self, attacker)
 
-	# 1. THE TELEGRAPH
-	screen_shake(5.0, 0.2)
-	
-	var clang = get_node_or_null("ClangSound")
-	if clang != null and clang.stream != null:
-		clang.pitch_scale = 0.5 # Deep wind-up sound
-		clang.play()
-		
-	spawn_loot_text("FOCUS STRIKE!", Color(1.0, 0.5, 0.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
-	
-	await get_tree().create_timer(0.6).timeout
-	
-	# --- CINEMATIC LOCK ---
-	var prev_paused = get_tree().paused
-	get_tree().paused = true
-	
-	# 2. THE UI POP
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100 
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS # Keeps UI running while game is paused
-	add_child(qte_layer)
-	
-	var vp_size = get_viewport_rect().size
-	
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0, 0, 0, 0.35)
-	qte_layer.add_child(screen_dimmer)
-	
-	# Letterbox bars
-	var letterbox_h = 56.0
-	var top_bar = ColorRect.new()
-	top_bar.color = Color(0, 0, 0, 0.85)
-	top_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(top_bar)
-
-	var bottom_bar = ColorRect.new()
-	bottom_bar.color = Color(0, 0, 0, 0.85)
-	bottom_bar.position = Vector2(0.0, vp_size.y)
-	bottom_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(bottom_bar)
-
-	var lb_in = qte_layer.create_tween().set_parallel(true)
-	lb_in.tween_property(top_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "position:y", vp_size.y - letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-	var flash_rect = ColorRect.new()
-	flash_rect.size = vp_size
-	flash_rect.color = Color.WHITE
-	flash_rect.modulate = Color(1, 1, 1, 0)
-	qte_layer.add_child(flash_rect)
-
-	# The Background Bar
-	var bar_bg = ColorRect.new()
-	bar_bg.size = Vector2(400, 30)
-	bar_bg.pivot_offset = bar_bg.size / 2.0
-	bar_bg.position = (vp_size - bar_bg.size) / 2.0
-	bar_bg.position.y -= 100 
-	bar_bg.color = Color(0.1, 0.1, 0.1, 0.9)
-	bar_bg.scale = Vector2(0.8, 0.8)
-	bar_bg.modulate.a = 0.0
-	qte_layer.add_child(bar_bg)
-	
-	var bar_pop = qte_layer.create_tween().set_parallel(true)
-	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	
-	# The Target Zone
-	var target_zone = ColorRect.new()
-	target_zone.size = Vector2(50, 30) 
-	target_zone.position = Vector2(300, 0) # Near the end
-	target_zone.color = Color(0.2, 0.8, 0.2, 0.85)
-	bar_bg.add_child(target_zone)
-	
-	# The Perfect Zone
-	var perfect_zone = ColorRect.new()
-	perfect_zone.size = Vector2(16, 30)
-	perfect_zone.position = Vector2((target_zone.size.x - perfect_zone.size.x) / 2.0, 0.0)
-	perfect_zone.color = Color(1.0, 0.85, 0.2, 0.9)
-	target_zone.add_child(perfect_zone)
-	
-	var pulse = qte_layer.create_tween().set_loops()
-	pulse.tween_property(target_zone, "modulate", Color(1.2, 1.2, 1.2, 1.0), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	pulse.tween_property(target_zone, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	
-	# The Charging Fill Bar
-	var fill_bar = ColorRect.new()
-	fill_bar.size = Vector2(0, 30)
-	fill_bar.position = Vector2.ZERO
-	fill_bar.color = Color(1.0, 0.6, 0.0)
-	bar_bg.add_child(fill_bar)
-	
-	var help_text = Label.new()
-	help_text.text = "HOLD SPACE... RELEASE IN GREEN!"
-	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help_text.add_theme_font_size_override("font_size", 24)
-	bar_bg.add_child(help_text)
-	help_text.position = Vector2(0, -40)
-	help_text.size.x = bar_bg.size.x
-	
-	# 3. THE CHARGE LOOP (Time Tick Based for pausing immunity)
-	var final_result = 0 # 0 = fail, 1 = nice, 2 = perfect
-	var is_charging = false
-	var finished = false
-	var time_waiting = 0.0
-	
-	var fill_time = 1.2 # Takes 1.2 seconds to fill
-	var charge_start_ms = 0
-	
-	while not finished:
-		await get_tree().process_frame
-		
-		# If they haven't started holding Spacebar yet
-		if not is_charging:
-			time_waiting += get_process_delta_time()
-			if time_waiting > 2.0: 
-				finished = true
-				help_text.text = "TOO SLOW!"
-				help_text.add_theme_color_override("font_color", Color.RED)
-				break
-				
-			if Input.is_action_just_pressed("ui_accept"):
-				is_charging = true
-				charge_start_ms = Time.get_ticks_msec()
-				
-		# If they are holding it
-		else:
-			var elapsed = Time.get_ticks_msec() - charge_start_ms
-			var progress = float(elapsed) / (fill_time * 1000.0)
-			fill_bar.size.x = progress * bar_bg.size.x
-			
-			# Check Release
-			if Input.is_action_just_released("ui_accept"):
-				finished = true
-				var tip = fill_bar.size.x
-				var tz_start = target_zone.position.x
-				var tz_end = tz_start + target_zone.size.x
-				var p_start = tz_start + perfect_zone.position.x
-				var p_end = p_start + perfect_zone.size.x
-				
-				if tip >= tz_start and tip <= tz_end:
-					var perfect = (tip >= p_start and tip <= p_end)
-					final_result = 2 if perfect else 1 # <--- THE KEY UPDATE
-					
-					fill_bar.color = Color(1.0, 0.85, 0.2)
-					target_zone.color = Color(1.0, 1.0, 1.0, 0.85)
-					
-					screen_shake(24.0 if perfect else 14.0, 0.3 if perfect else 0.2)
-					
-					if clang != null and clang.stream != null:
-						clang.pitch_scale = randf_range(1.25, 1.45) if perfect else randf_range(1.15, 1.30)
-						clang.play()
-						
-					flash_rect.modulate.a = 0.0
-					var win_flash = qte_layer.create_tween()
-					win_flash.tween_property(flash_rect, "modulate:a", 0.28 if perfect else 0.20, 0.05)
-					win_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.15)
-					
-					help_text.text = "PERFECT STRIKE!" if perfect else "NICE!"
-					help_text.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2) if perfect else Color(0.2, 1.0, 0.2))
-				else:
-					final_result = 0
-					fill_bar.color = Color(0.9, 0.25, 0.25)
-					screen_shake(10.0, 0.18)
-					if miss_sound.stream != null: miss_sound.play()
-					
-					flash_rect.modulate.a = 0.0
-					var fail_flash = qte_layer.create_tween()
-					fail_flash.tween_property(flash_rect, "modulate:a", 0.10, 0.03)
-					fail_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.10)
-					
-					help_text.text = "MISSED!"
-					help_text.add_theme_color_override("font_color", Color.RED)
-				break
-				
-			# Check Overcharge
-			if fill_bar.size.x >= bar_bg.size.x:
-				fill_bar.size.x = bar_bg.size.x
-				finished = true
-				final_result = 0
-				fill_bar.color = Color(0.9, 0.25, 0.25)
-				screen_shake(10.0, 0.18)
-				if miss_sound.stream != null: miss_sound.play()
-				
-				help_text.text = "OVERCHARGED!"
-				help_text.add_theme_color_override("font_color", Color.RED)
-				break
-				
-	# 4. RESOLUTION HOLD AND CLEANUP
-	await get_tree().create_timer(0.45, true, false, true).timeout # Pause-safe timer
-	
-	var lb_out = qte_layer.create_tween().set_parallel(true)
-	lb_out.tween_property(top_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "position:y", vp_size.y, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await lb_out.finished
-	
-	qte_layer.queue_free()
-	get_tree().paused = prev_paused
-	
-	# Returns 0 (Fail), 1 (Nice), or 2 (Perfect!)
-	return final_result
 
 # --- ABILITY 4: BLOODTHIRSTER (Multi-Tap Combo QTE) ---
 # Returns the number of successful hits (0 to 3)
 func _run_bloodthirster_minigame(attacker: Node2D) -> int:
-	if attacker == null or not is_instance_valid(attacker):
-		return 0
+	return await BattleFieldQteMinigameHelpers.run_bloodthirster_minigame(self, attacker)
 
-	# 1. THE TELEGRAPH
-	screen_shake(8.0, 0.3)
-	
-	var clang = get_node_or_null("ClangSound")
-	if clang != null and clang.stream != null:
-		clang.pitch_scale = 0.6 # Deep, sinister thud
-		clang.play()
-		
-	spawn_loot_text("BLOODTHIRSTER!", Color(0.8, 0.1, 0.1), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
-	
-	await get_tree().create_timer(0.6).timeout
-	
-	# --- CINEMATIC LOCK ---
-	var prev_paused = get_tree().paused
-	get_tree().paused = true
 
-	# 2. THE UI POP
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100 
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(qte_layer)
-	
-	var vp_size = get_viewport_rect().size
-	
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0.2, 0.0, 0.0, 0.4) # Dark red tint
-	qte_layer.add_child(screen_dimmer)
-	
-	# Letterbox Bars
-	var letterbox_h = 56.0
-	var top_bar = ColorRect.new()
-	top_bar.color = Color(0, 0, 0, 0.85)
-	top_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(top_bar)
-
-	var bottom_bar = ColorRect.new()
-	bottom_bar.color = Color(0, 0, 0, 0.85)
-	bottom_bar.position = Vector2(0.0, vp_size.y)
-	bottom_bar.size = Vector2(vp_size.x, 0.0)
-	qte_layer.add_child(bottom_bar)
-
-	var lb_in = qte_layer.create_tween().set_parallel(true)
-	lb_in.tween_property(top_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "size:y", letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	lb_in.tween_property(bottom_bar, "position:y", vp_size.y - letterbox_h, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	
-	var flash_rect = ColorRect.new()
-	flash_rect.size = vp_size
-	flash_rect.color = Color(0.8, 0.1, 0.1) # Red flash
-	flash_rect.modulate = Color(1, 1, 1, 0)
-	qte_layer.add_child(flash_rect)
-
-	# Main Bar
-	var bar_bg = ColorRect.new()
-	bar_bg.size = Vector2(420, 34)
-	bar_bg.position = (vp_size - bar_bg.size) / 2.0
-	bar_bg.position.y -= 100.0
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.95)
-	bar_bg.scale = Vector2(0.9, 0.9)
-	bar_bg.modulate.a = 0.0
-	qte_layer.add_child(bar_bg)
-	
-	var bar_pop = qte_layer.create_tween().set_parallel(true)
-	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	
-	# The 3 Combo Target Zones
-	var z_width = 30.0
-	var targets = []
-	var positions = [80.0, 200.0, 320.0] # Spread evenly across the bar
-	
-	for pos in positions:
-		var tz = ColorRect.new()
-		tz.size = Vector2(z_width, 34)
-		tz.position = Vector2(pos, 0)
-		tz.color = Color(0.4, 0.0, 0.0, 0.8) # Dull red until hit
-		bar_bg.add_child(tz)
-		targets.append(tz)
-	
-	var qte_cursor = ColorRect.new()
-	qte_cursor.size = Vector2(8, 56)
-	qte_cursor.position = Vector2(0, -11)
-	qte_cursor.color = Color.WHITE
-	bar_bg.add_child(qte_cursor)
-	
-	var help_text = Label.new()
-	help_text.text = "TAP 3 TIMES!"
-	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help_text.add_theme_font_size_override("font_size", 26)
-	help_text.add_theme_color_override("font_color", Color(0.8, 0.1, 0.1))
-	help_text.position = Vector2(0, -52)
-	help_text.size.x = bar_bg.size.x
-	bar_bg.add_child(help_text)
-	
-	# 3. COMBO SWEEP LOOP
-	var total_ms = 1400 # 1.4 seconds to sweep across
-	var start_ms = Time.get_ticks_msec()
-	
-	var hits = 0
-	var active_zone = 0
-	var broken = false
-
-	while true:
-		await get_tree().process_frame
-		var elapsed_ms = Time.get_ticks_msec() - start_ms
-		
-		if elapsed_ms >= total_ms:
-			break
-			
-		var progress = float(elapsed_ms) / float(total_ms)
-		qte_cursor.position.x = progress * bar_bg.size.x
-		
-		if not broken and active_zone < 3:
-			var current_tz = targets[active_zone]
-			var c_center = qte_cursor.position.x + (qte_cursor.size.x / 2.0)
-			var tz_start = current_tz.position.x
-			var tz_end = tz_start + current_tz.size.x
-			
-			# Check if cursor passed the zone without the player pressing space
-			if c_center > tz_end + 5.0:
-				broken = true
-				qte_cursor.color = Color(0.4, 0.4, 0.4)
-				current_tz.color = Color(0.2, 0.0, 0.0, 0.8)
-				if miss_sound.stream != null: miss_sound.play()
-				help_text.text = "COMBO DROPPED!"
-				help_text.add_theme_color_override("font_color", Color.GRAY)
-				screen_shake(8.0, 0.2)
-				
-			# Check if they pressed space
-			elif Input.is_action_just_pressed("ui_accept"):
-				# Give a tiny bit of leniency (8 pixels)
-				if c_center >= tz_start - 8.0 and c_center <= tz_end + 8.0:
-					hits += 1
-					active_zone += 1
-					current_tz.color = Color(1.0, 0.1, 0.1, 1.0) # Bright Crimson on hit!
-					screen_shake(12.0, 0.15)
-					
-					# Pitch escalates with each successful hit
-					if clang != null and clang.stream != null:
-						clang.pitch_scale = 0.8 + (hits * 0.25) 
-						clang.play()
-						
-					flash_rect.modulate.a = 0.0
-					var hit_flash = qte_layer.create_tween()
-					hit_flash.tween_property(flash_rect, "modulate:a", 0.15, 0.03)
-					hit_flash.tween_property(flash_rect, "modulate:a", 0.00, 0.1)
-				else:
-					broken = true
-					qte_cursor.color = Color(0.4, 0.4, 0.4)
-					if miss_sound.stream != null: miss_sound.play()
-					help_text.text = "MISSED!"
-					help_text.add_theme_color_override("font_color", Color.GRAY)
-					screen_shake(8.0, 0.2)
-					
-	# 4. FINAL RESOLUTION
-	if hits == 3:
-		help_text.text = "MAXIMUM BLOODSHED!"
-		help_text.add_theme_color_override("font_color", Color(1.0, 0.1, 0.1))
-		screen_shake(20.0, 0.4)
-		if crit_sound.stream != null: crit_sound.play()
-		
-	await get_tree().create_timer(0.45, true, false, true).timeout 
-	
-	var lb_out = qte_layer.create_tween().set_parallel(true)
-	lb_out.tween_property(top_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "size:y", 0.0, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	lb_out.tween_property(bottom_bar, "position:y", vp_size.y, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await lb_out.finished
-	
-	qte_layer.queue_free()
-	get_tree().paused = prev_paused
-	return hits # Returns 0, 1, 2, or 3!
-	
 # --- ABILITY 5: HUNDRED POINT STRIKE (Simon Says QTE) ---
 # Returns the total number of successful combo hits
 func _run_hundred_point_strike_minigame(attacker: Node2D) -> int:
-	if attacker == null or not is_instance_valid(attacker):
-		return 0
+	return await BattleFieldQteMinigameHelpers.run_hundred_point_strike_minigame(self, attacker)
 
-	# 1. THE TELEGRAPH
-	screen_shake(6.0, 0.2)
-	
-	if has_node("ClangSound") and get_node("ClangSound").stream != null:
-		get_node("ClangSound").pitch_scale = 1.5 # Fast, sharp ring
-		get_node("ClangSound").play()
-		
-	spawn_loot_text("HUNDRED POINT STRIKE!", Color(0.9, 0.2, 1.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
-	
-	await get_tree().create_timer(0.7).timeout
-	
-	# --- CINEMATIC LOCK ---
-	var prev_paused = get_tree().paused
-	get_tree().paused = true
-
-	# 2. THE UI POP
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100 
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(qte_layer)
-	
-	var vp_size = get_viewport_rect().size
-	
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0.1, 0.0, 0.2, 0.6) # Deep purple tint
-	qte_layer.add_child(screen_dimmer)
-	
-	# The Prompt Box (Shows the Arrow Key)
-	var prompt_box = ColorRect.new()
-	prompt_box.size = Vector2(120, 120)
-	prompt_box.position = (vp_size - prompt_box.size) / 2.0
-	prompt_box.position.y -= 50
-	prompt_box.color = Color(0.1, 0.1, 0.1, 0.9)
-	qte_layer.add_child(prompt_box)
-	
-	var prompt_label = Label.new()
-	prompt_label.text = "â†‘"
-	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	prompt_label.add_theme_font_size_override("font_size", 80)
-	prompt_label.add_theme_color_override("font_color", Color.WHITE)
-	prompt_label.size = prompt_box.size
-	prompt_box.add_child(prompt_label)
-	
-	# The Timer Bar (Shrinks down)
-	var timer_bar = ProgressBar.new()
-	timer_bar.max_value = 100
-	timer_bar.value = 100
-	timer_bar.size = Vector2(300, 20)
-	timer_bar.position = Vector2((vp_size.x - 300) / 2.0, prompt_box.position.y + 140)
-	timer_bar.show_percentage = false
-	
-	var fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.9, 0.2, 1.0)
-	timer_bar.add_theme_stylebox_override("fill", fill_style)
-	qte_layer.add_child(timer_bar)
-	
-	# Combo Counter
-	var combo_label = Label.new()
-	combo_label.text = "HITS: 0"
-	combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	combo_label.add_theme_font_size_override("font_size", 40)
-	combo_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
-	combo_label.position = Vector2(0, prompt_box.position.y - 60)
-	combo_label.size.x = vp_size.x
-	qte_layer.add_child(combo_label)
-
-	# 3. THE COMBO LOOP
-	var actions = ["ui_up", "ui_down", "ui_left", "ui_right"]
-	var arrows = ["UP â†‘", "DOWN â†“", "LEFT â†", "RIGHT â†’"]
-	
-	var hits = 0
-	var current_target = randi() % 4
-	prompt_label.text = arrows[current_target]
-	
-	# Base time is 1.2 seconds. It will shrink as the combo grows!
-	var max_time_for_hit = 1.2 
-	var time_left = max_time_for_hit
-	var failed = false
-
-	# We clear the input buffer so they don't accidentally fail on frame 1
-	Input.flush_buffered_events()
-
-	while not failed:
-		await get_tree().process_frame
-		var delta = get_process_delta_time()
-		time_left -= delta
-		
-		# Update visual bar
-		timer_bar.value = (time_left / max_time_for_hit) * 100.0
-		
-		# Did they run out of time?
-		if time_left <= 0:
-			failed = true
-			prompt_box.color = Color(0.8, 0.1, 0.1) # Turn red
-			prompt_label.text = "X"
-			if miss_sound.stream != null: miss_sound.play()
-			break
-			
-		# Check for player inputs
-		var pressed_any = false
-		var hit_correct = false
-		
-		for i in range(4):
-			if Input.is_action_just_pressed(actions[i]):
-				pressed_any = true
-				if i == current_target:
-					hit_correct = true
-				break # Stop checking other keys if they pressed one
-				
-		if pressed_any:
-			if hit_correct:
-				# SUCCESS!
-				hits += 1
-				combo_label.text = "HITS: " + str(hits)
-				
-				# Play pitch-escalating sound
-				if select_sound.stream != null:
-					select_sound.pitch_scale = min(1.0 + (hits * 0.1), 2.5)
-					select_sound.play()
-					
-				# Make the game harder! Shrink the time limit by 12% (min 0.25s)
-				max_time_for_hit = max(0.25, max_time_for_hit * 0.88)
-				time_left = max_time_for_hit
-				
-				# Pick a new random key
-				current_target = randi() % 4
-				prompt_label.text = arrows[current_target]
-				
-				# Micro flash for feedback
-				prompt_box.modulate = Color(2.0, 2.0, 2.0)
-				var flash = qte_layer.create_tween()
-				flash.tween_property(prompt_box, "modulate", Color.WHITE, 0.05)
-				
-			else:
-				# WRONG KEY PRESSED!
-				failed = true
-				prompt_box.color = Color(0.8, 0.1, 0.1) 
-				prompt_label.text = "X"
-				if miss_sound.stream != null: miss_sound.play()
-				break
-
-	# 4. RESOLUTION HOLD
-	screen_shake(10.0, 0.2)
-	await get_tree().create_timer(0.6, true, false, true).timeout 
-	
-	qte_layer.queue_free()
-	get_tree().paused = prev_paused
-	return hits
 
 # ==========================================
 # STAT APPLICATION HELPER
@@ -5540,186 +4736,25 @@ func _on_loot_item_selected(index: int) -> void:
 # INVENTORY WINDOW INFO PANEL
 # ==========================================
 
+
+
 func calculate_enemy_threat_range(enemy: Node2D) -> void:
-	clear_ranges()
-	enemy_reachable_tiles.clear()
-	enemy_attackable_tiles.clear()
-	if enemy == null: return
-	if not can_preview_enemy_threat(enemy): return
+	BattleFieldGridRangeHelpers.calculate_enemy_threat_range(self, enemy)
 
-	var footprint: Array[Vector2i] = _unit_footprint_tiles(enemy)
-	var move_range = enemy.get("move_range") if enemy.get("move_range") != null else 0
 
-	var saved: Dictionary = {}
-	for t in footprint:
-		saved[t] = {"w": astar.is_point_solid(t), "fl": flying_astar.is_point_solid(t)}
-		astar.set_point_solid(t, false)
-		flying_astar.set_point_solid(t, false)
-
-	var reach_accum: Dictionary = {}
-	for start in footprint:
-		var x0: int = maxi(0, start.x - move_range)
-		var x1: int = mini(GRID_SIZE.x, start.x + move_range + 1)
-		var y0: int = maxi(0, start.y - move_range)
-		var y1: int = mini(GRID_SIZE.y, start.y + move_range + 1)
-		for x in range(x0, x1):
-			for y in range(y0, y1):
-				var target = Vector2i(x, y)
-				if abs(start.x - target.x) + abs(start.y - target.y) > move_range:
-					continue
-
-				var path = get_unit_path(enemy, start, target)
-				if path.size() > 0:
-					var path_cost = get_path_move_cost(path, enemy)
-					if path_cost <= float(move_range):
-						reach_accum[target] = true
-
-	for t in footprint:
-		var rec: Variant = saved.get(t, null)
-		if rec != null:
-			astar.set_point_solid(t, rec.w)
-			flying_astar.set_point_solid(t, rec.fl)
-
-	for k in reach_accum.keys():
-		enemy_reachable_tiles.append(k)
-
-	var min_r = 1
-	var max_r = 1
-	var ew_variant: Variant = enemy.get("equipped_weapon")
-	var ew: Resource = ew_variant as Resource if ew_variant is Resource else null
-	var enemy_use_los: bool = true
-	if ew != null:
-		min_r = ew.min_range
-		max_r = ew.max_range
-		if ew.get("is_healing_staff") == true or ew.get("is_buff_staff") == true or ew.get("is_debuff_staff") == true:
-			enemy_use_los = false
-
-	for r_tile in enemy_reachable_tiles:
-		for x in range(-max_r, max_r + 1):
-			for y in range(-max_r, max_r + 1):
-				var dist = abs(x) + abs(y)
-				if dist >= min_r and dist <= max_r:
-					var n = r_tile + Vector2i(x, y)
-					if n.x >= 0 and n.x < GRID_SIZE.x and n.y >= 0 and n.y < GRID_SIZE.y:
-						if not enemy_reachable_tiles.has(n) and not enemy_attackable_tiles.has(n):
-							if enemy_use_los and not _attack_has_clear_los(r_tile, n):
-								continue
-							enemy_attackable_tiles.append(n)
-	queue_redraw()
-		
 # Calculates the movement points, adding penalties for Armored units
 func get_path_move_cost(path: Array[Vector2i], unit: Node2D) -> float:
-	var total_cost = 0.0
-	var is_flying = unit.get("move_type") == 2 # FLYING
-	var is_armored = unit.get("move_type") == 1 # ARMORED
+	return BattleFieldGridRangeHelpers.get_path_move_cost(self, path, unit)
 
 
-	for i in range(1, path.size()):
-		if is_flying:
-			total_cost += 1.0
-		else:
-			var base_cost = astar.get_point_weight_scale(path[i])
-			# If terrain is tough (Cost > 1.0) and unit is Armored, punish them!
-			if is_armored and base_cost > 1.0:
-				base_cost += 1.0 
-			total_cost += base_cost
-	return total_cost
-	
 func get_unit_path(unit: Node2D, start: Vector2i, target: Vector2i) -> Array[Vector2i]:
-	if unit.get("move_type") == 2: # FLYING
-		return flying_astar.get_id_path(start, target)
-	return astar.get_id_path(start, target)
+	return BattleFieldGridRangeHelpers.get_unit_path(self, unit, start, target)
+
 
 func calculate_full_danger_zone() -> void:
-	_danger_zone_recalc_dirty = false
-	danger_zone_move_tiles.clear()
-	danger_zone_attack_tiles.clear()
-	if enemy_container == null: return
+	BattleFieldGridRangeHelpers.calculate_full_danger_zone(self)
 
-	var union_move: Dictionary = {}
-	var union_attack: Dictionary = {}
 
-	for enemy in enemy_container.get_children():
-		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
-			continue
-		# Match get_enemy_at / FoW: hidden enemies do not contribute threat.
-		if not enemy.visible:
-			continue
-		if enemy.get("current_hp") != null and enemy.current_hp <= 0:
-			continue
-
-		var footprint: Array[Vector2i] = _unit_footprint_tiles(enemy)
-		var move_range = enemy.get("move_range") if enemy.get("move_range") != null else 0
-
-		var saved: Dictionary = {}
-		for t in footprint:
-			saved[t] = {"w": astar.is_point_solid(t), "fl": flying_astar.is_point_solid(t)}
-			astar.set_point_solid(t, false)
-			flying_astar.set_point_solid(t, false)
-
-		var reachable: Array[Vector2i] = []
-		var reach_seen: Dictionary = {}
-		for start in footprint:
-			var x0: int = maxi(0, start.x - move_range)
-			var x1: int = mini(GRID_SIZE.x, start.x + move_range + 1)
-			var y0: int = maxi(0, start.y - move_range)
-			var y1: int = mini(GRID_SIZE.y, start.y + move_range + 1)
-			for x in range(x0, x1):
-				for y in range(y0, y1):
-					var target = Vector2i(x, y)
-					if abs(start.x - target.x) + abs(start.y - target.y) > move_range:
-						continue
-					var path = get_unit_path(enemy, start, target)
-					if path.size() > 0:
-						var path_cost = get_path_move_cost(path, enemy)
-						if path_cost <= float(move_range):
-							if not reach_seen.has(target):
-								reach_seen[target] = true
-								reachable.append(target)
-
-		for t in footprint:
-			var rec: Variant = saved.get(t, null)
-			if rec != null:
-				astar.set_point_solid(t, rec.w)
-				flying_astar.set_point_solid(t, rec.fl)
-
-		var reachable_set: Dictionary = {}
-		for t in reachable:
-			reachable_set[t] = true
-			union_move[t] = true
-
-		var min_r = 1
-		var max_r = 1
-		var ew2: Resource = enemy.equipped_weapon
-		var danger_use_los: bool = true
-		if ew2 != null:
-			min_r = ew2.min_range
-			max_r = ew2.max_range
-			if ew2.get("is_healing_staff") == true or ew2.get("is_buff_staff") == true or ew2.get("is_debuff_staff") == true:
-				danger_use_los = false
-
-		for r_tile in reachable:
-			for ox in range(-max_r, max_r + 1):
-				for oy in range(-max_r, max_r + 1):
-					var dist = abs(ox) + abs(oy)
-					if dist < min_r or dist > max_r:
-						continue
-					var n = r_tile + Vector2i(ox, oy)
-					if n.x < 0 or n.x >= GRID_SIZE.x or n.y < 0 or n.y >= GRID_SIZE.y:
-						continue
-					if reachable_set.has(n):
-						continue
-					if union_attack.has(n):
-						continue
-					if danger_use_los and not _attack_has_clear_los(r_tile, n):
-						continue
-					union_attack[n] = true
-
-	for k in union_move.keys():
-		danger_zone_move_tiles.append(k)
-	for k in union_attack.keys():
-		danger_zone_attack_tiles.append(k)
-	queue_redraw()
 
 func toggle_danger_zone() -> void:
 	show_danger_zone = !show_danger_zone
@@ -6631,58 +5666,17 @@ func update_fog_of_war() -> void:
 	# Force the black squares to redraw
 	fog_drawer.queue_redraw()
 
+	
+
 func _check_line_of_sight(start: Vector2i, target: Vector2i) -> bool:
-	# Bresenham's Line Algorithm
-	var dx = abs(target.x - start.x)
-	var dy = -abs(target.y - start.y)
-	var sx = 1 if start.x < target.x else -1
-	var sy = 1 if start.y < target.y else -1
-	var err = dx + dy
-	
-	var current = start
-	
-	while true:
-		# If the ray hits a wall/mountain BEFORE reaching the target, vision is blocked
-		if current != start and current != target:
-			
-			# --- NEW: Check physical Wall nodes in the Hierarchy! ---
-			if _is_wall_at(current):
-				return false
-				
-			# (We keep the TileMap check as a backup just in case you ever 
-			# want to add "Mountain" or "Thick Forest" tiles later)
-			var t_data = get_terrain_data(current)
-			if vision_blocking_terrain.has(t_data["name"]):
-				return false
-				
-		if current == target: break
-		
-		var e2 = 2 * err
-		if e2 >= dy:
-			err += dy
-			current.x += sx
-		if e2 <= dx:
-			err += dx
-			current.y += sy
-			
-	return true
-	
+	return BattleFieldGridRangeHelpers.check_line_of_sight(self, start, target)
+
+
 func _is_wall_at(pos: Vector2i) -> bool:
-	if walls_container == null: return false
-	
-	for w in walls_container.get_children():
-		if not is_instance_valid(w) or w.is_queued_for_deletion(): continue
-		
-		# Support for both 1x1 walls and massive multi-tile walls!
-		if w.has_method("get_occupied_tiles"):
-			if pos in w.get_occupied_tiles(self):
-				return true
-		else:
-			if get_grid_pos(w) == pos:
-				return true
-				
-	return false
-	
+	return BattleFieldGridRangeHelpers.is_wall_at(self, pos)
+
+
+
 func _apply_fow_visibility(container: Node) -> void:
 	if container == null: return
 	for child in container.get_children():
@@ -6765,125 +5759,8 @@ func _on_fog_draw() -> void:
 
 # --- TACTICAL ABILITY (Momentum QTE) ---
 func _run_tactical_action_minigame(attacker: Node2D, ability_name: String) -> bool:
-	if attacker == null or not is_instance_valid(attacker): return false
+	return await BattleFieldQteMinigameHelpers.run_tactical_action_minigame(self, attacker, ability_name)
 
-	# 1) TELEGRAPH
-	screen_shake(6.0, 0.2)
-	var clang = get_node_or_null("ClangSound")
-	if clang != null and clang.stream != null:
-		clang.pitch_scale = 1.8 # High-pitched windup
-		clang.play()
-
-	spawn_loot_text("MOMENTUM!", Color(0.2, 1.0, 1.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
-
-	await get_tree().create_timer(0.45).timeout
-
-	# --- CINEMATIC LOCK ---
-	var prev_paused = get_tree().paused
-	get_tree().paused = true
-
-	# 2) UI POP
-	var qte_layer = CanvasLayer.new()
-	qte_layer.layer = 100
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS 
-	add_child(qte_layer)
-
-	var vp_size = get_viewport_rect().size
-
-	var screen_dimmer = ColorRect.new()
-	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0, 0.1, 0.2, 0.3) # Slight blue tint
-	qte_layer.add_child(screen_dimmer)
-
-	# Bar
-	var bar_bg = ColorRect.new()
-	bar_bg.size = Vector2(380, 30)
-	bar_bg.pivot_offset = bar_bg.size / 2.0
-	bar_bg.position = (vp_size - bar_bg.size) / 2.0
-	bar_bg.position.y += 100.0 # Put it below the action
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.95)
-	bar_bg.scale = Vector2(0.86, 0.86)
-	bar_bg.modulate.a = 0.0
-	qte_layer.add_child(bar_bg)
-
-	var bar_pop = qte_layer.create_tween().set_parallel(true)
-	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-	# The "Perfect" Sweet Spot (Small and Green)
-	var perfect_zone = ColorRect.new()
-	perfect_zone.size = Vector2(40, 30)
-	var rand_max = bar_bg.size.x - perfect_zone.size.x
-	perfect_zone.position = Vector2(randf_range(50.0, rand_max), 0.0)
-	perfect_zone.color = Color(0.2, 1.0, 0.2, 0.9)
-	bar_bg.add_child(perfect_zone)
-
-	var qte_cursor = ColorRect.new()
-	qte_cursor.size = Vector2(8, 50)
-	qte_cursor.position = Vector2(0, -10)
-	qte_cursor.color = Color.WHITE
-	bar_bg.add_child(qte_cursor)
-
-	var help_text = Label.new()
-	help_text.text = "STOP IN GREEN FOR +DAMAGE & TRAP DURATION!" if ability_name == "Fire Trap" else "STOP IN GREEN FOR 2x DISTANCE!"
-	help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help_text.add_theme_font_size_override("font_size", 24)
-	help_text.add_theme_color_override("font_color", Color.CYAN)
-	bar_bg.add_child(help_text)
-	help_text.position = Vector2(0, 40)
-	help_text.size.x = bar_bg.size.x
-
-	# 3) TIMING LOOP 
-	var total_ms = 700 # Very fast!
-	var start_ms = Time.get_ticks_msec()
-	var is_perfect = false
-	var pressed = false
-
-	while true:
-		await get_tree().process_frame
-		var elapsed_ms = Time.get_ticks_msec() - start_ms
-
-		if elapsed_ms >= total_ms: break
-
-		var progress = float(elapsed_ms) / float(total_ms)
-		qte_cursor.position.x = progress * bar_bg.size.x
-
-		if Input.is_action_just_pressed("ui_accept"):
-			pressed = true
-			var cursor_center = qte_cursor.position.x + (qte_cursor.size.x / 2.0)
-			var p_start = perfect_zone.position.x
-			var p_end = p_start + perfect_zone.size.x
-
-			if cursor_center >= p_start and cursor_center <= p_end:
-				is_perfect = true
-				qte_cursor.color = Color.YELLOW
-				perfect_zone.color = Color.WHITE
-				screen_shake(15.0, 0.25)
-
-				if clang != null and clang.stream != null:
-					clang.pitch_scale = 1.3
-					clang.play()
-				
-				help_text.text = "MAXIMUM POWER!"
-				help_text.add_theme_color_override("font_color", Color.YELLOW)
-			else:
-				qte_cursor.color = Color(0.9, 0.25, 0.25)
-				if miss_sound.stream != null: miss_sound.play()
-				help_text.text = "NORMAL " + ability_name.to_upper()
-				help_text.add_theme_color_override("font_color", Color.GRAY)
-			break
-
-	if not pressed:
-		if miss_sound.stream != null: miss_sound.play()
-		help_text.text = "NORMAL " + ability_name.to_upper()
-		help_text.add_theme_color_override("font_color", Color.GRAY)
-
-	await get_tree().create_timer(0.45, true, false, true).timeout 
-
-	qte_layer.queue_free()
-	get_tree().paused = prev_paused
-	
-	return is_perfect
 
 func _count_alive_enemies(exclude: Node2D = null) -> int:
 	var count := 0
