@@ -254,6 +254,14 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
 		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
 
+	# Physical subtype multipliers (forecast must match resolution)
+	if not atk_is_magic and atk_wpn != null:
+		var atk_subtype: int = field.resolve_physical_subtype(atk_wpn)
+		atk_dmg = int(round(float(atk_dmg) * field.resolve_physical_subtype_multiplier(defender, atk_subtype)))
+	if not def_is_magic and def_wpn != null:
+		var def_subtype: int = field.resolve_physical_subtype(def_wpn)
+		def_dmg = int(round(float(def_dmg) * field.resolve_physical_subtype_multiplier(attacker, def_subtype)))
+
 	# UI Updates (columns: left = attacker / you, right = defender / target)
 	field.forecast_atk_name.text = ForecastUI.format_forecast_name_fitted("ATK", attacker.unit_name, 17)
 	field.forecast_atk_weapon.text = ForecastUI.format_forecast_weapon_name(atk_wpn, 14)

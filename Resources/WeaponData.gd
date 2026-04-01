@@ -6,6 +6,14 @@ enum DamageType {
 	MAGIC = 1
 }
 
+## Physical subtype for physical attacks (weapon triangle stays separate).
+## IMPORTANT: Append only; do not reorder (serialized in .tres).
+enum PhysicalSubtype {
+	SLASHING = 0,
+	PIERCING = 1,
+	BLUDGEONING = 2
+}
+
 # IMPORTANT:
 # Existing serialized values are preserved explicitly.
 # New weapon categories are appended safely to avoid remapping old .tres files.
@@ -31,6 +39,7 @@ enum WeaponType {
 @export var gold_cost: int = 250
 @export var damage_type: DamageType = DamageType.PHYSICAL
 @export var weapon_type: WeaponType = WeaponType.SWORD
+@export var physical_subtype: PhysicalSubtype = PhysicalSubtype.SLASHING
 
 @export_category("Visual Effects")
 @export var projectile_scene: PackedScene

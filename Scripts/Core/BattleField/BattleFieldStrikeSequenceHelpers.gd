@@ -1458,6 +1458,13 @@ static func run_strike_sequence(
 			var crit_chance: int = int(clamp((attacker.agility / 2) + assassinate_crit_bonus + atk_rel["crit_bonus"] - def_sup["crit_avo"] + rookie_crit, 0, 100))
 			damage += hellfire_bonus_damage + ballista_shot_bonus_damage + aegis_strike_bonus_damage
 			damage += rookie_dmg
+
+			# Physical subtype multiplier (slashing/piercing/bludgeoning). Magic stays untouched.
+			if not is_magic and wpn != null:
+				var subtype: int = field.resolve_physical_subtype(wpn)
+				var mult: float = field.resolve_physical_subtype_multiplier(defender, subtype)
+				damage = int(round(float(damage) * mult))
+
 			var is_crit: bool = force_crit or (randi() % 100 < crit_chance)
 			var attack_hits: bool = force_hit or (randi() % 100 < hit_chance)
 			if not rookie_log.is_empty():

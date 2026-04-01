@@ -105,6 +105,9 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 	var impact_damage_kind: int = 0
 	if is_magic or (wpn_fx != null and int(wpn_fx.damage_type) == int(WeaponData.DamageType.MAGIC)):
 		impact_damage_kind = 1
+	var phys_subtype: int = -1
+	if not is_magic and wpn_fx is WeaponData:
+		phys_subtype = field.resolve_physical_subtype(wpn_fx as WeaponData)
 
 	if not defense_resolved_and_won:
 		if attack_hits:
@@ -239,6 +242,8 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 							field.spawn_blood_splatter(defender, attacker.global_position, false, impact_damage_kind)
 
 							var exp_tgt = attacker if (defender.current_hp <= current_hit_dmg or hit_idx == combo_hits - 1) else null
+							if phys_subtype >= 0:
+								defender.set_meta("last_damage_subtype", phys_subtype)
 							field._apply_hit_with_support_reactions(defender, current_hit_dmg, attacker, exp_tgt, false)
 
 						if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
@@ -303,6 +308,8 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 						else:
 							loot_recipient = null
 
+						if phys_subtype >= 0:
+							defender.set_meta("last_damage_subtype", phys_subtype)
 						field._apply_hit_with_support_reactions(defender, final_dmg, attacker, attacker, false)
 
 						if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
@@ -326,6 +333,8 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 									"rise_px": 38.0,
 								})
 								field.spawn_slash_effect(defender.global_position, attacker.global_position, force_crit, weapon_impact_fam)
+								if phys_subtype >= 0:
+									defender.set_meta("last_damage_subtype", phys_subtype)
 								field._apply_hit_with_support_reactions(defender, slash_dmg, attacker, attacker, false)
 
 						if parting_shot_dodge and is_instance_valid(attacker) and attacker.current_hp > 0:

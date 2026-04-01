@@ -38,6 +38,12 @@ class_name UnitData
 @export var speed: int = 3
 @export var agility: int = 3
 
+@export_category("Damage Subtype Multipliers (Physical)")
+## 1.0 = neutral, <1.0 = resistant, >1.0 = vulnerable
+@export var phys_mult_slashing: float = 1.0
+@export var phys_mult_piercing: float = 1.0
+@export var phys_mult_bludgeoning: float = 1.0
+
 @export_category("Character Growth Rates (%)")
 @export var hp_growth: int = 40
 @export var str_growth: int = 30

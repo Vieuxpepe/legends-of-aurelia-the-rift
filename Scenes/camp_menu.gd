@@ -8689,16 +8689,51 @@ func _on_use_pressed() -> void:
 	if not (item is ConsumableData): return
 	
 	var unit_idx = selected_roster_index
+	if unit_idx < 0 or unit_idx >= CampaignManager.player_roster.size():
+		return
 	var unit_data = CampaignManager.player_roster[unit_idx]
 	
 	# --- JUICE: TRACK GAINS FOR FEEDBACK ---
 	var feedback_list = []
+	var should_consume_item: bool = false
 	
+	# ==========================================
+	# PROMOTION ITEM LOGIC (SHARED WITH BATTLEFIELD RULES)
+	# ==========================================
+	var item_name_lower = str(item.item_name).to_lower()
+	if item.get("is_promotion_item") == true:
+		var current_class: Resource = PromotionFlowSharedHelpers.resolve_current_class_from_roster_unit(unit_data)
+		var promotion_options: Array[Resource] = PromotionFlowSharedHelpers.get_promotion_options(current_class)
+		if not PromotionFlowSharedHelpers.can_unit_promote(int(unit_data.get("level", 1)), current_class):
+			_play_camp_inv_sfx_invalid()
+			if warning_dialog:
+				warning_dialog.dialog_text = "Cannot Promote!"
+				warning_dialog.popup_centered()
+			return
+
+		var chosen_advanced_class: Resource = await _ask_for_promotion_choice(promotion_options)
+		if chosen_advanced_class == null:
+			return
+
+		var promo_result: Dictionary = PromotionFlowSharedHelpers.apply_promotion_to_roster_unit(unit_data, chosen_advanced_class)
+		var promoted_name: String = str(promo_result.get("new_class_name", "Advanced Class"))
+		var promo_gains: Dictionary = promo_result.get("gains", {})
+		feedback_list.append("CLASS CHANGE: " + promoted_name.to_upper())
+		var hp_gain: int = int(promo_gains.get("hp", 0))
+		if hp_gain != 0:
+			feedback_list.append("%+d MAX HP" % hp_gain)
+		var gain_labels := {"str": "STR", "mag": "MAG", "def": "DEF", "res": "RES", "spd": "SPD", "agi": "AGI"}
+		for short_key in gain_labels.keys():
+			var amount: int = int(promo_gains.get(short_key, 0))
+			if amount != 0:
+				feedback_list.append("%+d %s" % [amount, gain_labels[short_key]])
+		_play_camp_inv_sfx_use()
+		should_consume_item = true
+
 	# ==========================================
 	# NEW: EGG CONSUMPTION LOGIC (SOUL ABSORPTION)
 	# ==========================================
-	var item_name_lower = str(item.item_name).to_lower()
-	if "egg" in item_name_lower:
+	elif "egg" in item_name_lower:
 		var element = "Fire" # Fallback
 		var egg_uid = item.get_meta("egg_uid", "")
 		var found_in_queue = false
@@ -8740,6 +8775,7 @@ func _on_use_pressed() -> void:
 		if masterwork_sound and masterwork_sound.stream: 
 			masterwork_sound.pitch_scale = 0.7 # Deep rumbling absorption
 			masterwork_sound.play()
+		should_consume_item = true
 			
 	# ==========================================
 	# EXISTING LOGIC: POTIONS, MUSIC, STAT BOOSTS
@@ -8785,6 +8821,10 @@ func _on_use_pressed() -> void:
 				feedback_list.append("+ " + str(boost_val) + " " + stats[key])
 
 		_play_camp_inv_sfx_use()
+		should_consume_item = true
+
+	if not should_consume_item:
+		return
 	
 	# --- EXECUTE CONSUMPTION (REMOVE THE ITEM) ---
 	if meta["source"] == "unit":

@@ -62,8 +62,10 @@ static func resolve_current_class_from_roster_unit(unit_data: Dictionary) -> Res
 static func apply_promotion_to_unit_node(unit: Node2D, advanced_class: Resource, apply_stat_gains_cb: Callable = Callable()) -> Dictionary:
 	if unit == null or advanced_class == null:
 		return {}
-	var old_class_name: String = str(unit.get("unit_class_name", "")).strip_edges()
-	var new_class_name: String = str(advanced_class.get("job_name", "Advanced Class")).strip_edges()
+	var old_class_name_raw: Variant = unit.get("unit_class_name")
+	var old_class_name: String = str(old_class_name_raw if old_class_name_raw != null else "").strip_edges()
+	var new_class_name_raw: Variant = advanced_class.get("job_name")
+	var new_class_name: String = str(new_class_name_raw if new_class_name_raw != null else "Advanced Class").strip_edges()
 	if new_class_name == "":
 		new_class_name = "Advanced Class"
 	var gains: Dictionary = build_promotion_gains(advanced_class)
@@ -119,7 +121,8 @@ static func apply_promotion_to_roster_unit(unit_data: Dictionary, advanced_class
 	var old_class_name: String = str(unit_data.get("unit_class", "")).strip_edges()
 	if old_class_name == "" and current_class != null and current_class.get("job_name") != null:
 		old_class_name = str(current_class.job_name).strip_edges()
-	var new_class_name: String = str(advanced_class.get("job_name", "Advanced Class")).strip_edges()
+	var new_class_name_raw: Variant = advanced_class.get("job_name")
+	var new_class_name: String = str(new_class_name_raw if new_class_name_raw != null else "Advanced Class").strip_edges()
 	if new_class_name == "":
 		new_class_name = "Advanced Class"
 	var gains: Dictionary = build_promotion_gains(advanced_class)

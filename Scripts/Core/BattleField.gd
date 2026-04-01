@@ -4685,6 +4685,52 @@ func _weapon_type_name_safe(w_type: int) -> String:
 		10: return "Dark Tome"
 		_: return "Unknown"
 
+
+## Physical damage subtype resolution (presentation/logic separate from weapon triangle).
+## If a weapon has the default subtype but its family implies a different default, use the family default.
+func resolve_physical_subtype(wpn: WeaponData) -> int:
+	if wpn == null:
+		return int(WeaponData.PhysicalSubtype.SLASHING)
+	var fam: int = WeaponData.get_weapon_family(int(wpn.weapon_type))
+	var inferred: int = int(WeaponData.PhysicalSubtype.SLASHING)
+	if fam == WeaponData.WeaponType.SWORD:
+		inferred = int(WeaponData.PhysicalSubtype.SLASHING)
+	elif fam == WeaponData.WeaponType.LANCE:
+		inferred = int(WeaponData.PhysicalSubtype.PIERCING)
+	elif fam == WeaponData.WeaponType.AXE:
+		inferred = int(WeaponData.PhysicalSubtype.BLUDGEONING)
+	elif fam == WeaponData.WeaponType.BOW:
+		inferred = int(WeaponData.PhysicalSubtype.PIERCING)
+	else:
+		inferred = int(WeaponData.PhysicalSubtype.BLUDGEONING)
+
+	var stored: int = inferred
+	if wpn.get("physical_subtype") != null:
+		stored = int(wpn.physical_subtype)
+	# Heuristic: new field defaults to SLASHING for all legacy weapons; infer for non-sword families unless explicitly overridden.
+	if stored == int(WeaponData.PhysicalSubtype.SLASHING) and inferred != int(WeaponData.PhysicalSubtype.SLASHING) and fam != WeaponData.WeaponType.SWORD:
+		return inferred
+	return stored
+
+
+## Returns multiplier for a physical subtype vs a defender's UnitData, defaulting to 1.0 when missing.
+func resolve_physical_subtype_multiplier(defender: Node2D, subtype: int) -> float:
+	if defender == null or not is_instance_valid(defender):
+		return 1.0
+	var d: Variant = defender.get("data")
+	if d == null or not (d is UnitData):
+		return 1.0
+	var ud: UnitData = d as UnitData
+	match int(subtype):
+		WeaponData.PhysicalSubtype.SLASHING:
+			return maxf(0.0, float(ud.phys_mult_slashing))
+		WeaponData.PhysicalSubtype.PIERCING:
+			return maxf(0.0, float(ud.phys_mult_piercing))
+		WeaponData.PhysicalSubtype.BLUDGEONING:
+			return maxf(0.0, float(ud.phys_mult_bludgeoning))
+		_:
+			return 1.0
+
 func _format_class_weapon_permissions(class_res: Resource) -> String:
 	if class_res == null:
 		return "Weapons: Unknown"
