@@ -25,6 +25,10 @@ static func execute_talk(field, initiator: Node2D, target: Node2D) -> void:
 	if field._battle_resonance_allowed():
 		CampaignManager.mark_battle_resonance("showed_mercy_under_pressure")
 	field.rebuild_grid()
+	if field.has_method("update_fog_of_war"):
+		field.update_fog_of_war()
+	if field.has_method("update_objective_ui"):
+		field.update_objective_ui(true)
 
 
 static func play_recruit_dialogue(field, initiator: Node2D, target: Node2D) -> void:
@@ -110,6 +114,10 @@ static func _on_support_talk_pressed(field) -> void:
 
 
 static func play_support_dialogue(field, initiator: Node2D, target: Node2D) -> void:
+	if initiator.get("data") == null or target.get("data") == null:
+		push_warning("BattleField: support dialogue aborted (missing unit data).")
+		return
+
 	var init_name: String = field.get_support_name(initiator)
 	var target_name: String = field.get_support_name(target)
 	var bond: Dictionary = CampaignManager.get_support_bond(init_name, target_name)
@@ -139,6 +147,10 @@ static func play_support_dialogue(field, initiator: Node2D, target: Node2D) -> v
 		elif bond["rank"] == 2:
 			dialogue_lines = support_file_found.a_dialogue
 			new_rank_name = "A"
+
+	if support_file_found == null or dialogue_lines.is_empty():
+		push_warning("BattleField: support dialogue missing or empty for current rank; bond not advanced.")
+		return
 
 	# Reuse the exact same cinematic UI we built for Enemy Recruitment!
 	var temp_data: Variant = target.get("data")

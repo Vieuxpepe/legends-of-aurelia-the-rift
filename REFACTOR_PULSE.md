@@ -467,6 +467,15 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 - **Not moved:** `_setup_objective_ui` (already `ObjectiveUiHelpers`); intro / arena VS (`_start_intro_sequence`) left on field.
 - **Verification:** `ReadLints` — clean. Smoke: new game / load → deployment → start battle; skirmish; mock co-op roster snapshot if used.
 
+### 38) Post-refactor stabilization checkpoint (monolith size + audit pass) — **stable milestone**
+- **Scale:** The historical `BattleField.gd` monolith (~21k lines) has been reduced to a **stable milestone** of roughly **under ~5k lines**, with large subsystems living in `Scripts/Core/BattleField/*Helpers.gd` and thin delegation on the field.
+- **Audit-driven fixes:** Recent parity-focused corrections (forecast, co-op startup, forced movement grid, cinematic pause/camera) were **kept and applied** in code; see **Verification log** below for a short checklist of categories.
+- **Direction:** Next priority is **stabilization and drift control**, not broad redesign or re-expanding `BattleField.gd`.
+- **Guidance for new work:**
+  - **Avoid** dropping new combat features directly into `BattleField.gd` unless they are **tiny orchestration glue** (delegate out early).
+  - **Parity-sensitive helpers** should get a **few strategic comments** where behavior is non-obvious or tightly coupled to forecast/resolution/sync ordering.
+  - **Future Battlefield work should prioritize:** (1) helper cohesion, (2) wrapper cleanup **only when safe**, (3) **anti-regrowth** discipline on the monolith.
+
 ---
 
 ## Verification log
@@ -485,10 +494,18 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 - Visual parity checks:
   - `_draw()` pre-battle deployment overlay drift was corrected in `BattleFieldDrawHelpers.gd` and verified.
   - Cursor/path preview + loot-close still require runtime smoke confirmation for final “no drift” proof (lint does not validate visuals).
+- **Stabilization / audit pass (2026-03-31, categories verified in-session):**
+  - **Utility staff forecast parity** — forecast classification aligned with combat for heal/buff/debuff staffs (`BattleFieldCombatForecastFlowHelpers.gd` + shared utility-staff gate).
+  - **Co-op startup sync registration timing** — runtime battle sync registers **after** mock handoff ownership assignment when applicable (`BattleFieldStartupHelpers.gd`), avoiding early inbound drops.
+  - **Forced movement authoritative grid rebuild** — Shove/Grapple path uses **`rebuild_grid()`** after the slide tween instead of partial `astar` patching (`BattleFieldForcedMovementTacticalHelpers.gd`).
+  - **Cinematic dialogue pause / camera restore** — snapshots prior `tree.paused` and `main_camera.process_mode`, restores on exit (`BattleFieldCinematicDialogueHelpers.gd`).
+  - *Runtime smoke for these four items:* exercise in editor locally (utility staff forecast, mock co-op battle start with handoff, shove/grapple, cinematic dialogue) — not re-run as automated tests from the agent session.
 
 ---
 
 ## Next Heavy Refactor Targets (proposed)
+**Note:** The list below remains useful for backlog sizing, but **stabilization** (helper cohesion, safe wrapper trims, anti-regrowth) is the **current priority** over starting new large extractions unless they unblock a bug or parity issue.
+
 These are the next subsystems that are likely to be large and parity-sensitive.
 
 ### A) Combat turn orchestration extraction

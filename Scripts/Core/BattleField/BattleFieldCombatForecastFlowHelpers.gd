@@ -5,6 +5,18 @@ extends RefCounted
 
 const ForecastUI = preload("res://Scripts/Core/BattleField/BattleFieldCombatForecastHelpers.gd")
 
+
+## Matches `BattleFieldCombatOrchestrationHelpers.execute_combat` / strike staff gate (heal, buff, debuff).
+static func is_utility_staff_weapon(wpn: Resource) -> bool:
+	if wpn == null:
+		return false
+	return (
+		wpn.get("is_healing_staff") == true
+		or wpn.get("is_buff_staff") == true
+		or wpn.get("is_debuff_staff") == true
+	)
+
+
 static func get_forecast_support_text(field, unit: Node2D) -> String:
 	if unit == null:
 		return ""
@@ -33,12 +45,7 @@ static func build_forecast_reaction_summary(field, attacker: Node2D, defender: N
 	if attacker == null or defender == null:
 		return ""
 
-	var staff: bool = atk_wpn != null and (
-		atk_wpn.get("is_healing_staff") == true
-		or atk_wpn.get("is_buff_staff") == true
-		or atk_wpn.get("is_debuff_staff") == true
-	)
-	if staff:
+	if is_utility_staff_weapon(atk_wpn):
 		lines.append("Staff: Guard / Dual Strike / Defy Death do not apply to this exchange.")
 		return "\n".join(lines)
 
@@ -241,7 +248,7 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 	var def_hit: int = clamp(80 + def_hit_bonus + def_tri_hit + def_adj["hit"] + def_sup["hit"] - atk_sup["avo"] + def_rel["hit"] - atk_rel["avo"] + (defender.agility * 2) - (attacker.speed * 2) - atk_terrain["avo"], 0, 100)
 	var def_crit: int = clamp(defender.agility / 2 + def_rel["crit_bonus"] - atk_sup["crit_avo"], 0, 100)
 
-	if atk_wpn == null or atk_wpn.get("is_healing_staff") != true:
+	if atk_wpn == null or not is_utility_staff_weapon(atk_wpn):
 		var fr_rookie: Dictionary = field._forecast_rookie_class_passive_mods(attacker, defender, atk_is_magic, atk_wpn)
 		atk_hit = clampi(atk_hit + int(fr_rookie.get("hit", 0)), 0, 100)
 		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
@@ -296,11 +303,23 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 	# --- RESET UI MODULATES ---
 	ForecastUI.reset_forecast_emphasis_visuals(field)
 
-	# --- HEALING VS ATTACKING LOGIC ---
-	if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
+	# --- UTILITY STAFF (heal / buff / debuff) — same classification as execute_combat + strike PHASE A ---
+	if is_utility_staff_weapon(atk_wpn):
 		field.forecast_def_name.text = ForecastUI.format_forecast_name_fitted("TARGET", defender.unit_name, 18)
-		var heal_amount = attacker.magic + atk_wpn.might
-		field.forecast_atk_dmg.text = "HEAL: " + str(heal_amount)
+		if atk_wpn.get("is_healing_staff") == true:
+			var heal_amount = attacker.magic + atk_wpn.might
+			field.forecast_atk_dmg.text = "HEAL: " + str(heal_amount)
+		elif atk_wpn.get("is_buff_staff") == true:
+			var bstat: String = str(atk_wpn.get("affected_stat", "?"))
+			var bamt: int = int(atk_wpn.get("effect_amount", 0))
+			field.forecast_atk_dmg.text = "BUFF: " + bstat.to_upper() + " +" + str(bamt)
+		elif atk_wpn.get("is_debuff_staff") == true:
+			var dstat: String = str(atk_wpn.get("affected_stat", "?"))
+			var damt: int = int(atk_wpn.get("effect_amount", 0))
+			field.forecast_atk_dmg.text = "DEBUFF: " + dstat.to_upper() + " -" + str(damt)
+		else:
+			field.forecast_atk_dmg.text = "STAFF: --"
+
 		field.forecast_atk_hit.text = "HIT: 100%"
 		field.forecast_atk_crit.text = "CRIT: 0%"
 
@@ -318,13 +337,13 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		field.forecast_atk_hit.text = "HIT: " + str(atk_hit) + "%"
 		field.forecast_atk_crit.text = "CRIT: " + str(atk_crit) + "%"
 
-		var def_is_healer = def_wpn != null and def_wpn.get("is_healing_staff") == true
+		var def_is_utility_staff: bool = is_utility_staff_weapon(def_wpn)
 		if defender.get_parent() == field.enemy_container:
 			field.forecast_def_name.text = ForecastUI.format_forecast_name_fitted("DEF", defender.unit_name, 17)
 		else:
 			field.forecast_def_name.text = ForecastUI.format_forecast_name_fitted("TARGET", defender.unit_name, 18)
 
-		if def_wpn == null or def_is_healer or not field.is_in_range(defender, attacker):
+		if def_wpn == null or def_is_utility_staff or not field.is_in_range(defender, attacker):
 			field.forecast_def_dmg.text = "COUNTER: NONE"
 			field.forecast_def_hit.text = ""
 			field.forecast_def_crit.text = ""
@@ -424,6 +443,10 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 	if field.forecast_instruction_label:
 		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
 			field.forecast_instruction_label.text = "Confirm to heal. Cancel or right-click to go back."
+		elif atk_wpn != null and atk_wpn.get("is_buff_staff") == true:
+			field.forecast_instruction_label.text = "Confirm to buff. Cancel or right-click to go back."
+		elif atk_wpn != null and atk_wpn.get("is_debuff_staff") == true:
+			field.forecast_instruction_label.text = "Confirm to debuff. Cancel or right-click to go back."
 		else:
 			var ins := "Left: your strike · Right: enemy counter (if any). Click the defender's tile to commit."
 			if talk_visible:

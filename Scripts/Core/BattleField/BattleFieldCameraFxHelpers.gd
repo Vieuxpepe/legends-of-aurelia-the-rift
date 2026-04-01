@@ -155,9 +155,10 @@ static func start_impact_camera(field, focus_world: Vector2, _zoom_mult: float, 
 	field._impact_snap_tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	field._impact_snap_tween.tween_property(field.main_camera, "offset", old_offset + punch_offset, snap_t).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
+	var restore_offset: Vector2 = old_offset
 	field._impact_snap_tween.finished.connect(func():
 		field._impact_restore_tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		field._impact_restore_tween.tween_property(field.main_camera, "offset", Vector2.ZERO, restore_t).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		field._impact_restore_tween.tween_property(field.main_camera, "offset", restore_offset, restore_t).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	)
 
 

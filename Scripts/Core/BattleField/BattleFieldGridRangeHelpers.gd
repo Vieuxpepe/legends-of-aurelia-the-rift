@@ -284,8 +284,9 @@ static func calculate_ranges(field, unit: Node2D) -> void:
 	var final_reachable: Array[Vector2i] = []
 	for tile in field.reachable_tiles:
 		var valid = true
-		var occupant = get_unit_at(field, tile)
-		if occupant != null and occupant != unit: valid = false
+		var occupant: Node2D = get_occupant_at(field, tile)
+		if occupant != null and occupant != unit:
+			valid = false
 		
 		if unit.get("move_type") == 2: # FLYING
 			for w in field.walls_container.get_children():

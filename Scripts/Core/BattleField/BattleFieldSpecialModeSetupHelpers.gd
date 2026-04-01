@@ -54,6 +54,8 @@ static func apply_special_modes_after_fog(field) -> void:
 				if d.has_method("process_turn") and d.get("spawner_faction") == 0:
 					d.queue_free()
 
+		field.rebuild_grid()
+
 		var max_roster_level = CampaignManager.get_highest_garrison_level()
 
 		var chosen_data_path = "res://Resources/Units/LowLevelBandit.tres"
@@ -87,7 +89,7 @@ static func apply_special_modes_after_fog(field) -> void:
 			if spawned >= spawn_count:
 				break
 
-			if not field.astar.is_point_solid(pos) and field.get_unit_at(pos) == null:
+			if not field.astar.is_point_solid(pos) and field.get_occupant_at(pos) == null:
 
 				if field.player_unit_scene == null:
 					push_warning("CRITICAL: player_unit_scene is not assigned in the Inspector.")
@@ -162,6 +164,8 @@ static func setup_arena_battle(field) -> void:
 	for child in field.enemy_container.get_children():
 		child.queue_free()
 
+	field.rebuild_grid()
+
 	var meta = opp_data.get("metadata", {})
 	var roster = meta.get("roster", [])
 	var dragons = meta.get("dragons", [])
@@ -170,7 +174,7 @@ static func setup_arena_battle(field) -> void:
 	for x in range(int(field.GRID_SIZE.x / 2.0), field.GRID_SIZE.x):
 		for y in range(field.GRID_SIZE.y):
 			var pos = Vector2i(x, y)
-			if not field.astar.is_point_solid(pos) and field.get_unit_at(pos) == null:
+			if not field.astar.is_point_solid(pos) and field.get_occupant_at(pos) == null:
 				valid_spawn_points.append(pos)
 
 	valid_spawn_points.shuffle()

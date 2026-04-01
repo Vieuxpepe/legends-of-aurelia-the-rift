@@ -151,8 +151,6 @@ static func on_ready(field) -> void:
 			CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
 			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
 	)
-	if has_live_runtime_coop_phase:
-		CoopExpeditionSessionManager.register_runtime_coop_battle_sync_target(field)
 	if not field._consumed_mock_coop_battle_handoff.is_empty():
 		field._mock_coop_battle_context = MockCoopBattleContext.from_consumed_handoff(field._consumed_mock_coop_battle_handoff)
 		if field._mock_coop_battle_context != null:
@@ -161,9 +159,11 @@ static func on_ready(field) -> void:
 		print("[MockCoopHandoff] battle start keys=%s" % str(field._consumed_mock_coop_battle_handoff.keys()))
 		present_mock_coop_joint_expedition_charter(field)
 		field._assign_mock_coop_unit_ownership_from_context()
-		if field.is_mock_coop_unit_ownership_active() and has_live_runtime_coop_phase:
+	if has_live_runtime_coop_phase:
+		CoopExpeditionSessionManager.register_runtime_coop_battle_sync_target(field)
+		if field.is_mock_coop_unit_ownership_active():
 			CoopExpeditionSessionManager.try_publish_runtime_coop_battle_rng_seed()
-	elif has_live_runtime_coop_phase and OS.is_debug_build():
+	if field._consumed_mock_coop_battle_handoff.is_empty() and has_live_runtime_coop_phase and OS.is_debug_build():
 		push_warning("BattleField: network co-op battle loaded without a pending mock handoff; battle sync is registered, but ownership is inactive.")
 	if has_live_runtime_coop_phase and not field.is_mock_coop_unit_ownership_active() and OS.is_debug_build():
 		push_warning("BattleField: network co-op battle has no active mock ownership assignment; local player moves will not mirror until the handoff/ownership path is valid.")

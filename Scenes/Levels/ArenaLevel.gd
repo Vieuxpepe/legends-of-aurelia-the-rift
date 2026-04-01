@@ -15,7 +15,8 @@ const DEFAULT_CELL_SIZE: Vector2i = Vector2i(64, 64)
 
 # Predefined grid coordinates for enemy spawns when no BattleField is found.
 var enemy_spawn_points: Array[Vector2] = [
-	Vector2(10, 5), Vector2(10, 6), Vector2(10, 7), Vector2(11, 5), Vector2(11, 6)
+	Vector2(10, 5), Vector2(10, 6), Vector2(10, 7), Vector2(11, 5), Vector2(11, 6),
+	Vector2(12, 5), Vector2(12, 6), Vector2(12, 7), Vector2(13, 5), Vector2(13, 6)
 ]
 
 # Cached after _ready; used for spawning and signal connections.
@@ -25,6 +26,11 @@ var _cell_size: Vector2i = DEFAULT_CELL_SIZE
 
 
 func _ready() -> void:
+	# Yield one frame to ensure _battlefield's @onready variables (like enemy_container) are initialized
+	# because child _ready() runs before parent _ready().
+	call_deferred("_initialize_spawns")
+
+func _initialize_spawns() -> void:
 	_resolve_spawn_target()
 	_spawn_ghost_team()
 
@@ -34,6 +40,9 @@ func _resolve_spawn_target() -> void:
 	_battlefield = _find_battlefield()
 	if _battlefield != null:
 		var enc = _battlefield.get("enemy_container")
+		if enc == null:
+			# Fallback if onready hasn't fired or was missed
+			enc = _battlefield.get_node_or_null("EnemyUnits")
 		if enc != null and enc is Node:
 			_spawn_container = enc
 		if _battlefield.get("CELL_SIZE") != null:
@@ -53,10 +62,16 @@ func _find_battlefield() -> Node:
 
 
 func _get_next_spawn_position(index: int) -> Vector2:
+	var p: Vector2
 	if index < enemy_spawn_points.size():
-		var p: Vector2 = enemy_spawn_points[index]
-		return Vector2(p.x * _cell_size.x, p.y * _cell_size.y)
-	return Vector2.ZERO
+		p = enemy_spawn_points[index]
+	else:
+		# Fallback pattern if we run out of defined manual spawn points
+		var offset = index - enemy_spawn_points.size()
+		p = Vector2(9 - (offset / 3), 5 + (offset % 3))
+	
+	# Add half cell size to perfectly center the units in the grid tile
+	return Vector2(p.x * _cell_size.x + _cell_size.x * 0.5, p.y * _cell_size.y + _cell_size.y * 0.5)
 
 
 func _spawn_ghost_team() -> void:
@@ -78,8 +93,6 @@ func _spawn_ghost_team() -> void:
 				child.queue_free()
 
 	for unit_dict in roster:
-		if spawn_index >= enemy_spawn_points.size():
-			break
 		var ghost: Node2D = _spawn_one_ghost_unit(unit_dict, false)
 		if ghost != null:
 			ghost.position = _get_next_spawn_position(spawn_index)
@@ -91,8 +104,6 @@ func _spawn_ghost_team() -> void:
 			spawn_index += 1
 
 	for d_dict in dragons:
-		if spawn_index >= enemy_spawn_points.size():
-			break
 		var ghost_dragon: Node2D = _spawn_one_ghost_dragon(d_dict)
 		if ghost_dragon != null:
 			ghost_dragon.position = _get_next_spawn_position(spawn_index)
@@ -131,8 +142,9 @@ func _spawn_one_ghost_unit(unit_dict: Dictionary, _is_dragon: bool) -> Node2D:
 		ghost.ability = unit_dict.get("ability", "None")
 
 	_create_ghost_weapon(ghost, unit_dict.get("equipped_weapon_name", "Ghost Blade"), 5, 10, 1, 1)
-	if ghost.get("data") == null:
-		ghost.set("data", UnitData.new())
+	var safe_data = UnitData.new()
+	safe_data.portrait = null
+	ghost.set("data", safe_data)
 
 	return ghost
 
@@ -168,8 +180,9 @@ func _spawn_one_ghost_dragon(d_dict: Dictionary) -> Node2D:
 	fang.max_range = 1
 	ghost.equipped_weapon = fang
 
-	if ghost.get("data") == null:
-		ghost.set("data", UnitData.new())
+	var safe_data = UnitData.new()
+	safe_data.portrait = null
+	ghost.set("data", safe_data)
 
 	return ghost
 
@@ -206,9 +219,11 @@ func _apply_ghost_visuals(ghost: Node2D, unit_dict: Dictionary) -> void:
 		if sprite_node:
 			sprite_node.texture = load(s_path) as Texture2D
 	var data = ghost.get("data")
-	if data != null and p_path != "" and ResourceLoader.exists(p_path):
-		data.portrait = load(p_path) as Texture2D
-
+	if data != null:
+		if p_path != "" and ResourceLoader.exists(p_path):
+			data.portrait = load(p_path) as Texture2D
+		else:
+			data.portrait = null
 
 func _apply_ghost_dragon_visuals(ghost: Node2D, d_dict: Dictionary) -> void:
 	ghost.base_color = Color(1.0, 0.7, 0.7)

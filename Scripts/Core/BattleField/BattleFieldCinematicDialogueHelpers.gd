@@ -36,6 +36,9 @@ static func play_cinematic_dialogue(
 	lines: Array,
 	hide_gameplay_ui: bool = false
 ) -> void:
+	var prev_tree_paused: bool = field.get_tree().paused
+	var prev_cam_process_mode: Node.ProcessMode = field.main_camera.process_mode if field.main_camera != null else Node.PROCESS_MODE_INHERIT
+
 	# 1. Freeze the game so nothing moves in the background
 	field.get_tree().paused = true
 	var vp_size = field.get_viewport_rect().size
@@ -245,5 +248,7 @@ static func play_cinematic_dialogue(
 	cine_layer.queue_free()
 	if hide_gameplay_ui:
 		restore_ui_visibility_snapshot(field, ui_visibility_snapshot)
-	field.get_tree().paused = false
+	field.get_tree().paused = prev_tree_paused
+	if field.main_camera != null:
+		field.main_camera.process_mode = prev_cam_process_mode
 

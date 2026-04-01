@@ -93,9 +93,8 @@ static func process_phase_g_forced_movement_and_fire_trap(
 			if tiles_moved > 0:
 				var slide_tween: Tween = field.create_tween()
 				slide_tween.tween_property(defender, "global_position", Vector2(target_tile.x * field.CELL_SIZE.x, target_tile.y * field.CELL_SIZE.y), 0.15 * tiles_moved).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-				field.astar.set_point_solid(d_pos, false)
-				field.astar.set_point_solid(target_tile, true)
 				await slide_tween.finished
+				field.rebuild_grid()
 
 			if crashed:
 				field.spawn_loot_text("CRASH!", Color.RED, defender.global_position + Vector2(32, -16))

@@ -592,13 +592,54 @@ static func apply_tactical_ui_overhaul(field) -> void:
 	field._style_tactical_item_list(field.trade_left_list)
 	field._style_tactical_item_list(field.trade_right_list)
 	
+	var talk_panel_w: float = clampf(vp_size.x - 56.0, 560.0, 980.0)
+	var talk_panel_h: float = 268.0
+	var talk_panel_x: float = (vp_size.x - talk_panel_w) * 0.5
+	var talk_panel_y: float = maxf(36.0, vp_size.y - talk_panel_h - 42.0)
+	var talk_portrait_size := Vector2(150.0, 184.0)
+	var talk_portrait_margin_x: float = 16.0
+	var talk_portrait_margin_y: float = 16.0
+	var talk_center_left: float = talk_portrait_margin_x + talk_portrait_size.x + 18.0
+	var talk_center_right_margin: float = talk_portrait_margin_x + talk_portrait_size.x + 18.0
+	var talk_footer_h: float = 46.0
+	var talk_text_bottom_margin: float = 14.0
 	if field.talk_panel != null:
+		field.talk_panel.scale = Vector2.ONE
+		field.talk_panel.position = Vector2(talk_panel_x, talk_panel_y)
+		field.talk_panel.size = Vector2(talk_panel_w, talk_panel_h)
+		field.talk_panel.clip_contents = true
 		field._style_tactical_panel(field.talk_panel, field.TACTICAL_UI_BG_ALT, field.TACTICAL_UI_BORDER, 2, 12)
+	if field.talk_left_portrait != null:
+		field.talk_left_portrait.position = Vector2(talk_portrait_margin_x, talk_portrait_margin_y)
+		field.talk_left_portrait.size = talk_portrait_size
+		field.talk_left_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		field.talk_left_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	if field.talk_right_portrait != null and field.talk_panel != null:
+		field.talk_right_portrait.position = Vector2(field.talk_panel.size.x - talk_portrait_margin_x - talk_portrait_size.x, talk_portrait_margin_y)
+		field.talk_right_portrait.size = talk_portrait_size
+		field.talk_right_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		field.talk_right_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if field.talk_name != null:
+		if field.talk_panel != null:
+			field.talk_name.position = Vector2(talk_center_left, 16.0)
+			field.talk_name.size = Vector2(field.talk_panel.size.x - talk_center_left - talk_center_right_margin, 30.0)
+			field.talk_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			field.talk_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		field._style_tactical_label(field.talk_name, field.TACTICAL_UI_ACCENT, 22, 4)
 	if field.talk_text != null:
+		if field.talk_panel != null:
+			field.talk_text.position = Vector2(talk_center_left, 54.0)
+			field.talk_text.size = Vector2(
+				field.talk_panel.size.x - talk_center_left - talk_center_right_margin,
+				field.talk_panel.size.y - 54.0 - talk_footer_h - talk_text_bottom_margin
+			)
+			field.talk_text.scroll_active = false
 		field._style_tactical_richtext(field.talk_text, 19, 21)
 	if field.talk_next_btn != null:
+		if field.talk_panel != null:
+			field.talk_next_btn.position = Vector2(field.talk_panel.size.x - 16.0 - 152.0, field.talk_panel.size.y - 16.0 - 38.0)
+			field.talk_next_btn.size = Vector2(152.0, 38.0)
+			field.talk_next_btn.z_index = 2
 		field._style_tactical_button(field.talk_next_btn, "CONTINUE", true, 18)
 	
 	if field.level_up_panel != null:

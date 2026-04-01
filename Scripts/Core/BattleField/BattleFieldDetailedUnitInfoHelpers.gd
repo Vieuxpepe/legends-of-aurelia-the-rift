@@ -3,8 +3,18 @@ extends RefCounted
 static func get_unit_target_for_details(field) -> Node2D:
 	var locked_inspect_unit: Node2D = field._get_locked_inspect_unit()
 	if locked_inspect_unit != null:
-		return locked_inspect_unit
+		# Match hostile reveal rules used by targeting (`get_enemy_at`: fog-hidden enemies are not inspectable).
+		if locked_inspect_unit.get_parent() == field.enemy_container:
+			var locked_cell: Vector2i = field.get_grid_pos(locked_inspect_unit)
+			if field.get_enemy_at(locked_cell) != locked_inspect_unit:
+				locked_inspect_unit = null
+		if locked_inspect_unit != null:
+			return locked_inspect_unit
 	var hovered_occupant: Node2D = field.get_occupant_at(field.cursor_grid_pos)
+	if hovered_occupant != null:
+		if hovered_occupant.get_parent() == field.enemy_container:
+			if field.get_enemy_at(field.cursor_grid_pos) != hovered_occupant:
+				hovered_occupant = null
 	if hovered_occupant != null:
 		return hovered_occupant
 	if field.current_state == field.player_state and field.player_state.active_unit != null:
