@@ -90,6 +90,8 @@ var battle_deploy_zone_overlay_default: bool = true
 var battle_deploy_auto_arm_after_place: bool = false
 ## When arming a benched unit, auto-place if exactly one legal empty tile exists.
 var battle_deploy_quick_fill: bool = false
+## When true, skip the loot reveal popup; items apply immediately with the same rules as closing the window.
+var battle_skip_loot_window: bool = false
 
 var arena_mmr: int = 1000
 
@@ -4031,6 +4033,7 @@ func load_global_settings() -> void:
 	battle_deploy_zone_overlay_default = bool(cfg.get_value("battle", "deploy_zone_overlay_default", battle_deploy_zone_overlay_default))
 	battle_deploy_auto_arm_after_place = bool(cfg.get_value("battle", "deploy_auto_arm_after_place", battle_deploy_auto_arm_after_place))
 	battle_deploy_quick_fill = bool(cfg.get_value("battle", "deploy_quick_fill", battle_deploy_quick_fill))
+	battle_skip_loot_window = bool(cfg.get_value("battle", "skip_loot_window", battle_skip_loot_window))
 
 	performance_vsync = bool(cfg.get_value("performance", "vsync", performance_vsync))
 	performance_max_fps = sanitize_performance_max_fps(int(cfg.get_value("performance", "max_fps", performance_max_fps)))
@@ -4096,6 +4099,7 @@ func save_global_settings() -> void:
 	cfg.set_value("battle", "deploy_zone_overlay_default", battle_deploy_zone_overlay_default)
 	cfg.set_value("battle", "deploy_auto_arm_after_place", battle_deploy_auto_arm_after_place)
 	cfg.set_value("battle", "deploy_quick_fill", battle_deploy_quick_fill)
+	cfg.set_value("battle", "skip_loot_window", battle_skip_loot_window)
 
 	cfg.set_value("performance", "vsync", performance_vsync)
 	cfg.set_value("performance", "max_fps", performance_max_fps)

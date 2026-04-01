@@ -10,9 +10,17 @@ static func run_parry_minigame(field, defender: Node2D) -> bool:
 		clang.pitch_scale = randf_range(0.85, 0.95)
 		clang.play()
 
-	field.spawn_loot_text("PARRY!", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
+	var parry_focus: Vector2 = defender.global_position + Vector2(32, 32)
+	field._start_impact_camera(parry_focus, 1.0, 0.020, 0.11)
+	field.spawn_loot_text("PARRY!", Color(1.0, 0.92, 0.42), defender.global_position + Vector2(32, -52), {
+		"stack_anchor": defender,
+		"font_size": 26,
+		"text_scale": 2.55,
+		"rise_px": 40.0,
+		"scatter_amount": 12.0,
+	})
 
-	field.screen_shake(6.0, 0.2)
+	field.screen_shake(7.5, 0.16)
 	await field.get_tree().create_timer(0.45).timeout
 
 	# --- CINEMATIC LOCK (Freeze the game) ---
@@ -235,7 +243,15 @@ static func run_shield_clash_minigame(field, defender: Node2D, attacker: Node2D)
 		field.get_node("ShieldBashSound").pitch_scale = randf_range(0.85, 0.95)
 		field.get_node("ShieldBashSound").play()
 
-	field.spawn_loot_text("SHIELD CLASH!", Color(0.8, 0.9, 1.0), defender.global_position + Vector2(32, -48), {"stack_anchor": defender})
+	var clash_focus: Vector2 = defender.global_position + Vector2(32, 32)
+	field._start_impact_camera(clash_focus, 1.0, 0.022, 0.12)
+	field.spawn_loot_text("SHIELD CLASH!", Color(0.82, 0.93, 1.0), defender.global_position + Vector2(32, -52), {
+		"stack_anchor": defender,
+		"font_size": 25,
+		"text_scale": 2.5,
+		"rise_px": 38.0,
+		"scatter_amount": 12.0,
+	})
 
 	await field.get_tree().create_timer(1.2).timeout
 

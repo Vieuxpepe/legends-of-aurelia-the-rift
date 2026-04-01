@@ -39,6 +39,11 @@ enum WeaponType {
 @export var custom_hit_sound: AudioStream
 @export var is_instant_cast: bool = false
 
+@export_category("Restrictions")
+@export var dragon_only: bool = false
+@export var non_tradeable: bool = false
+@export var non_convoy: bool = false
+
 @export var is_healing_staff: bool = false
 @export var is_buff_staff: bool = false
 @export var is_debuff_staff: bool = false
@@ -111,3 +116,26 @@ static func is_staff_like(weapon: WeaponData) -> bool:
 		return false
 
 	return weapon.is_healing_staff or weapon.is_buff_staff or weapon.is_debuff_staff
+
+
+static func is_dragon_weapon(weapon: WeaponData) -> bool:
+	if weapon == null:
+		return false
+
+	if weapon.get("dragon_only") == true:
+		return true
+
+	var n: String = str(weapon.weapon_name).strip_edges().to_lower()
+	return n.contains("dragon")
+
+
+static func is_trade_locked(weapon: WeaponData) -> bool:
+	if weapon == null:
+		return false
+	return weapon.get("non_tradeable") == true or is_dragon_weapon(weapon)
+
+
+static func is_convoy_locked(weapon: WeaponData) -> bool:
+	if weapon == null:
+		return false
+	return weapon.get("non_convoy") == true or is_trade_locked(weapon)

@@ -8,6 +8,15 @@ const PostStrikeCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleF
 const ForcedMovementTacticalHelpers = preload("res://Scripts/Core/BattleField/BattleFieldForcedMovementTacticalHelpers.gd")
 const CombatCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatCleanupHelpers.gd")
 
+static func _compute_projectile_target_point(defender: Node2D, lunge_dir: Vector2, attack_hits: bool) -> Vector2:
+	var defender_center: Vector2 = defender.global_position + Vector2(32, 32)
+	if attack_hits:
+		return defender_center
+	var side_dir: Vector2 = Vector2(-lunge_dir.y, lunge_dir.x).normalized()
+	var miss_side: float = -1.0 if lunge_dir.x >= 0.0 else 1.0
+	return defender_center + (side_dir * (22.0 * miss_side)) + (lunge_dir * 10.0)
+
+
 static func run_strike_sequence(
 	field,
 	attacker: Node2D,
@@ -1460,6 +1469,7 @@ static func run_strike_sequence(
 			var lunge_dir: Vector2 = (defender.global_position - attacker.global_position).normalized()
 			var did_melee_crit_animation: bool = false
 			var did_melee_normal_animation: bool = false
+			var used_ranged_projectile: bool = false
 	
 			if wpn != null and wpn.get("is_instant_cast") == true:
 				# --- INSTANT CAST (BEAM / PILLAR) ---
@@ -1479,35 +1489,67 @@ static func run_strike_sequence(
 				
 			elif wpn != null and wpn.get("projectile_scene") != null:
 				# --- RANGED PROJECTILE ---
+				used_ranged_projectile = true
 				var recoil_tween: Tween = field.create_tween()
-				recoil_tween.tween_property(attacker, "global_position", orig_pos - (lunge_dir * 8.0), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				recoil_tween.tween_property(attacker, "global_position", orig_pos - (lunge_dir * 9.0), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				await recoil_tween.finished
+				await field.get_tree().create_timer(0.025).timeout
 				
 				var proj: Node2D = wpn.projectile_scene.instantiate()
 				field.add_child(proj)
 				proj.z_index = 110
+				if field.attack_sound != null and field.attack_sound.stream != null:
+					var old_launch_pitch: float = field.attack_sound.pitch_scale
+					var old_launch_volume: float = field.attack_sound.volume_db
+					field.attack_sound.pitch_scale = 1.16
+					field.attack_sound.volume_db = -5.0
+					field.attack_sound.play()
+					field.attack_sound.pitch_scale = old_launch_pitch
+					field.attack_sound.volume_db = old_launch_volume
 				
 				var p_scale: float = float(wpn.get("projectile_scale")) if wpn.get("projectile_scale") != null else 2.0
 				proj.scale = Vector2(p_scale, p_scale)
 				
-				proj.global_position = attacker.global_position + Vector2(32, 32) 
+				var proj_start: Vector2 = attacker.global_position + Vector2(32, 32)
+				proj.global_position = proj_start
 				proj.rotation = lunge_dir.angle()
+				var projectile_target: Vector2 = _compute_projectile_target_point(defender, lunge_dir, attack_hits)
 				
-				var distance: float = attacker.global_position.distance_to(defender.global_position)
-				var travel_time: float = distance / 800.0
+				var distance: float = proj_start.distance_to(projectile_target)
+				var travel_time: float = clampf(distance / 920.0, 0.09, 0.32)
+				var travel_mid: Vector2 = proj_start.lerp(projectile_target, 0.68)
+				var arc_height: float = clampf(distance * 0.06, 8.0, 26.0)
+				travel_mid.y -= arc_height
+				if is_magic:
+					travel_mid.y -= 8.0
+				var spin_turns: float = 0.0
+				if wpn.get("projectile_spin_turns") != null:
+					spin_turns = float(wpn.get("projectile_spin_turns"))
+				elif not is_magic:
+					spin_turns = clampf(distance / 180.0, 0.35, 1.20)
 				
 				var fly_tween: Tween = field.create_tween()
-				fly_tween.tween_property(proj, "global_position", defender.global_position + Vector2(32, 32), travel_time)
+				fly_tween.tween_property(proj, "global_position", travel_mid, travel_time * 0.60).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+				fly_tween.tween_property(proj, "global_position", projectile_target, travel_time * 0.40).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+				if absf(spin_turns) > 0.001:
+					fly_tween.parallel().tween_property(proj, "rotation", proj.rotation + (TAU * spin_turns), travel_time)
 				await fly_tween.finished
 				
-				if wpn.get("impact_scene") != null and wpn.impact_scene != null:
+				if wpn.get("impact_scene") != null and wpn.impact_scene != null and attack_hits:
 					var impact: Node2D = wpn.impact_scene.instantiate()
 					field.add_child(impact)
 					impact.z_index = 115
-					impact.global_position = defender.global_position + Vector2(32, 32)
+					impact.global_position = projectile_target
 					impact.scale = Vector2(p_scale * 1.2, p_scale * 1.2)
+				elif not attack_hits:
+					field.screen_shake(2.2, 0.05)
 				
-				proj.queue_free()
+				if is_instance_valid(proj) and not proj.is_queued_for_deletion():
+					proj.queue_free()
+				if is_instance_valid(attacker):
+					var ranged_return_tween: Tween = field.create_tween()
+					ranged_return_tween.tween_property(attacker, "global_position", orig_pos, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+					await ranged_return_tween.finished
 				
 			else:
 				# --- MELEE ATTACK ---
@@ -1557,6 +1599,7 @@ static func run_strike_sequence(
 				"will_stagger": will_stagger,
 				"did_melee_normal_animation": did_melee_normal_animation,
 				"did_melee_crit_animation": did_melee_crit_animation,
+				"used_ranged_projectile": used_ranged_projectile,
 				"def_current_poise": def_current_poise,
 				"poise_dmg": poise_dmg,
 				"def_max_poise": def_max_poise,

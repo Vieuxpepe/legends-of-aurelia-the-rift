@@ -93,6 +93,7 @@ func _find_ui(node_name: String) -> Node:
 @onready var ui_show_health_bars_toggle: CheckBox = _find_ui("UiShowHealthBarsToggle") as CheckBox
 @onready var ui_show_phase_banner_toggle: CheckBox = _find_ui("UiShowPhaseBannerToggle") as CheckBox
 @onready var ui_show_status_effects_toggle: CheckBox = _find_ui("UiShowStatusEffectsToggle") as CheckBox
+@onready var ui_skip_loot_window_toggle: CheckBox = _find_ui("UiSkipLootWindowToggle") as CheckBox
 @onready var ui_damage_text_size_option: OptionButton = _find_ui("UiDamageTextSizeOption") as OptionButton
 @onready var ui_combat_log_font_option: OptionButton = _find_ui("UiCombatLogFontOption") as OptionButton
 @onready var ui_cursor_size_option: OptionButton = _find_ui("UiCursorSizeOption") as OptionButton
@@ -754,6 +755,7 @@ func _apply_theme() -> void:
 	_style_checkbox(ui_show_health_bars_toggle)
 	_style_checkbox(ui_show_phase_banner_toggle)
 	_style_checkbox(ui_show_status_effects_toggle)
+	_style_checkbox(ui_skip_loot_window_toggle)
 	_style_checkbox(ui_cursor_high_contrast_toggle)
 
 	_style_slider(audio_master_slider, SETTINGS_ACCENT)
@@ -1118,6 +1120,7 @@ func _refresh_header_for_overlay() -> void:
 
 
 func _go_to_pause_root() -> void:
+	_flush_interface_panel_to_campaign_if_showing()
 	_overlay_panel = PANEL_PAUSE
 	_update_overlay_layers()
 	_layout_menu()
@@ -1246,6 +1249,7 @@ func _on_pause_resume_pressed() -> void:
 
 
 func _on_pause_audio_pressed() -> void:
+	_flush_interface_panel_to_campaign_if_showing()
 	_overlay_panel = PANEL_AUDIO
 	_update_overlay_layers()
 	_sync_audio_ui_from_campaign()
@@ -1320,11 +1324,25 @@ func _sync_interface_ui_from_campaign() -> void:
 		ui_show_phase_banner_toggle.button_pressed = CampaignManager.interface_show_phase_banner
 	if ui_show_status_effects_toggle:
 		ui_show_status_effects_toggle.button_pressed = CampaignManager.interface_show_status_effects
+	if ui_skip_loot_window_toggle:
+		ui_skip_loot_window_toggle.button_pressed = CampaignManager.battle_skip_loot_window
 	if ui_damage_text_size_option:
 		ui_damage_text_size_option.select(clampi(CampaignManager.interface_damage_text_size, 0, ui_damage_text_size_option.item_count - 1))
 	if ui_combat_log_font_option:
 		ui_combat_log_font_option.select(clampi(CampaignManager.interface_combat_log_font_size, 0, ui_combat_log_font_option.item_count - 1))
 	_is_syncing_ui = false
+
+
+## Commit Interface-only controls to CampaignManager when leaving the panel (Back / other pause-hub tabs).
+## Avoids losing the skip-loot toggle if `toggled` did not run or UI drifted from memory.
+func _flush_interface_panel_to_campaign_if_showing() -> void:
+	if _overlay_panel != PANEL_INTERFACE:
+		return
+	if _is_syncing_ui:
+		return
+	if ui_skip_loot_window_toggle == null:
+		return
+	_on_ui_skip_loot_window_toggled(ui_skip_loot_window_toggle.button_pressed)
 
 
 func _persist_interface() -> void:
@@ -1381,6 +1399,13 @@ func _on_ui_show_status_effects_toggled(toggled_on: bool) -> void:
 	_persist_interface()
 
 
+func _on_ui_skip_loot_window_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.battle_skip_loot_window = toggled_on
+	_persist_interface()
+
+
 func _on_ui_damage_text_size_selected(index: int) -> void:
 	if _is_syncing_ui:
 		return
@@ -1396,6 +1421,7 @@ func _on_ui_combat_log_font_selected(index: int) -> void:
 
 
 func _on_pause_settings_pressed() -> void:
+	_flush_interface_panel_to_campaign_if_showing()
 	_overlay_panel = PANEL_SETTINGS
 	_update_overlay_layers()
 	_sync_ui_from_settings()
@@ -1406,6 +1432,7 @@ func _on_pause_settings_pressed() -> void:
 
 
 func _on_pause_performance_pressed() -> void:
+	_flush_interface_panel_to_campaign_if_showing()
 	_overlay_panel = PANEL_PERFORMANCE
 	_update_overlay_layers()
 	_sync_performance_ui_from_campaign()
@@ -1658,6 +1685,7 @@ func _on_reset_defaults_pressed() -> void:
 	CampaignManager.battle_deploy_zone_overlay_default = true
 	CampaignManager.battle_deploy_auto_arm_after_place = false
 	CampaignManager.battle_deploy_quick_fill = false
+	CampaignManager.battle_skip_loot_window = false
 	CampaignManager.interface_cursor_size = 0
 	CampaignManager.interface_cursor_high_contrast = false
 
@@ -1987,6 +2015,7 @@ func _open_settings_overlay(panel: int, from_pause_flow: bool) -> void:
 
 
 func hide_menu() -> void:
+	_flush_interface_panel_to_campaign_if_showing()
 	if feedback_board:
 		feedback_board.hide()
 	visible = false

@@ -924,8 +924,17 @@ func apply_promotion_aura() -> void:
 	sparks.initial_velocity_min = 30.0 
 	sparks.initial_velocity_max = 80.0
 	
-	sparks.scale_amount_min = 1.0 
-	sparks.scale_amount_max = 2.5 # Reduced slightly since textures feel "bigger" than squares
+	# Normalize spark size against texture dimensions so promoted aura sparks stay micro.
+	var spark_scale_min: float = 0.20
+	var spark_scale_max: float = 0.45
+	if lightning_bolt_texture != null:
+		var tex_max_dim: float = maxf(float(lightning_bolt_texture.get_width()), float(lightning_bolt_texture.get_height()))
+		if tex_max_dim > 0.0:
+			var tex_norm: float = clampf(24.0 / tex_max_dim, 0.08, 0.45)
+			spark_scale_min = 0.55 * tex_norm
+			spark_scale_max = 1.20 * tex_norm
+	sparks.scale_amount_min = spark_scale_min
+	sparks.scale_amount_max = spark_scale_max
 	
 	var grad = Gradient.new()
 	grad.set_color(0, Color.WHITE) 

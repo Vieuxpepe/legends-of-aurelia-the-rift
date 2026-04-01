@@ -4,10 +4,13 @@ extends RefCounted
 static func animate_flying_gold(field, world_pos: Vector2, amount: int) -> void:
 	# 1. Bring back the floating text so you still see the big number instantly!
 	field.spawn_loot_text("+ " + str(amount) + " G", Color(1.0, 0.9, 0.2), world_pos + Vector2(32, -32))
+	var gold_lbl: Label = field.gold_label
+	if gold_lbl == null:
+		return
 
 	# 2. Convert the 2D World Map position into Screen/UI coordinates
 	var screen_pos = field.get_global_transform_with_canvas() * world_pos
-	field.gold_label.pivot_offset = field.gold_label.size / 2.0
+	gold_lbl.pivot_offset = gold_lbl.size / 2.0
 
 	# 3. THE FIX: 1-to-1 coin mapping, capped at 20 coins max!
 	var coin_count = amount
@@ -47,7 +50,7 @@ static func animate_flying_gold(field, world_pos: Vector2, amount: int) -> void:
 		t.tween_interval(0.1 + (i * 0.05))
 
 		# Phase C: Fly to the Bank!
-		var target_pos = field.gold_label.global_position + (field.gold_label.size / 2.0) - (coin.custom_minimum_size / 2.0)
+		var target_pos = gold_lbl.global_position + (gold_lbl.size / 2.0) - (coin.custom_minimum_size / 2.0)
 		t.tween_property(coin, "global_position", target_pos, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 
 		# Phase D: Impact!
@@ -61,7 +64,7 @@ static func animate_flying_gold(field, world_pos: Vector2, amount: int) -> void:
 			if is_last_coin or visual_gold_ref[0] > field.player_gold:
 				visual_gold_ref[0] = field.player_gold
 
-			field.gold_label.text = "Gold: " + str(visual_gold_ref[0])
+			gold_lbl.text = "Gold: " + str(visual_gold_ref[0])
 
 			# Play a rapid "clinking" sound
 			if field.select_sound and field.select_sound.stream != null:
@@ -74,8 +77,8 @@ static func animate_flying_gold(field, world_pos: Vector2, amount: int) -> void:
 				p.finished.connect(p.queue_free)
 
 			# Micro-bounce the UI Label
-			field.gold_label.scale = Vector2(1.1, 1.1)
+			gold_lbl.scale = Vector2(1.1, 1.1)
 			var pulse = field.create_tween()
-			pulse.tween_property(field.gold_label, "scale", Vector2.ONE, 0.1).set_trans(Tween.TRANS_BOUNCE)
+			pulse.tween_property(gold_lbl, "scale", Vector2.ONE, 0.1).set_trans(Tween.TRANS_BOUNCE)
 		)
 

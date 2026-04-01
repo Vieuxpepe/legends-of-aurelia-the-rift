@@ -282,6 +282,9 @@ static func setup_arena_battle(field) -> void:
 		fang.might = 6
 		fang.min_range = 1
 		fang.max_range = 1
+		fang.dragon_only = true
+		fang.non_tradeable = true
+		fang.non_convoy = true
 		ghost_dragon.equipped_weapon = fang
 
 		if ghost_dragon.data == null:

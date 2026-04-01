@@ -124,14 +124,15 @@ static func apply_tactical_ui_overhaul(field) -> void:
 		field.convoy_button.visible = show_battle_hud
 		field._style_tactical_button(field.convoy_button, "CONVOY", false, 20)
 	
-	if field.gold_label != null:
-		field.gold_label.z_index = 19
-		field.gold_label.scale = Vector2.ONE
-		field.gold_label.position = Vector2(command_cluster_x + 14.0, gold_anchor_y + 2.0)
-		field.gold_label.size = Vector2(command_cluster_width_render - 28.0, 28.0)
-		field.gold_label.visible = show_battle_hud
-		field.gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		field._style_tactical_label(field.gold_label, field.TACTICAL_UI_ACCENT, 20, 4)
+	var gold_lbl: Label = field.gold_label
+	if gold_lbl != null:
+		gold_lbl.z_index = 19
+		gold_lbl.scale = Vector2.ONE
+		gold_lbl.position = Vector2(command_cluster_x + 14.0, gold_anchor_y + 2.0)
+		gold_lbl.size = Vector2(command_cluster_width_render - 28.0, 28.0)
+		gold_lbl.visible = show_battle_hud
+		gold_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		field._style_tactical_label(gold_lbl, field.TACTICAL_UI_ACCENT, 20, 4)
 	if gold_backdrop != null:
 		gold_backdrop.visible = show_battle_hud
 	
@@ -182,8 +183,10 @@ static func apply_tactical_ui_overhaul(field) -> void:
 	if field.unit_stats_label != null:
 		field.unit_stats_label.position = Vector2(16, 142)
 		field.unit_stats_label.size = Vector2(210, 24)
-		field.unit_stats_label.scroll_active = false
-		field._style_tactical_richtext(field.unit_stats_label, 11, 12)
+		var stats_as_rtl: RichTextLabel = field.unit_stats_label as RichTextLabel
+		if stats_as_rtl != null:
+			stats_as_rtl.scroll_active = false
+			field._style_tactical_richtext(stats_as_rtl, 11, 12)
 	field._ensure_unit_info_primary_widgets()
 	field._layout_unit_info_primary_widgets()
 	field._ensure_unit_info_stat_widgets()
@@ -637,10 +640,30 @@ static func apply_tactical_ui_overhaul(field) -> void:
 		field._style_tactical_richtext(field.talk_text, 19, 21)
 	if field.talk_next_btn != null:
 		if field.talk_panel != null:
-			field.talk_next_btn.position = Vector2(field.talk_panel.size.x - 16.0 - 152.0, field.talk_panel.size.y - 16.0 - 38.0)
-			field.talk_next_btn.size = Vector2(152.0, 38.0)
-			field.talk_next_btn.z_index = 2
-		field._style_tactical_button(field.talk_next_btn, "CONTINUE", true, 18)
+			field.talk_next_btn.position = Vector2.ZERO
+			field.talk_next_btn.size = field.talk_panel.size
+			field.talk_next_btn.z_index = 1
+			field.talk_next_btn.text = ""
+			field.talk_next_btn.flat = true
+			field.talk_next_btn.focus_mode = Control.FOCUS_NONE
+			field.talk_next_btn.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			var talk_next_empty := StyleBoxEmpty.new()
+			field.talk_next_btn.add_theme_stylebox_override("normal", talk_next_empty)
+			field.talk_next_btn.add_theme_stylebox_override("hover", talk_next_empty)
+			field.talk_next_btn.add_theme_stylebox_override("pressed", talk_next_empty)
+			field.talk_next_btn.add_theme_stylebox_override("focus", talk_next_empty)
+			field.talk_next_btn.add_theme_stylebox_override("disabled", talk_next_empty)
+			var talk_continue_visual := field.talk_panel.get_node_or_null("TalkContinueVisual") as Button
+			if talk_continue_visual == null:
+				talk_continue_visual = Button.new()
+				talk_continue_visual.name = "TalkContinueVisual"
+				talk_continue_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				talk_continue_visual.focus_mode = Control.FOCUS_NONE
+				field.talk_panel.add_child(talk_continue_visual)
+			talk_continue_visual.position = Vector2(field.talk_panel.size.x - 16.0 - 152.0, field.talk_panel.size.y - 16.0 - 38.0)
+			talk_continue_visual.size = Vector2(152.0, 38.0)
+			talk_continue_visual.z_index = 2
+			field._style_tactical_button(talk_continue_visual, "CONTINUE", true, 18)
 	
 	if field.level_up_panel != null:
 		field._style_tactical_panel(field.level_up_panel, field.TACTICAL_UI_BG_ALT, field.TACTICAL_UI_BORDER, 2, 14)

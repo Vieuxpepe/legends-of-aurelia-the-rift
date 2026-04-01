@@ -4,10 +4,38 @@ extends RefCounted
 # This extraction focuses on grid rebuild mechanics + trade swapping.
 
 
+static func _find_player_dragon_with_space(field) -> Node2D:
+	if field.player_container == null:
+		return null
+	for unit in field.player_container.get_children():
+		if not is_instance_valid(unit) or unit.is_queued_for_deletion() or unit.current_hp <= 0:
+			continue
+		if field._is_unit_dragon(unit) and unit.inventory.size() < 5:
+			return unit
+	return null
+
+
+static func _rehome_convoy_locked_dragon_weapons(field) -> void:
+	if field.player_inventory == null or field.player_inventory.is_empty():
+		return
+	for i in range(field.player_inventory.size() - 1, -1, -1):
+		var item = field.player_inventory[i]
+		if not (item is WeaponData):
+			continue
+		if not field._is_weapon_convoy_locked(item as WeaponData):
+			continue
+		var dragon_target: Node2D = _find_player_dragon_with_space(field)
+		if dragon_target == null:
+			continue
+		field.player_inventory.remove_at(i)
+		dragon_target.inventory.append(item)
+
+
 static func populate_convoy_list(field) -> void:
 	if field.convoy_grid == null or field.inv_scroll == null:
 		return
 
+	_rehome_convoy_locked_dragon_weapons(field)
 	field._clear_grids()
 	if field.inv_desc_label:
 		field.inv_desc_label.text = "Select an item to view details."
@@ -196,6 +224,72 @@ static func build_grid_items(
 			btn.add_theme_stylebox_override("disabled", empty_style)
 
 
+static func distribute_pending_loot_to_inventory(field) -> void:
+	var recipient = field.loot_recipient if is_instance_valid(field.loot_recipient) else field.player_state.active_unit
+	for item in field.pending_loot:
+		var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
+		if item is WeaponData and field._is_weapon_convoy_locked(item as WeaponData):
+			var dragon_target: Node2D = null
+			if is_instance_valid(recipient) and recipient.get_parent() == field.player_container and field._is_unit_dragon(recipient) and recipient.inventory.size() < 5:
+				dragon_target = recipient
+			if dragon_target == null:
+				dragon_target = _find_player_dragon_with_space(field)
+			if dragon_target != null:
+				dragon_target.inventory.append(item)
+				field.add_combat_log(dragon_target.unit_name + " secured " + str(i_name) + " (dragon-bound).", "orange")
+			else:
+				field.player_inventory.append(item)
+				field.add_combat_log("No dragon backpack space for " + str(i_name) + ". Sent to Convoy temporarily.", "orange")
+			continue
+
+		if item is MaterialData:
+			field.player_inventory.append(item)
+			field.add_combat_log(str(i_name) + " sent to Convoy.", "gray")
+		else:
+			if is_instance_valid(recipient) and recipient.get_parent() == field.player_container:
+				if recipient.inventory.size() < 5:
+					recipient.inventory.append(item)
+					field.add_combat_log(recipient.unit_name + " pocketed " + str(i_name) + ".", "cyan")
+				else:
+					field.player_inventory.append(item)
+					field.add_combat_log(recipient.unit_name + "'s pockets full. Sent to Convoy.", "gray")
+			else:
+				field.player_inventory.append(item)
+				field.add_combat_log(str(i_name) + " sent to Convoy.", "gray")
+
+
+## Skip reveal UI: same distribution and completion signals as closing the loot window, without popup or fly-in animations.
+static func instant_resolve_loot_without_reveal(field) -> void:
+	if field.pending_loot.is_empty():
+		return
+	var floater_pos := Vector2.ZERO
+	var floater_anchor: Node2D = null
+	if is_instance_valid(field.loot_recipient):
+		floater_anchor = field.loot_recipient
+	elif field.player_state != null and is_instance_valid(field.player_state.active_unit):
+		floater_anchor = field.player_state.active_unit
+	if floater_anchor != null:
+		floater_pos = floater_anchor.global_position + Vector2(32, -32)
+	distribute_pending_loot_to_inventory(field)
+	if floater_anchor != null and field.has_method("spawn_loot_text"):
+		field.spawn_loot_text("+ Loot", Color(1.0, 0.92, 0.45, 1.0), floater_pos, {"tier": FloatingCombatText.Tier.NORMAL, "stack_anchor": floater_anchor})
+	field.pending_loot.clear()
+	field.loot_recipient = null
+	if field.player_state:
+		field.player_state.is_forecasting = false
+	field.get_tree().paused = false
+	if field.close_loot_button:
+		field.close_loot_button.disabled = false
+	if field.loot_window:
+		field.loot_window.visible = false
+	var deferred_result: String = field._deferred_battle_result_after_loot
+	field._deferred_battle_result_after_loot = ""
+	field.loot_window_closed.emit()
+	if deferred_result != "":
+		field.call_deferred("_apply_deferred_battle_result_after_loot", deferred_result)
+	field.update_unit_info_panel()
+
+
 static func execute_trade_swap(field, side1: String, idx1: int, side2: String, idx2: int) -> void:
 	# 1. Normalize both arrays to exactly 5 slots (prevents crash on empty slot clicks)
 	var inv_a = field.trade_unit_a.inventory.duplicate()
@@ -206,6 +300,16 @@ static func execute_trade_swap(field, side1: String, idx1: int, side2: String, i
 	# 2. Point to the correct arrays based on the click
 	var target_inv1 = inv_a if side1 == "left" else inv_b
 	var target_inv2 = inv_a if side2 == "left" else inv_b
+
+	# 2.5. Safety gate: locked dragon weapons cannot move between inventories.
+	var item_a = target_inv1[idx1]
+	var item_b = target_inv2[idx2]
+	var a_locked: bool = item_a is WeaponData and field._is_weapon_non_tradeable(item_a as WeaponData)
+	var b_locked: bool = item_b is WeaponData and field._is_weapon_non_tradeable(item_b as WeaponData)
+	if a_locked or b_locked:
+		field.play_ui_sfx(field.UISfx.INVALID)
+		field.add_combat_log("Dragon-bound weapons cannot be traded.", "orange")
+		return
 
 	# 3. Swap the data
 	var temp = target_inv1[idx1]
@@ -234,27 +338,8 @@ static func on_close_loot_pressed(field) -> void:
 	field.close_loot_button.disabled = true
 
 	# 2. Distribute Loot & Keep track of the EXACT items we added
-	var recipient = field.loot_recipient if is_instance_valid(field.loot_recipient) else field.player_state.active_unit
-	var looted_items_refs = []
-
-	for item in field.pending_loot:
-		looted_items_refs.append(item) # Save the reference to animate later!
-		var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-
-		if item is MaterialData:
-			field.player_inventory.append(item)
-			field.add_combat_log(str(i_name) + " sent to Convoy.", "gray")
-		else:
-			if is_instance_valid(recipient) and recipient.get_parent() == field.player_container:
-				if recipient.inventory.size() < 5:
-					recipient.inventory.append(item)
-					field.add_combat_log(recipient.unit_name + " pocketed " + str(i_name) + ".", "cyan")
-				else:
-					field.player_inventory.append(item)
-					field.add_combat_log(recipient.unit_name + "'s pockets full. Sent to Convoy.", "gray")
-			else:
-				field.player_inventory.append(item)
-				field.add_combat_log(str(i_name) + " sent to Convoy.", "gray")
+	var looted_items_refs: Array = field.pending_loot.duplicate()
+	distribute_pending_loot_to_inventory(field)
 
 	await close_tween.finished
 
@@ -436,4 +521,3 @@ static func on_close_loot_pressed(field) -> void:
 		field.call_deferred("_apply_deferred_battle_result_after_loot", deferred_result)
 
 	field.update_unit_info_panel()
-

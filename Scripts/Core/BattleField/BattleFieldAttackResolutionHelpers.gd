@@ -1,8 +1,18 @@
 extends RefCounted
 
+const CombatVfxHelpersRef = preload("res://Scripts/Core/BattleField/BattleFieldCombatVfxHelpers.gd")
+
 const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
 
 const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
+
+static func _resolve_weapon_impact_family(wpn) -> int:
+	if wpn == null:
+		return -1
+	if WeaponData.is_staff_like(wpn):
+		return CombatVfxHelpersRef.FAMILY_STAFF_UTILITY
+	return WeaponData.get_weapon_family(int(wpn.weapon_type))
+
 
 # Phase E: normal attack resolution (post Phase D defensive abilities).
 # Uses a context Dictionary to avoid an unmanageable parameter list.
@@ -20,6 +30,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 	var will_stagger: bool = ctx["will_stagger"]
 	var did_melee_normal_animation: bool = ctx["did_melee_normal_animation"]
 	var did_melee_crit_animation: bool = ctx["did_melee_crit_animation"]
+	var used_ranged_projectile: bool = ctx.get("used_ranged_projectile", false)
 	var def_current_poise: int = ctx["def_current_poise"]
 	var poise_dmg: int = ctx["poise_dmg"]
 	var def_max_poise: int = ctx["def_max_poise"]
@@ -88,6 +99,13 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 	# Apply defensive damage reductions
 	damage = int(round(float(damage) * incoming_damage_multiplier))
 
+	# Presentation-only: weapon-family signature + damage-kind tinting
+	var wpn_fx: Variant = ctx.get("wpn", null)
+	var weapon_impact_fam: int = _resolve_weapon_impact_family(wpn_fx)
+	var impact_damage_kind: int = 0
+	if is_magic or (wpn_fx != null and int(wpn_fx.damage_type) == int(WeaponData.DamageType.MAGIC)):
+		impact_damage_kind = 1
+
 	if not defense_resolved_and_won:
 		if attack_hits:
 			field._rookie_register_apprentice_magic_hit(attacker, ctx.get("wpn", null), is_magic, true)
@@ -97,8 +115,10 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 				await field._play_critical_impact(impact_focus)
 			elif already_staggered or will_stagger:
 				await field._play_guard_break_impact(impact_focus)
+			elif used_ranged_projectile:
+				await field._play_light_hit_impact(impact_focus)
 			elif did_melee_normal_animation:
-				await field._do_hit_stop(0.007, 0.22, 0.04)
+				await field._play_normal_hit_impact(impact_focus)
 
 			var final_dmg: int = damage * 3 if is_crit else damage
 
@@ -121,7 +141,13 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 				field.screen_shake(3.0, 0.15)
 
 				if will_stagger:
-					field.spawn_loot_text("GUARD BREAK!", Color.ORANGE, defender.global_position + Vector2(32, -40))
+					field.spawn_loot_text("GUARD BREAK!", Color(1.0, 0.62, 0.18), defender.global_position + Vector2(28, -46), {
+						"stack_anchor": defender,
+						"font_size": 24,
+						"text_scale": 2.48,
+						"rise_px": 36.0,
+						"scatter_amount": 12.0,
+					})
 					field.screen_shake(12.0, 0.2)
 					if defender.has_method("set_staggered_visuals"):
 						defender.set_staggered_visuals(true)
@@ -173,7 +199,13 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 
 				# 3) GUARD BREAK VISUALS (Only if they survive!)
 				if will_stagger and not actually_dies:
-					field.spawn_loot_text("GUARD BREAK!", Color.ORANGE, defender.global_position + Vector2(32, -40))
+					field.spawn_loot_text("GUARD BREAK!", Color(1.0, 0.62, 0.18), defender.global_position + Vector2(28, -46), {
+						"stack_anchor": defender,
+						"font_size": 24,
+						"text_scale": 2.48,
+						"rise_px": 36.0,
+						"scatter_amount": 12.0,
+					})
 					field.screen_shake(12.0, 0.2)
 					if defender.has_method("set_staggered_visuals"):
 						defender.set_staggered_visuals(true)
@@ -195,10 +227,16 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 							var snap = field.create_tween()
 							snap.tween_property(attacker, "position", attacker.position - (lunge_dir * 4.0), 0.05)
 
-							field.spawn_loot_text(str(current_hit_dmg), Color(0.9, 0.2, 1.0), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-24, 24), randf_range(-24, 24)))
+							field.spawn_loot_text(str(current_hit_dmg), Color(0.9, 0.25, 0.98), defender.global_position + Vector2(32, -10) + Vector2(randf_range(-9.0, 9.0), randf_range(-7.0, 7.0)), {
+								"stack_anchor": defender,
+								"font_size": 18,
+								"text_scale": 2.05,
+								"scatter_amount": 11.0,
+								"rise_px": 36.0,
+							})
 
-							field.spawn_slash_effect(defender.global_position, attacker.global_position, false)
-							field.spawn_blood_splatter(defender, attacker.global_position, false)
+							field.spawn_slash_effect(defender.global_position, attacker.global_position, false, weapon_impact_fam)
+							field.spawn_blood_splatter(defender, attacker.global_position, false, impact_damage_kind)
 
 							var exp_tgt = attacker if (defender.current_hp <= current_hit_dmg or hit_idx == combo_hits - 1) else null
 							field._apply_hit_with_support_reactions(defender, current_hit_dmg, attacker, exp_tgt, false)
@@ -232,13 +270,18 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 						if defender.max_hp > 0:
 							chunk_r = clampf(float(final_dmg) / float(defender.max_hp), 0.0, 1.0)
 						var floater_tier: int = FloatingCombatText.Tier.CRIT if is_crit else FloatingCombatText.Tier.NORMAL
-						field.spawn_loot_text(str(final_dmg) + (" CRIT" if is_crit else ""), Color(1.0, 0.2, 0.2) if is_crit else Color.WHITE, defender.global_position + Vector2(32, -16), {
+						var dmg_label_pos: Vector2 = defender.global_position + (Vector2(32, -26) if is_crit else Vector2(32, -15))
+						field.spawn_loot_text(str(final_dmg) + (" CRIT" if is_crit else ""), Color(1.0, 0.2, 0.2) if is_crit else Color.WHITE, dmg_label_pos, {
 							"tier": floater_tier,
 							"hp_chunk_ratio": chunk_r,
 							"stack_anchor": defender,
+							"font_size": 26 if is_crit else 22,
+							"text_scale": 2.62 if is_crit else 2.38,
+							"rise_px": 48.0 if is_crit else 42.0,
+							"scatter_amount": 14.0 if is_crit else 16.0,
 						})
-						field.spawn_slash_effect(defender.global_position, attacker.global_position, is_crit)
-						field.spawn_blood_splatter(defender, attacker.global_position, is_crit)
+						field.spawn_slash_effect(defender.global_position, attacker.global_position, is_crit, weapon_impact_fam)
+						field.spawn_blood_splatter(defender, attacker.global_position, is_crit, impact_damage_kind)
 
 						# Earn support points (copied as-is: uses field funcs/containers)
 						if attacker.get_parent() == field.player_container or attacker.get_parent() == field.ally_container:
@@ -275,8 +318,14 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 									break
 								var slash_dmg: int = int(max(1.0, float(damage) * severing_strike_damage_multiplier))
 								if field.attack_sound and field.attack_sound.stream != null: field.attack_sound.play()
-								field.spawn_loot_text(str(slash_dmg), Color(0.70, 0.90, 1.00), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
-								field.spawn_slash_effect(defender.global_position, attacker.global_position, force_crit)
+								field.spawn_loot_text(str(slash_dmg), Color(0.70, 0.90, 1.00), defender.global_position + Vector2(32, -12) + Vector2(randf_range(-10.0, 10.0), randf_range(-8.0, 8.0)), {
+									"stack_anchor": defender,
+									"font_size": 19,
+									"text_scale": 2.12,
+									"scatter_amount": 11.0,
+									"rise_px": 38.0,
+								})
+								field.spawn_slash_effect(defender.global_position, attacker.global_position, force_crit, weapon_impact_fam)
 								field._apply_hit_with_support_reactions(defender, slash_dmg, attacker, attacker, false)
 
 						if parting_shot_dodge and is_instance_valid(attacker) and attacker.current_hp > 0:
@@ -513,11 +562,17 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								splash_target.take_damage(earthshatter_splash_damage, attacker)
 		else:
 			# MISS LOGIC
+			var miss_focus_miss: Vector2 = defender.global_position + Vector2(32, 32)
+			await field._play_miss_impact(miss_focus_miss)
 			if field.miss_sound.stream != null: field.miss_sound.play()
 			field.add_combat_log(attacker.unit_name + " missed " + defender.unit_name, "gray")
-			field.spawn_loot_text("Miss", Color(0.7, 0.7, 0.7), defender.global_position + Vector2(32, -16), {
+			field.spawn_loot_text("MISS", Color(0.62, 0.68, 0.74), defender.global_position + Vector2(32, -24), {
 				"tier": FloatingCombatText.Tier.MISS,
 				"stack_anchor": defender,
+				"font_size": 23,
+				"text_scale": 2.35,
+				"scatter_amount": 10.0,
+				"fade_time": 0.26,
 			})
 
 	ctx["incoming_damage_multiplier"] = incoming_damage_multiplier

@@ -27,6 +27,8 @@
 extends Control
 
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
+const PromotionChoiceUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionChoiceUiHelpers.gd")
+const PromotionFlowSharedHelpers = preload("res://Scripts/Core/PromotionFlowSharedHelpers.gd")
 const CAMP_PANEL_BG := Color(0.13, 0.097, 0.068, 0.88)
 const CAMP_PANEL_BG_ALT := Color(0.17, 0.126, 0.083, 0.94)
 const CAMP_PANEL_BG_SOFT := Color(0.08, 0.061, 0.043, 0.82)
@@ -221,6 +223,7 @@ var blacksmith_tween: Tween
 @onready var close_blacksmith_btn: Button = get_node_or_null("%CloseBlacksmithButton")
 @export var haldor_normal: Texture2D
 @export var haldor_impressed: Texture2D
+signal promotion_chosen(chosen_class_res: Resource)
 signal name_confirmed(new_name: String)
 var last_blacksmith_lore_index: int = -1 # Tracks the last line to prevent repeats
 
@@ -2236,6 +2239,14 @@ func _camp_format_class_weapon_permissions(class_res: Resource) -> String:
 	if class_res.get("can_use_debuff_staff") == true:
 		parts.append("Debuff Staff")
 	return "Weapons: None" if parts.is_empty() else "Weapons: " + ", ".join(parts)
+
+
+func _format_class_weapon_permissions(class_res: Resource) -> String:
+	return _camp_format_class_weapon_permissions(class_res)
+
+
+func _ask_for_promotion_choice(options: Array) -> Resource:
+	return await PromotionChoiceUiHelpers.ask_for_promotion_choice(self, options)
 
 func _camp_unit_info_primary_description(bar_key: String) -> String:
 	match bar_key:

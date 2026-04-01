@@ -78,8 +78,10 @@ static func on_ready(field) -> void:
 		field.forecast_talk_btn.pressed.connect(field._on_forecast_talk)
 	if field.forecast_ability_btn:
 		field.forecast_ability_btn.pressed.connect(field._on_forecast_ability_pressed)
-	field.convoy_button.pressed.connect(field._on_convoy_pressed)
-	field.open_inv_button.pressed.connect(field._on_open_inv_pressed)
+	if field.convoy_button:
+		field.convoy_button.pressed.connect(field._on_convoy_pressed)
+	if field.open_inv_button:
+		field.open_inv_button.pressed.connect(field._on_open_inv_pressed)
 	field.get_node("UI/InventoryPanel/EquipButton").pressed.connect(field._on_equip_pressed)
 	field.get_node("UI/InventoryPanel/CloseButton").pressed.connect(field._on_close_inv_pressed)
 	field.get_node("UI/InventoryPanel/UseButton").pressed.connect(field._on_use_pressed)

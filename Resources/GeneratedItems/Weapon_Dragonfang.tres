@@ -14,3 +14,6 @@ hit_bonus = 23
 max_range = 2
 max_durability = 22
 current_durability = 22
+dragon_only = true
+non_tradeable = true
+non_convoy = true

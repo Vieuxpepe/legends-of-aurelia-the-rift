@@ -585,6 +585,8 @@ static func fill_trade_list(list: ItemList, unit: Node2D) -> void:
 		if i < inv.size() and inv[i] != null:
 			var item = inv[i]
 			var text = get_item_display_text(item)
+			if item is WeaponData and WeaponData.is_trade_locked(item as WeaponData):
+				text = "[LOCK] " + text
 			if item == unit.equipped_weapon:
 				text = "[E] " + text
 			var img = item.get("icon") if item.get("icon") != null else null
@@ -593,9 +595,23 @@ static func fill_trade_list(list: ItemList, unit: Node2D) -> void:
 			list.add_item("--- Empty ---", null)
 
 
+static func _trade_item_at(field, side: String, index: int):
+	var unit: Node2D = field.trade_unit_a if side == "left" else field.trade_unit_b
+	if unit == null:
+		return null
+	if index < 0 or index >= unit.inventory.size():
+		return null
+	return unit.inventory[index]
+
+
 static func on_trade_item_clicked(field, index: int, side: String) -> void:
 	if field.select_sound.stream != null:
 		field.select_sound.play()
+	var clicked_item = _trade_item_at(field, side, index)
+	if clicked_item is WeaponData and field._is_weapon_non_tradeable(clicked_item as WeaponData):
+		field.play_ui_sfx(field.UISfx.INVALID)
+		field.add_combat_log("Dragon-bound weapons cannot be traded.", "orange")
+		return
 
 	# Click 1: Select the first item
 	if field.trade_selected_side == "":

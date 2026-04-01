@@ -130,6 +130,7 @@ const CoopRngSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCo
 const CoopMockSessionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopMockSessionHelpers.gd")
 const CoopBattleRuntimeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopBattleRuntimeHelpers.gd")
 const BattleFieldFogOfWarHelpers = preload("res://Scripts/Core/BattleField/BattleFieldFogOfWarHelpers.gd")
+const PromotionFlowSharedHelpers = preload("res://Scripts/Core/PromotionFlowSharedHelpers.gd")
 
 # Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage â†’ Fire Trap).
 const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
@@ -367,18 +368,25 @@ var deploy_roster_toggle_tween: Tween
 # UI - UNIT INFO / CORE HUD
 # =============================================================================
 
-@onready var unit_info_panel = $UI/UnitInfoPanel
+@onready var battle_hud: BattleHUD = $UI as BattleHUD
 @onready var ui_root: CanvasLayer = $UI
+@onready var unit_info_panel = $UI/UnitInfoPanel
 @onready var unit_portrait = $UI/UnitInfoPanel/PortraitRect
 @onready var unit_name_label = $UI/UnitInfoPanel/NameLabel
 @onready var unit_hp_label = $UI/UnitInfoPanel/HPLabel
 @onready var unit_stats_label = $UI/UnitInfoPanel/StatsLabel
-@onready var support_btn = $UI/UnitInfoPanel/SupportButton
+@onready var support_btn = get_node_or_null("UI/UnitInfoPanel/SupportButton") as Button
 @onready var open_inv_button = $UI/UnitInfoPanel/OpenInvButton
 @onready var unit_details_button: Button = get_node_or_null("UI/UnitDetailsButton") as Button
 var inspected_unit: Node2D = null
 
-@onready var gold_label = $UI/GoldLabel
+var gold_label: Label:
+	get:
+		if battle_hud != null:
+			var gl: Label = battle_hud.gold_label
+			if gl != null:
+				return gl
+		return get_node_or_null("UI/GoldLabel") as Label
 @onready var battle_log = $UI/BattleLogPanel/RichTextLabel
 @onready var convoy_button = $UI/ConvoyButton
 
@@ -493,11 +501,13 @@ var loot_item_info_panel: Panel
 # UI - LEVEL / PHASE / GAME OVER
 # =============================================================================
 
+@onready var phase_banner: Node = $UI/PhaseBanner
+@onready var phase_sound: AudioStreamPlayer = get_node_or_null("UI/PhaseBanner/PhaseSound") as AudioStreamPlayer
+
 @onready var level_up_panel = $UI/LevelUpPanel
 @onready var level_up_title = $UI/LevelUpPanel/TitleLabel
 @onready var level_up_stats = $UI/LevelUpPanel/StatsLabel
 
-@onready var phase_banner = $UI/PhaseBanner
 @onready var game_over_panel = $UI/GameOverPanel
 @onready var result_label = $UI/GameOverPanel/ResultLabel
 @onready var restart_button = $UI/GameOverPanel/RestartButton
@@ -544,9 +554,6 @@ var loot_item_info_panel: Panel
 
 @onready var level_up_sound = $LevelUpSound
 @onready var epic_level_up_sound = $EpicLevelUpSound
-
-@onready var phase_sound = $UI/PhaseSound
-
 
 # =============================================================================
 # PATHFINDING / GRID STATE
@@ -2477,31 +2484,52 @@ func calculate_ranges(unit: Node2D) -> void:
 	BattleFieldGridRangeHelpers.calculate_ranges(self, unit)
 
 
-func show_phase_banner(phase_title: String, phase_color: Color) -> void:
-	# 1. Reset and Modulate the Banner
-	phase_banner.self_modulate = phase_color
-	phase_banner.modulate.a = 0.0
-	phase_banner.visible = true
-	
-	# --- THE FIX: Stop the animation and force it to Frame 0 ---
-	if phase_banner.has_method("stop"):
-		phase_banner.stop()
-		phase_banner.frame = 0 
-		
-	# 2. Handle Positioning (AnimatedSprite2D uses global_position centered)
-	var viewport_size = get_viewport_rect().size
-	var banner_size = Vector2(800, 150) # Fallback approximate size of the ribbon
-	
-	if phase_banner is Control:
-		banner_size = phase_banner.size
-		phase_banner.position.x = (viewport_size.x - banner_size.x) / 2.0
-		phase_banner.position.y = ((viewport_size.y - banner_size.y) / 2.0) - 50
-	else:
-		phase_banner.global_position = viewport_size / 2.0
-		phase_banner.global_position.y -= 50
+func _build_phase_banner_objective_line() -> String:
+	var custom_obj: String = custom_objective_text.strip_edges()
+	match map_objective:
+		Objective.ROUT_ENEMY:
+			if custom_obj != "":
+				return "- Turn " + str(current_turn) + " â€” " + custom_obj + " -"
+			else:
+				return "- Turn " + str(current_turn) + " : Rout the Enemy -"
+		Objective.SURVIVE_TURNS:
+			if custom_obj != "":
+				return "- " + custom_obj + " (" + str(current_turn) + " / " + str(turn_limit) + ") -"
+			else:
+				return "- Survive: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+		Objective.DEFEND_TARGET:
+			if custom_obj != "":
+				return "- " + custom_obj + " â€” Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+			else:
+				return "- Defend Target: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+	return ""
 
-	# 3. Add the dynamic Phase Text (Player Phase, etc.)
-	var title_label = phase_banner.get_node_or_null("PhaseTitle")
+
+func show_phase_banner(phase_title: String, phase_color: Color) -> void:
+	if phase_banner == null:
+		return
+	var objective_subtitle: String = _build_phase_banner_objective_line()
+	var pb: Node = phase_banner
+	pb.self_modulate = phase_color
+	pb.modulate.a = 0.0
+	pb.visible = true
+
+	if pb.has_method("stop"):
+		pb.stop()
+		pb.frame = 0
+
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var banner_size: Vector2 = Vector2(800, 150)
+
+	if pb is Control:
+		banner_size = (pb as Control).size
+		(pb as Control).position.x = (viewport_size.x - banner_size.x) / 2.0
+		(pb as Control).position.y = ((viewport_size.y - banner_size.y) / 2.0) - 50
+	else:
+		(pb as Node2D).global_position = viewport_size / 2.0
+		(pb as Node2D).global_position.y -= 50
+
+	var title_label: Label = pb.get_node_or_null("PhaseTitle") as Label
 	if title_label == null:
 		title_label = Label.new()
 		title_label.name = "PhaseTitle"
@@ -2511,86 +2539,53 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 		title_label.add_theme_color_override("font_color", Color.WHITE)
 		title_label.add_theme_constant_override("outline_size", 8)
 		title_label.add_theme_color_override("font_outline_color", Color(0.1, 0.1, 0.1))
-		phase_banner.add_child(title_label)
-		
+		pb.add_child(title_label)
+
 	title_label.text = phase_title
-	title_label.modulate.a = 1.0 # Ensure it's fully visible from the start
-	
-	# Center the text over the banner
-	if phase_banner is Control:
+	title_label.modulate.a = 1.0
+
+	if pb is Control:
 		title_label.size = banner_size
 		title_label.position = Vector2.ZERO
 	else:
 		title_label.custom_minimum_size = banner_size
 		title_label.position = -(banner_size / 2.0)
 
-	# 4. Add the Objective Text below the banner
-	var obj_label = phase_banner.get_node_or_null("ObjectiveText")
+	var obj_label: Label = pb.get_node_or_null("ObjectiveText") as Label
 	if obj_label == null:
 		obj_label = Label.new()
 		obj_label.name = "ObjectiveText"
 		obj_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		obj_label.add_theme_font_size_override("font_size", 26)
-		obj_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5)) # Soft Gold
+		obj_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 		obj_label.add_theme_constant_override("outline_size", 6)
 		obj_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		phase_banner.add_child(obj_label)
-		
-	if phase_banner is Control:
+		pb.add_child(obj_label)
+
+	if pb is Control:
 		obj_label.position = Vector2(0, banner_size.y + 5)
 		obj_label.size.x = banner_size.x
 	else:
 		obj_label.position = Vector2(-(banner_size.x / 2.0), (banner_size.y / 2.0) + 5)
 		obj_label.custom_minimum_size.x = banner_size.x
-		
-	obj_label.modulate.a = 1.0 # Ensure it's fully visible from the start
-		
-	var custom_obj: String = custom_objective_text.strip_edges()
-	match map_objective:
-		Objective.ROUT_ENEMY:
-			if custom_obj != "":
-				obj_label.text = "- Turn " + str(current_turn) + " â€” " + custom_obj + " -"
-			else:
-				obj_label.text = "- Turn " + str(current_turn) + " : Rout the Enemy -"
-		Objective.SURVIVE_TURNS:
-			if custom_obj != "":
-				obj_label.text = "- " + custom_obj + " (" + str(current_turn) + " / " + str(turn_limit) + ") -"
-			else:
-				obj_label.text = "- Survive: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
-		Objective.DEFEND_TARGET:
-			if custom_obj != "":
-				obj_label.text = "- " + custom_obj + " â€” Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
-			else:
-				obj_label.text = "- Defend Target: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
-	
-	# 5. Play Sound and Animate Opacity
-	var tween = create_tween()
-	
-	# Fast fade in (0.2s)
-	tween.tween_property(phase_banner, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	
-	# Brief hold before ribbon unroll (tighter pacing than a long static beat)
-	tween.tween_interval(1.2) 
-	
-	# Trigger the unfolding animation AND the sound!
+
+	obj_label.modulate.a = 1.0
+	obj_label.text = objective_subtitle
+
+	var tween: Tween = create_tween()
+	tween.tween_property(pb, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(1.2)
 	tween.tween_callback(func():
-		if phase_banner.has_method("play"):
-			phase_banner.play("default")
-			
-		# Play the sound exactly as the ribbon unrolls! (And only here!)
+		if pb.has_method("play"):
+			pb.play("default")
 		if phase_sound != null and phase_sound.stream != null:
 			phase_sound.play()
 	)
-	
-	# Wait JUST long enough for the unroll animation to finish playing (e.g., 0.5s)
-	tween.tween_interval(0.5) 
-	
-	# Snap it out of existence quickly! (0.15s)
-	tween.tween_property(phase_banner, "modulate:a", 0.0, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	
+	tween.tween_interval(0.5)
+	tween.tween_property(pb, "modulate:a", 0.0, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	await tween.finished
-	phase_banner.visible = false
-			
+	pb.visible = false
+
 func update_unit_info_panel() -> void:
 	var target_unit: Node2D = null
 
@@ -2618,8 +2613,10 @@ func update_unit_info_panel() -> void:
 		unit_stats_label.text = "[center]TERRAIN INFO" + terrain_bb + "[/center]"
 		_set_unit_portrait_block_visible(false)
 		open_inv_button.visible = false
-		if support_btn: support_btn.visible = false
-		if unit_details_button: unit_details_button.visible = false
+		if support_btn:
+			support_btn.visible = false
+		if unit_details_button:
+			unit_details_button.visible = false
 		unit_info_panel.visible = true
 		return
 		
@@ -2645,7 +2642,6 @@ func update_unit_info_panel() -> void:
 				status_line = "[color=gold]Moved - Action Ready[/color]\n"
 			else:
 				status_line = "[color=cyan]Selected Unit[/color]\n"
-		unit_name_label.text = String(target_unit.unit_name).to_upper()
 
 		var display_def = target_unit.defense
 		var display_res = target_unit.resistance
@@ -2678,15 +2674,6 @@ func update_unit_info_panel() -> void:
 			max_poise = max(1, int(target_unit.get_max_poise()))
 			u_poise = str(current_poise) + "/" + str(max_poise)
 
-		unit_hp_label.text = "LV %d  |  MOVE %d" % [
-			int(target_unit.level),
-			int(u_move),
-		]
-
-		unit_stats_label.position = Vector2(16, 142)
-		unit_stats_label.size = Vector2(210, 24)
-		_style_tactical_richtext(unit_stats_label, 11, 12)
-
 		var meta_lines: PackedStringArray = PackedStringArray()
 		var coop_own_line: String = _mock_coop_unit_ownership_bbcode_line_for_panel(target_unit).strip_edges()
 		if status_line != "":
@@ -2701,7 +2688,19 @@ func update_unit_info_panel() -> void:
 			detail_parts.append("[color=yellow]%s[/color]" % _truncate_forecast_text(String(target_unit.equipped_weapon.weapon_name).to_upper(), 12))
 		if detail_parts.size() > 0:
 			meta_lines.append(" [color=gray]|[/color] ".join(detail_parts))
-		unit_stats_label.text = "[center]" + "\n".join(meta_lines) + "[/center]"
+		unit_name_label.text = String(target_unit.unit_name).to_upper()
+
+		unit_hp_label.text = "LV %d  |  MOVE %d" % [
+			int(target_unit.level),
+			int(u_move),
+		]
+
+		unit_stats_label.position = Vector2(16, 142)
+		unit_stats_label.size = Vector2(210, 24)
+		_style_tactical_richtext(unit_stats_label, 11, 12)
+
+		var stats_bbcode: String = "[center]" + "\n".join(meta_lines) + "[/center]"
+		unit_stats_label.text = stats_bbcode
 		_refresh_unit_info_primary_widgets({
 			"hp": {
 				"current": int(target_unit.current_hp),
@@ -2734,17 +2733,20 @@ func update_unit_info_panel() -> void:
 			_set_unit_portrait_block_visible(true)
 		else:
 			_set_unit_portrait_block_visible(false)
-		
-		var is_friendly = (target_unit.get_parent() == player_container or target_unit.get_parent() == ally_container)
+
+		var is_friendly: bool = (target_unit.get_parent() == player_container or target_unit.get_parent() == ally_container)
 		open_inv_button.visible = (target_unit.get_parent() == player_container)
-		if support_btn: support_btn.visible = is_friendly
-		if unit_details_button: unit_details_button.visible = true
+		if support_btn:
+			support_btn.visible = is_friendly
+		if unit_details_button:
+			unit_details_button.visible = true
 		unit_info_panel.visible = true
 	else:
 		_unit_info_stat_source_id = -1
 		_set_unit_info_primary_widgets_visible(false)
 		_set_unit_info_stat_widgets_visible(false)
-		if unit_details_button: unit_details_button.visible = false
+		if unit_details_button:
+			unit_details_button.visible = false
 		unit_info_panel.visible = false
 				
 func _on_unit_leveled_up(unit: Node2D, gains: Dictionary) -> void:
@@ -3085,7 +3087,10 @@ func get_ability_trigger_chance(unit: Node2D, is_universal_parry: bool = false) 
 	return clamp(int(chance), 0, 85)
 	
 func update_gold_display() -> void:
-	gold_label.text = "Gold: " + str(player_gold)
+	if battle_hud != null:
+		battle_hud.set_gold_display(player_gold)
+	elif gold_label != null:
+		gold_label.text = "Gold: " + str(player_gold)
 
 func _on_convoy_pressed() -> void:
 	InventoryTradeFlowHelpers.on_convoy_pressed(self)
@@ -3190,7 +3195,8 @@ func _floater_stack_nudge_for_anchor(anchor: Node) -> float:
 	return -14.0 * float(depth)
 
 
-## meta keys: tier (FloatingCombatText.Tier), hp_chunk_ratio (0..1), stack_anchor (Node).
+## meta keys: tier (FloatingCombatText.Tier), hp_chunk_ratio (0..1), stack_anchor (Node),
+## optional text_scale/font_size/rise_px/scatter_amount/hold_time/fade_time (presentation-only).
 func spawn_loot_text(text: String, color: Color, pos: Vector2, meta = null) -> void:
 	var md: Dictionary = meta if meta is Dictionary else {}
 	var f_text = FloatingTextScene.instantiate()
@@ -3200,6 +3206,18 @@ func spawn_loot_text(text: String, color: Color, pos: Vector2, meta = null) -> v
 		f_text.tier = md["tier"]
 	if md.has("hp_chunk_ratio"):
 		f_text.hp_chunk_ratio = md["hp_chunk_ratio"]
+	if md.has("font_size"):
+		f_text.font_size = int(md["font_size"])
+	if md.has("text_scale"):
+		f_text.text_scale = float(md["text_scale"])
+	if md.has("rise_px"):
+		f_text.rise_px = float(md["rise_px"])
+	if md.has("scatter_amount"):
+		f_text.scatter_amount = float(md["scatter_amount"])
+	if md.has("hold_time"):
+		f_text.hold_time = float(md["hold_time"])
+	if md.has("fade_time"):
+		f_text.fade_time = float(md["fade_time"])
 	var anchor: Node = md.get("stack_anchor", null)
 	var nudge: float = _floater_stack_nudge_for_anchor(anchor)
 	_mount_floating_combat_text(f_text)
@@ -3876,7 +3894,6 @@ func execute_promotion(unit: Node2D, advanced_class: Resource) -> void:
 	
 	var old_sprite_tex = unit.data.unit_sprite
 	var new_sprite_tex = advanced_class.get("promoted_battle_sprite")
-	var new_portrait_tex = advanced_class.get("promoted_portrait")
 	
 	# --- 2. BUILD THE CINEMATIC UI LAYER ---
 	var promo_layer = CanvasLayer.new()
@@ -3980,50 +3997,25 @@ func execute_promotion(unit: Node2D, advanced_class: Resource) -> void:
 	
 	# STAGE 2: THE FLASH & DATA SWAP
 	tween.chain().tween_callback(func():
-		UnitTraitsLib.grant_rookie_legacy_on_promotion(unit, old_class_name)
-		UnitTraitsLib.grant_tier_class_legacy_on_promotion(unit, old_class_name, advanced_class)
+		var promo_result: Dictionary = PromotionFlowSharedHelpers.apply_promotion_to_unit_node(
+			unit,
+			advanced_class,
+			Callable(self, "apply_stat_gains")
+		)
+		var gains: Dictionary = promo_result.get("gains", {})
+		var result_class_name: String = str(promo_result.get("new_class_name", new_class_name))
+		var result_sprite_tex: Texture2D = promo_result.get("new_sprite_tex", new_sprite_tex)
 
-		var gains = {
-			"hp": advanced_class.get("promo_hp_bonus") if advanced_class.get("promo_hp_bonus") != null else 0,
-			"str": advanced_class.get("promo_str_bonus") if advanced_class.get("promo_str_bonus") != null else 0,
-			"mag": advanced_class.get("promo_mag_bonus") if advanced_class.get("promo_mag_bonus") != null else 0,
-			"def": advanced_class.get("promo_def_bonus") if advanced_class.get("promo_def_bonus") != null else 0,
-			"res": advanced_class.get("promo_res_bonus") if advanced_class.get("promo_res_bonus") != null else 0,
-			"spd": advanced_class.get("promo_spd_bonus") if advanced_class.get("promo_spd_bonus") != null else 0,
-			"agi": advanced_class.get("promo_agi_bonus") if advanced_class.get("promo_agi_bonus") != null else 0
-		}
-		
-		unit.active_class_data = advanced_class
-		unit.unit_class_name = new_class_name
-		unit.level = 1
-		unit.experience = 0
-		if advanced_class.get("move_range") != null: unit.move_range = advanced_class.move_range
-		if advanced_class.get("move_type") != null: unit.set("move_type", advanced_class.move_type)
+		if result_sprite_tex != null:
+			big_sprite.texture = result_sprite_tex
+			aura_sprite.texture = result_sprite_tex # Update the aura's texture too!
 
-		apply_stat_gains(unit, gains)
-		
-		# --- FLAG AS PROMOTED AND IGNITE AURA ---
-		unit.set("is_promoted", true)
-		if unit.has_method("apply_promotion_aura"):
-			unit.apply_promotion_aura()
-			
-		if new_sprite_tex != null:
-			big_sprite.texture = new_sprite_tex
-			aura_sprite.texture = new_sprite_tex # Update the aura's texture too!
-			
-			if unit.get("data") != null: unit.data.unit_sprite = new_sprite_tex 
-			var map_sprite = unit.get_node_or_null("Sprite")
-			if map_sprite: map_sprite.texture = new_sprite_tex
-			
-			# The Silhouette Setup
+			# The silhouette setup
 			big_sprite.modulate = Color.BLACK
-			big_sprite.scale = Vector2(1.15, 1.15) 
-			
-		if new_portrait_tex != null and unit.get("data") != null:
-			unit.data.portrait = new_portrait_tex
+			big_sprite.scale = Vector2(1.15, 1.15)
 
-		info_label.text = "[center]" + unit.unit_name + "\n[color=gold]" + new_class_name.to_upper() + "[/color][/center]"
-		unit.set_meta("promo_gains_temp", gains) 
+		info_label.text = "[center]" + unit.unit_name + "\n[color=gold]" + result_class_name.to_upper() + "[/color][/center]"
+		unit.set_meta("promo_gains_temp", gains)
 	)
 	
 	# The instant blinding flash
@@ -4122,15 +4114,15 @@ func update_objective_ui(skip_animation: bool = false) -> void:
 func spawn_dash_effect(start_pos: Vector2, target_pos: Vector2) -> void:
 	CombatVfxHelpers.spawn_dash_effect(self, start_pos, target_pos)
 
-func spawn_slash_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false) -> void:
-	CombatVfxHelpers.spawn_slash_effect(self, target_pos, attacker_pos, is_crit)
+func spawn_slash_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
+	CombatVfxHelpers.spawn_slash_effect(self, target_pos, attacker_pos, is_crit, weapon_family)
 
 func spawn_level_up_effect(target_pos: Vector2) -> void:
 	CombatVfxHelpers.spawn_level_up_effect(self, target_pos)
 
 
-func spawn_blood_splatter(target_unit: Node2D, attacker_pos: Vector2, is_crit: bool = false) -> void:
-	CombatVfxHelpers.spawn_blood_splatter(self, target_unit, attacker_pos, is_crit)
+func spawn_blood_splatter(target_unit: Node2D, attacker_pos: Vector2, is_crit: bool = false, damage_kind: int = 0) -> void:
+	CombatVfxHelpers.spawn_blood_splatter(self, target_unit, attacker_pos, is_crit, damage_kind)
 
 # ==========================================
 # --- LEVEL INTRO CINEMATICS ---
@@ -4632,6 +4624,23 @@ func apply_campaign_settings() -> void:
 
 	queue_redraw()
 
+func _is_unit_dragon(unit: Node2D) -> bool:
+	if unit == null:
+		return false
+	if bool(unit.get_meta("is_dragon", false)):
+		return true
+	var cls_name: String = str(unit.get("unit_class_name") if unit.get("unit_class_name") != null else "").to_lower()
+	return cls_name.contains("dragon")
+
+
+func _is_weapon_non_tradeable(weapon: WeaponData) -> bool:
+	return WeaponData.is_trade_locked(weapon)
+
+
+func _is_weapon_convoy_locked(weapon: WeaponData) -> bool:
+	return WeaponData.is_convoy_locked(weapon)
+
+
 func _class_can_equip_weapon(class_data: ClassData, weapon: WeaponData) -> bool:
 	if class_data == null or weapon == null:
 		return false
@@ -4651,6 +4660,9 @@ func _class_can_equip_weapon(class_data: ClassData, weapon: WeaponData) -> bool:
 
 func _unit_can_equip_weapon(unit: Node2D, weapon: WeaponData) -> bool:
 	if unit == null or weapon == null:
+		return false
+
+	if WeaponData.is_dragon_weapon(weapon) and not _is_unit_dragon(unit):
 		return false
 
 	if not ("active_class_data" in unit):
@@ -4723,6 +4735,8 @@ func _unit_can_use_item_for_ui(unit: Node2D, item: Resource) -> bool:
 		return false
 	if not ("active_class_data" in unit):
 		return false
+	if item is WeaponData and WeaponData.is_dragon_weapon(item as WeaponData):
+		return _is_unit_dragon(unit)
 
 	return _class_can_equip_item(unit.active_class_data, item)
 
@@ -4839,30 +4853,34 @@ func _is_valid_combat_unit(node: Node2D) -> bool:
 	return true
 	
 func _run_melee_crit_lunge(attacker: Node2D, _defender: Node2D, orig_pos: Vector2, lunge_dir: Vector2) -> void:
-	"""Crit-only melee sequence: charge back with jitter, very fast strike, brief hold with crit sound, attacker left at enemy for PHASE F return."""
+	"""Crit-only melee sequence: brief anticipation lean-back, sharp committed strike, brief hold with crit sound, attacker left at enemy for PHASE F return."""
 	if not is_instance_valid(attacker):
 		return
-	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 6.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 8.0)
 	var perp: Vector2 = Vector2(-lunge_dir.y, lunge_dir.x)
 	var strike_pos: Vector2 = orig_pos + (lunge_dir * 16.0)
 
-	# Short charge-back with subtle jitter (0.06s)
+	# Anticipation: lean back with a tiny corkscrew jitter (0.045s)
 	var charge_tween: Tween = create_tween().set_trans(Tween.TRANS_LINEAR)
-	charge_tween.tween_method(
-		func(progress: float) -> void:
-			if not is_instance_valid(attacker): return
-			var base_pos: Vector2 = orig_pos.lerp(recoil_pos, progress)
-			var jitter: float = sin(progress * 20.0) * 2.0
-			attacker.global_position = base_pos + (perp * jitter),
-		0.0, 1.0, 0.06
-	)
+	var _crit_charge_cb := func(progress: float) -> void:
+		if not is_instance_valid(attacker):
+			return
+		var base_pos: Vector2 = orig_pos.lerp(recoil_pos, progress)
+		var jitter: float = sin(progress * 24.0) * 1.8
+		var cork: float = sin(progress * 10.0) * 0.9
+		attacker.global_position = base_pos + (perp * jitter) - (lunge_dir * cork)
+	charge_tween.tween_method(_crit_charge_cb, 0.0, 1.0, 0.045)
 	await charge_tween.finished
 	if not is_instance_valid(attacker): return
 
-	# Very fast strike toward target (0.05s)
+	# Brief micro-hold so the anticipation reads (0.02s)
+	await get_tree().create_timer(0.02).timeout
+	if not is_instance_valid(attacker): return
+
+	# Sharp committed strike toward target (0.042s)
 	spawn_dash_effect(attacker.global_position, strike_pos)
 	var strike_tween: Tween = create_tween()
-	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.042).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await strike_tween.finished
 	if not is_instance_valid(attacker): return
 
@@ -4904,19 +4922,37 @@ func _run_melee_normal_lunge(attacker: Node2D, _defender: Node2D, orig_pos: Vect
 
 
 func _play_critical_impact(focus_world: Vector2) -> void:
-	_spawn_fullscreen_impact_flash(Color(1.0, 0.98, 0.88), 0.44, 0.16)
-	_spawn_fullscreen_impact_flash(Color(1.0, 0.72, 0.20), 0.16, 0.22)
+	_spawn_fullscreen_impact_flash(Color(1.0, 0.98, 0.88), 0.44, 0.14)
+	_spawn_fullscreen_impact_flash(Color(1.0, 0.72, 0.20), 0.16, 0.18)
 
 	# Offset punch only â€” no zoom manipulation
-	_start_impact_camera(focus_world, 1.0, 0.040, 0.18)
+	_start_impact_camera(focus_world, 1.0, 0.032, 0.16)
 
-	await _do_hit_stop(0.018, 0.14, 0.11)
+	await _do_hit_stop(0.016, 0.12, 0.10)
 	
 func _play_guard_break_impact(focus_world: Vector2) -> void:
-	_spawn_fullscreen_impact_flash(Color(1.0, 0.55, 0.18), 0.28, 0.12)
-	_spawn_fullscreen_impact_flash(Color(1.0, 0.82, 0.35), 0.10, 0.18)
+	_spawn_fullscreen_impact_flash(Color(1.0, 0.55, 0.18), 0.28, 0.10)
+	_spawn_fullscreen_impact_flash(Color(1.0, 0.82, 0.35), 0.10, 0.15)
 
 	# Smaller offset punch than crits
-	_start_impact_camera(focus_world, 1.0, 0.030, 0.14)
+	_start_impact_camera(focus_world, 1.0, 0.024, 0.12)
 
-	await _do_hit_stop(0.012, 0.22, 0.07)
+	await _do_hit_stop(0.010, 0.20, 0.06)
+
+
+## Lightweight impact punctuation (used for fast projectile hits).
+func _play_light_hit_impact(focus_world: Vector2) -> void:
+	_start_impact_camera(focus_world, 1.0, 0.018, 0.10)
+	await _do_hit_stop(0.006, 0.35, 0.035)
+
+
+## Standard hit punctuation (used for normal melee hits).
+func _play_normal_hit_impact(focus_world: Vector2) -> void:
+	_start_impact_camera(focus_world, 1.0, 0.024, 0.12)
+	await _do_hit_stop(0.010, 0.22, 0.06)
+
+
+## Miss telegraph: quick offset + micro hit-stop (does not replace attack-resolution timing).
+func _play_miss_impact(focus_world: Vector2) -> void:
+	_start_impact_camera(focus_world, 1.0, 0.014, 0.09)
+	await _do_hit_stop(0.004, 0.50, 0.028)

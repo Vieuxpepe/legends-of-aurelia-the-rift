@@ -1,5 +1,13 @@
 extends RefCounted
 
+static func _mark_dragon_weapon_flags(wpn: WeaponData) -> void:
+	if wpn == null:
+		return
+	if WeaponData.is_dragon_weapon(wpn) or int(wpn.weapon_type) == WeaponData.WeaponType.NONE:
+		wpn.dragon_only = true
+		wpn.non_tradeable = true
+		wpn.non_convoy = true
+
 
 static func is_dragon_deployable_in_battle(dragon: Dictionary) -> bool:
 	if not (dragon is Dictionary):
@@ -19,6 +27,7 @@ static func make_dragon_battle_entry(dragon: Dictionary) -> Dictionary:
 	fang.hit_bonus = int(dragon.get("weapon_hit_bonus", 10))
 	fang.min_range = int(dragon.get("min_range", 1))
 	fang.max_range = int(dragon.get("max_range", 1))
+	_mark_dragon_weapon_flags(fang)
 
 	var max_hp: int = int(dragon.get("max_hp", 30 + (stage * 4)))
 	var current_hp: int = int(dragon.get("current_hp", max_hp))
@@ -230,8 +239,14 @@ static func load_campaign_data(field) -> void:
 				fang.might = 6
 				fang.min_range = 1
 				fang.max_range = 1
+				_mark_dragon_weapon_flags(fang)
 				new_unit.equipped_weapon = fang
 				new_unit.inventory = [fang]
+			elif new_unit.equipped_weapon is WeaponData:
+				_mark_dragon_weapon_flags(new_unit.equipped_weapon as WeaponData)
+			for inv_item in new_unit.inventory:
+				if inv_item is WeaponData:
+					_mark_dragon_weapon_flags(inv_item as WeaponData)
 
 			var elem = str(saved.get("element", "Fire")).to_lower()
 			var d_path = "res://Assets/Sprites/" + elem + "_dragon_sprite.png"

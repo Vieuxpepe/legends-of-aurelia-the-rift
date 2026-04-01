@@ -3,6 +3,7 @@ extends RefCounted
 # Extracted inventory action handlers from `BattleField.gd`.
 # Keeps the awaited/predicted UI/turn sequencing identical by delegating back
 # into the existing `field` instance for internal methods/state.
+const PromotionFlowSharedHelpers = preload("res://Scripts/Core/PromotionFlowSharedHelpers.gd")
 
 
 static func on_equip_pressed(field) -> void:
@@ -41,18 +42,14 @@ static func on_use_pressed(field) -> void:
 	if item is ConsumableData:
 		var unit = field.unit_managing_inventory
 		if item.get("is_promotion_item") == true:
-			var current_class = unit.get("active_class_data")
-			if (
-				unit.level >= 1
-				and current_class != null
-				and current_class.get("promotion_options") != null
-				and current_class.promotion_options.size() > 0
-			):
+			var current_class: Resource = PromotionFlowSharedHelpers.resolve_current_class_from_unit_node(unit)
+			var promotion_options: Array[Resource] = PromotionFlowSharedHelpers.get_promotion_options(current_class)
+			if PromotionFlowSharedHelpers.can_unit_promote(int(unit.level), current_class):
 				unit.inventory.remove_at(real_index)
 				field.play_ui_sfx(field.UISfx.INVENTORY_USE)
 				field._on_close_inv_pressed()
 
-				var chosen_advanced_class = await field._ask_for_promotion_choice(current_class.promotion_options)
+				var chosen_advanced_class = await field._ask_for_promotion_choice(promotion_options)
 				if chosen_advanced_class != null:
 					field.execute_promotion(unit, chosen_advanced_class)
 					field.update_unit_info_panel()

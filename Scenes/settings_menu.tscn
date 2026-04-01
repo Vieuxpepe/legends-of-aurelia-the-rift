@@ -1000,6 +1000,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "SHOW STATUS EFFECTS ON UNITS"
 
+[node name="UiSkipLootWindowToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SKIP LOOT WINDOW (instant loot, no reveal UI)"
+
 [node name="CombatTextCard" type="PanelContainer" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
