@@ -1,329 +1,297 @@
 extends RefCounted
 
-# Combat forecast panel + math + await `forecast_resolved` — extracted from `BattleField.gd`.
+# Combat forecast panel widgets / text styling helpers (bars, badges, emphasis pulse).
 
-static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> Array:
-	if attacker == null or defender == null:
-		return []
+static func style_forecast_hp_bar(field, bar: ProgressBar, fill: Color) -> void:
+	if bar == null:
+		return
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_theme_stylebox_override("background", field._make_tactical_bar_style(Color(0.10, 0.09, 0.06, 0.98), Color(0.72, 0.61, 0.28, 1.0), 2, 6))
+	bar.add_theme_stylebox_override("fill", field._make_tactical_bar_style(fill, Color(0.85, 0.78, 0.44, 0.95), 1, 6))
 
-	if field.is_local_player_command_blocked_for_mock_coop_unit(attacker):
-		return []
+static func forecast_hp_fill_color(current_hp: int, max_hp: int) -> Color:
+	if max_hp <= 0:
+		return Color(0.82, 0.25, 0.22, 1.0)
+	var ratio: float = clampf(float(current_hp) / float(max_hp), 0.0, 1.0)
+	if ratio >= 0.67:
+		return Color(0.24, 0.86, 0.50, 1.0)
+	if ratio >= 0.34:
+		return Color(0.93, 0.74, 0.24, 1.0)
+	return Color(0.92, 0.32, 0.27, 1.0)
 
-	if attacker.get("equipped_weapon") == null:
-		return []
+static func truncate_forecast_text(text: String, max_chars: int) -> String:
+	var clean: String = str(text).strip_edges()
+	if max_chars <= 3 or clean.length() <= max_chars:
+		return clean
+	return clean.substr(0, max_chars - 3) + "..."
 
-	# Defender can be forecasted even if unarmed, but must still be a combat unit
-	if attacker.get("strength") == null or attacker.get("magic") == null:
-		return []
-	if defender.get("strength") == null or defender.get("magic") == null:
-		return []
+static func format_forecast_name(prefix: String, unit_name: String, max_name_chars: int = 14) -> String:
+	var pre: String = str(prefix).strip_edges()
+	var capped_name: String = truncate_forecast_text(unit_name, max_name_chars)
+	if pre == "":
+		return capped_name
+	return pre + ": " + capped_name
 
-	var atk_wpn = attacker.equipped_weapon
-	var def_wpn = defender.equipped_weapon
+static func format_forecast_name_fitted(prefix: String, unit_name: String, max_total_chars: int = 18) -> String:
+	var pre: String = str(prefix).strip_edges()
+	var prefix_text: String = pre + ": " if pre != "" else ""
+	var available_name_chars: int = maxi(4, max_total_chars - prefix_text.length())
+	return prefix_text + truncate_forecast_text(unit_name, available_name_chars)
 
-	# Adjacency check
-	var atk_adj = field.get_adjacency_bonus(attacker)
-	var def_adj = field.get_adjacency_bonus(defender)
+static func forecast_weapon_marker(weapon: WeaponData) -> String:
+	if weapon == null:
+		return "[---]"
+	if WeaponData.is_staff_like(weapon):
+		return "[STF]"
+	match int(weapon.weapon_type):
+		WeaponData.WeaponType.SWORD:
+			return "[SWD]"
+		WeaponData.WeaponType.LANCE:
+			return "[LNC]"
+		WeaponData.WeaponType.AXE:
+			return "[AXE]"
+		WeaponData.WeaponType.BOW:
+			return "[BOW]"
+		WeaponData.WeaponType.TOME:
+			return "[TOM]"
+		WeaponData.WeaponType.KNIFE:
+			return "[KNF]"
+		WeaponData.WeaponType.FIREARM:
+			return "[GUN]"
+		WeaponData.WeaponType.FIST:
+			return "[FST]"
+		WeaponData.WeaponType.INSTRUMENT:
+			return "[SON]"
+		WeaponData.WeaponType.DARK_TOME:
+			return "[DRK]"
+		_:
+			return "[---]"
 
-	field._ensure_forecast_support_labels()
-	if field.forecast_atk_support_label:
-		field.forecast_atk_support_label.text = field._get_forecast_support_text(attacker)
-	if field.forecast_def_support_label:
-		field.forecast_def_support_label.text = field._get_forecast_support_text(defender)
+static func format_forecast_weapon_text(weapon: WeaponData) -> String:
+	if weapon == null:
+		return "[---] UNARMED"
+	return "%s %s" % [forecast_weapon_marker(weapon), String(weapon.weapon_name).to_upper()]
 
-	var atk_terrain = field.get_terrain_data(field.get_grid_pos(attacker))
-	var def_terrain = field.get_terrain_data(field.get_grid_pos(defender))
+static func format_forecast_weapon_name(weapon: WeaponData, max_chars: int = 14) -> String:
+	if weapon == null:
+		return "UNARMED"
+	return truncate_forecast_text(String(weapon.weapon_name).to_upper(), max_chars)
 
-	var atk_might = atk_wpn.might if atk_wpn else 0
-	var atk_hit_bonus = atk_wpn.hit_bonus if atk_wpn else 0
-	var def_might = def_wpn.might if def_wpn else 0
-	var def_hit_bonus = def_wpn.hit_bonus if def_wpn else 0
+static func forecast_weapon_rarity_glow_color(weapon: WeaponData) -> Color:
+	if weapon == null:
+		return Color(0, 0, 0, 0)
+	match String(weapon.rarity):
+		"Rare":
+			return Color(0.42, 0.72, 1.0, 0.22)
+		"Epic":
+			return Color(0.82, 0.50, 1.0, 0.22)
+		"Legendary":
+			return Color(1.0, 0.84, 0.38, 0.26)
+		_:
+			return Color(0, 0, 0, 0)
 
-	# --- THE BROKEN PENALTY ---
-	if atk_wpn and atk_wpn.get("current_durability") != null and atk_wpn.current_durability <= 0:
-		atk_might /= 2
-		atk_hit_bonus /= 2
+static func style_forecast_weapon_glow(glow_panel: Panel, glow_color: Color) -> void:
+	if glow_panel == null:
+		return
+	var style := StyleBoxFlat.new()
+	style.bg_color = glow_color
+	style.set_corner_radius_all(6)
+	style.shadow_color = Color(glow_color.r, glow_color.g, glow_color.b, glow_color.a * 1.6)
+	style.shadow_size = 10
+	style.shadow_offset = Vector2.ZERO
+	glow_panel.add_theme_stylebox_override("panel", style)
 
-	if def_wpn and def_wpn.get("current_durability") != null and def_wpn.current_durability <= 0:
-		def_might /= 2
-		def_hit_bonus /= 2
-	# -------------------------------
+static func ensure_forecast_hp_bars(field) -> void:
+	if field.forecast_panel == null:
+		return
+	if field.forecast_atk_hp_bar == null:
+		field.forecast_atk_hp_bar = ProgressBar.new()
+		field.forecast_atk_hp_bar.name = "AtkHPBar"
+		field.forecast_panel.add_child(field.forecast_atk_hp_bar)
+	if field.forecast_def_hp_bar == null:
+		field.forecast_def_hp_bar = ProgressBar.new()
+		field.forecast_def_hp_bar.name = "DefHPBar"
+		field.forecast_panel.add_child(field.forecast_def_hp_bar)
+	for bar in [field.forecast_atk_hp_bar, field.forecast_def_hp_bar]:
+		if bar == null:
+			continue
+		bar.min_value = 0.0
+		bar.max_value = 100.0
+		bar.value = 100.0
+		bar.step = 0.1
+		bar.custom_minimum_size = Vector2(190, 10)
+		bar.size = Vector2(190, 10)
+		bar.z_index = 2
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		style_forecast_hp_bar(field, bar, Color(0.24, 0.86, 0.50, 1.0))
 
-	var atk_is_magic = atk_wpn.damage_type == WeaponData.DamageType.MAGIC if atk_wpn else false
-	var def_is_magic = def_wpn.damage_type == WeaponData.DamageType.MAGIC if def_wpn else false
+static func ensure_forecast_weapon_badges(field) -> void:
+	if field.forecast_panel == null:
+		return
+	var specs: Array[Dictionary] = [
+		{
+			"panel_name": "AtkWeaponBadgePanel",
+			"fill": Color(0.34, 0.17, 0.10, 0.92),
+			"border": Color(0.94, 0.72, 0.42, 0.92),
+			"text_color": Color(1.0, 0.88, 0.62, 1.0),
+		},
+		{
+			"panel_name": "DefWeaponBadgePanel",
+			"fill": Color(0.10, 0.18, 0.34, 0.92),
+			"border": Color(0.58, 0.80, 1.0, 0.92),
+			"text_color": Color(0.88, 0.95, 1.0, 1.0),
+		},
+	]
+	for spec in specs:
+		var panel_name: String = str(spec.get("panel_name", ""))
+		var panel := field.forecast_panel.get_node_or_null(panel_name) as Panel
+		if panel == null:
+			panel = Panel.new()
+			panel.name = panel_name
+			panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			field.forecast_panel.add_child(panel)
+		panel.z_index = 3
+		field._style_tactical_panel(panel, spec.get("fill", field.TACTICAL_UI_BG_SOFT), spec.get("border", field.TACTICAL_UI_BORDER), 1, 8)
+		var badge_label := panel.get_node_or_null("Text") as Label
+		if badge_label == null:
+			badge_label = Label.new()
+			badge_label.name = "Text"
+			badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(badge_label)
+		badge_label.position = Vector2.ZERO
+		badge_label.size = panel.size
+		badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		field._style_tactical_label(badge_label, spec.get("text_color", field.TACTICAL_UI_TEXT), 15, 3)
 
-	var atk_offense = attacker.magic if atk_is_magic else attacker.strength
-	var def_offense = defender.magic if def_is_magic else defender.strength
+static func ensure_forecast_weapon_pair_frames(field) -> void:
+	if field.forecast_panel == null:
+		return
+	for panel_name in ["AtkWeaponPairFrame", "DefWeaponPairFrame"]:
+		var frame := field.forecast_panel.get_node_or_null(panel_name) as Panel
+		if frame == null:
+			frame = Panel.new()
+			frame.name = panel_name
+			frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			field.forecast_panel.add_child(frame)
+		frame.z_index = 2
+		field._style_tactical_panel(frame, Color(0.16, 0.13, 0.09, 0.88), Color(0.46, 0.40, 0.26, 0.88), 1, 8)
+		var bevel_top := frame.get_node_or_null("BevelTop") as ColorRect
+		if bevel_top == null:
+			bevel_top = ColorRect.new()
+			bevel_top.name = "BevelTop"
+			bevel_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			frame.add_child(bevel_top)
+		bevel_top.color = Color(1.0, 0.94, 0.74, 0.18)
+		var bevel_bottom := frame.get_node_or_null("BevelBottom") as ColorRect
+		if bevel_bottom == null:
+			bevel_bottom = ColorRect.new()
+			bevel_bottom.name = "BevelBottom"
+			bevel_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			frame.add_child(bevel_bottom)
+		bevel_bottom.color = Color(0.0, 0.0, 0.0, 0.20)
 
-	# Apply Defender's Adjacency to their Defense
-	var atk_defense_target = defender.resistance if atk_is_magic else defender.defense
-	if defender.get("is_defending") == true:
-		atk_defense_target += defender.defense_bonus
-	atk_defense_target += def_adj["def"]
-	atk_defense_target += def_terrain["def"]
+static func ensure_forecast_weapon_icons(field) -> void:
+	if field.forecast_panel == null:
+		return
+	for panel_name in ["AtkWeaponIconPanel", "DefWeaponIconPanel"]:
+		var panel := field.forecast_panel.get_node_or_null(panel_name) as Panel
+		if panel == null:
+			panel = Panel.new()
+			panel.name = panel_name
+			panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			field.forecast_panel.add_child(panel)
+		panel.z_index = 3
+		field._style_tactical_panel(panel, field.TACTICAL_UI_BG_SOFT, field.TACTICAL_UI_BORDER_MUTED, 1, 7)
+		var glow_panel := panel.get_node_or_null("Glow") as Panel
+		if glow_panel == null:
+			glow_panel = Panel.new()
+			glow_panel.name = "Glow"
+			glow_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(glow_panel)
+			panel.move_child(glow_panel, 0)
+		glow_panel.position = Vector2(2, 2)
+		glow_panel.size = Vector2(22, 22)
+		glow_panel.visible = false
+		var icon_rect := panel.get_node_or_null("Icon") as TextureRect
+		if icon_rect == null:
+			icon_rect = TextureRect.new()
+			icon_rect.name = "Icon"
+			icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(icon_rect)
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.position = Vector2(3, 3)
+		icon_rect.size = Vector2(20, 20)
 
-	# Apply Attacker's Adjacency to their Defense
-	var def_defense_target = attacker.resistance if def_is_magic else attacker.defense
-	def_defense_target += atk_adj["def"]
-	def_defense_target += atk_terrain["def"]
+static func reset_forecast_emphasis_visuals(field) -> void:
+	if field.crit_flash_tween != null:
+		field.crit_flash_tween.kill()
+	for lbl in [field.forecast_atk_dmg, field.forecast_def_dmg, field.forecast_atk_crit, field.forecast_def_crit]:
+		if lbl is Label:
+			var ui_lbl := lbl as Label
+			ui_lbl.modulate = Color.WHITE
+			ui_lbl.scale = Vector2.ONE
 
-	var advantage = field.get_triangle_advantage(attacker, defender)
-	var atk_tri_dmg = advantage * 1
-	var atk_tri_hit = advantage * 15
-	var def_tri_dmg = (advantage * -1) * 1
-	var def_tri_hit = (advantage * -1) * 15
+static func start_forecast_emphasis_pulse(field, attacker_lethal: bool, defender_lethal: bool, attacker_crit_ready: bool, defender_crit_ready: bool) -> void:
+	reset_forecast_emphasis_visuals(field)
+	var pulse_targets: Array[Dictionary] = []
+	if attacker_lethal and field.forecast_atk_dmg != null:
+		pulse_targets.append({
+			"label": field.forecast_atk_dmg,
+			"color": Color(1.0, 0.86, 0.62, 1.0),
+			"scale": Vector2(1.08, 1.08),
+		})
+	if defender_lethal and field.forecast_def_dmg != null:
+		pulse_targets.append({
+			"label": field.forecast_def_dmg,
+			"color": Color(0.74, 0.92, 1.0, 1.0),
+			"scale": Vector2(1.08, 1.08),
+		})
+	if attacker_crit_ready and field.forecast_atk_crit != null:
+		pulse_targets.append({
+			"label": field.forecast_atk_crit,
+			"color": Color(1.0, 0.94, 0.62, 1.0),
+			"scale": Vector2(1.05, 1.05),
+		})
+	if defender_crit_ready and field.forecast_def_crit != null:
+		pulse_targets.append({
+			"label": field.forecast_def_crit,
+			"color": Color(0.88, 0.94, 1.0, 1.0),
+			"scale": Vector2(1.05, 1.05),
+		})
+	if pulse_targets.is_empty():
+		return
 
-	# Support-combat and relationship web (forecast must match resolution)
-	var atk_sup: Dictionary = field.get_support_combat_bonus(attacker)
-	var def_sup: Dictionary = field.get_support_combat_bonus(defender)
-	var atk_rel: Dictionary = field.get_relationship_combat_modifiers(attacker)
-	var def_rel: Dictionary = field.get_relationship_combat_modifiers(defender)
-	var atk_dmg = max(0, (atk_offense + atk_might + atk_tri_dmg) - atk_defense_target) + atk_rel.get("dmg_bonus", 0)
-	var def_dmg = max(0, (def_offense + def_might + def_tri_dmg) - def_defense_target) + def_rel.get("dmg_bonus", 0)
-	var atk_hit: int = clamp(80 + atk_hit_bonus + atk_tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100)
-	var atk_crit: int = clamp(attacker.agility / 2 + atk_rel["crit_bonus"] - def_sup["crit_avo"], 0, 100)
-	var def_hit: int = clamp(80 + def_hit_bonus + def_tri_hit + def_adj["hit"] + def_sup["hit"] - atk_sup["avo"] + def_rel["hit"] - atk_rel["avo"] + (defender.agility * 2) - (attacker.speed * 2) - atk_terrain["avo"], 0, 100)
-	var def_crit: int = clamp(defender.agility / 2 + def_rel["crit_bonus"] - atk_sup["crit_avo"], 0, 100)
+	field.crit_flash_tween = field.create_tween().set_loops()
+	field.crit_flash_tween.set_trans(Tween.TRANS_SINE)
+	field.crit_flash_tween.set_ease(Tween.EASE_IN_OUT)
 
-	if atk_wpn == null or atk_wpn.get("is_healing_staff") != true:
-		var fr_rookie: Dictionary = field._forecast_rookie_class_passive_mods(attacker, defender, atk_is_magic, atk_wpn)
-		atk_hit = clampi(atk_hit + int(fr_rookie.get("hit", 0)), 0, 100)
-		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
-		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
-
-	# UI Updates (columns: left = attacker / you, right = defender / target)
-	field.forecast_atk_name.text = field._format_forecast_name_fitted("ATK", attacker.unit_name, 17)
-	field.forecast_atk_weapon.text = field._format_forecast_weapon_name(atk_wpn, 14)
-	field.forecast_atk_hp.text = "HP: %d / %d" % [attacker.current_hp, attacker.max_hp]
-
-	field.forecast_def_name.text = field._format_forecast_name_fitted("TARGET", defender.unit_name, 18)
-	field.forecast_def_weapon.text = field._format_forecast_weapon_name(def_wpn, 14)
-	field.forecast_def_hp.text = "HP: %d / %d" % [defender.current_hp, defender.max_hp]
-	var atk_weapon_badge := field.forecast_panel.get_node_or_null("AtkWeaponBadgePanel/Text") as Label
-	if atk_weapon_badge != null:
-		atk_weapon_badge.text = field._forecast_weapon_marker(atk_wpn)
-	var def_weapon_badge := field.forecast_panel.get_node_or_null("DefWeaponBadgePanel/Text") as Label
-	if def_weapon_badge != null:
-		def_weapon_badge.text = field._forecast_weapon_marker(def_wpn)
-	var atk_weapon_icon_panel := field.forecast_panel.get_node_or_null("AtkWeaponIconPanel") as Panel
-	var atk_weapon_icon := field.forecast_panel.get_node_or_null("AtkWeaponIconPanel/Icon") as TextureRect
-	var atk_weapon_glow := field.forecast_panel.get_node_or_null("AtkWeaponIconPanel/Glow") as Panel
-	var atk_weapon_glow_color: Color = field._forecast_weapon_rarity_glow_color(atk_wpn)
-	if atk_weapon_icon_panel != null:
-		atk_weapon_icon_panel.visible = atk_wpn != null and atk_wpn.icon != null
-	if atk_weapon_icon != null:
-		atk_weapon_icon.texture = atk_wpn.icon if atk_wpn != null else null
-	if atk_weapon_glow != null:
-		atk_weapon_glow.visible = atk_wpn != null and atk_wpn.icon != null and atk_weapon_glow_color.a > 0.0
-		field._style_forecast_weapon_glow(atk_weapon_glow, atk_weapon_glow_color)
-	var def_weapon_icon_panel := field.forecast_panel.get_node_or_null("DefWeaponIconPanel") as Panel
-	var def_weapon_icon := field.forecast_panel.get_node_or_null("DefWeaponIconPanel/Icon") as TextureRect
-	var def_weapon_glow := field.forecast_panel.get_node_or_null("DefWeaponIconPanel/Glow") as Panel
-	var def_weapon_glow_color: Color = field._forecast_weapon_rarity_glow_color(def_wpn)
-	if def_weapon_icon_panel != null:
-		def_weapon_icon_panel.visible = def_wpn != null and def_wpn.icon != null
-	if def_weapon_icon != null:
-		def_weapon_icon.texture = def_wpn.icon if def_wpn != null else null
-	if def_weapon_glow != null:
-		def_weapon_glow.visible = def_wpn != null and def_wpn.icon != null and def_weapon_glow_color.a > 0.0
-		field._style_forecast_weapon_glow(def_weapon_glow, def_weapon_glow_color)
-	field._ensure_forecast_hp_bars()
-	if field.forecast_atk_hp_bar != null:
-		field.forecast_atk_hp_bar.max_value = float(max(1, int(attacker.max_hp)))
-		field.forecast_atk_hp_bar.value = float(clampi(int(attacker.current_hp), 0, int(attacker.max_hp)))
-		field._style_forecast_hp_bar(field.forecast_atk_hp_bar, field._forecast_hp_fill_color(int(attacker.current_hp), int(attacker.max_hp)))
-	if field.forecast_def_hp_bar != null:
-		field.forecast_def_hp_bar.max_value = float(max(1, int(defender.max_hp)))
-		field.forecast_def_hp_bar.value = float(clampi(int(defender.current_hp), 0, int(defender.max_hp)))
-		field._style_forecast_hp_bar(field.forecast_def_hp_bar, field._forecast_hp_fill_color(int(defender.current_hp), int(defender.max_hp)))
-
-	# --- RESET UI MODULATES ---
-	field._reset_forecast_emphasis_visuals()
-
-	# --- HEALING VS ATTACKING LOGIC ---
-	if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-		field.forecast_def_name.text = field._format_forecast_name_fitted("TARGET", defender.unit_name, 18)
-		var heal_amount = attacker.magic + atk_wpn.might
-		field.forecast_atk_dmg.text = "HEAL: " + str(heal_amount)
-		field.forecast_atk_hit.text = "HIT: 100%"
-		field.forecast_atk_crit.text = "CRIT: 0%"
-
-		field.forecast_def_dmg.text = "DAMAGE: --"
-		field.forecast_def_hit.text = ""
-		field.forecast_def_crit.text = ""
-
-		field.forecast_atk_adv.text = ""
-		field.forecast_def_adv.text = ""
-		field.forecast_atk_double.text = ""
-		field.forecast_def_double.text = ""
-	else:
-		# Standard Attack UI
-		field.forecast_atk_dmg.text = "DMG: " + str(atk_dmg)
-		field.forecast_atk_hit.text = "HIT: " + str(atk_hit) + "%"
-		field.forecast_atk_crit.text = "CRIT: " + str(atk_crit) + "%"
-
-		var def_is_healer = def_wpn != null and def_wpn.get("is_healing_staff") == true
-		if defender.get_parent() == field.enemy_container:
-			field.forecast_def_name.text = field._format_forecast_name_fitted("DEF", defender.unit_name, 17)
+	var first_up: bool = true
+	for pulse in pulse_targets:
+		var lbl: Label = pulse.get("label") as Label
+		if lbl == null:
+			continue
+		var pulse_color: Color = pulse.get("color", Color.WHITE)
+		var pulse_scale: Vector2 = pulse.get("scale", Vector2.ONE)
+		if first_up:
+			field.crit_flash_tween.tween_property(lbl, "modulate", pulse_color, 0.55)
+			field.crit_flash_tween.parallel().tween_property(lbl, "scale", pulse_scale, 0.55)
+			first_up = false
 		else:
-			field.forecast_def_name.text = field._format_forecast_name_fitted("TARGET", defender.unit_name, 18)
+			field.crit_flash_tween.parallel().tween_property(lbl, "modulate", pulse_color, 0.55)
+			field.crit_flash_tween.parallel().tween_property(lbl, "scale", pulse_scale, 0.55)
 
-		if def_wpn == null or def_is_healer or not field.is_in_range(defender, attacker):
-			field.forecast_def_dmg.text = "COUNTER: NONE"
-			field.forecast_def_hit.text = ""
-			field.forecast_def_crit.text = ""
-			field.forecast_def_double.text = ""
+	var first_down: bool = true
+	for pulse in pulse_targets:
+		var lbl_down: Label = pulse.get("label") as Label
+		if lbl_down == null:
+			continue
+		if first_down:
+			field.crit_flash_tween.tween_property(lbl_down, "modulate", Color.WHITE, 0.55)
+			field.crit_flash_tween.parallel().tween_property(lbl_down, "scale", Vector2.ONE, 0.55)
+			first_down = false
 		else:
-			field.forecast_def_dmg.text = "COUNTER: " + str(def_dmg)
-			field.forecast_def_hit.text = "HIT: " + str(def_hit) + "%"
-			field.forecast_def_crit.text = "CRIT: " + str(def_crit) + "%"
-			var def_doubles = (defender.speed - attacker.speed) >= 4
-			field.forecast_def_double.text = "x2" if def_doubles else ""
-
-		# Advantage Indicators
-		if advantage == 1:
-			field.forecast_atk_adv.text = "Adv."
-			field.forecast_atk_adv.modulate = Color.CYAN
-			field.forecast_def_adv.text = "Disadv."
-			field.forecast_def_adv.modulate = Color.TOMATO
-		elif advantage == -1:
-			field.forecast_atk_adv.text = "Disadv."
-			field.forecast_atk_adv.modulate = Color.TOMATO
-			field.forecast_def_adv.text = "Adv."
-			field.forecast_def_adv.modulate = Color.CYAN
-		else:
-			field.forecast_atk_adv.text = ""
-			field.forecast_def_adv.text = ""
-
-		# --- POISE BREAK WARNING ---
-		var raw_power = atk_offense + atk_might
-		var poise_dmg = raw_power
-		if atk_wpn and atk_wpn.get("weapon_type") == WeaponData.WeaponType.AXE:
-			poise_dmg = int(float(poise_dmg) * 1.5)
-
-		var def_cur_poise = defender.get_current_poise() if defender.has_method("get_current_poise") else 999
-
-		if def_cur_poise <= 0:
-			field.forecast_def_adv.text = "GUARD BROKEN"
-			field.forecast_def_adv.modulate = Color.RED
-		elif (def_cur_poise - poise_dmg) <= 0:
-			field.forecast_def_adv.text = "STAGGER RISK!"
-			field.forecast_def_adv.modulate = Color.ORANGE
-
-		var atk_doubles = (attacker.speed - defender.speed) >= 4
-		field.forecast_atk_double.text = "x2" if atk_doubles else ""
-		var attacker_lethal: bool = atk_hit > 0 and atk_dmg >= int(defender.current_hp)
-		var defender_lethal: bool = field.forecast_def_dmg.text != "COUNTER: NONE" and def_hit > 0 and def_dmg >= int(attacker.current_hp)
-		field._start_forecast_emphasis_pulse(attacker_lethal, defender_lethal, atk_crit > 0, def_crit > 0)
-
-	# --- FIGURE-8 ANIMATION TRIGGER ---
-	if field.forecast_atk_double.text != "" or field.forecast_def_double.text != "":
-		field._start_double_animation()
-	else:
-		if field.figure_8_tween:
-			field.figure_8_tween.kill()
-
-	var talk_visible: bool = false
-	if field.forecast_talk_btn != null:
-		if defender.get_parent() == field.enemy_container and defender.get("data") != null and defender.data.get("is_recruitable") == true:
-			field.forecast_talk_btn.visible = true
-			talk_visible = true
-			field.forecast_talk_btn.tooltip_text = "Recruit this unit through dialogue (ends this unit's turn)."
-		else:
-			field.forecast_talk_btn.visible = false
-			field.forecast_talk_btn.tooltip_text = ""
-
-	# --- ABILITY BUTTON LOGIC ---
-	if field.forecast_ability_btn:
-		field.forecast_ability_btn.visible = false # Hide by default
-
-		var abil: String = field._resolve_tactical_ability_name(attacker)
-		if abil == "Shove" or abil == "Grapple Hook" or abil == "Fire Trap":
-			var cooldown = attacker.get_meta("ability_cooldown", 0)
-
-			field.forecast_ability_btn.visible = true
-			if cooldown > 0:
-				field.forecast_ability_btn.text = abil + " (CD: " + str(cooldown) + ")"
-				field.forecast_ability_btn.disabled = true
-			else:
-				field.forecast_ability_btn.text = "USE " + abil.to_upper()
-				field.forecast_ability_btn.disabled = false
-
-	if field.forecast_atk_support_label:
-		field.forecast_atk_support_label.visible = true
-	if field.forecast_def_support_label:
-		field.forecast_def_support_label.visible = true
-
-	var fc_btn: Button = field.forecast_panel.get_node_or_null("ConfirmButton") as Button
-	if fc_btn != null:
-		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-			fc_btn.text = "Heal"
-		elif atk_wpn != null and atk_wpn.get("is_buff_staff") == true:
-			fc_btn.text = "Buff"
-		elif atk_wpn != null and atk_wpn.get("is_debuff_staff") == true:
-			fc_btn.text = "Debuff"
-		else:
-			fc_btn.text = "Attack"
-
-	if field.forecast_instruction_label:
-		if atk_wpn != null and atk_wpn.get("is_healing_staff") == true:
-			field.forecast_instruction_label.text = "Confirm to heal. Cancel or right-click to go back."
-		else:
-			var ins := "Left: your strike · Right: enemy counter (if any). Click the defender's tile to commit."
-			if talk_visible:
-				ins += " Talk = recruit (ends turn)."
-			field.forecast_instruction_label.text = ins
-
-	if field.forecast_reaction_label:
-		var rsum: String = field._build_forecast_reaction_summary(attacker, defender, atk_wpn)
-		if rsum.is_empty():
-			field.forecast_reaction_label.visible = false
-			field.forecast_reaction_label.text = ""
-		else:
-			field.forecast_reaction_label.text = rsum
-			field.forecast_reaction_label.visible = true
-
-	if is_instance_valid(field.target_cursor):
-		field.target_cursor.z_index = 80
-		field.target_cursor.modulate = Color.WHITE
-		if is_instance_valid(field.target_cursor_sprite):
-			field.target_cursor_sprite.modulate = Color.WHITE
-		# Match main Cursor: parent sits on tile top-left; child Sprite2D (~half cell + texture offset) centers the art.
-		field.target_cursor.global_position = defender.global_position
-		field._set_cursor_state(field.target_cursor, "ATTACK")
-		if field.target_cursor.has_method("set_occluded"):
-			field.target_cursor.call("set_occluded", true)
-		field.target_cursor.visible = true
-
-	field.forecast_panel.visible = true
-	# --- UPDATE THE AWAIT ---
-	var result_array = await field.forecast_resolved
-	var action = result_array[0]
-	var used_ability = result_array[1]
-
-	# --- CLEANUP AND RESET ---
-	if field.figure_8_tween:
-		field.figure_8_tween.kill()
-	field._reset_forecast_emphasis_visuals()
-
-	if field.atk_double_origin != Vector2.ZERO:
-		field.forecast_atk_double.position = field.atk_double_origin
-		field.forecast_def_double.position = field.def_double_origin
-
-	if field.forecast_atk_support_label:
-		field.forecast_atk_support_label.visible = false
-	if field.forecast_def_support_label:
-		field.forecast_def_support_label.visible = false
-	if field.forecast_reaction_label:
-		field.forecast_reaction_label.visible = false
-		field.forecast_reaction_label.text = ""
-
-	field.forecast_panel.visible = false
-	if is_instance_valid(field.target_cursor):
-		if is_instance_valid(field.target_cursor_sprite):
-			field.target_cursor_sprite.modulate = Color.WHITE
-		field._set_cursor_state(field.target_cursor, "DEFAULT")
-		if field.target_cursor.has_method("set_occluded"):
-			field.target_cursor.call("set_occluded", false)
-		field.target_cursor.visible = false
-	return [action, used_ability]
+			field.crit_flash_tween.parallel().tween_property(lbl_down, "modulate", Color.WHITE, 0.55)
+			field.crit_flash_tween.parallel().tween_property(lbl_down, "scale", Vector2.ONE, 0.55)
