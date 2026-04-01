@@ -227,7 +227,7 @@ static func ensure_detailed_unit_info_panel(field) -> void:
 		desc_label.custom_minimum_size = Vector2(0, 34)
 		block_box.add_child(desc_label)
 
-		var sheen := field._attach_unit_info_bar_sheen(bar)
+		var sheen: ColorRect = field._attach_unit_info_bar_sheen(bar)
 		field.detailed_unit_info_primary_widgets[bar_key] = {
 			"panel": block,
 			"name": name_label,
@@ -296,7 +296,7 @@ static func ensure_detailed_unit_info_panel(field) -> void:
 		stat_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		stat_box.add_child(stat_desc)
 
-		var stat_sheen := field._attach_unit_info_bar_sheen(stat_bar)
+		var stat_sheen: ColorRect = field._attach_unit_info_bar_sheen(stat_bar)
 		field.detailed_unit_info_stat_widgets[stat_key] = {
 			"panel": stat_block,
 			"name": stat_name,
@@ -375,7 +375,7 @@ static func ensure_detailed_unit_info_panel(field) -> void:
 		growth_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		growth_box.add_child(growth_bar)
 
-		var growth_sheen := field._attach_unit_info_bar_sheen(growth_bar)
+		var growth_sheen: ColorRect = field._attach_unit_info_bar_sheen(growth_bar)
 		field.detailed_unit_info_growth_widgets[growth_key] = {
 			"panel": growth_block,
 			"name": growth_name,
@@ -787,7 +787,7 @@ static func build_detailed_unit_info_right_text(field, unit: Node2D) -> String:
 			if item is WeaponData:
 				marker = " [color=lime](usable)[/color]" if field._unit_can_use_item_for_ui(unit, item) else " [color=red](locked)[/color]"
 
-				var w_type := field._weapon_type_name_safe(int(item.weapon_type))
+				var w_type: String = field._weapon_type_name_safe(int(item.weapon_type))
 				var extra := " | Mt " + str(item.might) + " | Hit +" + str(item.hit_bonus) + " | Rng " + str(item.min_range) + "-" + str(item.max_range)
 				lines.append("• " + str(item_name) + " (" + w_type + ")" + marker)
 				lines.append("   " + extra)
