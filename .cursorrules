@@ -61,3 +61,42 @@ When starting, finishing, or verifying a “heavy” refactor (especially inside
 2. Record verification performed (at minimum: whether `ReadLints` was clean; include any key smoke tests you ran or that still need to be run).
 3. If parity risk exists (UI/await/closures/lambda captures), list the most likely drift points under “Parity-sensitive areas”.
 4. Update “Next Heavy Refactor Targets” by adding the next 1-3 proposed extractions and 2-3 drift-detection checkpoints.
+
+# Architecture / refactor guardrails
+
+- Do not keep expanding monolithic scripts when a change is a self-contained subsystem.
+- Prefer extracting new logic into dedicated helper scripts instead of appending more code into existing large controller files.
+- For Godot controller scripts (example: `BattleField.gd`, `CampExplore.gd`), keep the main script focused on:
+  - state ownership
+  - node references
+  - scene wiring
+  - signals
+  - top-level orchestration
+- Move self-contained implementation details into helper scripts under the closest relevant folder (for example `Scripts/Core/BattleField/`).
+
+## Extraction rules
+- If adding a feature introduces a self-contained subsystem, create a new helper script rather than growing the main script.
+- Leave thin wrappers in the main script so existing call sites remain stable.
+- Preserve behavior exactly unless explicitly asked to change behavior.
+- Do not do unrelated refactors in the same pass.
+- One subsystem per extraction pass.
+
+## Parity-first rules
+- Preserve return values, await sequencing, signal flow, UI behavior, and gameplay logic.
+- Do not rewrite hot-path systems broadly when a surgical extraction is possible.
+- Prefer minimal, reviewable diffs.
+
+## Large-file protection
+- Treat files like `BattleField.gd` as orchestration layers, not dumping grounds.
+- Before adding significant new logic to a large file, first ask:
+  - can this live in a helper?
+  - can this be delegated with a thin wrapper?
+  - can this avoid increasing coupling in the main script?
+
+## Output expectations
+When performing a refactor:
+1. list modified files
+2. show new helper file(s)
+3. show exact wrapper code left in the main file
+4. note any risks or parity-sensitive areas
+5. avoid unrelated edits

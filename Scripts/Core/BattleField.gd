@@ -96,6 +96,7 @@ const GoldVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldGoldVf
 const TurnOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnOrchestrationHelpers.gd")
 const DefensiveReactionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionHelpers.gd")
 const DetailedUnitInfoHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoHelpers.gd")
+const DialogueInteractionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd")
 const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
 const DefensiveAbilityFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveAbilityFlowHelpers.gd")
 const AttackResolutionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldAttackResolutionHelpers.gd")
@@ -111,7 +112,7 @@ const CoopRemoteSyncActionHelpers = preload("res://Scripts/Core/BattleField/Batt
 const CoopRngSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRngSyncHelpers.gd")
 const CoopMockSessionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopMockSessionHelpers.gd")
 
-# Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage → Fire Trap).
+# Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage â†’ Fire Trap).
 const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
 	"Bloodthirster",
 	"Shield Clash",
@@ -274,7 +275,7 @@ var deploy_roster_toggle_tween: Tween
 @export var slash_fx_scene: PackedScene
 @export var level_up_fx_scene: PackedScene
 
-@export_category("Hazards — Fire tiles")
+@export_category("Hazards â€” Fire tiles")
 @export var fire_tile_loop_vfx_scene: PackedScene
 @export var default_fire_tile_damage: int = 3
 @export var fire_tile_extinguish_shrink_sec: float = 0.18
@@ -1312,7 +1313,7 @@ func coop_net_rng_sync_ready() -> bool:
 	return CoopRngSyncHelpers.coop_net_rng_sync_ready(self)
 
 
-## Call immediately before [method execute_combat] on the attacker’s machine. Returns packed id for the wire (guest vs host ranges avoid collisions).
+## Call immediately before [method execute_combat] on the attackerâ€™s machine. Returns packed id for the wire (guest vs host ranges avoid collisions).
 func coop_enet_begin_synchronized_combat_round() -> int:
 	return CoopRngSyncHelpers.coop_enet_begin_synchronized_combat_round(self)
 
@@ -1491,7 +1492,7 @@ func coop_enet_ai_execute_combat(attacker: Node2D, defender: Node2D, used_abilit
 	await CoopEnemyCombatNetHelpers.coop_enet_ai_execute_combat(self, attacker, defender, used_ability)
 
 
-## True when this peer is the ENet guest with battle RNG locked — player-initiated combat must be simulated on the host only.
+## True when this peer is the ENet guest with battle RNG locked â€” player-initiated combat must be simulated on the host only.
 func coop_enet_should_delegate_player_combat_to_host() -> bool:
 	return coop_net_rng_sync_ready() and is_mock_coop_unit_ownership_active() and CoopExpeditionSessionManager.uses_runtime_network_coop_transport() and CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
 
@@ -3924,7 +3925,7 @@ func _apply_tactical_ui_overhaul() -> void:
 				deploy_roster_toggle_tween = null
 		roster_panel.visible = show_deployment_rail
 		roster_panel.scale = hud_scale_vec
-		# Pre-battle: objective HUD is hidden — don't force the 252px floor; use full-height column.
+		# Pre-battle: objective HUD is hidden â€” don't force the 252px floor; use full-height column.
 		var roster_top: float = (TACTICAL_UI_MARGIN if show_deployment_rail else maxf(252.0, objective_panel_render_bottom))
 		var roster_w: float = TACTICAL_DEPLOY_ROSTER_PANEL_WIDTH if show_deployment_rail else (TACTICAL_UI_RAIL_WIDTH - 24.0)
 		var roster_bottom_px: float = (108.0 * hud_scale) if not show_deployment_rail else (TACTICAL_DEPLOY_ROSTER_VIEWPORT_BOTTOM_RESERVE * hud_scale)
@@ -4165,7 +4166,7 @@ func _process_mock_partner_placeholder_frame() -> void:
 	TurnOrchestrationHelpers.process_mock_partner_placeholder_frame(self)
 
 
-## Player phase only: BBCode for objective panel — local-owned, fielded, alive units; ready = not is_exhausted.
+## Player phase only: BBCode for objective panel â€” local-owned, fielded, alive units; ready = not is_exhausted.
 func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
 	var c: Dictionary = _get_mock_coop_player_phase_detachment_counts()
 	if not bool(c.get("valid", false)):
@@ -4175,7 +4176,7 @@ func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
 	var partner_fielded: int = int(c.get("partner_fielded", 0))
 	if total <= 0:
 		return ""
-	var s: String = "\n[color=cyan][b]Co-op — Your units ready: %d / %d[/b][/color]" % [ready, total]
+	var s: String = "\n[color=cyan][b]Co-op â€” Your units ready: %d / %d[/b][/color]" % [ready, total]
 	if partner_fielded > 0:
 		var partner_state: String = "Ready" if _mock_coop_remote_player_phase_ready else "Acting"
 		s += "\n[color=gold][b]Partner commander: %s[/b][/color]" % partner_state
@@ -4186,7 +4187,7 @@ func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
 	elif ready == 0:
 		s += "\n[color=gray][font_size=16]All your fielded units have acted this phase.[/font_size][/color]"
 		if partner_fielded > 0:
-			s += "\n[color=orange][font_size=16]Partner detachment still on the field — not under your command. End or Skip phase when you are ready.[/font_size][/color]"
+			s += "\n[color=orange][font_size=16]Partner detachment still on the field â€” not under your command. End or Skip phase when you are ready.[/font_size][/color]"
 	elif partner_fielded > 0 and _mock_coop_remote_player_phase_ready:
 		s += "\n[color=gold][font_size=16]Partner is ready. Finish your commands when you are ready.[/font_size][/color]"
 	return s + "\n"
@@ -4241,7 +4242,7 @@ func _get_mock_coop_deployed_player_side_unit_nodes() -> Array:
 	return out
 
 
-## All player-side units in tree order (player_container then ally_container), including benched/hidden — for locked mock co-op meta.
+## All player-side units in tree order (player_container then ally_container), including benched/hidden â€” for locked mock co-op meta.
 func _iter_all_player_side_unit_nodes_for_mock_coop() -> Array:
 	var out: Array = []
 	for cont in [player_container, ally_container]:
@@ -4287,13 +4288,13 @@ func _assign_mock_coop_unit_ownership_from_context() -> void:
 	_mock_coop_ownership_assignments.clear()
 	if _mock_coop_battle_context == null or not _mock_coop_battle_context.context_valid:
 		if _mock_coop_battle_context != null and _mock_coop_battle_context.active:
-			print("[MockCoopOwnership] skipped (mock context not valid — no unit ownership assigned)")
+			print("[MockCoopOwnership] skipped (mock context not valid â€” no unit ownership assigned)")
 		return
 	var assign_raw: Variant = _consumed_mock_coop_battle_handoff.get("mock_detachment_assignment", {})
 	if typeof(assign_raw) == TYPE_DICTIONARY and not (assign_raw as Dictionary).is_empty() and _mock_coop_battle_context.has_locked_mock_detachment_assignment():
 		_apply_mock_coop_locked_detachment_assignment(assign_raw as Dictionary)
 		return
-	push_warning("[MockCoopOwnership] mock_detachment_assignment missing or not locked — using DEPRECATED fielded visible-unit order fallback.")
+	push_warning("[MockCoopOwnership] mock_detachment_assignment missing or not locked â€” using DEPRECATED fielded visible-unit order fallback.")
 	_assign_mock_coop_unit_ownership_fielded_order_fallback_deprecated()
 
 
@@ -4322,7 +4323,7 @@ func _apply_mock_coop_locked_detachment_assignment(assign: Dictionary) -> void:
 			owner_s = MOCK_COOP_OWNER_REMOTE
 		else:
 			owner_s = MOCK_COOP_OWNER_REMOTE
-			print("[MockCoopOwnership] unlisted id '%s' — PARTNER command (not in charter lock)" % rid)
+			print("[MockCoopOwnership] unlisted id '%s' â€” PARTNER command (not in charter lock)" % rid)
 		u.set_meta(MOCK_COOP_BATTLE_OWNER_META, owner_s)
 		var uname: String = str(u.get("unit_name")) if u.get("unit_name") != null else str(u.name)
 		var src: String = "player" if u.get_parent() == player_container else "ally"
@@ -4347,7 +4348,7 @@ func _apply_mock_coop_locked_detachment_assignment(assign: Dictionary) -> void:
 	print("[MockCoopOwnership] rule=charter_locked_detachment units=%d %s" % [units.size(), str(_mock_coop_ownership_assignments)])
 
 
-## Deprecated: visible fielded units only, first ceil(n/2) local — used only when handoff lacks a valid locked assignment.
+## Deprecated: visible fielded units only, first ceil(n/2) local â€” used only when handoff lacks a valid locked assignment.
 func _assign_mock_coop_unit_ownership_fielded_order_fallback_deprecated() -> void:
 	var units: Array = _get_mock_coop_deployed_player_side_unit_nodes()
 	var n: int = units.size()
@@ -4391,15 +4392,15 @@ func _present_mock_coop_joint_expedition_charter() -> void:
 	var rem: String = ctx.get_remote_participant_label()
 	var role_cap: String = ctx.local_role.capitalize()
 	if ctx.context_valid:
-		add_combat_log("──────── Joint Expedition Charter (Mock Co-op) ────────", "gold")
+		add_combat_log("â”€â”€â”€â”€â”€â”€â”€â”€ Joint Expedition Charter (Mock Co-op) â”€â”€â”€â”€â”€â”€â”€â”€", "gold")
 		add_combat_log("Expedition: %s" % exp_title, "cyan")
-		add_combat_log("Commanders: %s  ·  %s" % [loc, rem], "cyan")
+		add_combat_log("Commanders: %s  Â·  %s" % [loc, rem], "cyan")
 		add_combat_log("Your role: %s" % role_cap, "cyan")
-		add_combat_log("Shared contract — this sortie is fought together.", "gray")
+		add_combat_log("Shared contract â€” this sortie is fought together.", "gray")
 	else:
-		add_combat_log("──────── Joint Expedition Charter (incomplete data) ────────", "orange")
-		add_combat_log("Expedition: %s — verify session before relying on co-op data." % exp_title, "yellow")
-		add_combat_log("Commanders: %s  ·  %s  |  Your role: %s" % [loc, rem, role_cap], "yellow")
+		add_combat_log("â”€â”€â”€â”€â”€â”€â”€â”€ Joint Expedition Charter (incomplete data) â”€â”€â”€â”€â”€â”€â”€â”€", "orange")
+		add_combat_log("Expedition: %s â€” verify session before relying on co-op data." % exp_title, "yellow")
+		add_combat_log("Commanders: %s  Â·  %s  |  Your role: %s" % [loc, rem, role_cap], "yellow")
 		add_combat_log("Issues: %s" % str(ctx.validation_errors), "orange")
 
 var _ui_sfx_block_until_msec := 0
@@ -4577,7 +4578,7 @@ func _ready() -> void:
 
 	# 8. --- SKIRMISH LOGIC ---
 	# is_skirmish_mode is also set for expedition runs (world-map return routing). Those use story scenes
-	# with pre-placed enemies — do NOT run random undead spawn (requires enemy_scene in inspector).
+	# with pre-placed enemies â€” do NOT run random undead spawn (requires enemy_scene in inspector).
 	if CampaignManager.is_skirmish_mode and not CampaignManager.is_expedition_run:
 		setup_skirmish_battle()
 		_reset_rookie_battle_tracking()
@@ -4837,7 +4838,7 @@ func _compute_burn_tick_damage(unit: Node2D) -> int:
 	return clampi(maxi(raw, BURN_TICK_DAMAGE_MIN), BURN_TICK_DAMAGE_MIN, BURN_TICK_DAMAGE_MAX)
 
 
-## End-of-round burn for units with meta is_burning (Hellfire ignite). Uses RESISTANCE only — no attacker for EXP.
+## End-of-round burn for units with meta is_burning (Hellfire ignite). Uses RESISTANCE only â€” no attacker for EXP.
 func _tick_burn_status_effects() -> void:
 	var burn_units: Array[Node2D] = []
 	for cont in [player_container, ally_container, enemy_container]:
@@ -5766,7 +5767,7 @@ func is_in_range(attacker: Node2D, defender: Node2D) -> bool:
 	return false
 
 
-## ClassData.MoveType: FLYING = 2, CAVALRY = 3 — only these get post-action Canto (leftover move, no second attack).
+## ClassData.MoveType: FLYING = 2, CAVALRY = 3 â€” only these get post-action Canto (leftover move, no second attack).
 func unit_supports_canto(unit: Node2D) -> bool:
 	if unit == null:
 		return false
@@ -5972,7 +5973,7 @@ func calculate_ranges(unit: Node2D) -> void:
 			
 	reachable_tiles = final_reachable
 
-	# 2. Attackable Tiles (Red) — not during Canto (no second attack)
+	# 2. Attackable Tiles (Red) â€” not during Canto (no second attack)
 	if not in_canto:
 		var min_r = 1
 		var max_r = 1
@@ -6072,7 +6073,7 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 	match map_objective:
 		Objective.ROUT_ENEMY:
 			if custom_obj != "":
-				obj_label.text = "- Turn " + str(current_turn) + " — " + custom_obj + " -"
+				obj_label.text = "- Turn " + str(current_turn) + " â€” " + custom_obj + " -"
 			else:
 				obj_label.text = "- Turn " + str(current_turn) + " : Rout the Enemy -"
 		Objective.SURVIVE_TURNS:
@@ -6082,7 +6083,7 @@ func show_phase_banner(phase_title: String, phase_color: Color) -> void:
 				obj_label.text = "- Survive: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
 		Objective.DEFEND_TARGET:
 			if custom_obj != "":
-				obj_label.text = "- " + custom_obj + " — Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
+				obj_label.text = "- " + custom_obj + " â€” Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
 			else:
 				obj_label.text = "- Defend Target: Turn " + str(current_turn) + " / " + str(turn_limit) + " -"
 	
@@ -6158,7 +6159,7 @@ func update_unit_info_panel() -> void:
 			if target_unit.is_exhausted:
 				active_tag = " [Turn done]"
 			elif target_unit.has_moved:
-				active_tag = " [Moved — act]"
+				active_tag = " [Moved â€” act]"
 			else:
 				active_tag = " [ACTIVE]"
 		if current_state == player_state and player_state.active_unit == target_unit:
@@ -6322,13 +6323,13 @@ func _ensure_novice_blank_slate_roll(attacker: Node2D) -> void:
 	var r: int = randi() % 3
 	if r == 0:
 		attacker.set_meta(META_ROOKIE_NOVICE_HIT, 10)
-		add_combat_log(attacker.unit_name + ": Blank Slate — sharp instincts! (+Hit this battle)", "cyan")
+		add_combat_log(attacker.unit_name + ": Blank Slate â€” sharp instincts! (+Hit this battle)", "cyan")
 	elif r == 1:
 		attacker.set_meta(META_ROOKIE_NOVICE_DMG, 4)
-		add_combat_log(attacker.unit_name + ": Blank Slate — raw power! (+Damage this battle)", "cyan")
+		add_combat_log(attacker.unit_name + ": Blank Slate â€” raw power! (+Damage this battle)", "cyan")
 	else:
 		attacker.set_meta(META_ROOKIE_NOVICE_CRIT, 8)
-		add_combat_log(attacker.unit_name + ": Blank Slate — lucky streak! (+Crit this battle)", "cyan")
+		add_combat_log(attacker.unit_name + ": Blank Slate â€” lucky streak! (+Crit this battle)", "cyan")
 
 
 func _rookie_ordered_unique_roles(attacker: Node2D) -> Array[String]:
@@ -6483,7 +6484,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 	await CombatOrchestrationHelpers.execute_combat(self, attacker, defender, trigger_active_ability)
 
 # ============================================================================
-# 🤖 AI / DEVELOPER INSTRUCTIONS: HOW TO ADD NEW COMBAT ABILITIES 🤖
+# ðŸ¤– AI / DEVELOPER INSTRUCTIONS: HOW TO ADD NEW COMBAT ABILITIES ðŸ¤–
 # ============================================================================
 # To add a new skill/ability to the game, follow these 4 steps:
 #
@@ -6508,7 +6509,7 @@ func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: 
 #    - Go to `CharacterCreation.gd` and add the string to `ability_dropdown`.
 # ============================================================================
 # ============================================================================
-# 🤖 AI / DEVELOPER INSTRUCTIONS: HOW TO ADD NEW COMBAT ABILITIES USING COOLDOWNS
+# ðŸ¤– AI / DEVELOPER INSTRUCTIONS: HOW TO ADD NEW COMBAT ABILITIES USING COOLDOWNS
 # ============================================================================
 # The game now supports TWO types of abilities. Follow the steps below for the type you want to add.
 #
@@ -6726,19 +6727,19 @@ func _bbcode_escape_user_text(s: String) -> String:
 	return str(s).replace("[", "[lb]")
 
 func _item_detail_soft_rule() -> String:
-	return "[color=#5c4f41] · · · · · · · · · · · · · · · ·[/color]"
+	return "[color=#5c4f41] Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â·[/color]"
 
 func _item_detail_section_heading(title: String) -> String:
-	return "[font_size=20][color=#c4943a]▍ [/color][b][color=#f2d680]" + str(title).to_upper() + "[/color][/b][/font_size]"
+	return "[font_size=20][color=#c4943a]â– [/color][b][color=#f2d680]" + str(title).to_upper() + "[/color][/b][/font_size]"
 
 func _item_detail_callout(accent_hex: String, body_hex: String, escaped_msg: String) -> String:
-	return "[font_size=19][color=%s]▸ [/color][color=%s]%s[/color][/font_size]" % [accent_hex, body_hex, escaped_msg]
+	return "[font_size=19][color=%s]â–¸ [/color][color=%s]%s[/color][/font_size]" % [accent_hex, body_hex, escaped_msg]
 
 func _item_detail_line(lbl: String, value_bb: String) -> String:
 	return "[font_size=19][color=#c4bba8][b]" + lbl + "[/b][/color][color=#5a5248]   [/color]" + value_bb + "[/font_size]"
 
 func _item_detail_effect_row(body_color: String, escaped_inner: String) -> String:
-	return "[font_size=19]   [color=#e0b858]◆[/color][color=#5a5248]   [/color][color=%s]%s[/color][/font_size]" % [body_color, escaped_inner]
+	return "[font_size=19]   [color=#e0b858]â—†[/color][color=#5a5248]   [/color][color=%s]%s[/color][/font_size]" % [body_color, escaped_inner]
 
 
 func _weapon_compare_delta_fragments_bbcode(sel: WeaponData, equipped: WeaponData) -> PackedStringArray:
@@ -6762,7 +6763,7 @@ func _weapon_stat_compare_line_bbcode(sel: WeaponData, equipped: WeaponData) -> 
 	var frags: PackedStringArray = _weapon_compare_delta_fragments_bbcode(sel, equipped)
 	if frags.is_empty():
 		return ""
-	var sep: String = "[color=#5a5248] · [/color]"
+	var sep: String = "[color=#5a5248] Â· [/color]"
 	return (
 		"[font_size=19][color=#b8a890]vs equipped[/color]%s%s[/font_size]"
 		% [sep, sep.join(frags)]
@@ -6843,11 +6844,11 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 
 	lines.append("[font_size=28][b][color=%s]%s[/color][/b][/font_size]" % [rarity_hex, str(rarity).to_upper()])
 	var meta: String = (
-		"[font_size=20][color=#d4a85c]⬥ [/color][color=%s]Value[/color][color=#5a5248]   [/color][color=%s][b]%d[/b][/color][color=%s]g[/color]"
+		"[font_size=20][color=#d4a85c]â¬¥ [/color][color=%s]Value[/color][color=#5a5248]   [/color][color=%s][b]%d[/b][/color][color=%s]g[/color]"
 		% [C_MUTED, C_VALUE, cost, C_DIM]
 	)
 	if stack_count > 1:
-		meta += "[color=#5a5248]        [/color][color=#b89858]⬧ [/color][color=%s]Stack[/color][color=#5a5248]   [/color][color=%s][b]×%d[/b][/color]" % [C_MUTED, C_BODY, stack_count]
+		meta += "[color=#5a5248]        [/color][color=#b89858]â¬§ [/color][color=%s]Stack[/color][color=#5a5248]   [/color][color=%s][b]Ã—%d[/b][/color]" % [C_MUTED, C_BODY, stack_count]
 	meta += "[/font_size]"
 	lines.append(meta)
 	lines.append(_item_detail_soft_rule())
@@ -6855,7 +6856,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 
 	if item is WeaponData:
 		if item.get("current_durability") != null and item.current_durability <= 0:
-			lines.append("[font_size=20][b][color=%s]Broken — half effectiveness. Repair to restore full power.[/color][/b][/font_size]" % C_BAD)
+			lines.append("[font_size=20][b][color=%s]Broken â€” half effectiveness. Repair to restore full power.[/color][/b][/font_size]" % C_BAD)
 			lines.append("")
 
 		lines.append(_item_detail_section_heading("Combat stats"))
@@ -6869,7 +6870,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 		lines.append(
 			_item_detail_line(
 				"Weapon",
-				"[color=%s]%s[/color][color=%s]   ·   [/color][color=%s]%s[/color]"
+				"[color=%s]%s[/color][color=%s]   Â·   [/color][color=%s]%s[/color]"
 				% [C_BODY, w_type_str, C_DIM, C_DIM, d_type_str]
 			)
 		)
@@ -6882,7 +6883,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 		lines.append(
 			_item_detail_line(
 				"Range",
-				"[color=%s]%d[/color][color=%s]–[/color][color=%s]%d[/color]"
+				"[color=%s]%d[/color][color=%s]â€“[/color][color=%s]%d[/color]"
 				% [C_BODY, int(item.min_range), C_DIM, C_BODY, int(item.max_range)]
 			)
 		)
@@ -6911,9 +6912,9 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 			lines.append("")
 			var usable: bool = _unit_can_use_item_for_ui(viewer_unit, item)
 			if usable:
-				lines.append("[font_size=20][color=%s][b]Equippable[/b][/color][color=#5a5248] — [/color][color=%s]This unit can use this weapon.[/color][/font_size]" % [C_OK, C_BODY])
+				lines.append("[font_size=20][color=%s][b]Equippable[/b][/color][color=#5a5248] â€” [/color][color=%s]This unit can use this weapon.[/color][/font_size]" % [C_OK, C_BODY])
 			else:
-				lines.append("[font_size=20][color=%s][b]Locked[/b][/color][color=#5a5248] — [/color][color=%s]This unit cannot equip this weapon.[/color][/font_size]" % [C_BAD, C_MUTED])
+				lines.append("[font_size=20][color=%s][b]Locked[/b][/color][color=#5a5248] â€” [/color][color=%s]This unit cannot equip this weapon.[/color][/font_size]" % [C_BAD, C_MUTED])
 
 		var effects: Array = []
 		if item.get("is_healing_staff") == true:
@@ -6978,7 +6979,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 			_item_detail_callout(
 				"#a89878",
 				"#e8dfd4",
-				"Unclassified treasure — still worth its weight on the market."
+				"Unclassified treasure â€” still worth its weight on the market."
 			)
 		)
 
@@ -6994,7 +6995,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 				lines.append("")
 				continue
 			lines.append(
-				"[font_size=19][color=#b8a890]▸[/color][color=#5a5248]  [/color][color=%s]%s[/color][/font_size]"
+				"[font_size=19][color=#b8a890]â–¸[/color][color=#5a5248]  [/color][color=%s]%s[/color][/font_size]"
 				% [C_BODY, _bbcode_escape_user_text(row)]
 			)
 	else:
@@ -7002,7 +7003,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 			_item_detail_callout(
 				"#7a7064",
 				"#c8beb2",
-				"No written notes for this entry — check its name in the list or try it in battle."
+				"No written notes for this entry â€” check its name in the list or try it in battle."
 			)
 		)
 
@@ -7741,10 +7742,10 @@ func play_ui_sfx(kind: int) -> void:
 	match kind:
 		UISfx.MOVE_OK:
 			player = select_sound
-			p = randf_range(0.95, 1.02) # “confirm” doux
+			p = randf_range(0.95, 1.02) # â€œconfirmâ€ doux
 		UISfx.TARGET_OK:
 			player = select_sound
-			p = randf_range(1.08, 1.16) # “attaque” plus aigu
+			p = randf_range(1.08, 1.16) # â€œattaqueâ€ plus aigu
 		UISfx.INVALID:
 			# buzzer soft, sinon fallback sur miss_sound
 			player = invalid_sound if (invalid_sound and invalid_sound.stream) else miss_sound
@@ -8354,7 +8355,7 @@ func _run_hundred_point_strike_minigame(attacker: Node2D) -> int:
 	qte_layer.add_child(prompt_box)
 	
 	var prompt_label = Label.new()
-	prompt_label.text = "↑"
+	prompt_label.text = "â†‘"
 	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	prompt_label.add_theme_font_size_override("font_size", 80)
@@ -8387,7 +8388,7 @@ func _run_hundred_point_strike_minigame(attacker: Node2D) -> int:
 
 	# 3. THE COMBO LOOP
 	var actions = ["ui_up", "ui_down", "ui_left", "ui_right"]
-	var arrows = ["UP ↑", "DOWN ↓", "LEFT ←", "RIGHT →"]
+	var arrows = ["UP â†‘", "DOWN â†“", "LEFT â†", "RIGHT â†’"]
 	
 	var hits = 0
 	var current_target = randi() % 4
@@ -8792,7 +8793,7 @@ func toggle_danger_zone() -> void:
 		calculate_full_danger_zone()
 		play_ui_sfx(UISfx.TARGET_OK) # Sharp "On" sound
 		if battle_log and battle_log.visible:
-			add_combat_log("Enemy threat overlay: ON (Shift) — visible enemies; purple = move, orange = attack", "gray")
+			add_combat_log("Enemy threat overlay: ON (Shift) â€” visible enemies; purple = move, orange = attack", "gray")
 	else:
 		_danger_zone_recalc_dirty = false
 		danger_zone_move_tiles.clear()
@@ -8952,166 +8953,17 @@ func _validate_equipment(unit: Node2D) -> void:
 				break
 	
 func execute_talk(initiator: Node2D, target: Node2D) -> void:
-	# --- 1. PLAY THE CINEMATIC FIRST! ---
-	await play_recruit_dialogue(initiator, target)
-	
-	# --- 2. EXECUTE THE TEAM SWAP ---
-	target.get_parent().remove_child(target)
-	player_container.add_child(target)
-	
-	if target.get("data") != null:
-		target.data.is_recruitable = false
-		
-	target.is_exhausted = true
-	if target.has_method("set_selected_glow"):
-		target.set_selected_glow(false)
-		
-	if epic_level_up_sound and epic_level_up_sound.stream != null:
-		epic_level_up_sound.play()
-		
-	screen_shake(8.0, 0.3)
-	add_combat_log(initiator.unit_name + " convinced " + target.unit_name + " to join.", "cyan")
-	spawn_loot_text("RECRUITED!", Color.LIME, target.global_position + Vector2(32, -32))
-	if _battle_resonance_allowed():
-		CampaignManager.mark_battle_resonance("showed_mercy_under_pressure")
-	rebuild_grid()
+	await DialogueInteractionHelpers.execute_talk(self, initiator, target)
 
 func play_recruit_dialogue(initiator: Node2D, target: Node2D) -> void:
-	# Freeze the battlefield, but keep the UI running
-	get_tree().paused = true
-	talk_panel.process_mode = Node.PROCESS_MODE_ALWAYS 
-	
-	# Grab the dialogue from the enemy data safely
-	var lines: Array[String] = []
-	if target.get("data") != null and "recruit_dialogue" in target.data and target.data.recruit_dialogue.size() > 0:
-		for l in target.data.recruit_dialogue: 
-			lines.append(str(l))
-	else:
-		lines = ["Join us!", "If the pay is good, I'm in."] # Fallback text
-		
-	# Setup Portraits
-	talk_left_portrait.texture = initiator.data.portrait if initiator.get("data") else null
-	talk_right_portrait.texture = target.data.portrait if target.get("data") else null
-	
-	talk_panel.visible = true
-	
-	# Loop through the conversation line by line
-	for i in range(lines.size()):
-		var is_initiator_speaking = (i % 2 == 0) # Evens = Player, Odds = Enemy
-		
-		# Dim the listener, highlight the speaker
-		if is_initiator_speaking:
-			talk_name.text = initiator.unit_name
-			talk_name.modulate = Color.CYAN
-			talk_left_portrait.modulate = Color.WHITE
-			talk_right_portrait.modulate = Color(0.3, 0.3, 0.3) # Dimmer
-		else:
-			talk_name.text = target.unit_name
-			talk_name.modulate = Color.TOMATO
-			talk_left_portrait.modulate = Color(0.3, 0.3, 0.3) # Dimmer
-			talk_right_portrait.modulate = Color.WHITE
-			
-		# Prepare text and replace {Name} with the Avatar's real name!
-		var line_text = lines[i]
-		if initiator.get("is_custom_avatar") == true:
-			line_text = line_text.replace("{Name}", initiator.unit_name)
-		elif target.get("is_custom_avatar") == true:
-			line_text = line_text.replace("{Name}", target.unit_name)
-			
-		talk_text.text = "[center]" + line_text + "[/center]"
-		talk_text.visible_ratio = 0.0 # Hide all text initially
-		
-		# Play a tiny dialogue beep
-		if select_sound and select_sound.stream != null:
-			select_sound.pitch_scale = 1.2 if is_initiator_speaking else 0.8
-			select_sound.play()
-			
-		# Typewriter Effect Tween
-		var type_speed = lines[i].length() * 0.025 # Longer lines take slightly more time
-		var tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		tw.tween_property(talk_text, "visible_ratio", 1.0, type_speed)
-		
-		# Wait for the player to click the invisible Next Button
-		await self.dialogue_advanced
-		
-		# If they clicked while text was still typing, force it to finish instantly!
-		if tw.is_running():
-			tw.kill()
-			talk_text.visible_ratio = 1.0
-			await self.dialogue_advanced # Wait for a second click to actually move on
-		
-	# Cleanup
-	talk_panel.visible = false
-	get_tree().paused = false
+	await DialogueInteractionHelpers.play_recruit_dialogue(self, initiator, target)
 
 func _on_support_talk_pressed() -> void:
-	hide_trade_popup()
-	var initiator = player_state.active_unit
-	var ally = player_state.trade_target_ally
-	
-	if initiator != null and ally != null:
-		play_ui_sfx(UISfx.TARGET_OK)
-		await play_support_dialogue(initiator, ally)
-		# End the initiator's turn after talking
-		initiator.finish_turn()
-		player_state.clear_active_unit()
+	await DialogueInteractionHelpers._on_support_talk_pressed(self)
 
 func play_support_dialogue(initiator: Node2D, target: Node2D) -> void:
-	var init_name = get_support_name(initiator)
-	var target_name = get_support_name(target)
-	var bond = CampaignManager.get_support_bond(init_name, target_name)
-	
-	var dialogue_lines = []
-	var new_rank_name = "C"
-	var support_file_found = null
-	
-	for s_file in initiator.data.supports:
-		if s_file.partner_name == target_name:
-			support_file_found = s_file
-			break
-			
-	if support_file_found == null:
-		for s_file in target.data.supports:
-			if s_file.partner_name == init_name:
-				support_file_found = s_file
-				break
-				
-	if support_file_found != null:
-		if bond["rank"] == 0: 
-			dialogue_lines = support_file_found.c_dialogue
-			new_rank_name = "C"
-		elif bond["rank"] == 1: 
-			dialogue_lines = support_file_found.b_dialogue
-			new_rank_name = "B"
-		elif bond["rank"] == 2: 
-			dialogue_lines = support_file_found.a_dialogue
-			new_rank_name = "A"
-			
-	# Reuse the exact same cinematic UI we built for Enemy Recruitment!
-	var temp_data = target.get("data")
-	var original_recruit = []
-	if temp_data and "recruit_dialogue" in temp_data:
-		original_recruit = temp_data.recruit_dialogue.duplicate()
-		temp_data.recruit_dialogue = dialogue_lines 
-		
-	# Play the cinematic scene
-	await play_recruit_dialogue(initiator, target)
-	
-	# Restore their original data
-	if temp_data and "recruit_dialogue" in temp_data:
-		temp_data.recruit_dialogue = original_recruit
-		
-	# Upgrade the Rank permanently!
-	bond["rank"] += 1
-	
-	if level_up_sound.stream != null: level_up_sound.play()
-	spawn_loot_text("SUPPORT RANK " + new_rank_name + "!", Color.VIOLET, initiator.global_position + Vector2(0, -40))
-	if support_file_found != null:
-		var a_name: String = str(initiator.get("unit_name")) if initiator.get("unit_name") != null else "Unit"
-		var b_name: String = str(target.get("unit_name")) if target.get("unit_name") != null else "Ally"
-		add_combat_log(a_name + " & " + b_name + ": Support rank → " + new_rank_name + "!", "violet")
+	await DialogueInteractionHelpers.play_support_dialogue(self, initiator, target)
 
-# Safely handles the Player's custom name for Support Files
 func get_support_name(unit: Node2D) -> String:
 	if unit.get("is_custom_avatar") == true:
 		return "Avatar" # This is the codename you will type in the Inspector!
@@ -9349,7 +9201,7 @@ func get_support_combat_bonus(unit: Node2D) -> Dictionary:
 # --- Phase 2: support reaction context (partner node, rank, can_react). Used by Guard, Defy Death, Dual Strike. ---
 ## Returns the best support partner and rank for reaction checks. Reuses Phase 1 range and identity.
 ## Purpose: Expose partner node and rank so callers can implement Guard (rank>=2), Defy Death (rank 3), Dual Strike (rank>=2).
-## Inputs: unit (Node2D) — the unit whose support partner we query.
+## Inputs: unit (Node2D) â€” the unit whose support partner we query.
 ## Outputs: Dictionary with "partner" (Node2D or null), "rank" (int 0..3), "in_range" (bool), "can_react" (bool).
 ## Side effects: None. Missing/invalid data => partner null, rank 0, can_react false.
 func get_best_support_context(unit: Node2D) -> Dictionary:
@@ -9387,7 +9239,7 @@ func get_best_support_context(unit: Node2D) -> Dictionary:
 
 ## Applies one hit with Phase 2 support reactions: Guard (redirect one hit to partner), then Defy Death (survive at 1 HP once per battle).
 ## Purpose: Single insertion point for Guard/Defy so forecast and resolution stay consistent; prevents redirect loops via is_redirected.
-## Inputs: victim (Node2D), damage (int), source (Node2D), exp_tgt (Node2D or null), is_redirected (bool) — if true, no reactions.
+## Inputs: victim (Node2D), damage (int), source (Node2D), exp_tgt (Node2D or null), is_redirected (bool) â€” if true, no reactions.
 ## Outputs: None.
 ## Side effects: May apply damage to victim or to guard partner; may cap damage and set _defy_death_used; sets _support_guard_used_this_sequence when Guard triggers.
 func _apply_hit_with_support_reactions(victim: Node2D, damage: int, source: Node2D, exp_tgt: Node2D, is_redirected: bool) -> void:
@@ -10669,7 +10521,7 @@ func _get_levelup_bar_cap(stat_key: String, value: int) -> int:
 func _update_levelup_value_label(value: float, value_label: Label, old_value: int, gain: int) -> void:
 	var shown: int = int(round(value))
 	if gain > 0:
-		value_label.text = str(old_value) + " → " + str(shown) + "  (+" + str(gain) + ")"
+		value_label.text = str(old_value) + " â†’ " + str(shown) + "  (+" + str(gain) + ")"
 	else:
 		value_label.text = str(shown)
 
@@ -10776,20 +10628,20 @@ func _get_levelup_class_theme(unit: Node2D) -> Dictionary:
 func _get_levelup_stat_visual(stat_key: String) -> Dictionary:
 	match stat_key:
 		"hp":
-			return {"name": "HP", "icon": "♥", "color": Color(0.94, 0.32, 0.32, 1.0)}
+			return {"name": "HP", "icon": "â™¥", "color": Color(0.94, 0.32, 0.32, 1.0)}
 		"str":
-			return {"name": "STR", "icon": "⚔", "color": Color(1.00, 0.56, 0.20, 1.0)}
+			return {"name": "STR", "icon": "âš”", "color": Color(1.00, 0.56, 0.20, 1.0)}
 		"mag":
-			return {"name": "MAG", "icon": "✦", "color": Color(0.82, 0.48, 1.00, 1.0)}
+			return {"name": "MAG", "icon": "âœ¦", "color": Color(0.82, 0.48, 1.00, 1.0)}
 		"def":
-			return {"name": "DEF", "icon": "⬢", "color": Color(0.38, 0.82, 0.52, 1.0)}
+			return {"name": "DEF", "icon": "â¬¢", "color": Color(0.38, 0.82, 0.52, 1.0)}
 		"res":
-			return {"name": "RES", "icon": "✚", "color": Color(0.38, 0.96, 0.92, 1.0)}
+			return {"name": "RES", "icon": "âœš", "color": Color(0.38, 0.96, 0.92, 1.0)}
 		"spd":
-			return {"name": "SPD", "icon": "➤", "color": Color(0.44, 0.74, 1.00, 1.0)}
+			return {"name": "SPD", "icon": "âž¤", "color": Color(0.44, 0.74, 1.00, 1.0)}
 		"agi":
-			return {"name": "AGI", "icon": "❖", "color": Color(1.00, 0.86, 0.42, 1.0)}
-	return {"name": stat_key.to_upper(), "icon": "•", "color": Color.WHITE}
+			return {"name": "AGI", "icon": "â–", "color": Color(1.00, 0.86, 0.42, 1.0)}
+	return {"name": stat_key.to_upper(), "icon": "â€¢", "color": Color.WHITE}
 
 func _create_levelup_icon_badge(icon_text: String, icon_color: Color) -> PanelContainer:
 	var badge: PanelContainer = PanelContainer.new()
@@ -10913,14 +10765,14 @@ func _create_levelup_header(unit: Node2D, old_level: int, new_level: int, theme:
 		unit_class_text = str(raw_class_value)
 
 	var name_label: Label = Label.new()
-	name_label.text = unit_name_text + "  •  " + unit_class_text
+	name_label.text = unit_name_text + "  â€¢  " + unit_class_text
 	name_label.add_theme_font_size_override("font_size", 22)
 	name_label.add_theme_color_override("font_color", Color(0.96, 1.0, 0.96))
 	info_box.add_child(name_label)
 
 	var level_label: Label = Label.new()
 	if old_level != new_level:
-		level_label.text = "LEVEL " + str(old_level) + "  →  " + str(new_level)
+		level_label.text = "LEVEL " + str(old_level) + "  â†’  " + str(new_level)
 	else:
 		level_label.text = "LEVEL " + str(new_level)
 	level_label.add_theme_font_size_override("font_size", 18)
@@ -11035,7 +10887,7 @@ func _create_levelup_stat_row(container: VBoxContainer, stat_name: String, stat_
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	value_label.add_theme_font_size_override("font_size", 18)
 	value_label.add_theme_color_override("font_color", theme["crit"] if is_critical else (Color(0.94, 1.0, 0.94) if gain > 0 else Color(0.86, 0.86, 0.86)))
-	value_label.text = str(start_value) + " → " + str(start_value) + "  (+" + str(gain) + ")" if gain > 0 else str(end_value)
+	value_label.text = str(start_value) + " â†’ " + str(start_value) + "  (+" + str(gain) + ")" if gain > 0 else str(end_value)
 	top_row.add_child(value_label)
 
 	var bar: ProgressBar = ProgressBar.new()
@@ -11728,13 +11580,13 @@ func _build_forecast_reaction_summary(attacker: Node2D, defender: Node2D, atk_wp
 		lines.append("Hellfire: strong minigame can ignite (burn DoT after enemy phase).")
 
 	if _attacker_has_attack_skill(attacker, "Ballista Shot"):
-		lines.append("Ballista Shot: on proc, bolt can overpenetrate — spill damage to a foe in the tile behind this target (same line).")
+		lines.append("Ballista Shot: on proc, bolt can overpenetrate â€” spill damage to a foe in the tile behind this target (same line).")
 
 	if _attacker_has_attack_skill(attacker, "Charge"):
 		lines.append("Charge: on proc, if another enemy stands behind this target in your line, they take collision damage and your impact is stronger.")
 
 	if _attacker_has_attack_skill(attacker, "Fireball"):
-		lines.append("Fireball: on proc, flames wash down the line — extra burn on a foe in the tile behind the target.")
+		lines.append("Fireball: on proc, flames wash down the line â€” extra burn on a foe in the tile behind the target.")
 
 	if _attacker_has_attack_skill(attacker, "Meteor Storm"):
 		lines.append("Meteor Storm: on proc, a fragment may streak into a foe behind the target (same line) for extra splash damage.")
@@ -11749,7 +11601,7 @@ func _build_forecast_reaction_summary(attacker: Node2D, defender: Node2D, atk_wp
 		lines.append("Volley: on a perfect proc, the second follow-up arrow can strike a different foe adjacent to the target.")
 
 	if _attacker_has_attack_skill(attacker, "Rain of Arrows"):
-		lines.append("Rain of Arrows: rear-rank pressure — extra damage to a foe in the tile behind the target (same line); non-perfect splash favors that foe when you must pick one.")
+		lines.append("Rain of Arrows: rear-rank pressure â€” extra damage to a foe in the tile behind the target (same line); non-perfect splash favors that foe when you must pick one.")
 
 	if lines.is_empty():
 		return ""
@@ -12679,7 +12531,7 @@ func _play_critical_impact(focus_world: Vector2) -> void:
 	_spawn_fullscreen_impact_flash(Color(1.0, 0.98, 0.88), 0.44, 0.16)
 	_spawn_fullscreen_impact_flash(Color(1.0, 0.72, 0.20), 0.16, 0.22)
 
-	# Offset punch only — no zoom manipulation
+	# Offset punch only â€” no zoom manipulation
 	_start_impact_camera(focus_world, 1.0, 0.040, 0.18)
 
 	await _do_hit_stop(0.018, 0.14, 0.11)
