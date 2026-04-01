@@ -824,5 +824,3 @@ static func on_unit_details_button_pressed(field) -> void:
 	var target_unit = field._get_unit_target_for_details()
 	if target_unit != null:
 		field._show_detailed_unit_info_panel(target_unit)
-
-

@@ -67,7 +67,7 @@ static func get_levelup_bar_cap(stat_key: String, value: int) -> int:
 static func update_levelup_value_label(value: float, value_label: Label, old_value: int, gain: int) -> void:
 	var shown: int = int(round(value))
 	if gain > 0:
-		value_label.text = str(old_value) + " â†’ " + str(shown) + "  (+" + str(gain) + ")"
+		value_label.text = str(old_value) + " \u2192 " + str(shown) + "  (+" + str(gain) + ")"
 	else:
 		value_label.text = str(shown)
 
@@ -175,20 +175,20 @@ static func get_levelup_class_theme(unit: Node2D) -> Dictionary:
 static func get_levelup_stat_visual(stat_key: String) -> Dictionary:
 	match stat_key:
 		"hp":
-			return {"name": "HP", "icon": "â™¥", "color": Color(0.94, 0.32, 0.32, 1.0)}
+			return {"name": "HP", "icon": "\u2665", "color": Color(0.94, 0.32, 0.32, 1.0)}
 		"str":
-			return {"name": "STR", "icon": "âš”", "color": Color(1.00, 0.56, 0.20, 1.0)}
+			return {"name": "STR", "icon": "\u2694", "color": Color(1.00, 0.56, 0.20, 1.0)}
 		"mag":
-			return {"name": "MAG", "icon": "âœ¦", "color": Color(0.82, 0.48, 1.00, 1.0)}
+			return {"name": "MAG", "icon": "\u2726", "color": Color(0.82, 0.48, 1.00, 1.0)}
 		"def":
-			return {"name": "DEF", "icon": "â¬¢", "color": Color(0.38, 0.82, 0.52, 1.0)}
+			return {"name": "DEF", "icon": "\u25C6", "color": Color(0.38, 0.82, 0.52, 1.0)}
 		"res":
-			return {"name": "RES", "icon": "âœš", "color": Color(0.38, 0.96, 0.92, 1.0)}
+			return {"name": "RES", "icon": "\u271A", "color": Color(0.38, 0.96, 0.92, 1.0)}
 		"spd":
-			return {"name": "SPD", "icon": "âž¤", "color": Color(0.44, 0.74, 1.00, 1.0)}
+			return {"name": "SPD", "icon": "\u27A4", "color": Color(0.44, 0.74, 1.00, 1.0)}
 		"agi":
-			return {"name": "AGI", "icon": "â–", "color": Color(1.00, 0.86, 0.42, 1.0)}
-	return {"name": stat_key.to_upper(), "icon": "â€¢", "color": Color.WHITE}
+			return {"name": "AGI", "icon": "\u2729", "color": Color(1.00, 0.86, 0.42, 1.0)}
+	return {"name": stat_key.to_upper(), "icon": "\u2022", "color": Color.WHITE}
 
 
 static func create_levelup_icon_badge(icon_text: String, icon_color: Color) -> PanelContainer:
@@ -313,14 +313,14 @@ static func create_levelup_header(field, unit: Node2D, old_level: int, new_level
 		unit_class_text = str(raw_class_value)
 
 	var name_label: Label = Label.new()
-	name_label.text = unit_name_text + "  â€¢  " + unit_class_text
+	name_label.text = unit_name_text + "  \u2022  " + unit_class_text
 	name_label.add_theme_font_size_override("font_size", 22)
 	name_label.add_theme_color_override("font_color", Color(0.96, 1.0, 0.96))
 	info_box.add_child(name_label)
 
 	var level_label: Label = Label.new()
 	if old_level != new_level:
-		level_label.text = "LEVEL " + str(old_level) + "  â†’  " + str(new_level)
+		level_label.text = "LEVEL " + str(old_level) + "  \u2192  " + str(new_level)
 	else:
 		level_label.text = "LEVEL " + str(new_level)
 	level_label.add_theme_font_size_override("font_size", 18)
@@ -436,7 +436,7 @@ static func create_levelup_stat_row(container: VBoxContainer, stat_name: String,
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	value_label.add_theme_font_size_override("font_size", 18)
 	value_label.add_theme_color_override("font_color", theme["crit"] if is_critical else (Color(0.94, 1.0, 0.94) if gain > 0 else Color(0.86, 0.86, 0.86)))
-	value_label.text = str(start_value) + " â†’ " + str(start_value) + "  (+" + str(gain) + ")" if gain > 0 else str(end_value)
+	value_label.text = str(start_value) + " \u2192 " + str(end_value) + "  (+" + str(gain) + ")" if gain > 0 else str(end_value)
 	top_row.add_child(value_label)
 
 	var bar: ProgressBar = ProgressBar.new()

@@ -94,11 +94,14 @@ const StatusIconVfxHelpers = preload("res://Scripts/Core/BattleField/BattleField
 const CombatVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatVfxHelpers.gd")
 const GoldVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldGoldVfxHelpers.gd")
 const TurnOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnOrchestrationHelpers.gd")
+const BattleFieldTurnFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnFlowHelpers.gd")
+const TacticalHudLayoutHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTacticalHudLayoutHelpers.gd")
 const DefensiveReactionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionHelpers.gd")
 const DetailedUnitInfoHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoHelpers.gd")
 const DialogueInteractionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd")
 const LevelUpPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldLevelUpPresentationHelpers.gd")
 const BattleEndFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleEndFlowHelpers.gd")
+const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
 const CampaignSetupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCampaignSetupHelpers.gd")
 const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
 const DefensiveAbilityFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveAbilityFlowHelpers.gd")
@@ -1959,65 +1962,13 @@ func _apply_inventory_panel_item_list_extra_margins(inv_item_list: ItemList) -> 
 	inv_item_list.add_theme_stylebox_override("panel", d)
 
 func _resolve_loot_ui_nodes() -> void:
-	if loot_window == null:
-		return
-	loot_desc_label = loot_window.get_node_or_null("ItemDescLabel") as RichTextLabel
-	loot_item_info_panel = loot_window.get_node_or_null("LootItemInfoBackdrop") as Panel
+	BattleResultPresentationHelpers.resolve_loot_ui_nodes(self)
 
 func _layout_loot_item_info_backdrop() -> void:
-	if loot_window == null or loot_item_info_panel == null or loot_desc_label == null:
-		return
-	if not loot_desc_label.has_meta(META_LOOT_DESC_LAYOUT_BASE):
-		loot_desc_label.set_meta(META_LOOT_DESC_LAYOUT_BASE, Rect2(loot_desc_label.position, loot_desc_label.size))
-	var base_rect: Rect2 = loot_desc_label.get_meta(META_LOOT_DESC_LAYOUT_BASE)
-	var outer := float(LOOT_INFO_BACKDROP_OUTER_PAD)
-	var inner := float(LOOT_INFO_DESC_INNER_PAD)
-	loot_item_info_panel.position = base_rect.position - Vector2(outer, outer)
-	loot_item_info_panel.size = base_rect.size + Vector2(outer * 2.0, outer * 2.0)
-	loot_item_info_panel.z_index = -1
-	loot_desc_label.position = base_rect.position + Vector2(inner, inner)
-	loot_desc_label.size = base_rect.size - Vector2(inner * 2.0, inner * 2.0)
-	loot_desc_label.z_index = 2
+	BattleResultPresentationHelpers.layout_loot_item_info_backdrop(self)
 
 func _ensure_loot_item_info_ui() -> void:
-	if loot_window == null:
-		return
-	_resolve_loot_ui_nodes()
-	if loot_desc_label == null:
-		var rtl := RichTextLabel.new()
-		rtl.name = "ItemDescLabel"
-		rtl.layout_mode = 0
-		rtl.offset_left = 770.0
-		rtl.offset_top = 100.0
-		rtl.offset_right = 1248.0
-		rtl.offset_bottom = 392.0
-		rtl.bbcode_enabled = true
-		rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rtl.scroll_active = false
-		rtl.fit_content = false
-		rtl.mouse_filter = Control.MOUSE_FILTER_STOP
-		rtl.process_mode = Node.PROCESS_MODE_ALWAYS
-		loot_window.add_child(rtl)
-		loot_desc_label = rtl
-	if loot_item_info_panel == null:
-		var bp := Panel.new()
-		bp.name = "LootItemInfoBackdrop"
-		bp.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		loot_window.add_child(bp)
-		loot_item_info_panel = bp
-		loot_window.move_child(loot_item_info_panel, 0)
-	_style_tactical_panel(loot_item_info_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-	loot_item_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_layout_loot_item_info_backdrop()
-	var loot_title := loot_window.get_node_or_null("Label") as Label
-	if loot_title != null:
-		_style_tactical_label(loot_title, TACTICAL_UI_ACCENT, 22, 4)
-		loot_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if loot_desc_label != null:
-		loot_desc_label.focus_mode = Control.FOCUS_NONE
-		loot_desc_label.remove_theme_stylebox_override("focus")
-		loot_desc_label.scroll_active = false
-		loot_desc_label.process_mode = Node.PROCESS_MODE_ALWAYS
+	BattleResultPresentationHelpers.ensure_loot_item_info_ui(self)
 
 func _queue_refit_item_description_panels() -> void:
 	var t := Timer.new()
@@ -2026,31 +1977,14 @@ func _queue_refit_item_description_panels() -> void:
 	t.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(t)
 	t.timeout.connect(func():
-		_refit_loot_description_panel_height()
+		BattleResultPresentationHelpers.refit_loot_description_panel_height(self)
 		_refit_inventory_description_panel_height()
 		t.queue_free()
 	, CONNECT_ONE_SHOT)
 	t.start()
 
 func _refit_loot_description_panel_height() -> void:
-	if loot_desc_label == null or loot_item_info_panel == null:
-		return
-	if not loot_desc_label.has_meta(META_LOOT_DESC_LAYOUT_BASE):
-		return
-	loot_desc_label.scroll_active = false
-	var base_rect: Rect2 = loot_desc_label.get_meta(META_LOOT_DESC_LAYOUT_BASE)
-	var inner := float(LOOT_INFO_DESC_INNER_PAD)
-	var outer := float(LOOT_INFO_BACKDROP_OUTER_PAD)
-	var text_w: float = maxf(48.0, base_rect.size.x - inner * 2.0)
-	loot_desc_label.position = base_rect.position + Vector2(inner, inner)
-	loot_desc_label.size.x = text_w
-	loot_desc_label.size.y = maxf(ITEM_DESC_RICHTEXT_MIN_H, 32.0)
-	var ch: float = loot_desc_label.get_content_height()
-	var th: float = clampf(ch + ITEM_DESC_RICHTEXT_EXTRA_PAD, ITEM_DESC_RICHTEXT_MIN_H, ITEM_DESC_RICHTEXT_MAX_H)
-	loot_desc_label.size.y = th
-	var block_h: float = th + inner * 2.0
-	loot_item_info_panel.position = base_rect.position - Vector2(outer, outer)
-	loot_item_info_panel.size = Vector2(base_rect.size.x + outer * 2.0, block_h + outer * 2.0)
+	BattleResultPresentationHelpers.refit_loot_description_panel_height(self)
 
 func _refit_inventory_description_panel_height() -> void:
 	if inv_desc_label == null or inventory_panel == null:
@@ -3056,741 +2990,7 @@ func _set_unit_portrait_block_visible(show: bool) -> void:
 			portrait_frame.visible = show
 
 func _apply_tactical_ui_overhaul() -> void:
-	if not _tactical_ui_resize_hooked:
-		var vp := get_viewport()
-		if vp != null:
-			vp.size_changed.connect(_queue_tactical_ui_overhaul)
-		_tactical_ui_resize_hooked = true
-
-	var ui_root := get_node_or_null("UI")
-	if ui_root == null:
-		return
-	_ensure_unit_details_button()
-	_detach_tactical_action_buttons_to_ui_root()
-
-	for path in ["UI/BottomBarUI", "UI/ColorRect", "UI/ColorRect2", "UI/FramePortrait", "UI/Panel"]:
-		var legacy := get_node_or_null(path) as CanvasItem
-		if legacy != null:
-			legacy.visible = false
-
-	var vp_size := get_viewport_rect().size
-	var hud_scale := TACTICAL_UI_HUD_SCALE
-	var hud_scale_vec := Vector2(hud_scale, hud_scale)
-	var bottom_panel_scale := hud_scale * TACTICAL_UI_BOTTOM_PANEL_SCALE_MULT
-	var bottom_panel_scale_vec := Vector2(bottom_panel_scale, bottom_panel_scale)
-	var rail_render_w: float = TACTICAL_UI_RAIL_WIDTH * hud_scale
-	var info_h: float = 258.0
-	var bottom_render_h: float = info_h * bottom_panel_scale
-	var log_panel_h: float = TACTICAL_UI_BOTTOM_HEIGHT * TACTICAL_UI_LOG_HEIGHT_RATIO
-	var log_render_h: float = log_panel_h * bottom_panel_scale
-	var info_w: float = 384.0
-	var info_render_w: float = info_w * bottom_panel_scale
-	var hud_gap: float = 18.0 * bottom_panel_scale
-	var right_x: float = vp_size.x - rail_render_w - TACTICAL_UI_MARGIN
-	var bottom_y: float = vp_size.y - bottom_render_h - TACTICAL_UI_BOTTOM_EDGE_MARGIN
-	var log_y: float = bottom_y + (bottom_render_h - log_render_h)
-	var log_x: float = TACTICAL_UI_MARGIN + info_render_w + hud_gap
-	var log_render_w: float = max(372.0 * bottom_panel_scale, right_x - log_x - (hud_gap + (44.0 * bottom_panel_scale)))
-	var log_w: float = log_render_w / bottom_panel_scale
-
-	var right_rail := _ensure_tactical_backdrop("TacticalRightRail")
-	var show_deployment_rail: bool = current_state == pre_battle_state
-	var show_battle_hud: bool = not show_deployment_rail
-	if right_rail != null:
-		right_rail.visible = false
-		right_rail.position = Vector2(right_x, TACTICAL_UI_MARGIN)
-		right_rail.size = Vector2(rail_render_w, vp_size.y - (TACTICAL_UI_MARGIN * 2.0))
-		_style_tactical_panel(right_rail, TACTICAL_UI_BG, TACTICAL_UI_BORDER_MUTED, 1, 12)
-
-	var bottom_backdrop := _ensure_tactical_backdrop("TacticalBottomBackdrop")
-	if bottom_backdrop != null:
-		bottom_backdrop.visible = false
-
-	var gold_backdrop := _ensure_tactical_backdrop("TacticalGoldBackdrop")
-	var objective_panel_render_bottom: float = 252.0
-	var gold_panel_height: float = 32.0
-	var gold_anchor_y: float = vp_size.y - gold_panel_height - TACTICAL_UI_BOTTOM_EDGE_MARGIN
-	var command_cluster_margin_render: float = 18.0
-	var command_button_gap_render: float = 4.0
-	var command_button_height: float = 40.0
-	var command_cluster_x: float = right_x + command_cluster_margin_render
-	var command_cluster_width_render: float = rail_render_w - (command_cluster_margin_render * 2.0)
-	var command_button_width: float = (command_cluster_width_render - command_button_gap_render) * 0.5
-	var command_buttons_y: float = gold_anchor_y - command_button_height - 10.0
-	if gold_backdrop != null:
-		gold_backdrop.z_index = 18
-		gold_backdrop.scale = Vector2.ONE
-		gold_backdrop.position = Vector2(command_cluster_x, gold_anchor_y)
-		gold_backdrop.size = Vector2(command_cluster_width_render, gold_panel_height)
-		_style_tactical_panel(gold_backdrop, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER_MUTED, 1, 8)
-
-	if objective_toggle_btn != null:
-		objective_toggle_btn.scale = hud_scale_vec
-		objective_toggle_btn.z_index = 31
-		objective_toggle_btn.position = Vector2(right_x + rail_render_w - (144.0 * hud_scale) - 10.0, 18.0)
-		objective_toggle_btn.size = Vector2(144.0, 38.0)
-		objective_toggle_btn.visible = show_battle_hud
-		objective_toggle_btn.text = "Hide Goals" if is_objective_expanded else "Show Goals"
-		_style_tactical_button(objective_toggle_btn, objective_toggle_btn.text, false, 18)
-
-	if objective_panel != null:
-		objective_panel.scale = hud_scale_vec
-		objective_panel.z_index = 24
-		objective_panel.clip_contents = true
-		var objective_expanded_pos := Vector2(right_x + 12.0, 18.0 + (38.0 * hud_scale) + 14.0)
-		var objective_collapsed_x: float = vp_size.x + 50.0
-		objective_panel.position = Vector2(objective_expanded_pos.x if is_objective_expanded else objective_collapsed_x, objective_expanded_pos.y)
-		objective_panel.size.x = TACTICAL_UI_RAIL_WIDTH - 24.0
-		objective_panel.pivot_offset = objective_panel.size / 2.0
-		objective_panel.visible = show_battle_hud
-		objective_panel.set_meta("objective_expanded_x", objective_expanded_pos.x)
-		objective_panel.set_meta("objective_collapsed_x", objective_collapsed_x)
-		_style_tactical_panel(objective_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-		objective_panel_render_bottom = objective_panel.position.y + (objective_panel.size.y * hud_scale) + 18.0
-	if objective_label != null:
-		objective_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 16)
-		objective_label.scroll_active = true
-		_style_tactical_richtext(objective_label, 19, 23)
-
-	var skip_button := get_node_or_null("UI/SkipButton") as Button
-	if skip_button != null:
-		skip_button.scale = Vector2.ONE
-		skip_button.position = Vector2(command_cluster_x, command_buttons_y)
-		skip_button.size = Vector2(command_button_width, command_button_height)
-		skip_button.visible = show_battle_hud
-		_style_tactical_button(skip_button, "END TURN", true, 20)
-		var end_turn_fill: Color = TACTICAL_UI_PRIMARY_FILL.lerp(TACTICAL_UI_ACCENT, 0.20)
-		var end_turn_hover: Color = TACTICAL_UI_PRIMARY_HOVER.lerp(TACTICAL_UI_ACCENT, 0.28)
-		var end_turn_press: Color = TACTICAL_UI_PRIMARY_PRESS.lerp(TACTICAL_UI_ACCENT, 0.12)
-		skip_button.add_theme_stylebox_override("normal", _make_tactical_panel_style(end_turn_fill, TACTICAL_UI_ACCENT, 3, 10))
-		skip_button.add_theme_stylebox_override("hover", _make_tactical_panel_style(end_turn_hover, TACTICAL_UI_ACCENT, 3, 10))
-		skip_button.add_theme_stylebox_override("pressed", _make_tactical_panel_style(end_turn_press, TACTICAL_UI_ACCENT, 3, 10))
-		skip_button.add_theme_stylebox_override("focus", _make_tactical_panel_style(end_turn_hover, TACTICAL_UI_ACCENT_SOFT, 3, 10))
-
-	if convoy_button != null:
-		convoy_button.scale = Vector2.ONE
-		convoy_button.position = Vector2(
-			command_cluster_x + command_button_width + command_button_gap_render,
-			command_buttons_y
-		)
-		convoy_button.size = Vector2(command_button_width, command_button_height)
-		convoy_button.visible = show_battle_hud
-		_style_tactical_button(convoy_button, "CONVOY", false, 20)
-
-	if gold_label != null:
-		gold_label.z_index = 19
-		gold_label.scale = Vector2.ONE
-		gold_label.position = Vector2(command_cluster_x + 14.0, gold_anchor_y + 2.0)
-		gold_label.size = Vector2(command_cluster_width_render - 28.0, 28.0)
-		gold_label.visible = show_battle_hud
-		gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_style_tactical_label(gold_label, TACTICAL_UI_ACCENT, 20, 4)
-	if gold_backdrop != null:
-		gold_backdrop.visible = show_battle_hud
-
-	if unit_info_panel != null:
-		unit_info_panel.scale = bottom_panel_scale_vec
-		unit_info_panel.position = Vector2(TACTICAL_UI_MARGIN, bottom_y)
-		unit_info_panel.size = Vector2(info_w, info_h)
-		unit_info_panel.clip_contents = true
-		_style_tactical_panel(unit_info_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-		var portrait_frame := unit_info_panel.get_node_or_null("PortraitFrame") as Panel
-		if portrait_frame == null:
-			portrait_frame = Panel.new()
-			portrait_frame.name = "PortraitFrame"
-			portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			unit_info_panel.add_child(portrait_frame)
-			unit_info_panel.move_child(portrait_frame, 0)
-		portrait_frame.z_index = 0
-		portrait_frame.position = Vector2(240, 18)
-		portrait_frame.size = Vector2(122, 156)
-		_style_tactical_panel(portrait_frame, TACTICAL_UI_BG_SOFT, TACTICAL_UI_BORDER_MUTED, 1, 8)
-
-	if unit_name_label != null:
-		unit_name_label.position = Vector2(18, 16)
-		unit_name_label.size = Vector2(208, 30)
-		unit_name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		_style_tactical_label(unit_name_label, TACTICAL_UI_ACCENT, 24, 4)
-	if unit_hp_label != null:
-		unit_hp_label.position = Vector2(18, 35)
-		unit_hp_label.size = Vector2(208, 16)
-		unit_hp_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		_style_tactical_label(unit_hp_label, TACTICAL_UI_ACCENT_SOFT, 14, 3)
-		var header_divider := unit_info_panel.get_node_or_null("HeaderDivider") as Panel
-		if header_divider == null:
-			header_divider = Panel.new()
-			header_divider.name = "HeaderDivider"
-			header_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			unit_info_panel.add_child(header_divider)
-		header_divider.position = Vector2(18, 53)
-		header_divider.size = Vector2(208, 3)
-		header_divider.z_index = 1
-		_style_tactical_panel(
-			header_divider,
-			Color(0.19, 0.16, 0.10, 0.92),
-			Color(0.55, 0.48, 0.26, 0.55),
-			1,
-			4
-		)
-	if unit_stats_label != null:
-		unit_stats_label.position = Vector2(16, 142)
-		unit_stats_label.size = Vector2(210, 24)
-		unit_stats_label.scroll_active = false
-		_style_tactical_richtext(unit_stats_label, 11, 12)
-	_ensure_unit_info_primary_widgets()
-	_layout_unit_info_primary_widgets()
-	_ensure_unit_info_stat_widgets()
-	_layout_unit_info_stat_widgets()
-	if unit_portrait != null:
-		unit_portrait.z_index = 1
-		unit_portrait.position = Vector2(244, 22)
-		unit_portrait.size = Vector2(114, 148)
-		unit_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		unit_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	if open_inv_button != null:
-		open_inv_button.top_level = false
-		open_inv_button.scale = bottom_panel_scale_vec
-		open_inv_button.position = unit_info_panel.position + (Vector2(16, 228) * bottom_panel_scale)
-		open_inv_button.size = Vector2(92, 28)
-		open_inv_button.z_index = 20
-		_style_tactical_button(open_inv_button, "ITEMS", false, 18)
-	if support_btn != null:
-		support_btn.top_level = false
-		support_btn.scale = bottom_panel_scale_vec
-		support_btn.position = unit_info_panel.position + (Vector2(112, 228) * bottom_panel_scale)
-		support_btn.size = Vector2(104, 28)
-		support_btn.z_index = 20
-		_style_tactical_button(support_btn, "SUPPORTS", false, 16)
-	if unit_details_button != null:
-		unit_details_button.top_level = false
-		unit_details_button.scale = bottom_panel_scale_vec
-		unit_details_button.position = unit_info_panel.position + (Vector2(238, 228) * bottom_panel_scale)
-		unit_details_button.size = Vector2(122, 28)
-		unit_details_button.z_index = 20
-		unit_details_button.visible = true
-		_style_tactical_button(unit_details_button, "UNIT INFO", false, 16)
-
-	var battle_log_panel: Panel = null
-	if battle_log != null:
-		battle_log_panel = battle_log.get_parent() as Panel
-	if battle_log_panel != null:
-		var field_log_toggle_gap: float = 8.0 * bottom_panel_scale
-		var field_log_toggle_size := Vector2(132.0, 28.0)
-		var field_log_toggle_render_size: Vector2 = field_log_toggle_size * bottom_panel_scale
-		var field_log_expanded_button_pos := Vector2(
-			log_x + log_render_w - field_log_toggle_render_size.x - (12.0 * bottom_panel_scale),
-			log_y - field_log_toggle_render_size.y - field_log_toggle_gap
-		)
-		var field_log_collapsed_panel_y: float = vp_size.y + (6.0 * bottom_panel_scale)
-		var field_log_collapsed_button_y: float = field_log_collapsed_panel_y - field_log_toggle_render_size.y - field_log_toggle_gap
-		battle_log_panel.scale = bottom_panel_scale_vec
-		battle_log_panel.position = Vector2(log_x, log_y)
-		battle_log_panel.size = Vector2(log_w, log_panel_h)
-		battle_log_panel.set_meta("field_log_expanded_y", log_y)
-		battle_log_panel.set_meta("field_log_collapsed_y", field_log_collapsed_panel_y)
-		_style_tactical_panel(battle_log_panel, Color(0.12, 0.11, 0.09, 0.88), Color(0.46, 0.40, 0.28, 0.44), 1, 10)
-		var legacy_log_fill := battle_log_panel.get_node_or_null("ColorRect") as ColorRect
-		if legacy_log_fill != null:
-			legacy_log_fill.visible = false
-		var log_header := _ensure_tactical_header(battle_log_panel, "HeaderLabel", "Field Log")
-		if log_header != null:
-			_style_tactical_label(log_header, TACTICAL_UI_TEXT_MUTED, 13, 3)
-		var field_log_toggle := _ensure_field_log_toggle_button()
-		if field_log_toggle != null:
-			field_log_toggle.scale = bottom_panel_scale_vec
-			field_log_toggle.size = field_log_toggle_size
-			field_log_toggle.position = field_log_expanded_button_pos
-			field_log_toggle.z_index = 22
-			field_log_toggle.set_meta("field_log_expanded_y", field_log_expanded_button_pos.y)
-			field_log_toggle.set_meta("field_log_collapsed_y", field_log_collapsed_button_y)
-			field_log_toggle.custom_minimum_size = field_log_toggle_size
-			_set_field_log_toggle_button_text()
-			_apply_field_log_visibility(false)
-	elif field_log_toggle_btn != null and is_instance_valid(field_log_toggle_btn):
-		field_log_toggle_btn.visible = false
-	if battle_log != null:
-		battle_log.position = Vector2(16, 36)
-		battle_log.size = Vector2(log_w - 32.0, log_panel_h - 50.0)
-		battle_log.scroll_active = true
-		_style_tactical_richtext(battle_log, 13, 15)
-
-	if forecast_panel != null:
-		var forecast_size := Vector2(540.0, 360.0)
-		forecast_panel.position = Vector2(max(260.0, right_x - forecast_size.x - 20.0), max(120.0, bottom_y - forecast_size.y - 18.0))
-		forecast_panel.size = forecast_size
-		forecast_panel.clip_contents = false
-		_style_tactical_panel(forecast_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-		var forecast_left_tint := forecast_panel.get_node_or_null("ForecastLeftTint") as ColorRect
-		if forecast_left_tint == null:
-			forecast_left_tint = ColorRect.new()
-			forecast_left_tint.name = "ForecastLeftTint"
-			forecast_left_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			forecast_panel.add_child(forecast_left_tint)
-		forecast_left_tint.position = Vector2(14.0, 16.0)
-		forecast_left_tint.size = Vector2(214.0, 236.0)
-		forecast_left_tint.color = Color(0.78, 0.30, 0.18, 0.08)
-		var forecast_right_tint := forecast_panel.get_node_or_null("ForecastRightTint") as ColorRect
-		if forecast_right_tint == null:
-			forecast_right_tint = ColorRect.new()
-			forecast_right_tint.name = "ForecastRightTint"
-			forecast_right_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			forecast_panel.add_child(forecast_right_tint)
-		forecast_right_tint.position = Vector2(forecast_size.x - 228.0, 16.0)
-		forecast_right_tint.size = Vector2(214.0, 236.0)
-		forecast_right_tint.color = Color(0.18, 0.35, 0.76, 0.08)
-		forecast_panel.move_child(forecast_left_tint, 0)
-		forecast_panel.move_child(forecast_right_tint, 1)
-		var center_line_top := forecast_panel.get_node_or_null("CenterLineTop") as ColorRect
-		if center_line_top == null:
-			center_line_top = ColorRect.new()
-			center_line_top.name = "CenterLineTop"
-			center_line_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			forecast_panel.add_child(center_line_top)
-		center_line_top.position = Vector2((forecast_size.x * 0.5) - 1.0, 24.0)
-		center_line_top.size = Vector2(2.0, 92.0)
-		center_line_top.color = Color(0.73, 0.64, 0.34, 0.68)
-		var center_line_bottom := forecast_panel.get_node_or_null("CenterLineBottom") as ColorRect
-		if center_line_bottom == null:
-			center_line_bottom = ColorRect.new()
-			center_line_bottom.name = "CenterLineBottom"
-			center_line_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			forecast_panel.add_child(center_line_bottom)
-		center_line_bottom.position = Vector2((forecast_size.x * 0.5) - 1.0, 164.0)
-		center_line_bottom.size = Vector2(2.0, 94.0)
-		center_line_bottom.color = Color(0.73, 0.64, 0.34, 0.56)
-		var center_badge := forecast_panel.get_node_or_null("CenterBadge") as Label
-		if center_badge == null:
-			center_badge = Label.new()
-			center_badge.name = "CenterBadge"
-			center_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			forecast_panel.add_child(center_badge)
-		center_badge.text = "VS"
-		center_badge.position = Vector2((forecast_size.x * 0.5) - 24.0, 126.0)
-		center_badge.size = Vector2(48.0, 26.0)
-		center_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_style_tactical_label(center_badge, Color(1.0, 0.90, 0.58), 18, 3)
-		_ensure_forecast_support_labels()
-		_ensure_forecast_hp_bars()
-		_ensure_forecast_weapon_badges()
-		_ensure_forecast_weapon_pair_frames()
-		_ensure_forecast_weapon_icons()
-		var atk_weapon_pair_frame := forecast_panel.get_node_or_null("AtkWeaponPairFrame") as Panel
-		var def_weapon_pair_frame := forecast_panel.get_node_or_null("DefWeaponPairFrame") as Panel
-		var atk_weapon_badge_panel := forecast_panel.get_node_or_null("AtkWeaponBadgePanel") as Panel
-		var def_weapon_badge_panel := forecast_panel.get_node_or_null("DefWeaponBadgePanel") as Panel
-		var atk_weapon_icon_panel := forecast_panel.get_node_or_null("AtkWeaponIconPanel") as Panel
-		var def_weapon_icon_panel := forecast_panel.get_node_or_null("DefWeaponIconPanel") as Panel
-		var left_col_x := 24.0
-		var right_col_x := forecast_size.x - 214.0
-		var col_w := 190.0
-		var stat_y := {
-			"name": 18.0,
-			"hp": 54.0,
-			"bar": 78.0,
-			"hit": 92.0,
-			"dmg": 126.0,
-			"crit": 160.0,
-			"support": 194.0,
-			"weapon": 222.0,
-			"footer": 250.0,
-			"instruction": 266.0,
-			"reaction": 290.0,
-			"buttons": 306.0,
-		}
-		var name_labels: Array = [forecast_atk_name, forecast_def_name]
-		var hp_labels: Array = [forecast_atk_hp, forecast_def_hp]
-		var hit_labels: Array = [forecast_atk_hit, forecast_def_hit]
-		var dmg_labels: Array = [forecast_atk_dmg, forecast_def_dmg]
-		var crit_labels: Array = [forecast_atk_crit, forecast_def_crit]
-		var support_labels: Array = [forecast_atk_support_label, forecast_def_support_label]
-		var weapon_labels: Array = [forecast_atk_weapon, forecast_def_weapon]
-		var adv_labels: Array = [forecast_atk_adv, forecast_def_adv]
-		var double_labels: Array = [forecast_atk_double, forecast_def_double]
-		var col_positions: Array[float] = [left_col_x, right_col_x]
-		for idx in range(2):
-			var base_x: float = col_positions[idx]
-			var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT if idx == 0 else HORIZONTAL_ALIGNMENT_RIGHT
-			var name_lbl := name_labels[idx] as Label
-			if name_lbl != null:
-				name_lbl.position = Vector2(base_x, stat_y["name"])
-				name_lbl.size = Vector2(col_w, 28)
-				name_lbl.horizontal_alignment = align
-				name_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
-				name_lbl.clip_text = true
-				name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			var hp_lbl := hp_labels[idx] as Label
-			if hp_lbl != null:
-				hp_lbl.position = Vector2(base_x, stat_y["hp"])
-				hp_lbl.size = Vector2(col_w, 24)
-				hp_lbl.horizontal_alignment = align
-			var hp_bar: ProgressBar = forecast_atk_hp_bar if idx == 0 else forecast_def_hp_bar
-			if hp_bar != null:
-				hp_bar.position = Vector2(base_x, stat_y["bar"])
-				hp_bar.size = Vector2(col_w, 10)
-			var hit_lbl := hit_labels[idx] as Label
-			if hit_lbl != null:
-				hit_lbl.position = Vector2(base_x, stat_y["hit"])
-				hit_lbl.size = Vector2(col_w, 22)
-				hit_lbl.horizontal_alignment = align
-			var dmg_lbl := dmg_labels[idx] as Label
-			if dmg_lbl != null:
-				dmg_lbl.position = Vector2(base_x, stat_y["dmg"])
-				dmg_lbl.size = Vector2(col_w, 22)
-				dmg_lbl.horizontal_alignment = align
-			var crit_lbl := crit_labels[idx] as Label
-			if crit_lbl != null:
-				crit_lbl.position = Vector2(base_x, stat_y["crit"])
-				crit_lbl.size = Vector2(col_w, 22)
-				crit_lbl.horizontal_alignment = align
-			var support_lbl := support_labels[idx] as Label
-			if support_lbl != null:
-				support_lbl.position = Vector2(base_x, stat_y["support"])
-				support_lbl.size = Vector2(col_w, 22)
-				support_lbl.horizontal_alignment = align
-			var weapon_lbl := weapon_labels[idx] as Label
-			if weapon_lbl != null:
-				if idx == 0:
-					weapon_lbl.position = Vector2(base_x + 96.0, stat_y["weapon"])
-				else:
-					weapon_lbl.position = Vector2(base_x, stat_y["weapon"])
-				weapon_lbl.size = Vector2(col_w - 100.0, 22)
-				weapon_lbl.horizontal_alignment = align
-				weapon_lbl.clip_text = true
-				weapon_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			var adv_lbl := adv_labels[idx] as Label
-			if adv_lbl != null:
-				adv_lbl.position = Vector2(base_x, stat_y["footer"])
-				adv_lbl.size = Vector2(110.0, 22)
-				adv_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if idx == 0 else HORIZONTAL_ALIGNMENT_RIGHT
-			var double_lbl := double_labels[idx] as Label
-			if double_lbl != null:
-				var double_x := base_x + 118.0 if idx == 0 else base_x + 118.0
-				double_lbl.position = Vector2(double_x, stat_y["dmg"])
-				double_lbl.size = Vector2(60.0, 22)
-				double_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		if atk_weapon_badge_panel != null:
-			atk_weapon_badge_panel.position = Vector2(left_col_x, stat_y["weapon"] - 4.0)
-			atk_weapon_badge_panel.size = Vector2(56.0, 26.0)
-			var atk_badge_label := atk_weapon_badge_panel.get_node_or_null("Text") as Label
-			if atk_badge_label != null:
-				atk_badge_label.size = atk_weapon_badge_panel.size
-		if atk_weapon_pair_frame != null:
-			atk_weapon_pair_frame.position = Vector2(left_col_x - 6.0, stat_y["weapon"] - 6.0)
-			atk_weapon_pair_frame.size = Vector2(96.0, 30.0)
-			var atk_bevel_top := atk_weapon_pair_frame.get_node_or_null("BevelTop") as ColorRect
-			if atk_bevel_top != null:
-				atk_bevel_top.position = Vector2(4, 3)
-				atk_bevel_top.size = Vector2(atk_weapon_pair_frame.size.x - 8.0, 2.0)
-			var atk_bevel_bottom := atk_weapon_pair_frame.get_node_or_null("BevelBottom") as ColorRect
-			if atk_bevel_bottom != null:
-				atk_bevel_bottom.position = Vector2(4, atk_weapon_pair_frame.size.y - 5.0)
-				atk_bevel_bottom.size = Vector2(atk_weapon_pair_frame.size.x - 8.0, 2.0)
-		if atk_weapon_icon_panel != null:
-			atk_weapon_icon_panel.position = Vector2(left_col_x + 62.0, stat_y["weapon"] - 4.0)
-			atk_weapon_icon_panel.size = Vector2(26.0, 26.0)
-			var atk_glow := atk_weapon_icon_panel.get_node_or_null("Glow") as Panel
-			if atk_glow != null:
-				atk_glow.position = Vector2(2, 2)
-				atk_glow.size = Vector2(22, 22)
-		if def_weapon_badge_panel != null:
-			def_weapon_badge_panel.position = Vector2(right_col_x + col_w - 56.0, stat_y["weapon"] - 4.0)
-			def_weapon_badge_panel.size = Vector2(56.0, 26.0)
-			var def_badge_label := def_weapon_badge_panel.get_node_or_null("Text") as Label
-			if def_badge_label != null:
-				def_badge_label.size = def_weapon_badge_panel.size
-		if def_weapon_pair_frame != null:
-			def_weapon_pair_frame.position = Vector2(right_col_x + col_w - 90.0, stat_y["weapon"] - 6.0)
-			def_weapon_pair_frame.size = Vector2(96.0, 30.0)
-			var def_bevel_top := def_weapon_pair_frame.get_node_or_null("BevelTop") as ColorRect
-			if def_bevel_top != null:
-				def_bevel_top.position = Vector2(4, 3)
-				def_bevel_top.size = Vector2(def_weapon_pair_frame.size.x - 8.0, 2.0)
-			var def_bevel_bottom := def_weapon_pair_frame.get_node_or_null("BevelBottom") as ColorRect
-			if def_bevel_bottom != null:
-				def_bevel_bottom.position = Vector2(4, def_weapon_pair_frame.size.y - 5.0)
-				def_bevel_bottom.size = Vector2(def_weapon_pair_frame.size.x - 8.0, 2.0)
-		if def_weapon_icon_panel != null:
-			def_weapon_icon_panel.position = Vector2(right_col_x + col_w - 88.0, stat_y["weapon"] - 4.0)
-			def_weapon_icon_panel.size = Vector2(26.0, 26.0)
-			var def_glow := def_weapon_icon_panel.get_node_or_null("Glow") as Panel
-			if def_glow != null:
-				def_glow.position = Vector2(2, 2)
-				def_glow.size = Vector2(22, 22)
-	for lbl in [forecast_atk_name, forecast_atk_hp, forecast_atk_dmg, forecast_atk_hit, forecast_atk_crit, forecast_atk_weapon, forecast_atk_adv, forecast_atk_double, forecast_def_name, forecast_def_hp, forecast_def_dmg, forecast_def_hit, forecast_def_crit, forecast_def_weapon, forecast_def_adv, forecast_def_double]:
-		if lbl is Label:
-			_style_tactical_label(lbl as Label, TACTICAL_UI_TEXT, 23, 3)
-	for name_lbl in [forecast_atk_name, forecast_def_name]:
-		if name_lbl is Label:
-			_style_tactical_label(name_lbl as Label, Color(1.0, 0.90, 0.54), 24, 4)
-	if forecast_atk_name != null:
-		forecast_atk_name.add_theme_color_override("font_color", Color(1.0, 0.88, 0.52))
-	if forecast_def_name != null:
-		forecast_def_name.add_theme_color_override("font_color", Color(0.86, 0.92, 1.0))
-	for hp_lbl in [forecast_atk_hp, forecast_def_hp]:
-		if hp_lbl is Label:
-			_style_tactical_label(hp_lbl as Label, Color(0.90, 0.96, 0.92), 21, 3)
-	for hit_lbl in [forecast_atk_hit, forecast_def_hit]:
-		if hit_lbl is Label:
-			_style_tactical_label(hit_lbl as Label, Color(0.57, 0.94, 1.0), 20, 3)
-	if forecast_atk_dmg != null:
-		_style_tactical_label(forecast_atk_dmg, Color(1.0, 0.72, 0.49), 20, 3)
-	if forecast_def_dmg != null:
-		_style_tactical_label(forecast_def_dmg, Color(0.67, 0.87, 1.0), 20, 3)
-	for crit_lbl in [forecast_atk_crit, forecast_def_crit]:
-		if crit_lbl is Label:
-			_style_tactical_label(crit_lbl as Label, Color(1.0, 0.84, 0.38), 20, 3)
-	for weapon_lbl in [forecast_atk_weapon, forecast_def_weapon]:
-		if weapon_lbl is Label:
-			_style_tactical_label(weapon_lbl as Label, Color(0.93, 0.91, 0.80), 20, 3)
-	if forecast_atk_weapon != null:
-		forecast_atk_weapon.add_theme_color_override("font_color", Color(1.0, 0.84, 0.68))
-	if forecast_def_weapon != null:
-		forecast_def_weapon.add_theme_color_override("font_color", Color(0.78, 0.90, 1.0))
-	for adv_lbl in [forecast_atk_adv, forecast_def_adv]:
-		if adv_lbl is Label:
-			_style_tactical_label(adv_lbl as Label, Color(0.76, 0.96, 0.62), 19, 3)
-	for dbl in [forecast_atk_double, forecast_def_double]:
-		if dbl is Label:
-			_style_tactical_label(dbl as Label, Color(0.48, 0.90, 1.0), 23, 3)
-	var forecast_confirm := get_node_or_null("UI/CombatForecastPanel/ConfirmButton") as Button
-	var forecast_cancel := get_node_or_null("UI/CombatForecastPanel/CancelButton") as Button
-	if forecast_confirm != null:
-		_style_tactical_button(forecast_confirm, "ATTACK", true, 22)
-	if forecast_cancel != null:
-		_style_tactical_button(forecast_cancel, "BACK", false, 22)
-	if forecast_talk_btn != null:
-		_style_tactical_button(forecast_talk_btn, "TALK", false, 20)
-	if forecast_ability_btn != null:
-		_style_tactical_button(forecast_ability_btn, "ABILITY", false, 20)
-	if forecast_instruction_label != null:
-		forecast_instruction_label.position = Vector2(24, 262)
-		forecast_instruction_label.size = Vector2(492, 20)
-		forecast_instruction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		forecast_instruction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_style_tactical_label(forecast_instruction_label, Color(0.84, 0.84, 0.90), 14, 2)
-	if forecast_reaction_label != null:
-		forecast_reaction_label.position = Vector2(24, 284)
-		forecast_reaction_label.size = Vector2(492, 18)
-		forecast_reaction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		forecast_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_style_tactical_label(forecast_reaction_label, Color(0.96, 0.85, 0.57), 13, 2)
-	if forecast_confirm != null:
-		forecast_confirm.position = Vector2(110, 306)
-		forecast_confirm.size = Vector2(158, 42)
-	if forecast_cancel != null:
-		forecast_cancel.position = Vector2(282, 306)
-		forecast_cancel.size = Vector2(158, 42)
-	if forecast_talk_btn != null and forecast_ability_btn != null:
-		forecast_talk_btn.position = Vector2(24, 372)
-		forecast_talk_btn.size = Vector2(96, 42)
-		forecast_ability_btn.position = Vector2(126, 372)
-		forecast_ability_btn.size = Vector2(96, 42)
-	elif forecast_talk_btn != null:
-		forecast_talk_btn.position = Vector2(24, 372)
-		forecast_talk_btn.size = Vector2(96, 42)
-	elif forecast_ability_btn != null:
-		forecast_ability_btn.position = Vector2(24, 372)
-		forecast_ability_btn.size = Vector2(96, 42)
-
-	if inventory_panel != null:
-		_style_tactical_panel(inventory_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-		var inv_item_info := inventory_panel.get_node_or_null("Panel") as Panel
-		_style_inventory_item_info_backdrop(inv_item_info)
-	if inv_desc_label != null:
-		_style_tactical_richtext(inv_desc_label, 21, 26)
-		inv_desc_label.add_theme_constant_override("line_separation", 7)
-		inv_desc_label.scroll_active = false
-		inv_desc_label.z_index = 2
-	_style_tactical_button(equip_button, "EQUIP", false, 18)
-	_style_tactical_button(use_button, "USE", false, 18)
-	var inv_close := get_node_or_null("UI/InventoryPanel/CloseButton") as Button
-	if inv_close != null:
-		_style_tactical_button(inv_close, "CLOSE", false, 18)
-	var inv_item_list := get_node_or_null("UI/InventoryPanel/ItemList") as ItemList
-	_style_tactical_item_list(inv_item_list)
-	_apply_inventory_panel_item_list_extra_margins(inv_item_list)
-	_style_tactical_item_list(get_node_or_null("UI/RosterPanel/RosterList") as ItemList)
-	_style_tactical_item_list(loot_item_list)
-
-	if loot_window != null:
-		_style_tactical_panel(loot_window, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-		_ensure_loot_item_info_ui()
-	if loot_desc_label != null:
-		_style_tactical_richtext(loot_desc_label, 21, 26)
-		loot_desc_label.add_theme_constant_override("line_separation", 7)
-	if close_loot_button != null:
-		_style_tactical_button(close_loot_button, "CLAIM ALL", true, 20)
-
-	if support_tracker_panel != null:
-		_style_tactical_panel(support_tracker_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-	if support_list_text != null:
-		_style_tactical_richtext(support_list_text, 18, 20)
-	if close_support_btn != null:
-		_style_tactical_button(close_support_btn, "CLOSE", false, 18)
-
-	if trade_popup != null:
-		_style_tactical_panel(trade_popup, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-	if trade_popup_btn != null:
-		_style_tactical_button(trade_popup_btn, "TRADE", false, 18)
-	if popup_talk_btn != null:
-		_style_tactical_button(popup_talk_btn, "SUPPORT TALK", false, 16)
-
-	if trade_window != null:
-		_style_tactical_panel(trade_window, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-	for lbl in [trade_left_name, trade_right_name]:
-		if lbl is Label:
-			_style_tactical_label(lbl as Label, TACTICAL_UI_ACCENT, 20, 3)
-	if trade_close_btn != null:
-		_style_tactical_button(trade_close_btn, "CLOSE", false, 18)
-	_style_tactical_item_list(trade_left_list)
-	_style_tactical_item_list(trade_right_list)
-
-	if talk_panel != null:
-		_style_tactical_panel(talk_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-	if talk_name != null:
-		_style_tactical_label(talk_name, TACTICAL_UI_ACCENT, 22, 4)
-	if talk_text != null:
-		_style_tactical_richtext(talk_text, 19, 21)
-	if talk_next_btn != null:
-		_style_tactical_button(talk_next_btn, "CONTINUE", true, 18)
-
-	if level_up_panel != null:
-		_style_tactical_panel(level_up_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 14)
-	if level_up_title != null:
-		_style_tactical_label(level_up_title, TACTICAL_UI_ACCENT, 30, 5)
-	if level_up_stats != null:
-		_style_tactical_richtext(level_up_stats, 18, 20)
-
-	if game_over_panel != null:
-		_style_tactical_panel(game_over_panel, Color(0.06, 0.05, 0.04, 0.96), TACTICAL_UI_BORDER, 3, 16)
-	if result_label != null:
-		_style_tactical_label(result_label, TACTICAL_UI_ACCENT, 66, 6)
-	_style_tactical_button(restart_button, restart_button.text if restart_button != null else "PLAY AGAIN", true, 24)
-	_style_tactical_button(continue_button, continue_button.text if continue_button != null else "CONTINUE", false, 24)
-
-	var roster_panel := get_node_or_null("UI/RosterPanel") as Panel
-	var count_text := get_node_or_null("UI/RosterPanel/DeployCountLabel") as Label
-	var roster_items := get_node_or_null("UI/RosterPanel/RosterList") as ItemList
-	var build_button := get_node_or_null("UI/RosterPanel/BuildButton") as Button
-	var deploy_bond_panel: Panel = get_node_or_null("UI/RosterPanel/DeployBondPanel") as Panel
-	var deploy_bond_block_h: float = TACTICAL_DEPLOY_ROSTER_BONDS_H
-	if roster_panel != null and show_deployment_rail and roster_panel.get_meta("deploy_bond_hidden", false):
-		deploy_bond_block_h = 0.0
-	if roster_panel != null:
-		if show_deployment_rail:
-			if deploy_roster_toggle_tween != null:
-				deploy_roster_toggle_tween.kill()
-				deploy_roster_toggle_tween = null
-		roster_panel.visible = show_deployment_rail
-		roster_panel.scale = hud_scale_vec
-		# Pre-battle: objective HUD is hidden â€” don't force the 252px floor; use full-height column.
-		var roster_top: float = (TACTICAL_UI_MARGIN if show_deployment_rail else maxf(252.0, objective_panel_render_bottom))
-		var roster_w: float = TACTICAL_DEPLOY_ROSTER_PANEL_WIDTH if show_deployment_rail else (TACTICAL_UI_RAIL_WIDTH - 24.0)
-		var roster_bottom_px: float = (108.0 * hud_scale) if not show_deployment_rail else (TACTICAL_DEPLOY_ROSTER_VIEWPORT_BOTTOM_RESERVE * hud_scale)
-		var roster_base_h: float = max(180.0, (vp_size.y - roster_top - roster_bottom_px) / hud_scale)
-		if show_deployment_rail:
-			var min_deploy_h: float = 124.0 + deploy_bond_block_h + TACTICAL_DEPLOY_ROSTER_MIN_LIST_H
-			roster_base_h = maxf(roster_base_h, min_deploy_h)
-		roster_panel.size = Vector2(roster_w, roster_base_h)
-		var roster_visual_w: float = roster_w * hud_scale
-		var roster_left: float = clampf(right_x + 12.0, 8.0, maxf(8.0, vp_size.x - roster_visual_w - 8.0))
-		roster_panel.position.y = roster_top
-		roster_panel.set_meta("deploy_rail_expanded_x", roster_left)
-		roster_panel.set_meta("deploy_rail_collapsed_x", vp_size.x + 24.0)
-		_style_tactical_panel(roster_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-		# Pre-battle: let the player hide the deploy column for an unobstructed map view (slide + tween, same feel as field log).
-		var d_toggle := _ensure_deploy_roster_toggle_button()
-		if d_toggle != null and show_deployment_rail:
-			d_toggle.visible = true
-			d_toggle.scale = hud_scale_vec
-			d_toggle.z_index = 28
-			var tog_w: float = 132.0 * hud_scale
-			var tog_h: float = 38.0 * hud_scale
-			d_toggle.size = Vector2(tog_w, tog_h)
-			d_toggle.position.y = roster_top
-			d_toggle.set_meta("deploy_rail_btn_expanded_x", maxf(8.0, roster_left - tog_w - 10.0))
-			d_toggle.set_meta("deploy_rail_btn_collapsed_x", vp_size.x - tog_w - TACTICAL_UI_MARGIN)
-			_apply_deployment_rail_visibility(false)
-		elif d_toggle != null:
-			if deploy_roster_toggle_tween != null:
-				deploy_roster_toggle_tween.kill()
-				deploy_roster_toggle_tween = null
-			d_toggle.visible = false
-	if count_text != null and roster_panel != null:
-		count_text.position = Vector2(16, 16)
-		count_text.size = Vector2(roster_panel.size.x - 32.0, 24.0)
-		count_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_style_tactical_label(count_text, TACTICAL_UI_ACCENT, 21, 4)
-	if roster_items != null and roster_panel != null:
-		roster_items.position = Vector2(12, 50)
-		if show_deployment_rail:
-			# Multi-line rows: default ItemList uses trim+ellipsis (one line); that hides Lv/class/weapon/stats.
-			roster_items.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-			roster_items.icon_mode = ItemList.ICON_MODE_TOP
-			roster_items.max_text_lines = 4
-			roster_items.fixed_icon_size = Vector2i(40, 40)
-			roster_items.add_theme_font_size_override("font_size", 17)
-			roster_items.add_theme_constant_override("line_separation", 2)
-			roster_items.add_theme_constant_override("v_separation", 8)
-		else:
-			roster_items.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			roster_items.icon_mode = ItemList.ICON_MODE_LEFT
-			roster_items.max_text_lines = 1
-			roster_items.fixed_icon_size = Vector2i(40, 40)
-			roster_items.add_theme_font_size_override("font_size", 19)
-			roster_items.remove_theme_constant_override("line_separation")
-			roster_items.remove_theme_constant_override("v_separation")
-		if show_deployment_rail:
-			var btn_top_r: float = roster_panel.size.y - 58.0
-			var readout_top_r: float = btn_top_r - 8.0 - deploy_bond_block_h
-			# Must not use min height larger than free space or the list draws over the bond panel.
-			var list_h_r: float = readout_top_r - 50.0 - 8.0
-			roster_items.size = Vector2(roster_panel.size.x - 24.0, maxf(40.0, list_h_r))
-			roster_items.z_index = 0
-		else:
-			roster_items.size = Vector2(roster_panel.size.x - 24.0, max(180.0, roster_panel.size.y - 122.0))
-	if build_button != null and roster_panel != null:
-		build_button.position = Vector2(12, roster_panel.size.y - 58.0)
-		build_button.size = Vector2(roster_panel.size.x - 24.0, 46.0)
-		_style_tactical_button(build_button, build_button.text if build_button.text != "" else "BUILD DEFENSES", false, 20)
-	# Nested under RosterPanel (CanvasLayer cannot lay out Control children reliably). PreBattleState toggles visibility.
-	if deploy_bond_panel != null and roster_panel != null and roster_panel.visible and show_deployment_rail:
-		if deploy_bond_block_h <= 0.01:
-			deploy_bond_panel.visible = false
-		else:
-			deploy_bond_panel.visible = true
-			deploy_bond_panel.scale = Vector2.ONE
-			deploy_bond_panel.clip_contents = true
-			deploy_bond_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-			deploy_bond_panel.anchor_right = 0.0
-			deploy_bond_panel.anchor_bottom = 0.0
-			var btn_top_b: float = roster_panel.size.y - 58.0
-			var readout_top_b: float = btn_top_b - 8.0 - deploy_bond_block_h
-			deploy_bond_panel.position = Vector2(12, readout_top_b)
-			deploy_bond_panel.size = Vector2(roster_panel.size.x - 24.0, deploy_bond_block_h)
-			deploy_bond_panel.z_index = 2
-			# Opaquer than TACTICAL_UI_BG_SOFT so list text cannot show through when stacking.
-			_style_tactical_panel(deploy_bond_panel, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER_MUTED, 1, 8)
-	var start_button := get_node_or_null("UI/StartBattleButton") as Button
-	if start_button != null:
-		start_button.z_index = 26
-		start_button.scale = hud_scale_vec
-		var start_button_y: float = vp_size.y - (78.0 * hud_scale) - TACTICAL_UI_BOTTOM_EDGE_MARGIN - (12.0 * hud_scale)
-		start_button_y = maxf(110.0, start_button_y)
-		# When the roster is hidden, sit lower than dead-center so the map reads clearer (~200px at 1:1 HUD scale).
-		var start_button_mid_y: float = (vp_size.y - (78.0 * hud_scale)) * 0.5
-		start_button_mid_y += 200.0 * hud_scale
-		start_button_mid_y = minf(
-			start_button_mid_y,
-			vp_size.y - (78.0 * hud_scale) - TACTICAL_UI_BOTTOM_EDGE_MARGIN - (8.0 * hud_scale)
-		)
-		var start_button_x: float = ((vp_size.x - (460.0 * hud_scale)) * 0.5) + (24.0 * hud_scale)
-		start_button.position = Vector2(start_button_x, start_button_y)
-		start_button.size = Vector2(460.0, 78.0)
-		start_button.visible = show_deployment_rail
-		start_button.set_meta("deploy_start_expanded_y", start_button_y)
-		start_button.set_meta("deploy_start_collapsed_y", start_button_mid_y)
-		_style_tactical_button(start_button, start_button.text if start_button.text != "" else "START BATTLE", true, 42)
+	TacticalHudLayoutHelpers.apply_tactical_ui_overhaul(self)
 
 
 func _coop_remote_sync_prebattle_ready(body: Dictionary) -> void:
@@ -3828,63 +3028,17 @@ func _sanitize_player_phase_active_unit_for_mock_coop_ownership() -> void:
 
 ## One-line BBCode for unit stats panel when mock co-op ownership applies; empty otherwise.
 func _mock_coop_unit_ownership_bbcode_line_for_panel(unit: Node2D) -> String:
-	if unit == null or not is_instance_valid(unit):
-		return ""
-	if not is_mock_coop_unit_ownership_active():
-		return ""
-	if not _is_friendly_unit_on_field(unit):
-		return ""
-	var o: String = get_mock_coop_unit_owner_for_unit(unit)
-	if o == MOCK_COOP_OWNER_REMOTE:
-		return "[color=orange][b]Partner Unit[/b][/color] (co-op)\n"
-	if o == MOCK_COOP_OWNER_LOCAL:
-		return "[color=cyan][b]Your Unit[/b][/color] (co-op)\n"
-	return ""
+	return BattleFieldTurnFlowHelpers.mock_coop_unit_ownership_bbcode_line_for_panel(self, unit)
 
 
 ## Mock co-op + player phase: fielded local/partner counts (valid=false otherwise).
 func _get_mock_coop_player_phase_detachment_counts() -> Dictionary:
-	var out: Dictionary = {"valid": false, "local_total": 0, "local_ready": 0, "partner_fielded": 0}
-	if not is_mock_coop_unit_ownership_active() or current_state != player_state:
-		return out
-	out["valid"] = true
-	var total: int = 0
-	var ready: int = 0
-	var partner_fielded: int = 0
-	for cont in [player_container, ally_container]:
-		if cont == null:
-			continue
-		for u in cont.get_children():
-			if not is_instance_valid(u) or u.is_queued_for_deletion():
-				continue
-			if u.get("current_hp") == null or int(u.current_hp) <= 0:
-				continue
-			if not _is_mock_coop_deployed_player_side_unit(u):
-				continue
-			var own: String = get_mock_coop_unit_owner_for_unit(u)
-			if own == MOCK_COOP_OWNER_LOCAL:
-				total += 1
-				if u.get("is_exhausted") == false:
-					ready += 1
-			elif own == MOCK_COOP_OWNER_REMOTE:
-				partner_fielded += 1
-	out["local_total"] = total
-	out["local_ready"] = ready
-	out["partner_fielded"] = partner_fielded
-	return out
+	return BattleFieldTurnFlowHelpers.get_mock_coop_player_phase_detachment_counts(self)
 
 
 ## True when mock co-op player phase: all local fielded units have acted, partner fielded units remain (placeholder partner-turn gate).
 func is_mock_partner_placeholder_active() -> bool:
-	if not is_mock_coop_unit_ownership_active() or current_state != player_state:
-		return false
-	var c: Dictionary = _get_mock_coop_player_phase_detachment_counts()
-	if not bool(c.get("valid", false)):
-		return false
-	var lt: int = int(c.get("local_total", 0))
-	var lr: int = int(c.get("local_ready", 0))
-	var pf: int = int(c.get("partner_fielded", 0))
-	return lt > 0 and lr == 0 and pf > 0
+	return BattleFieldTurnFlowHelpers.is_mock_partner_placeholder_active(self)
 
 
 ## Player phase: true when at least one local-commandable player unit is fielded and alive, and every such unit has finished acting (is_exhausted).
@@ -3926,91 +3080,24 @@ func _process_mock_partner_placeholder_frame() -> void:
 
 ## Player phase only: BBCode for objective panel â€” local-owned, fielded, alive units; ready = not is_exhausted.
 func _build_mock_coop_player_phase_readiness_bbcode_suffix() -> String:
-	var c: Dictionary = _get_mock_coop_player_phase_detachment_counts()
-	if not bool(c.get("valid", false)):
-		return ""
-	var total: int = int(c.get("local_total", 0))
-	var ready: int = int(c.get("local_ready", 0))
-	var partner_fielded: int = int(c.get("partner_fielded", 0))
-	if total <= 0:
-		return ""
-	var s: String = "\n[color=cyan][b]Co-op â€” Your units ready: %d / %d[/b][/color]" % [ready, total]
-	if partner_fielded > 0:
-		var partner_state: String = "Ready" if _mock_coop_remote_player_phase_ready else "Acting"
-		s += "\n[color=gold][b]Partner commander: %s[/b][/color]" % partner_state
-	if _mock_coop_local_player_phase_ready:
-		s += "\n[color=cyan][font_size=16]You have ended your phase for this turn.[/font_size][/color]"
-		if partner_fielded > 0 and not _mock_coop_remote_player_phase_ready:
-			s += "\n[color=gold][b]Waiting for your partner to proceed to enemy phase.[/b][/color]"
-	elif ready == 0:
-		s += "\n[color=gray][font_size=16]All your fielded units have acted this phase.[/font_size][/color]"
-		if partner_fielded > 0:
-			s += "\n[color=orange][font_size=16]Partner detachment still on the field â€” not under your command. End or Skip phase when you are ready.[/font_size][/color]"
-	elif partner_fielded > 0 and _mock_coop_remote_player_phase_ready:
-		s += "\n[color=gold][font_size=16]Partner is ready. Finish your commands when you are ready.[/font_size][/color]"
-	return s + "\n"
+	return BattleFieldTurnFlowHelpers.build_mock_coop_player_phase_readiness_bbcode_suffix(self)
 
 
 func _update_skip_button_visual_modulate() -> void:
-	var btn: Button = get_node_or_null("UI/SkipButton") as Button
-	if btn == null or not btn.visible:
-		return
-	if not _skip_button_base_modulate_captured:
-		_skip_button_base_modulate = btn.modulate
-		_skip_button_base_modulate_captured = true
-	var m: Color = _skip_button_base_modulate
-	if is_mock_partner_placeholder_active():
-		m *= Color(1.14, 1.12, 0.96, 1.0)
-	var pulse_active: bool = _should_pulse_skip_button_end_turn_nudge()
-	if pulse_active:
-		var t: float = float(Time.get_ticks_msec()) * END_TURN_PULSE_TIME_SCALE
-		var wave: float = 0.5 + 0.5 * sin(t)
-		var wave_scale: float = 0.5 + 0.5 * sin(t * 1.19 + 0.85)
-		var boost: float = 1.0 + END_TURN_PULSE_MOD_DEPTH * wave
-		m *= Color(boost * 1.12, boost * 1.04, boost * 0.78, 1.0)
-		var s: float = END_TURN_PULSE_SCALE_CENTER + END_TURN_PULSE_SCALE_DEPTH * (wave_scale - 0.5) * 2.0
-		btn.pivot_offset = btn.size * 0.5
-		btn.scale = Vector2(s, s)
-	else:
-		btn.scale = Vector2.ONE
-		btn.pivot_offset = Vector2.ZERO
-	btn.modulate = m
+	BattleFieldTurnFlowHelpers.update_skip_button_visual_modulate(self)
 
 
 func _is_mock_coop_deployed_player_side_unit(unit: Node) -> bool:
-	if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
-		return false
-	if unit is CanvasItem and not (unit as CanvasItem).visible:
-		return false
-	if unit.process_mode == Node.PROCESS_MODE_DISABLED:
-		return false
-	return true
+	return BattleFieldTurnFlowHelpers.is_mock_coop_deployed_player_side_unit(self, unit)
 
 
 func _get_mock_coop_deployed_player_side_unit_nodes() -> Array:
-	var out: Array = []
-	if player_container != null:
-		for u in player_container.get_children():
-			if _is_mock_coop_deployed_player_side_unit(u):
-				out.append(u)
-	if ally_container != null:
-		for u in ally_container.get_children():
-			if _is_mock_coop_deployed_player_side_unit(u):
-				out.append(u)
-	return out
+	return BattleFieldTurnFlowHelpers.get_mock_coop_deployed_player_side_unit_nodes(self)
 
 
 ## All player-side units in tree order (player_container then ally_container), including benched/hidden â€” for locked mock co-op meta.
 func _iter_all_player_side_unit_nodes_for_mock_coop() -> Array:
-	var out: Array = []
-	for cont in [player_container, ally_container]:
-		if cont == null:
-			continue
-		for u in cont.get_children():
-			if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
-				continue
-			out.append(u)
-	return out
+	return BattleFieldTurnFlowHelpers.iter_all_player_side_unit_nodes_for_mock_coop(self)
 
 
 func _strip_mock_coop_ownership_meta_from_player_side() -> void:
@@ -6082,19 +5169,20 @@ func _bbcode_escape_user_text(s: String) -> String:
 	return str(s).replace("[", "[lb]")
 
 func _item_detail_soft_rule() -> String:
-	return "[color=#5c4f41] Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â· Â·[/color]"
+	# Middle dots via \u escapes — avoids mojibake if the .gd file is mis-saved as Latin-1.
+	return "[color=#5c4f41]%s[/color]" % (" \u00b7").repeat(18)
 
 func _item_detail_section_heading(title: String) -> String:
-	return "[font_size=20][color=#c4943a]â– [/color][b][color=#f2d680]" + str(title).to_upper() + "[/color][/b][/font_size]"
+	return "[font_size=20][color=#c4943a]\u25b6 [/color][b][color=#f2d680]" + str(title).to_upper() + "[/color][/b][/font_size]"
 
 func _item_detail_callout(accent_hex: String, body_hex: String, escaped_msg: String) -> String:
-	return "[font_size=19][color=%s]â–¸ [/color][color=%s]%s[/color][/font_size]" % [accent_hex, body_hex, escaped_msg]
+	return "[font_size=19][color=%s]\u25b8 [/color][color=%s]%s[/color][/font_size]" % [accent_hex, body_hex, escaped_msg]
 
 func _item_detail_line(lbl: String, value_bb: String) -> String:
 	return "[font_size=19][color=#c4bba8][b]" + lbl + "[/b][/color][color=#5a5248]   [/color]" + value_bb + "[/font_size]"
 
 func _item_detail_effect_row(body_color: String, escaped_inner: String) -> String:
-	return "[font_size=19]   [color=#e0b858]â—†[/color][color=#5a5248]   [/color][color=%s]%s[/color][/font_size]" % [body_color, escaped_inner]
+	return "[font_size=19]   [color=#e0b858]\u25c6[/color][color=#5a5248]   [/color][color=%s]%s[/color][/font_size]" % [body_color, escaped_inner]
 
 
 func _weapon_compare_delta_fragments_bbcode(sel: WeaponData, equipped: WeaponData) -> PackedStringArray:
@@ -6118,7 +5206,7 @@ func _weapon_stat_compare_line_bbcode(sel: WeaponData, equipped: WeaponData) -> 
 	var frags: PackedStringArray = _weapon_compare_delta_fragments_bbcode(sel, equipped)
 	if frags.is_empty():
 		return ""
-	var sep: String = "[color=#5a5248] Â· [/color]"
+	var sep: String = "[color=#5a5248] \u00b7 [/color]"
 	return (
 		"[font_size=19][color=#b8a890]vs equipped[/color]%s%s[/font_size]"
 		% [sep, sep.join(frags)]
@@ -6199,11 +5287,11 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 
 	lines.append("[font_size=28][b][color=%s]%s[/color][/b][/font_size]" % [rarity_hex, str(rarity).to_upper()])
 	var meta: String = (
-		"[font_size=20][color=#d4a85c]â¬¥ [/color][color=%s]Value[/color][color=#5a5248]   [/color][color=%s][b]%d[/b][/color][color=%s]g[/color]"
+		"[font_size=20][color=#d4a85c]\u2022 [/color][color=%s]Value[/color][color=#5a5248]   [/color][color=%s][b]%d[/b][/color][color=%s]g[/color]"
 		% [C_MUTED, C_VALUE, cost, C_DIM]
 	)
 	if stack_count > 1:
-		meta += "[color=#5a5248]        [/color][color=#b89858]â¬§ [/color][color=%s]Stack[/color][color=#5a5248]   [/color][color=%s][b]Ã—%d[/b][/color]" % [C_MUTED, C_BODY, stack_count]
+		meta += "[color=#5a5248]        [/color][color=#b89858]\u2022 [/color][color=%s]Stack[/color][color=#5a5248]   [/color][color=%s][b]\u00d7%d[/b][/color]" % [C_MUTED, C_BODY, stack_count]
 	meta += "[/font_size]"
 	lines.append(meta)
 	lines.append(_item_detail_soft_rule())
@@ -6211,7 +5299,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 
 	if item is WeaponData:
 		if item.get("current_durability") != null and item.current_durability <= 0:
-			lines.append("[font_size=20][b][color=%s]Broken â€” half effectiveness. Repair to restore full power.[/color][/b][/font_size]" % C_BAD)
+			lines.append("[font_size=20][b][color=%s]Broken \u2014 half effectiveness. Repair to restore full power.[/color][/b][/font_size]" % C_BAD)
 			lines.append("")
 
 		lines.append(_item_detail_section_heading("Combat stats"))
@@ -6225,7 +5313,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 		lines.append(
 			_item_detail_line(
 				"Weapon",
-				"[color=%s]%s[/color][color=%s]   Â·   [/color][color=%s]%s[/color]"
+				"[color=%s]%s[/color][color=%s]   \u00b7   [/color][color=%s]%s[/color]"
 				% [C_BODY, w_type_str, C_DIM, C_DIM, d_type_str]
 			)
 		)
@@ -6238,7 +5326,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 		lines.append(
 			_item_detail_line(
 				"Range",
-				"[color=%s]%d[/color][color=%s]â€“[/color][color=%s]%d[/color]"
+				"[color=%s]%d[/color][color=%s]\u2013[/color][color=%s]%d[/color]"
 				% [C_BODY, int(item.min_range), C_DIM, C_BODY, int(item.max_range)]
 			)
 		)
@@ -6267,9 +5355,9 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 			lines.append("")
 			var usable: bool = _unit_can_use_item_for_ui(viewer_unit, item)
 			if usable:
-				lines.append("[font_size=20][color=%s][b]Equippable[/b][/color][color=#5a5248] â€” [/color][color=%s]This unit can use this weapon.[/color][/font_size]" % [C_OK, C_BODY])
+				lines.append("[font_size=20][color=%s][b]Equippable[/b][/color][color=#5a5248] \u2014 [/color][color=%s]This unit can use this weapon.[/color][/font_size]" % [C_OK, C_BODY])
 			else:
-				lines.append("[font_size=20][color=%s][b]Locked[/b][/color][color=#5a5248] â€” [/color][color=%s]This unit cannot equip this weapon.[/color][/font_size]" % [C_BAD, C_MUTED])
+				lines.append("[font_size=20][color=%s][b]Locked[/b][/color][color=#5a5248] \u2014 [/color][color=%s]This unit cannot equip this weapon.[/color][/font_size]" % [C_BAD, C_MUTED])
 
 		var effects: Array = []
 		if item.get("is_healing_staff") == true:
@@ -6334,7 +5422,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 			_item_detail_callout(
 				"#a89878",
 				"#e8dfd4",
-				"Unclassified treasure â€” still worth its weight on the market."
+				"Unclassified treasure \u2014 still worth its weight on the market."
 			)
 		)
 
@@ -6350,7 +5438,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 				lines.append("")
 				continue
 			lines.append(
-				"[font_size=19][color=#b8a890]â–¸[/color][color=#5a5248]  [/color][color=%s]%s[/color][/font_size]"
+				"[font_size=19][color=#b8a890]\u25b8[/color][color=#5a5248]  [/color][color=%s]%s[/color][/font_size]"
 				% [C_BODY, _bbcode_escape_user_text(row)]
 			)
 	else:
@@ -6358,7 +5446,7 @@ func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: 
 			_item_detail_callout(
 				"#7a7064",
 				"#c8beb2",
-				"No written notes for this entry â€” check its name in the list or try it in battle."
+				"No written notes for this entry \u2014 check its name in the list or try it in battle."
 			)
 		)
 

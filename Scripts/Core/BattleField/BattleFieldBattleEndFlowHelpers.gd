@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
+
 
 static func remove_dead_player_dragon(field, unit: Node2D) -> void:
 	if unit == null:
@@ -274,82 +276,7 @@ static func trigger_game_over(field, result: String) -> void:
 		ArenaManager.last_match_mmr_change = mmr_change
 		ArenaManager.last_match_new_mmr = ArenaManager.get_local_mmr()
 
-	field.result_label.text = normalized_result
-	var coop_defeat_return_to_charter: bool = (
-		normalized_result != "VICTORY"
-		and CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
-		and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-	)
-	if normalized_result == "VICTORY":
-		field.result_label.modulate = Color(0.2, 0.8, 0.2)
-		field.continue_button.visible = true
-		field.restart_button.visible = false
-		if field.is_arena_match:
-			field.continue_button.text = "Return to City"
-		else:
-			field.continue_button.text = "Continue"
-	else:
-		field.result_label.modulate = Color(0.8, 0.2, 0.2)
-		field.continue_button.visible = coop_defeat_return_to_charter
-		field.restart_button.visible = not coop_defeat_return_to_charter
-		if coop_defeat_return_to_charter:
-			field.continue_button.text = "Return to Charter"
-		elif field.is_arena_match:
-			field.restart_button.text = "Leave Arena"
-
-	var base_clear = 500 if normalized_result == "VICTORY" else 0
-	var ability_pts = field.ability_triggers_count * 50
-	var kill_pts = field.enemy_kills_count * 25
-	var p_death_pen = field.player_deaths_count * -250
-	var a_death_pen = field.ally_deaths_count * -100
-
-	var raw_score = base_clear + ability_pts + kill_pts + p_death_pen + a_death_pen
-
-	var hero_level = 1
-	for u in field.player_container.get_children():
-		if u.get("is_custom_avatar") == true:
-			hero_level = u.level
-			break
-
-	var max_allowed = hero_level * 1000
-
-	var final_score = clamp(raw_score, 1, max_allowed)
-
-	CampaignManager.global_fame += final_score
-
-	var score_label = field.game_over_panel.get_node_or_null("ScoreBreakdown")
-	if score_label == null:
-		score_label = RichTextLabel.new()
-		score_label.name = "ScoreBreakdown"
-		score_label.bbcode_enabled = true
-
-		score_label.add_theme_font_size_override("normal_font_size", 32)
-		score_label.add_theme_font_size_override("bold_font_size", 32)
-
-		score_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-		score_label.custom_minimum_size = Vector2(800, 500)
-		score_label.position = Vector2((field.game_over_panel.size.x - 800) / 2.0, field.result_label.position.y + 70)
-		field.game_over_panel.add_child(score_label)
-
-	var txt = "[center]"
-	if base_clear > 0: txt += "Map Clear: [color=lime]+500[/color]\n"
-	if kill_pts > 0: txt += "Enemies Defeated (" + str(field.enemy_kills_count) + "): [color=lime]+" + str(kill_pts) + "[/color]\n"
-	if ability_pts > 0: txt += "Abilities Executed (" + str(field.ability_triggers_count) + "): [color=lime]+" + str(ability_pts) + "[/color]\n"
-
-	if p_death_pen < 0: txt += "Player Units Lost (" + str(field.player_deaths_count) + "): [color=red]" + str(p_death_pen) + "[/color]\n"
-	if a_death_pen < 0: txt += "Allies Lost (" + str(field.ally_deaths_count) + "): [color=orange]" + str(a_death_pen) + "[/color]\n"
-
-	txt += "------------------\n"
-	txt += "Total Score: " + str(final_score) + "\n"
-
-	if raw_score > max_allowed:
-		txt += "[color=yellow](Capped at Hero Level Limit: " + str(max_allowed) + ")[/color]\n"
-
-	txt += "\n[color=gold]GLOBAL FAME: " + str(CampaignManager.global_fame) + "[/color][/center]"
-
-	score_label.text = txt
-	field.game_over_panel.visible = true
+	BattleResultPresentationHelpers.present_game_over_panel(field, normalized_result)
 
 
 static func on_restart_button_pressed(field) -> void:
