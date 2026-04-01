@@ -298,6 +298,7 @@ func _apply_overhead_bar_visuals() -> void:
 	if exp_bar != null:
 		exp_bar.add_theme_stylebox_override("background", UnitBarVisuals.exp_track())
 		exp_bar.add_theme_stylebox_override("fill", UnitBarVisuals.exp_fill())
+	_layout_overhead_bars()
 	_style_level_badge()
 
 
@@ -324,6 +325,56 @@ func _style_level_badge() -> void:
 	plate.shadow_size = 2
 	plate.shadow_offset = Vector2(0, 1)
 	level_badge.add_theme_stylebox_override("normal", plate)
+
+
+func _target_overhead_bar_visual_width() -> float:
+	# Keep card bars visually consistent across units; per-sprite sizing looked uneven in combat.
+	return UnitBarVisuals.overhead_bar_visual_width_px()
+
+
+func _layout_overhead_bars() -> void:
+	if health_bar == null:
+		return
+
+	var hp_scale: Vector2 = UnitBarVisuals.overhead_hp_scale()
+	var hp_scale_x: float = maxf(absf(hp_scale.x), 0.001)
+	var hp_scale_y: float = maxf(absf(hp_scale.y), 0.001)
+	var hp_visual_w: float = _target_overhead_bar_visual_width()
+	var hp_unscaled_w: float = hp_visual_w / hp_scale_x
+	var hp_unscaled_h: float = UnitBarVisuals.overhead_hp_height_px()
+	var hp_visual_h: float = hp_unscaled_h * hp_scale_y
+	var sprite_top_y: float = float(DEFAULT_CELL_SIZE) * 0.5
+	if sprite != null and sprite.texture != null:
+		var sprite_visual_h: float = float(sprite.texture.get_height()) * absf(sprite.scale.y)
+		sprite_top_y = sprite.position.y - (sprite_visual_h * 0.5)
+	var desired_hp_y: float = sprite_top_y - hp_visual_h - UnitBarVisuals.overhead_head_gap_px()
+	var hp_pos_y: float = clampf(desired_hp_y, -UnitBarVisuals.overhead_top_margin_px(), -4.0)
+
+	health_bar.scale = hp_scale
+	health_bar.custom_minimum_size = Vector2(hp_unscaled_w, hp_unscaled_h)
+	health_bar.size = health_bar.custom_minimum_size
+	health_bar.position = Vector2(
+		(DEFAULT_CELL_SIZE - hp_visual_w) * 0.5,
+		hp_pos_y
+	)
+
+	if exp_bar != null:
+		var exp_scale: Vector2 = UnitBarVisuals.overhead_exp_scale()
+		var exp_scale_x: float = maxf(absf(exp_scale.x), 0.001)
+		var exp_visual_w: float = hp_visual_w * UnitBarVisuals.overhead_exp_width_ratio()
+		var exp_unscaled_w: float = exp_visual_w / exp_scale_x
+		var exp_unscaled_h: float = UnitBarVisuals.overhead_exp_height_px()
+
+		exp_bar.scale = exp_scale
+		exp_bar.custom_minimum_size = Vector2(exp_unscaled_w, exp_unscaled_h)
+		exp_bar.size = exp_bar.custom_minimum_size
+		exp_bar.position = Vector2(
+			(DEFAULT_CELL_SIZE - exp_visual_w) * 0.5,
+			health_bar.position.y + hp_visual_h + UnitBarVisuals.overhead_exp_gap_px()
+		)
+
+	if health_bar_delay != null:
+		_sync_health_bar_delay_layout(false)
 
 
 func _ensure_health_bar_delay() -> void:
@@ -823,6 +874,7 @@ func setup_from_save_data(save_dict: Dictionary) -> void:
 	if exp_bar:
 		exp_bar.max_value = get_exp_required()
 		exp_bar.value = experience
+	_layout_overhead_bars()
 	snap_health_delay_to_main()
 	_refresh_level_badge()
 	call_deferred("_refresh_level_badge")
@@ -859,6 +911,8 @@ func apply_custom_visuals(sprite_tex: Texture2D, portrait_tex: Texture2D) -> voi
 		# Update the actual 2D sprite node on the map
 		if sprite:
 			sprite.texture = sprite_tex
+			_layout_overhead_bars()
+			call_deferred("_layout_overhead_bars")
 		
 	if portrait_tex and data:
 		# Update the internal resource so the HUD info panel finds it
