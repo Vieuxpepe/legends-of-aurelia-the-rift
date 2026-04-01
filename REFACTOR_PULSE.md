@@ -443,6 +443,23 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
   - Public `BattleField` names preserved for `has_method` / external `field._get_mock_coop_command_id` / camera callers.
 - **Verification:** `ReadLints` on `BattleField.gd` + both new helpers — clean. Godot Level1 smoke — see log.
 
+### 35) Level-up / theatrical stat reveal presentation extraction — **completed**
+- **Moved to:** `Scripts/Core/BattleField/BattleFieldLevelUpPresentationHelpers.gd`
+- **Delegated from:** `Scripts/Core/BattleField.gd` (thin `await`/return wrappers; `LEVELUP_*` timing constants remain on the field).
+- **Key extracted static APIs:** `run_theatrical_stat_reveal(field, ...)`, `_hide_legacy` / dynamic scroll root / clear, `make_levelup_style`, class theme + stat visual builders, header + stat row construction, bar sheen + particles + center burst + halo, critical row FX.
+- **Related (already in-tree, no change this pass):** Talk / recruit / support dialogue remains in `Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd` with existing `BattleField` wrappers (`execute_talk`, `play_recruit_dialogue`, `_on_support_talk_pressed`, `play_support_dialogue`).
+- **Parity-sensitive areas:** Pause/unpause, tween/timer `await` order, sounds (`select_sound`, `crit_sound`, `level_up_sound`, `epic_level_up_sound`), `spawn_level_up_effect`, `screen_shake`, UI node parenting (`UI` flash rect, `level_up_panel`, halo parented on unit). Timing uses `field.LEVELUP_ROW_REVEAL_DELAY` / `LEVELUP_HOLD_TIME_*`.
+- **Intentionally left on `BattleField`:** `_show_next_support_ready_popup` (support queue UI) still uses `_make_levelup_style` wrapper only; not moved with level-up bundle.
+- **Scale:** ~801 lines removed from `BattleField.gd` (≈12.5k → ≈11.7k lines) for this milestone.
+- **Verification:** `ReadLints` on `BattleField.gd` + `BattleFieldLevelUpPresentationHelpers.gd` — clean. In-engine smoke not re-run from agent environment; recommend Level1 boot + one level-up / promo stat reveal pass locally.
+
+### 36) Battle-end / death / victory flow extraction — **completed**
+- **Moved to:** `Scripts/Core/BattleField/BattleFieldBattleEndFlowHelpers.gd`
+- **Delegated from:** `Scripts/Core/BattleField.gd` (thin wrappers; co-op deferral stays `CoopReplayHelpers` via existing `field._defer_battle_result_until_loot_if_needed` etc.)
+- **Extracted:** `remove_dead_player_dragon`, `on_unit_died`, `trigger_game_over`, `on_restart_button_pressed`, `on_continue_button_pressed`, `trigger_victory`
+- **Parity-sensitive:** `_on_unit_died` still calls `trigger_victory(field)` **without** `await` (matches pre-extract fire-and-forget). Grid clear via `astar.set_point_solid` + loot/co-op capture unchanged.
+- **Verification:** `ReadLints` — clean. Godot smoke: run locally (defeat, rout victory, continue/restart, arena, co-op defer paths).
+
 ---
 
 ## Verification log
@@ -455,6 +472,8 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 - **Re-verified (2026-03-31):** Godot 4.6 `res://Scenes/Levels/Level1.tscn` smoke boot boots clean again (only pre-existing warnings; no new parser/runtime errors observed from the enemy-combat helper wiring).
 - **Milestone #33 (2026-03-30):** `ReadLints` on `BattleField.gd` + `BattleFieldCoopOutboundSyncHelpers.gd` — clean. Godot 4.6 Level1 smoke — same (no new hard errors).
 - **Milestone #34 (2026-03-30):** `ReadLints` on `BattleField.gd` + `BattleFieldCoopRngSyncHelpers.gd` + `BattleFieldCoopMockSessionHelpers.gd` — clean. Godot 4.6 run `res://Scenes/Levels/Level1.tscn` — scripts reload, level boots; no new `Parser Error` / `ERROR:` attributable to this extraction (pre-existing warnings only).
+- **Milestone #35 (2026-03-31):** Level-up presentation extraction — `ReadLints` on `BattleField.gd` + `BattleFieldLevelUpPresentationHelpers.gd` — clean. Godot smoke: not executed in agent session; run editor/Level1 + level-up or promo reveal locally to confirm parity.
+- **Milestone #36 (2026-03-31):** Battle-end flow — `ReadLints` on `BattleField.gd` + `BattleFieldBattleEndFlowHelpers.gd` — clean. Godot: exercise unit death → loot → victory/defeat UI, continue/restart, arena + co-op defeat continue path locally.
 - Visual parity checks:
   - `_draw()` pre-battle deployment overlay drift was corrected in `BattleFieldDrawHelpers.gd` and verified.
   - Cursor/path preview + loot-close still require runtime smoke confirmation for final “no drift” proof (lint does not validate visuals).
@@ -508,6 +527,36 @@ These are the next subsystems that are likely to be large and parity-sensitive.
   1. Node ownership: particles still attach to the same `BattleField` parent and position identically.
   2. Timings and one-shot behavior unchanged (no linger / no missing emission).
   3. No accidental property drift (amount/lifetime/velocity/scale/gradient).
+
+### E) Support-ready popup queue (post–milestone #35)
+- Target area in `BattleField.gd`:
+  - `_queue_support_ready_if_needed`, `_show_next_support_ready_popup`, `_battle_support_ready_queue` / `_support_popup_busy` interaction
+- Proposed helper:
+  - e.g. `Scripts/Core/BattleField/BattleFieldSupportReadyPopupHelpers.gd` (or extend `BattleFieldSupportHelpers.gd` if coupling stays low)
+- Checkpoints:
+  1. FIFO queue + `_support_popup_busy` re-entrancy: only one popup at a time; chain to next after dismiss.
+  2. Tweens, `level_up_sound.pitch_scale`, and panel style (`_make_levelup_style` / `LevelUpPresentationHelpers.make_levelup_style`) match current timing and look.
+  3. No duplicate popups for the same `bond_key` when thresholds are already satisfied.
+
+### F) Arena VS cinematic presentation block
+- Target area:
+  - Inline arena intro presentation still living in `BattleField.gd` immediately above the level-up wrapper cluster (dimmer, panels, VS label, particles, tweens).
+- Proposed helper:
+  - `Scripts/Core/BattleField/BattleFieldArenaPresentationHelpers.gd`
+- Checkpoints:
+  1. Layer visibility, z-order, and `PROCESS_MODE` / pause behavior unchanged.
+  2. `await` chain on tweens + timer matches prior duration and ordering.
+  3. `crit_sound` / `screen_shake` triggers preserved.
+
+### G) Support bonds panel (`_on_support_btn_pressed` and related text/build)
+- Target area:
+  - Large handler that walks `CampaignManager.support_bonds` and builds rich text for the tactical support UI.
+- Proposed helper:
+  - `Scripts/Core/BattleField/BattleFieldSupportBondsPanelHelpers.gd` (or split read vs write if needed)
+- Checkpoints:
+  1. Same keys / name normalization as `get_support_name` and `CampaignManager.parse_relationship_key`.
+  2. UI control references and visibility toggles unchanged for the existing panel nodes.
+  3. Sound / focus behavior on open and close unchanged.
 
 ---
 
