@@ -130,6 +130,8 @@ const CoopRngSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCo
 const CoopMockSessionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopMockSessionHelpers.gd")
 const CoopBattleRuntimeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopBattleRuntimeHelpers.gd")
 const BattleFieldFogOfWarHelpers = preload("res://Scripts/Core/BattleField/BattleFieldFogOfWarHelpers.gd")
+const OverheadBarHelpers = preload("res://Scripts/Core/BattleField/BattleFieldOverheadBarHelpers.gd")
+const UnitHotkeyHudHelpers = preload("res://Scripts/Core/BattleField/BattleFieldUnitHotkeyHudHelpers.gd")
 const PromotionFlowSharedHelpers = preload("res://Scripts/Core/PromotionFlowSharedHelpers.gd")
 
 # Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage â†’ Fire Trap).
@@ -293,6 +295,9 @@ var deploy_roster_toggle_tween: Tween
 
 @export var dash_fx_scene: PackedScene
 @export var slash_fx_scene: PackedScene
+@export var piercing_fx_scene: PackedScene = preload("res://Scenes/PiercingEffect.tscn")
+## Default prevents silent slash fallback when a level scene forgets to assign this export.
+@export var bludgeon_fx_scene: PackedScene = preload("res://Scenes/BludgeoningEffect.tscn")
 @export var level_up_fx_scene: PackedScene
 
 @export_category("Hazards â€” Fire tiles")
@@ -545,6 +550,8 @@ var loot_item_info_panel: Panel
 # =============================================================================
 
 @onready var attack_sound = $AttackSound
+@onready var bludgeon_hit_sound: AudioStreamPlayer = $BludgeonHitSound
+@onready var piercing_hit_sound: AudioStreamPlayer = $PiercingHitSound
 @onready var crit_sound = $CritSound
 @onready var defend_sound = $DefendSound
 @onready var invalid_sound = $InvalidSound
@@ -1316,6 +1323,10 @@ func _get_battle_log_panel() -> Panel:
 	return battle_log.get_parent() as Panel
 
 
+func _refresh_unit_hotkey_hud() -> void:
+	UnitHotkeyHudHelpers.refresh_unit_hotkey_hud(self)
+
+
 func _ensure_field_log_toggle_button() -> Button:
 	if ui_root == null:
 		return null
@@ -1433,6 +1444,7 @@ func _apply_field_log_visibility(animated: bool = false) -> void:
 		battle_log_panel.visible = false
 		if battle_log != null:
 			battle_log.visible = false
+		_refresh_unit_hotkey_hud()
 		return
 	var expanded_panel_y: float = float(battle_log_panel.get_meta("field_log_expanded_y")) if battle_log_panel.has_meta("field_log_expanded_y") else battle_log_panel.position.y
 	var collapsed_panel_y: float = float(battle_log_panel.get_meta("field_log_collapsed_y")) if battle_log_panel.has_meta("field_log_collapsed_y") else battle_log_panel.position.y
@@ -1456,6 +1468,7 @@ func _apply_field_log_visibility(animated: bool = false) -> void:
 		if battle_log != null:
 			battle_log.visible = CampaignManager.battle_show_log
 		_set_field_log_toggle_button_text()
+		_refresh_unit_hotkey_hud()
 		return
 
 	field_log_toggle_tween = create_tween()
@@ -1469,6 +1482,7 @@ func _apply_field_log_visibility(animated: bool = false) -> void:
 	if battle_log != null:
 		battle_log.visible = CampaignManager.battle_show_log
 	_set_field_log_toggle_button_text()
+	_refresh_unit_hotkey_hud()
 
 
 func _on_field_log_toggle_pressed() -> void:
@@ -1791,6 +1805,7 @@ func _set_unit_portrait_block_visible(show: bool) -> void:
 
 func _apply_tactical_ui_overhaul() -> void:
 	TacticalHudLayoutHelpers.apply_tactical_ui_overhaul(self)
+	_refresh_unit_hotkey_hud()
 
 
 func _coop_remote_sync_prebattle_ready(body: Dictionary) -> void:
@@ -2044,6 +2059,10 @@ func _process(delta: float) -> void:
 func _handle_camera_panning(delta: float) -> void:
 	CameraFxHelpers.handle_camera_panning(self, delta)
 
+
+func _try_jump_camera_to_custom_avatar() -> bool:
+	return CameraFxHelpers.try_jump_camera_to_custom_avatar(self)
+
 func _unhandled_input(event: InputEvent) -> void:
 	# --- Mouse wheel zoom ---
 	if event is InputEventMouseButton and event.pressed:
@@ -2057,6 +2076,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_minimap"):
 		_toggle_minimap()
 		get_viewport().set_input_as_handled() # Stop other things from reacting to 'M'
+
+	# --- CAMERA SHORTCUT: SPACE => custom avatar ---
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+		if _try_jump_camera_to_custom_avatar():
+			get_viewport().set_input_as_handled()
+			return
 	
 	if current_state:
 		current_state.handle_input(event)
@@ -2277,6 +2302,10 @@ func _set_cursor_state(cursor_node: Node, state_name: String) -> void:
 
 func _apply_cursor_accessibility_settings() -> void:
 	PathCursorHelpers.apply_cursor_accessibility_settings(self)
+
+
+func _refresh_overhead_unit_bars() -> void:
+	OverheadBarHelpers.refresh_overhead_unit_bars(self)
 
 
 func _is_neutral_inspect_unit(unit: Node2D) -> bool:
@@ -4117,6 +4146,12 @@ func spawn_dash_effect(start_pos: Vector2, target_pos: Vector2) -> void:
 func spawn_slash_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
 	CombatVfxHelpers.spawn_slash_effect(self, target_pos, attacker_pos, is_crit, weapon_family)
 
+func spawn_piercing_strike_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
+	CombatVfxHelpers.spawn_piercing_strike_effect(self, target_pos, attacker_pos, is_crit, weapon_family)
+
+func spawn_bludgeon_impact_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
+	CombatVfxHelpers.spawn_bludgeon_impact_effect(self, target_pos, attacker_pos, is_crit, weapon_family)
+
 func spawn_level_up_effect(target_pos: Vector2) -> void:
 	CombatVfxHelpers.spawn_level_up_effect(self, target_pos)
 
@@ -4607,6 +4642,7 @@ func apply_campaign_settings() -> void:
 
 	if battle_log:
 		battle_log.visible = CampaignManager.battle_show_log
+	_refresh_unit_hotkey_hud()
 
 	draw_preview_path()
 
@@ -4688,10 +4724,11 @@ func _weapon_type_name_safe(w_type: int) -> String:
 
 ## Physical damage subtype resolution (presentation/logic separate from weapon triangle).
 ## If a weapon has the default subtype but its family implies a different default, use the family default.
-func resolve_physical_subtype(wpn: WeaponData) -> int:
-	if wpn == null:
+func resolve_physical_subtype(wpn: Variant) -> int:
+	if wpn == null or not (wpn is WeaponData):
 		return int(WeaponData.PhysicalSubtype.SLASHING)
-	var fam: int = WeaponData.get_weapon_family(int(wpn.weapon_type))
+	var wd: WeaponData = wpn as WeaponData
+	var fam: int = WeaponData.get_weapon_family(int(wd.weapon_type))
 	var inferred: int = int(WeaponData.PhysicalSubtype.SLASHING)
 	if fam == WeaponData.WeaponType.SWORD:
 		inferred = int(WeaponData.PhysicalSubtype.SLASHING)
@@ -4705,8 +4742,8 @@ func resolve_physical_subtype(wpn: WeaponData) -> int:
 		inferred = int(WeaponData.PhysicalSubtype.BLUDGEONING)
 
 	var stored: int = inferred
-	if wpn.get("physical_subtype") != null:
-		stored = int(wpn.physical_subtype)
+	if wd.get("physical_subtype") != null:
+		stored = int(wd.physical_subtype)
 	# Heuristic: new field defaults to SLASHING for all legacy weapons; infer for non-sword families unless explicitly overridden.
 	if stored == int(WeaponData.PhysicalSubtype.SLASHING) and inferred != int(WeaponData.PhysicalSubtype.SLASHING) and fam != WeaponData.WeaponType.SWORD:
 		return inferred
@@ -4897,43 +4934,92 @@ func _is_valid_combat_unit(node: Node2D) -> bool:
 		return false
 
 	return true
-	
+
+
+## Matches `Unit.tscn` default `Sprite2D.position` (see `Unit.gd` / scene).
+const MELEE_SPRITE_HOME_LOCAL: Vector2 = Vector2(32, 32)
+
+
+func _melee_attacker_sprite(attacker: Node2D) -> Sprite2D:
+	if not is_instance_valid(attacker):
+		return null
+	if attacker is Unit:
+		var u: Unit = attacker as Unit
+		if u.sprite != null and is_instance_valid(u.sprite):
+			return u.sprite
+	var n: Node = attacker.get_node_or_null("Sprite")
+	return n as Sprite2D
+
+
+## Side-view units: lean back away from the target (Godot 2D rotation+ = clockwise). Enemy right → negative radians, left → positive.
+func _melee_windup_tilt_radians(attacker: Node2D, lunge_dir: Vector2, degrees: float) -> float:
+	if not is_instance_valid(attacker) or lunge_dir.length_squared() < 0.0001:
+		return 0.0
+	var spr := _melee_attacker_sprite(attacker)
+	if spr == null:
+		return 0.0
+	var lean: float = deg_to_rad(degrees)
+	var dir_x: float = signf(lunge_dir.x)
+	if absf(dir_x) < 0.001:
+		dir_x = -1.0 if spr.flip_h else 1.0
+	return -lean * dir_x
+
+
+func _melee_reset_melee_sprite_visual(attacker: Node2D) -> void:
+	var spr := _melee_attacker_sprite(attacker)
+	if spr == null:
+		return
+	spr.rotation = 0.0
+	spr.position = MELEE_SPRITE_HOME_LOCAL
+
+
 func _run_melee_crit_lunge(attacker: Node2D, _defender: Node2D, orig_pos: Vector2, lunge_dir: Vector2) -> void:
 	"""Crit-only melee sequence: brief anticipation lean-back, sharp committed strike, brief hold with crit sound, attacker left at enemy for PHASE F return."""
 	if not is_instance_valid(attacker):
 		return
-	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 8.0)
+	var spr: Sprite2D = _melee_attacker_sprite(attacker)
+	_melee_reset_melee_sprite_visual(attacker)
+	var lean_max: float = _melee_windup_tilt_radians(attacker, lunge_dir, 22.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 13.0)
 	var perp: Vector2 = Vector2(-lunge_dir.y, lunge_dir.x)
 	var strike_pos: Vector2 = orig_pos + (lunge_dir * 16.0)
 
-	# Anticipation: lean back with a tiny corkscrew jitter (0.045s)
+	# Long anticipation: body recoil + sprite tilts back (rotation)
 	var charge_tween: Tween = create_tween().set_trans(Tween.TRANS_LINEAR)
 	var _crit_charge_cb := func(progress: float) -> void:
 		if not is_instance_valid(attacker):
 			return
 		var base_pos: Vector2 = orig_pos.lerp(recoil_pos, progress)
-		var jitter: float = sin(progress * 24.0) * 1.8
-		var cork: float = sin(progress * 10.0) * 0.9
-		attacker.global_position = base_pos + (perp * jitter) - (lunge_dir * cork)
-	charge_tween.tween_method(_crit_charge_cb, 0.0, 1.0, 0.045)
+		var jitter: float = sin(progress * TAU * 2.0) * 0.55
+		attacker.global_position = base_pos + (perp * jitter)
+		if spr != null:
+			spr.rotation = lean_max * progress
+	charge_tween.tween_method(_crit_charge_cb, 0.0, 1.0, 0.095).set_ease(Tween.EASE_OUT)
 	await charge_tween.finished
-	if not is_instance_valid(attacker): return
+	if not is_instance_valid(attacker):
+		return
 
-	# Brief micro-hold so the anticipation reads (0.02s)
-	await get_tree().create_timer(0.02).timeout
-	if not is_instance_valid(attacker): return
+	# Hold at full wind-up so it sells
+	await get_tree().create_timer(0.065).timeout
+	if not is_instance_valid(attacker):
+		return
 
 	# Sharp committed strike toward target (0.042s)
 	spawn_dash_effect(attacker.global_position, strike_pos)
-	var strike_tween: Tween = create_tween()
+	var strike_tween: Tween = create_tween().set_parallel(true)
 	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.042).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		strike_tween.tween_property(spr, "rotation", 0.0, 0.042).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await strike_tween.finished
-	if not is_instance_valid(attacker): return
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
 
 	# Brief hold; crit sound on impact
 	if crit_sound != null and crit_sound.stream != null:
 		crit_sound.play()
 	await get_tree().create_timer(0.10).timeout
+	_melee_reset_melee_sprite_visual(attacker)
 	# Attacker remains at strike_pos; PHASE F returns to orig_pos later
 
 
@@ -4941,40 +5027,234 @@ func _run_melee_normal_lunge(attacker: Node2D, _defender: Node2D, orig_pos: Vect
 	"""Snappy normal melee: short recoil, crisp strike, brief contact, quick return. Attacker ends at orig_pos."""
 	if not is_instance_valid(attacker):
 		return
-	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 3.0)
+	var spr: Sprite2D = _melee_attacker_sprite(attacker)
+	_melee_reset_melee_sprite_visual(attacker)
+	var lean: float = _melee_windup_tilt_radians(attacker, lunge_dir, 18.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 8.0)
 	var strike_pos: Vector2 = orig_pos + (lunge_dir * 16.0)
 
-	# Short startup recoil (0.03s)
-	var recoil_tween: Tween = create_tween()
-	recoil_tween.tween_property(attacker, "global_position", recoil_pos, 0.03).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Big startup recoil + sprite tilts back
+	var recoil_tween: Tween = create_tween().set_parallel(true)
+	recoil_tween.tween_property(attacker, "global_position", recoil_pos, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		recoil_tween.tween_property(spr, "rotation", lean, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await recoil_tween.finished
-	if not is_instance_valid(attacker): return
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
 
-	# Crisp forward strike (0.06s)
+	await get_tree().create_timer(0.05).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	# Forward strike; tilt returns to neutral through the lunge
 	spawn_dash_effect(attacker.global_position, strike_pos)
-	var strike_tween: Tween = create_tween()
+	var strike_tween: Tween = create_tween().set_parallel(true)
 	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		strike_tween.tween_property(spr, "rotation", 0.0, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await strike_tween.finished
-	if not is_instance_valid(attacker): return
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
 
 	# Brief contact (0.03s)
 	await get_tree().create_timer(0.03).timeout
-	if not is_instance_valid(attacker): return
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
 
 	# Quick return to orig_pos (0.06s)
 	var return_tween: Tween = create_tween()
 	return_tween.tween_property(attacker, "global_position", orig_pos, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await return_tween.finished
+	_melee_reset_melee_sprite_visual(attacker)
 
 
-func _play_critical_impact(focus_world: Vector2) -> void:
+func _run_melee_crit_lunge_piercing(attacker: Node2D, _defender: Node2D, orig_pos: Vector2, lunge_dir: Vector2) -> void:
+	"""Crit melee: tight linear wind-up, fast deep thrust; ends at strike for PHASE F return."""
+	if not is_instance_valid(attacker):
+		return
+	var spr: Sprite2D = _melee_attacker_sprite(attacker)
+	_melee_reset_melee_sprite_visual(attacker)
+	var lean: float = _melee_windup_tilt_radians(attacker, lunge_dir, 17.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 9.5)
+	var strike_pos: Vector2 = orig_pos + (lunge_dir * 21.0)
+
+	var wind: Tween = create_tween().set_parallel(true)
+	wind.tween_property(attacker, "global_position", recoil_pos, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		wind.tween_property(spr, "rotation", lean, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await wind.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	await get_tree().create_timer(0.045).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	spawn_dash_effect(attacker.global_position, strike_pos)
+	var strike_tween: Tween = create_tween().set_parallel(true)
+	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.034).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		strike_tween.tween_property(spr, "rotation", 0.0, 0.034).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await strike_tween.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	if crit_sound != null and crit_sound.stream != null:
+		crit_sound.play()
+	await get_tree().create_timer(0.10).timeout
+	_melee_reset_melee_sprite_visual(attacker)
+
+
+func _run_melee_normal_lunge_piercing(attacker: Node2D, _defender: Node2D, orig_pos: Vector2, lunge_dir: Vector2) -> void:
+	"""Normal melee: short line recoil, direct thrust, quick return."""
+	if not is_instance_valid(attacker):
+		return
+	var spr: Sprite2D = _melee_attacker_sprite(attacker)
+	_melee_reset_melee_sprite_visual(attacker)
+	var lean: float = _melee_windup_tilt_radians(attacker, lunge_dir, 14.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 5.5)
+	var strike_pos: Vector2 = orig_pos + (lunge_dir * 19.0)
+
+	var recoil_tween: Tween = create_tween().set_parallel(true)
+	recoil_tween.tween_property(attacker, "global_position", recoil_pos, 0.058).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		recoil_tween.tween_property(spr, "rotation", lean, 0.058).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await recoil_tween.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	await get_tree().create_timer(0.04).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	spawn_dash_effect(attacker.global_position, strike_pos)
+	var strike_tween: Tween = create_tween().set_parallel(true)
+	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.046).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		strike_tween.tween_property(spr, "rotation", 0.0, 0.038).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await strike_tween.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	await get_tree().create_timer(0.024).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	var return_tween: Tween = create_tween()
+	return_tween.tween_property(attacker, "global_position", orig_pos, 0.054).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await return_tween.finished
+	_melee_reset_melee_sprite_visual(attacker)
+
+
+func _run_melee_crit_lunge_bludgeoning(attacker: Node2D, _defender: Node2D, orig_pos: Vector2, lunge_dir: Vector2) -> void:
+	"""Crit melee: heavier wind-up, committed slower strike; ends at strike for PHASE F return."""
+	if not is_instance_valid(attacker):
+		return
+	var spr: Sprite2D = _melee_attacker_sprite(attacker)
+	_melee_reset_melee_sprite_visual(attacker)
+	var lean: float = _melee_windup_tilt_radians(attacker, lunge_dir, 26.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 17.0)
+	var strike_pos: Vector2 = orig_pos + (lunge_dir * 14.0)
+
+	var wind: Tween = create_tween().set_parallel(true)
+	wind.tween_property(attacker, "global_position", recoil_pos, 0.115).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if spr != null:
+		wind.tween_property(spr, "rotation", lean, 0.115).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await wind.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	await get_tree().create_timer(0.075).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	spawn_dash_effect(attacker.global_position, strike_pos)
+	var strike_tween: Tween = create_tween().set_parallel(true)
+	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.054).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if spr != null:
+		strike_tween.tween_property(spr, "rotation", 0.0, 0.054).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await strike_tween.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	if crit_sound != null and crit_sound.stream != null:
+		crit_sound.play()
+	await get_tree().create_timer(0.10).timeout
+	_melee_reset_melee_sprite_visual(attacker)
+
+
+func _run_melee_normal_lunge_bludgeoning(attacker: Node2D, _defender: Node2D, orig_pos: Vector2, lunge_dir: Vector2) -> void:
+	"""Normal melee: deep recoil, weighted step-in, longer contact, slower return."""
+	if not is_instance_valid(attacker):
+		return
+	var spr: Sprite2D = _melee_attacker_sprite(attacker)
+	_melee_reset_melee_sprite_visual(attacker)
+	var lean: float = _melee_windup_tilt_radians(attacker, lunge_dir, 23.0)
+	var recoil_pos: Vector2 = orig_pos - (lunge_dir * 11.0)
+	var strike_pos: Vector2 = orig_pos + (lunge_dir * 15.0)
+
+	var recoil_tween: Tween = create_tween().set_parallel(true)
+	recoil_tween.tween_property(attacker, "global_position", recoil_pos, 0.095).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if spr != null:
+		recoil_tween.tween_property(spr, "rotation", lean, 0.095).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await recoil_tween.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	await get_tree().create_timer(0.06).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	spawn_dash_effect(attacker.global_position, strike_pos)
+	var strike_tween: Tween = create_tween().set_parallel(true)
+	strike_tween.tween_property(attacker, "global_position", strike_pos, 0.074).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	if spr != null:
+		strike_tween.tween_property(spr, "rotation", 0.0, 0.055).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await strike_tween.finished
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	await get_tree().create_timer(0.042).timeout
+	if not is_instance_valid(attacker):
+		_melee_reset_melee_sprite_visual(attacker)
+		return
+
+	var return_tween: Tween = create_tween()
+	return_tween.tween_property(attacker, "global_position", orig_pos, 0.078).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await return_tween.finished
+	_melee_reset_melee_sprite_visual(attacker)
+
+
+func _play_critical_impact(focus_world: Vector2, heavy_bludgeon: bool = false) -> void:
 	_spawn_fullscreen_impact_flash(Color(1.0, 0.98, 0.88), 0.44, 0.14)
 	_spawn_fullscreen_impact_flash(Color(1.0, 0.72, 0.20), 0.16, 0.18)
 
-	# Offset punch only â€” no zoom manipulation
-	_start_impact_camera(focus_world, 1.0, 0.032, 0.16)
+	# Offset punch only — no zoom manipulation
+	var snap_t: float = 0.036 if heavy_bludgeon else 0.032
+	var restore_t: float = 0.17 if heavy_bludgeon else 0.16
+	_start_impact_camera(focus_world, 1.0, snap_t, restore_t)
 
-	await _do_hit_stop(0.016, 0.12, 0.10)
+	if heavy_bludgeon:
+		await _do_hit_stop(0.020, 0.10, 0.13)
+	else:
+		await _do_hit_stop(0.016, 0.12, 0.10)
 	
 func _play_guard_break_impact(focus_world: Vector2) -> void:
 	_spawn_fullscreen_impact_flash(Color(1.0, 0.55, 0.18), 0.28, 0.10)
@@ -4996,6 +5276,13 @@ func _play_light_hit_impact(focus_world: Vector2) -> void:
 func _play_normal_hit_impact(focus_world: Vector2) -> void:
 	_start_impact_camera(focus_world, 1.0, 0.024, 0.12)
 	await _do_hit_stop(0.010, 0.22, 0.06)
+
+
+## Heavier impact + hit-stop for bludgeoning (melee or ranged contact).
+func _play_heavy_bludgeon_hit_impact(focus_world: Vector2) -> void:
+	_spawn_fullscreen_impact_flash(Color(0.94, 0.91, 0.86), 0.15, 0.075)
+	_start_impact_camera(focus_world, 1.0, 0.031, 0.15)
+	await _do_hit_stop(0.015, 0.15, 0.095)
 
 
 ## Miss telegraph: quick offset + micro hit-stop (does not replace attack-resolution timing).

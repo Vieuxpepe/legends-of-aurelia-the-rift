@@ -1,7 +1,6 @@
 [gd_scene format=4 uid="uid://sx18xn1ax8lc"]
 
 [ext_resource type="Script" uid="uid://cnyqke0qc3nky" path="res://Scripts/Core/BattleField.gd" id="1_uk4s3"]
-[ext_resource type="Script" path="res://Scripts/UI/PathPreviewTicks.gd" id="path_preview_ticks"]
 [ext_resource type="AudioStream" uid="uid://cio4df814rqqh" path="res://SoundEffects/PromotionSound.mp3" id="3_yvg1k"]
 [ext_resource type="PackedScene" uid="uid://td7wlhmojryj" path="res://Scenes/PortableFortress.tscn" id="4_57uvy"]
 [ext_resource type="PackedScene" uid="uid://b0e8x5ik3udyx" path="res://Resources/Unit.tscn" id="4_vv18r"]
@@ -74,7 +73,9 @@
 [ext_resource type="AudioStream" uid="uid://dj3mwc6tapmbn" path="res://SoundEffects/NoDamageSound.mp3" id="62_llt25"]
 [ext_resource type="AudioStream" uid="uid://culcdsqmruen7" path="res://SoundEffects/DefenseMode.mp3" id="63_4hc4l"]
 [ext_resource type="Texture2D" uid="uid://d07qhv8g2nqrr" path="res://animations/Phase Banner Animation/24.png" id="63_ysa80"]
+[ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="64_d7ssd"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="64_tr5do"]
+[ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="65_0tovn"]
 [ext_resource type="Texture2D" uid="uid://dpnnbrrx57boa" path="res://Assets/Tilesets/Autumn/Autumn_Forest_Tiles.png" id="71_3ngww"]
 [ext_resource type="Texture2D" uid="uid://brfxs1cn0nwuh" path="res://Assets/Tilesets/Autumn/TX Tileset Grass.png" id="72_d7ssd"]
 [ext_resource type="Texture2D" uid="uid://d1frbaikpxan5" path="res://Assets/Tilesets/Autumn/unnamed__25_-removebg-preview.png" id="75_fnm5q"]
@@ -90,6 +91,7 @@
 [ext_resource type="AudioStream" uid="uid://de37yeicxyt1h" path="res://SoundEffects/Sound For Invalid Action, Dungeon Game, 16 Bit.mp3" id="89_b7401"]
 [ext_resource type="Shader" uid="uid://bei4vo7aontpe" path="res://Scenes/Levels/Clouds.gdshader" id="91_3ngww"]
 [ext_resource type="Texture2D" uid="uid://cx81cte88pqya" path="res://Assets/Backgrounds/BackgroundParallax.jpeg" id="109_57suq"]
+[ext_resource type="Script" uid="uid://5kh2jrl0vld8" path="res://Scripts/UI/PathPreviewTicks.gd" id="path_preview_ticks"]
 
 [sub_resource type="Resource" id="Resource_8a6bc"]
 script = ExtResource("6_noleb")
@@ -822,7 +824,7 @@ shader_parameter/shadow_color = Color(0.05, 0, 0.1, 0.4)
 shader_parameter/cloud_coverage = 0.6150000292125
 shader_parameter/softness = 0.5
 
-[node name="BattleField" type="Node2D" unique_id=1694060677 node_paths=PackedStringArray("vip_target")]
+[node name="BludgeonHitSound" type="Node2D" unique_id=1694060677 node_paths=PackedStringArray("vip_target")]
 position = Vector2(2, 0)
 script = ExtResource("1_uk4s3")
 player_unit_scene = ExtResource("4_vv18r")
@@ -832,22 +834,11 @@ promotion_sound = ExtResource("3_yvg1k")
 dash_fx_scene = ExtResource("8_7gknd")
 slash_fx_scene = ExtResource("9_rd3ey")
 level_up_fx_scene = ExtResource("10_qmxd2")
-default_fire_tile_damage = null
-fire_tile_extinguish_shrink_sec = null
 GRID_SIZE = Vector2i(20, 30)
-zoom_step = null
-min_zoom = null
-max_zoom = null
-zoom_to_cursor = null
-camera_speed = null
-edge_margin = null
 use_fog_of_war = true
-default_vision_range = null
-vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_noleb")]([SubResource("Resource_8a6bc"), SubResource("Resource_yu4i8"), SubResource("Resource_qqdt2"), SubResource("Resource_hhqx0"), SubResource("Resource_lsi8b")])
 outro_dialogue = Array[ExtResource("6_noleb")]([SubResource("Resource_0tovn"), SubResource("Resource_08kon")])
 map_objective = 2
-custom_objective_text = null
 turn_limit = 20
 vip_target = NodePath("AllyUnits/DonkeyCart")
 
@@ -2162,6 +2153,16 @@ stream = ExtResource("24_ifigw")
 [node name="AttackSound" type="AudioStreamPlayer" parent="." unique_id=1761563384]
 stream = ExtResource("25_pe0d0")
 
+[node name="BludgeonHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563385]
+stream = ExtResource("64_d7ssd")
+volume_db = 1.5
+pitch_scale = 0.88
+
+[node name="PiercingHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563386]
+stream = ExtResource("65_0tovn")
+volume_db = -1.5
+pitch_scale = 1.06
+
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("26_yf0ma")
 
@@ -2180,15 +2181,15 @@ default_color = Color(0.82, 0.96, 1, 1)
 antialiased = true
 
 [node name="PathEndMarker" type="Node2D" parent="." unique_id=271209552]
+visible = false
 z_index = 102
 z_as_relative = false
-visible = false
 
-[node name="Diamond" type="Polygon2D" parent="PathEndMarker"]
-polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
+[node name="Diamond" type="Polygon2D" parent="PathEndMarker" unique_id=2055376091]
 color = Color(0.9, 0.98, 1, 0.92)
+polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
 
-[node name="PathPreviewTicks" type="Node2D" parent="."]
+[node name="PathPreviewTicks" type="Node2D" parent="." unique_id=1342942836]
 z_index = 103
 z_as_relative = false
 script = ExtResource("path_preview_ticks")

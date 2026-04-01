@@ -5,12 +5,13 @@ class_name UnitBarVisuals
 # Shared overhead unit-card layout tokens (kept centralized so HUD tuning propagates project-wide).
 const OVERHEAD_HP_SCALE: float = 0.68
 const OVERHEAD_EXP_SCALE: float = 0.58
-const OVERHEAD_BAR_VISUAL_WIDTH_PX: float = 76.0
+const OVERHEAD_BAR_VISUAL_WIDTH_PX: float = 72.0
 const OVERHEAD_HP_HEIGHT_PX: float = 22.0
 const OVERHEAD_EXP_HEIGHT_PX: float = 16.0
 const OVERHEAD_EXP_WIDTH_RATIO: float = 0.84
-const OVERHEAD_TOP_MARGIN_PX: float = 52.0
-const OVERHEAD_HEAD_GAP_PX: float = 2.0
+const OVERHEAD_TOP_MARGIN_PX: float = 112.0
+const OVERHEAD_HEAD_GAP_PX: float = 3.0
+const OVERHEAD_HEAD_CLEARANCE_HEIGHT_FACTOR: float = 0.06
 const OVERHEAD_EXP_GAP_PX: float = 2.0
 
 
@@ -44,6 +45,10 @@ static func overhead_top_margin_px() -> float:
 
 static func overhead_head_gap_px() -> float:
 	return OVERHEAD_HEAD_GAP_PX
+
+
+static func overhead_head_clearance_height_factor() -> float:
+	return OVERHEAD_HEAD_CLEARANCE_HEIGHT_FACTOR
 
 
 static func overhead_exp_gap_px() -> float:

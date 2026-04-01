@@ -39,6 +39,7 @@
 [ext_resource type="Texture2D" uid="uid://dkjn4h5g80oaf" path="res://Assets/Tilesets/tiles/FieldsTileset.png" id="36_2v3dp"]
 [ext_resource type="AudioStream" uid="uid://cpvwhvc1hlts7" path="res://SoundEffects/ClangParry.mp3" id="37_st52j"]
 [ext_resource type="AudioStream" uid="uid://chtvs1op5q5f8" path="res://SoundEffects/ShieldBashSound.mp3" id="38_c7k8n"]
+[ext_resource type="AudioStream" uid="uid://bmh3ebl1gwv17" path="res://SoundEffects/ArrowImpact.mp3" id="38b_piercing_hit"]
 [ext_resource type="Texture2D" uid="uid://dh38x1stypndc" path="res://Assets/Tilesets/tiles/2 Fence/1.png" id="39_jb1ob"]
 [ext_resource type="Texture2D" uid="uid://bx8daklg07fc7" path="res://Assets/Tilesets/tiles/7 Decor/Tree1.png" id="40_58nol"]
 [ext_resource type="Texture2D" uid="uid://m5hwdsjr3vk3" path="res://Assets/Tilesets/tiles/7 Decor/Log2.png" id="41_7bkn0"]
@@ -2711,6 +2712,16 @@ stream = ExtResource("25_jgc3w")
 
 [node name="AttackSound" type="AudioStreamPlayer" parent="." unique_id=1761563384]
 stream = ExtResource("26_40206")
+
+[node name="BludgeonHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563385]
+stream = ExtResource("38_c7k8n")
+volume_db = 1.5
+pitch_scale = 0.88
+
+[node name="PiercingHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563386]
+stream = ExtResource("38b_piercing_hit")
+volume_db = -1.5
+pitch_scale = 1.06
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("27_x1hmy")

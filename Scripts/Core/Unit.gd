@@ -40,6 +40,14 @@ const POISE_BAR_TWEEN_DURATION: float = 0.2
 ## Matches HealthBar width in `Unit.tscn` when `size` is not yet laid out (offset_right − offset_left).
 const POISE_BAR_FALLBACK_WIDTH_PX: float = 85.0
 const POISE_BAR_HEIGHT_PX: float = 6.0
+const OVERHEAD_BAR_NON_FOCUS_ALPHA_DEFAULT: float = 0.32
+const OVERHEAD_FOOT_GAP_PX: float = 2.0
+const SELECT_PULSE_HALF_TIME: float = 0.27
+const SELECT_PULSE_SPRITE_BRIGHT: Color = Color(1.30, 1.30, 1.30, 1.0)
+const SELECT_PULSE_SPRITE_SCALE_MULT: float = 1.03
+const SELECT_PULSE_GLOW_ALPHA_MIN: float = 0.24
+const SELECT_PULSE_GLOW_ALPHA_MAX: float = 0.66
+const SELECT_PULSE_GLOW_SCALE_MULT: float = 1.03
 
 # ------------------------------------------------------------------------------
 # Signals
@@ -156,6 +164,15 @@ var trade_selected_index: int = -1
 ## Drawn under [member health_bar]; lags behind on damage so hits feel heavier.
 var health_bar_delay: ProgressBar
 var _hp_damage_tween: Tween
+var _overhead_bars_enabled: bool = true
+var _overhead_focus_mode_enabled: bool = false
+var _overhead_bar_is_focused: bool = true
+var _overhead_non_focus_alpha: float = OVERHEAD_BAR_NON_FOCUS_ALPHA_DEFAULT
+var _overhead_layout_at_feet_cached: bool = false
+var _overhead_layout_cache_ready: bool = false
+var _selection_base_sprite_scale: Vector2 = Vector2.ONE
+var _selection_base_glow_alpha: float = 0.3
+var _selection_pulse_active: bool = false
 
 func _ready() -> void:
 	if data == null:
@@ -300,6 +317,51 @@ func _apply_overhead_bar_visuals() -> void:
 		exp_bar.add_theme_stylebox_override("fill", UnitBarVisuals.exp_fill())
 	_layout_overhead_bars()
 	_style_level_badge()
+	_apply_overhead_bar_focus_state()
+
+
+## Applies battlefield-level overhead bar policy:
+## - HP + Poise remain on-map for all units when bars are enabled.
+## - EXP + level badge show only for focused units when focus mode is enabled.
+## - Non-focused units are faded instead of fully hidden.
+func set_overhead_bar_focus_state(show_bars: bool, use_focus_mode: bool, is_focus_unit: bool, non_focus_alpha: float = OVERHEAD_BAR_NON_FOCUS_ALPHA_DEFAULT) -> void:
+	var bars_at_feet: bool = CampaignManager.interface_unit_bars_at_feet
+	if (not _overhead_layout_cache_ready) or (bars_at_feet != _overhead_layout_at_feet_cached):
+		_overhead_layout_cache_ready = true
+		_overhead_layout_at_feet_cached = bars_at_feet
+		_layout_overhead_bars()
+		call_deferred("_refresh_level_badge")
+	_overhead_bars_enabled = show_bars
+	_overhead_focus_mode_enabled = use_focus_mode
+	_overhead_bar_is_focused = is_focus_unit
+	_overhead_non_focus_alpha = clampf(non_focus_alpha, 0.10, 1.0)
+	_apply_overhead_bar_focus_state()
+
+
+func _apply_overhead_bar_focus_state() -> void:
+	var should_draw_overhead: bool = _overhead_bars_enabled and current_hp > 0 and not has_meta("coop_remote_pending_death")
+	var is_focus_visible: bool = (not _overhead_focus_mode_enabled) or _overhead_bar_is_focused
+	var ui_alpha: float = 1.0 if is_focus_visible else _overhead_non_focus_alpha
+	var ui_tint: Color = Color(1.0, 1.0, 1.0, ui_alpha)
+
+	if health_bar != null:
+		health_bar.visible = should_draw_overhead
+		health_bar.modulate = ui_tint
+	if health_bar_delay != null:
+		health_bar_delay.visible = should_draw_overhead
+		health_bar_delay.modulate = ui_tint
+	if exp_bar != null:
+		exp_bar.visible = should_draw_overhead and is_focus_visible
+		exp_bar.modulate = ui_tint
+	if level_badge != null:
+		level_badge.visible = should_draw_overhead
+		level_badge.modulate = Color.WHITE
+
+	var p_bar: ProgressBar = get_node_or_null("DynamicPoiseBar") as ProgressBar
+	if p_bar != null:
+		var poise_visible: bool = should_draw_overhead and int(get_current_poise()) < int(get_max_poise())
+		p_bar.visible = poise_visible
+		p_bar.modulate = ui_tint
 
 
 func _style_level_badge() -> void:
@@ -332,6 +394,40 @@ func _target_overhead_bar_visual_width() -> float:
 	return UnitBarVisuals.overhead_bar_visual_width_px()
 
 
+func _sprite_top_y_in_unit_space() -> float:
+	if sprite == null or sprite.texture == null:
+		return float(DEFAULT_CELL_SIZE) * 0.25
+	var r: Rect2 = sprite.get_rect()
+	if r.size.x <= 0.0 or r.size.y <= 0.0:
+		return float(DEFAULT_CELL_SIZE) * 0.25
+	var xf: Transform2D = sprite.get_transform()
+	var p0: Vector2 = xf * r.position
+	var p1: Vector2 = xf * Vector2(r.position.x + r.size.x, r.position.y)
+	var p2: Vector2 = xf * Vector2(r.position.x, r.position.y + r.size.y)
+	var p3: Vector2 = xf * (r.position + r.size)
+	return minf(minf(p0.y, p1.y), minf(p2.y, p3.y))
+
+
+func _sprite_visual_height_in_unit_space() -> float:
+	if sprite == null or sprite.texture == null:
+		return float(DEFAULT_CELL_SIZE)
+	var r: Rect2 = sprite.get_rect()
+	if r.size.x <= 0.0 or r.size.y <= 0.0:
+		return float(DEFAULT_CELL_SIZE)
+	var xf: Transform2D = sprite.get_transform()
+	var p0: Vector2 = xf * r.position
+	var p1: Vector2 = xf * Vector2(r.position.x + r.size.x, r.position.y)
+	var p2: Vector2 = xf * Vector2(r.position.x, r.position.y + r.size.y)
+	var p3: Vector2 = xf * (r.position + r.size)
+	var min_y: float = minf(minf(p0.y, p1.y), minf(p2.y, p3.y))
+	var max_y: float = maxf(maxf(p0.y, p1.y), maxf(p2.y, p3.y))
+	return maxf(1.0, max_y - min_y)
+
+
+func _sprite_bottom_y_in_unit_space() -> float:
+	return _sprite_top_y_in_unit_space() + _sprite_visual_height_in_unit_space()
+
+
 func _layout_overhead_bars() -> void:
 	if health_bar == null:
 		return
@@ -343,12 +439,18 @@ func _layout_overhead_bars() -> void:
 	var hp_unscaled_w: float = hp_visual_w / hp_scale_x
 	var hp_unscaled_h: float = UnitBarVisuals.overhead_hp_height_px()
 	var hp_visual_h: float = hp_unscaled_h * hp_scale_y
-	var sprite_top_y: float = float(DEFAULT_CELL_SIZE) * 0.5
-	if sprite != null and sprite.texture != null:
-		var sprite_visual_h: float = float(sprite.texture.get_height()) * absf(sprite.scale.y)
-		sprite_top_y = sprite.position.y - (sprite_visual_h * 0.5)
-	var desired_hp_y: float = sprite_top_y - hp_visual_h - UnitBarVisuals.overhead_head_gap_px()
-	var hp_pos_y: float = clampf(desired_hp_y, -UnitBarVisuals.overhead_top_margin_px(), -4.0)
+	var hp_pos_y: float = -4.0
+	if CampaignManager.interface_unit_bars_at_feet:
+		var desired_hp_y: float = _sprite_bottom_y_in_unit_space() + OVERHEAD_FOOT_GAP_PX
+		var hp_min_y: float = 2.0
+		var hp_max_y: float = maxf(hp_min_y, float(DEFAULT_CELL_SIZE) - hp_visual_h - 2.0)
+		hp_pos_y = clampf(desired_hp_y, hp_min_y, hp_max_y)
+	else:
+		var sprite_top_y: float = _sprite_top_y_in_unit_space()
+		var sprite_visual_h: float = _sprite_visual_height_in_unit_space()
+		var head_clearance: float = UnitBarVisuals.overhead_head_gap_px() + (sprite_visual_h * UnitBarVisuals.overhead_head_clearance_height_factor())
+		var desired_hp_y_head: float = sprite_top_y - hp_visual_h - head_clearance
+		hp_pos_y = clampf(desired_hp_y_head, -UnitBarVisuals.overhead_top_margin_px(), -4.0)
 
 	health_bar.scale = hp_scale
 	health_bar.custom_minimum_size = Vector2(hp_unscaled_w, hp_unscaled_h)
@@ -541,6 +643,7 @@ func clear_remote_coop_pending_death_visual() -> void:
 		level_badge.visible = true
 		_refresh_level_badge()
 	snap_health_delay_to_main()
+	_apply_overhead_bar_focus_state()
 	process_mode = Node.PROCESS_MODE_INHERIT
 
 
@@ -797,11 +900,21 @@ func finish_turn() -> void:
 	emit_signal("finished_turn", self)
 
 func look_at_pos(target_grid_pos: Vector2i) -> void:
+	if sprite == null:
+		return
 	var current_grid_pos := Vector2i(int(position.x / DEFAULT_CELL_SIZE), int(position.y / DEFAULT_CELL_SIZE))
-	if target_grid_pos.x > current_grid_pos.x:
-		sprite.flip_h = false 
-	elif target_grid_pos.x < current_grid_pos.x:
-		sprite.flip_h = true  
+	var d := Vector2(float(target_grid_pos.x - current_grid_pos.x), float(target_grid_pos.y - current_grid_pos.y))
+	if d.length_squared() < 0.0001:
+		return
+	# Horizontal (or flatter diagonal): classic left/right face.
+	if absf(d.x) >= absf(d.y):
+		if d.x > 0.0:
+			sprite.flip_h = false
+		elif d.x < 0.0:
+			sprite.flip_h = true
+	else:
+		# Pure vertical / steep diagonal: old code never updated flip_h (same column).
+		sprite.flip_h = d.y > 0.0
 		
 func set_selected(is_selected: bool) -> void:
 	if selection_tween:
@@ -820,17 +933,43 @@ func set_selected_glow(is_selected: bool) -> void:
 	# Kill any existing tween so they don't fight each other
 	if selection_tween and selection_tween.is_valid():
 		selection_tween.kill()
+	selection_tween = null
 	
 	if is_selected:
-		# Create a new tween that loops infinitely
+		if sprite == null:
+			return
+		_selection_base_sprite_scale = sprite.scale
+		if team_glow != null:
+			_selection_base_glow_alpha = team_glow.color.a
+			team_glow.pivot_offset = team_glow.size * 0.5
+			team_glow.scale = Vector2.ONE
+		_selection_pulse_active = true
+		# Faster + stronger pulse for clearer active-unit read.
 		selection_tween = create_tween().set_loops()
-		# Tween modulate to be brighter than usual (Color values > 1 make it glow)
-		selection_tween.tween_property(sprite, "modulate", Color(1.3, 1.3, 1.3), 0.6).set_trans(Tween.TRANS_SINE)
-		# Tween back to normal white
-		selection_tween.tween_property(sprite, "modulate", Color.WHITE, 0.6).set_trans(Tween.TRANS_SINE)
+		selection_tween.tween_property(sprite, "modulate", SELECT_PULSE_SPRITE_BRIGHT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		selection_tween.parallel().tween_property(sprite, "scale", _selection_base_sprite_scale * SELECT_PULSE_SPRITE_SCALE_MULT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		if team_glow != null:
+			selection_tween.parallel().tween_property(team_glow, "color:a", SELECT_PULSE_GLOW_ALPHA_MAX, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			selection_tween.parallel().tween_property(team_glow, "scale", Vector2.ONE * SELECT_PULSE_GLOW_SCALE_MULT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		selection_tween.tween_property(sprite, "modulate", Color.WHITE, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		selection_tween.parallel().tween_property(sprite, "scale", _selection_base_sprite_scale, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+		if team_glow != null:
+			var target_base_alpha: float = maxf(_selection_base_glow_alpha, SELECT_PULSE_GLOW_ALPHA_MIN)
+			selection_tween.parallel().tween_property(team_glow, "color:a", target_base_alpha, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			selection_tween.parallel().tween_property(team_glow, "scale", Vector2.ONE, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	else:
+		if not _selection_pulse_active:
+			return
+		_selection_pulse_active = false
 		# Ensure the unit returns to normal color when deselected
-		sprite.modulate = Color.WHITE
+		if sprite != null:
+			sprite.modulate = Color.WHITE
+			sprite.scale = _selection_base_sprite_scale
+		if team_glow != null:
+			var glow_color: Color = team_glow.color
+			glow_color.a = maxf(_selection_base_glow_alpha, SELECT_PULSE_GLOW_ALPHA_MIN)
+			team_glow.color = glow_color
+			team_glow.scale = Vector2.ONE
 		
 func trigger_defend() -> void:
 	is_defending = true
@@ -878,6 +1017,7 @@ func setup_from_save_data(save_dict: Dictionary) -> void:
 	snap_health_delay_to_main()
 	_refresh_level_badge()
 	call_deferred("_refresh_level_badge")
+	_apply_overhead_bar_focus_state()
 	# 5. Restore Skill Tree Data
 	if save_dict.has("skill_points"):
 		skill_points = save_dict["skill_points"]
@@ -1077,6 +1217,7 @@ func update_poise_visuals() -> void:
 		_poise_bar_tween = create_tween()
 		_poise_bar_tween.tween_property(p_bar, "value", float(clampi(cur_p, 0, max_p)), POISE_BAR_TWEEN_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		p_bar.visible = (cur_p < max_p and current_hp > 0)
+	_apply_overhead_bar_focus_state()
 
 func set_staggered_visuals(is_staggered: bool) -> void:
 	if stagger_tween and stagger_tween.is_valid():
@@ -1105,6 +1246,7 @@ func setup_ghost_ui() -> void:
 		exp_bar.max_value = get_exp_required()
 		exp_bar.value = experience
 	snap_health_delay_to_main()
+	_apply_overhead_bar_focus_state()
 
 	# Optional: Give the ghosts an intimidating purple Arena aura!
 	if team_glow:

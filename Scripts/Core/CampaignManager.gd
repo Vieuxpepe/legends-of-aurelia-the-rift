@@ -309,6 +309,10 @@ var performance_screen_shake: bool = true
 var interface_hud_scale: int = 2
 var interface_show_damage_numbers: bool = true
 var interface_show_health_bars: bool = true
+## Smart declutter: keep HP/poise on map, but show EXP/full overhead only for focused units.
+var interface_focus_unit_bars: bool = true
+## If true, place on-map unit bars near the unit's feet instead of above the head.
+var interface_unit_bars_at_feet: bool = false
 var interface_show_phase_banner: bool = true
 var interface_show_status_effects: bool = true
 ## 0 = Small, 1 = Medium, 2 = Large
@@ -4046,6 +4050,8 @@ func load_global_settings() -> void:
 	interface_hud_scale = clampi(int(cfg.get_value("interface", "hud_scale", interface_hud_scale)), 0, 4)
 	interface_show_damage_numbers = bool(cfg.get_value("interface", "show_damage_numbers", interface_show_damage_numbers))
 	interface_show_health_bars = bool(cfg.get_value("interface", "show_health_bars", interface_show_health_bars))
+	interface_focus_unit_bars = bool(cfg.get_value("interface", "focus_unit_bars", interface_focus_unit_bars))
+	interface_unit_bars_at_feet = bool(cfg.get_value("interface", "unit_bars_at_feet", interface_unit_bars_at_feet))
 	interface_show_phase_banner = bool(cfg.get_value("interface", "show_phase_banner", interface_show_phase_banner))
 	interface_show_status_effects = bool(cfg.get_value("interface", "show_status_effects", interface_show_status_effects))
 	interface_damage_text_size = clampi(int(cfg.get_value("interface", "damage_text_size", interface_damage_text_size)), 0, 2)
@@ -4112,6 +4118,8 @@ func save_global_settings() -> void:
 	cfg.set_value("interface", "hud_scale", interface_hud_scale)
 	cfg.set_value("interface", "show_damage_numbers", interface_show_damage_numbers)
 	cfg.set_value("interface", "show_health_bars", interface_show_health_bars)
+	cfg.set_value("interface", "focus_unit_bars", interface_focus_unit_bars)
+	cfg.set_value("interface", "unit_bars_at_feet", interface_unit_bars_at_feet)
 	cfg.set_value("interface", "show_phase_banner", interface_show_phase_banner)
 	cfg.set_value("interface", "show_status_effects", interface_show_status_effects)
 	cfg.set_value("interface", "damage_text_size", interface_damage_text_size)

@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://kgnb1qm1aqpf"]
 
 [ext_resource type="Script" uid="uid://cnyqke0qc3nky" path="res://Scripts/Core/BattleField.gd" id="1_y08b5"]
-[ext_resource type="Script" path="res://Scripts/UI/PathPreviewTicks.gd" id="path_preview_ticks"]
 [ext_resource type="PackedScene" uid="uid://td7wlhmojryj" path="res://Scenes/PortableFortress.tscn" id="4_4dk6n"]
 [ext_resource type="AudioStream" uid="uid://cio4df814rqqh" path="res://SoundEffects/PromotionSound.mp3" id="5_a5mj7"]
 [ext_resource type="PackedScene" uid="uid://b0e8x5ik3udyx" path="res://Resources/Unit.tscn" id="5_blshy"]
@@ -61,6 +60,8 @@
 [ext_resource type="Texture2D" uid="uid://ccmatpngb33vg" path="res://animations/Phase Banner Animation/22.png" id="55_vsf1i"]
 [ext_resource type="Texture2D" uid="uid://c6xrwlmwanyrg" path="res://animations/Phase Banner Animation/23.png" id="56_jwur5"]
 [ext_resource type="Texture2D" uid="uid://d07qhv8g2nqrr" path="res://animations/Phase Banner Animation/24.png" id="57_urf3x"]
+[ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="57_vc4f1"]
+[ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="58_68ms7"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="58_n2ebu"]
 [ext_resource type="AudioStream" uid="uid://dj3mwc6tapmbn" path="res://SoundEffects/NoDamageSound.mp3" id="61_l82fr"]
 [ext_resource type="AudioStream" uid="uid://dvj8na3bctl7y" path="res://SoundEffects/Music/Emberwood BGM (1).mp3" id="61_nktan"]
@@ -72,6 +73,7 @@
 [ext_resource type="Texture2D" uid="uid://crllydbkiieh6" path="res://Assets/Tilesets/Autumn/image-removebg-preview - 2026-02-25T234212.820.png" id="90_6lfvu"]
 [ext_resource type="Texture2D" uid="uid://cx81cte88pqya" path="res://Assets/Backgrounds/BackgroundParallax.jpeg" id="93_i120u"]
 [ext_resource type="Shader" uid="uid://bei4vo7aontpe" path="res://Scenes/Levels/Clouds.gdshader" id="94_iywou"]
+[ext_resource type="Script" uid="uid://5kh2jrl0vld8" path="res://Scripts/UI/PathPreviewTicks.gd" id="path_preview_ticks"]
 
 [sub_resource type="Resource" id="Resource_8a6bc"]
 script = ExtResource("6_bcjqv")
@@ -679,22 +681,11 @@ promotion_sound = ExtResource("5_a5mj7")
 dash_fx_scene = ExtResource("10_gikfr")
 slash_fx_scene = ExtResource("11_dbhwt")
 level_up_fx_scene = ExtResource("12_ftigw")
-default_fire_tile_damage = null
-fire_tile_extinguish_shrink_sec = null
 GRID_SIZE = Vector2i(20, 30)
-zoom_step = null
-min_zoom = null
-max_zoom = null
-zoom_to_cursor = null
-camera_speed = null
-edge_margin = null
 use_fog_of_war = true
-default_vision_range = null
-vision_blocking_terrain = null
 intro_dialogue = Array[ExtResource("6_bcjqv")]([SubResource("Resource_8a6bc"), SubResource("Resource_yu4i8"), SubResource("Resource_qqdt2"), SubResource("Resource_hhqx0"), SubResource("Resource_lsi8b")])
 outro_dialogue = Array[ExtResource("6_bcjqv")]([SubResource("Resource_0tovn"), SubResource("Resource_08kon")])
 map_objective = 2
-custom_objective_text = null
 turn_limit = 20
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
@@ -1980,6 +1971,16 @@ stream = ExtResource("25_iogl6")
 [node name="AttackSound" type="AudioStreamPlayer" parent="." unique_id=1761563384]
 stream = ExtResource("26_ipqkn")
 
+[node name="BludgeonHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563385]
+stream = ExtResource("57_vc4f1")
+volume_db = 1.5
+pitch_scale = 0.88
+
+[node name="PiercingHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563386]
+stream = ExtResource("58_68ms7")
+volume_db = -1.5
+pitch_scale = 1.06
+
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("27_2iqmx")
 
@@ -1998,15 +1999,15 @@ default_color = Color(0.82, 0.96, 1, 1)
 antialiased = true
 
 [node name="PathEndMarker" type="Node2D" parent="." unique_id=271209552]
+visible = false
 z_index = 102
 z_as_relative = false
-visible = false
 
-[node name="Diamond" type="Polygon2D" parent="PathEndMarker"]
-polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
+[node name="Diamond" type="Polygon2D" parent="PathEndMarker" unique_id=264463009]
 color = Color(0.9, 0.98, 1, 0.92)
+polygon = PackedVector2Array(0, -9, 11, 0, 0, 9, -11, 0)
 
-[node name="PathPreviewTicks" type="Node2D" parent="."]
+[node name="PathPreviewTicks" type="Node2D" parent="." unique_id=1541947592]
 z_index = 103
 z_as_relative = false
 script = ExtResource("path_preview_ticks")

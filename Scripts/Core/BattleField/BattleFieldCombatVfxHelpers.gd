@@ -28,9 +28,8 @@ static func spawn_dash_effect(field, start_pos: Vector2, target_pos: Vector2) ->
 		# Moving LEFT: Inverted for your specific sprite sheet
 		fx.flip_h = true
 	else:
-		# Moving purely UP or DOWN:
-		# Randomly flip it horizontally so it doesn't look identical every time!
-		fx.flip_h = randf() > 0.5
+		# Purely vertical step: keep a stable facing (rotation stays 0).
+		fx.flip_h = false
 
 	fx.scale = Vector2(randf_range(1.0, 1.3), randf_range(0.8, 1.2))
 
@@ -39,22 +38,7 @@ static func spawn_dash_effect(field, start_pos: Vector2, target_pos: Vector2) ->
 const FAMILY_STAFF_UTILITY := -2
 
 
-static func spawn_slash_effect(field, target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
-	if field.slash_fx_scene == null:
-		print("WARNING: Slash FX Scene is missing! Assign it in the Battlefield Inspector!")
-		return
-
-	var fx = field.slash_fx_scene.instantiate()
-	field.add_child(fx)
-
-	fx.z_index = 110 # Make sure it draws above the units!
-
-	# Center it on the defender's chest
-	fx.global_position = target_pos + Vector2(32, 32)
-
-	# Point the slash so it cuts FROM the attacker TO the defender
-	var dir = (target_pos - attacker_pos).normalized()
-
+static func _family_slash_visual_params(weapon_family: int) -> Dictionary:
 	var sc_normal := Vector2(1.3, 1.3)
 	var sc_crit := Vector2(2.5, 2.5)
 	var mod_norm := Color(1.0, 1.0, 1.0, 1.0)
@@ -97,18 +81,135 @@ static func spawn_slash_effect(field, target_pos: Vector2, attacker_pos: Vector2
 			mod_norm = Color(1.0, 0.94, 0.78, 1.0)
 			rot_jitter = 0.2
 
+	return {
+		"sc_normal": sc_normal,
+		"sc_crit": sc_crit,
+		"mod_norm": mod_norm,
+		"rot_jitter": rot_jitter,
+	}
+
+
+static func spawn_slash_effect(field, target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
+	if field.slash_fx_scene == null:
+		print("WARNING: Slash FX Scene is missing! Assign it in the Battlefield Inspector!")
+		return
+
+	var fx = field.slash_fx_scene.instantiate()
+	field.add_child(fx)
+
+	fx.z_index = 110 # Make sure it draws above the units!
+
+	# Center it on the defender's chest
+	fx.global_position = target_pos + Vector2(32, 32)
+
+	# Point the slash so it cuts FROM the attacker TO the defender
+	var dir = (target_pos - attacker_pos).normalized()
+
+	var p: Dictionary = _family_slash_visual_params(weapon_family)
+	var rot_jitter: float = p["rot_jitter"]
+
 	# Add a tiny bit of random angle so combo hits don't look perfectly identical
 	fx.rotation = dir.angle() + randf_range(-rot_jitter, rot_jitter)
+	fx.flip_v = false
 
-	# Randomly flip the "blade" orientation
-	if randf() > 0.5:
-		fx.flip_v = true
-
-	fx.scale = sc_crit if is_crit else sc_normal
+	fx.scale = p["sc_crit"] if is_crit else p["sc_normal"]
 	if is_crit:
-		fx.modulate = mod_norm * Color(1.38, 1.22, 1.12, 1.0)
+		fx.modulate = p["mod_norm"] * Color(1.38, 1.22, 1.12, 1.0)
 	else:
-		fx.modulate = mod_norm
+		fx.modulate = p["mod_norm"]
+
+
+## Thrust along attacker→defender (projectile-like). Prefers `piercing_fx_scene`, else narrow slash strip.
+static func spawn_piercing_strike_effect(field, target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
+	var scene: PackedScene = field.piercing_fx_scene
+	if scene == null:
+		scene = field.slash_fx_scene
+	if scene == null:
+		print("WARNING: Piercing FX Scene is missing (no slash fallback). Assign piercing_fx_scene or slash_fx_scene on BattleField.")
+		return
+
+	var fx = scene.instantiate()
+	field.add_child(fx)
+	fx.z_index = 110
+
+	var dir_vec: Vector2 = target_pos - attacker_pos
+	var dist: float = dir_vec.length()
+	var dir: Vector2
+	if dist > 0.5:
+		dir = dir_vec / dist
+	else:
+		dir = Vector2.RIGHT
+
+	var using_dedicated_pierce: bool = field.piercing_fx_scene != null and scene == field.piercing_fx_scene
+
+	if using_dedicated_pierce:
+		# Impact center on defender; pull FX back along the thrust so it reads as driving into the target.
+		var impact: Vector2 = target_pos + Vector2(32, 32)
+		var pullback: float = clampf(dist * 0.32, 10.0, 52.0)
+		fx.global_position = impact - dir * pullback
+		# Assumes thrust art points along local +X (same convention as battle projectiles). If it points +Y, add PI/2.
+		fx.rotation = dir.angle()
+		fx.flip_h = false
+		fx.flip_v = false
+		var crit_mul: float = 1.2 if is_crit else 1.0
+		fx.scale *= Vector2(crit_mul, crit_mul)
+		var mod: Color = Color(0.90, 0.95, 1.06, 1.0)
+		if is_crit:
+			fx.modulate = mod * Color(1.38, 1.22, 1.12, 1.0)
+		else:
+			fx.modulate = mod
+	else:
+		fx.global_position = target_pos + Vector2(32, 32)
+		var p: Dictionary = _family_slash_visual_params(weapon_family)
+		var base_scale: Vector2 = p["sc_crit"] if is_crit else p["sc_normal"]
+		fx.scale = Vector2(base_scale.x * 0.58, base_scale.y * 1.24)
+		fx.rotation = dir.angle() + randf_range(-0.055, 0.055)
+		fx.flip_v = false
+		var mod2: Color = (p["mod_norm"] as Color) * Color(0.90, 0.95, 1.06, 1.0)
+		if is_crit:
+			fx.modulate = mod2 * Color(1.38, 1.22, 1.12, 1.0)
+		else:
+			fx.modulate = mod2
+
+
+## Chunky impact read; prefers `bludgeon_fx_scene`, falls back to slash VFX.
+static func spawn_bludgeon_impact_effect(field, target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
+	var scene: PackedScene = field.bludgeon_fx_scene
+	if scene == null:
+		scene = field.slash_fx_scene
+	if scene == null:
+		print("WARNING: Bludgeon FX Scene is missing (no slash fallback). Assign bludgeon_fx_scene or slash_fx_scene on BattleField.")
+		return
+
+	var fx = scene.instantiate()
+	field.add_child(fx)
+	fx.z_index = 110
+	fx.global_position = target_pos + Vector2(32, 32)
+
+	var p: Dictionary = _family_slash_visual_params(weapon_family)
+	var base_scale: Vector2 = p["sc_crit"] if is_crit else p["sc_normal"]
+	fx.scale = Vector2(base_scale.x * 1.34, base_scale.y * 1.12)
+	fx.flip_v = false
+
+	# BludgeoningEffect is a vertical frame strip (top → bottom in atlas). Full dir.angle() rotation
+	# makes the read flip by quadrant; keep upright and only mirror left/right from attacker side.
+	var using_dedicated_bludgeon: bool = field.bludgeon_fx_scene != null and scene == field.bludgeon_fx_scene
+	if using_dedicated_bludgeon:
+		fx.rotation = 0.0
+		var dx: float = target_pos.x - attacker_pos.x
+		if absf(dx) > 2.0:
+			fx.flip_h = dx < 0.0
+		else:
+			fx.flip_h = false
+	else:
+		var dir: Vector2 = (target_pos - attacker_pos).normalized()
+		fx.rotation = dir.angle() + randf_range(-0.44, 0.44)
+
+	var mod: Color = (p["mod_norm"] as Color) * Color(1.08, 0.95, 0.82, 1.0)
+	if is_crit:
+		fx.modulate = mod * Color(1.38, 1.22, 1.12, 1.0)
+	else:
+		fx.modulate = mod
 
 
 static func spawn_level_up_effect(field, target_pos: Vector2) -> void:
@@ -193,4 +294,3 @@ static func spawn_blood_splatter(field, target_unit: Node2D, attacker_pos: Vecto
 
 	blood.restart()
 	field.get_tree().create_timer(1.5, true, false, true).timeout.connect(blood.queue_free)
-

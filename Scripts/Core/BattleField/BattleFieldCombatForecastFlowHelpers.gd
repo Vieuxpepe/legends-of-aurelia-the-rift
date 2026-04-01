@@ -255,6 +255,8 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
 
 	# Physical subtype multipliers (forecast must match resolution)
+	var atk_dmg_base: int = int(atk_dmg)
+	var def_dmg_base: int = int(def_dmg)
 	if not atk_is_magic and atk_wpn != null:
 		var atk_subtype: int = field.resolve_physical_subtype(atk_wpn)
 		atk_dmg = int(round(float(atk_dmg) * field.resolve_physical_subtype_multiplier(defender, atk_subtype)))
@@ -341,7 +343,7 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		field.forecast_def_double.text = ""
 	else:
 		# Standard Attack UI
-		field.forecast_atk_dmg.text = "DMG: " + str(atk_dmg)
+		field.forecast_atk_dmg.text = "DMG: " + str(atk_dmg_base) + " (" + str(atk_dmg) + ")"
 		field.forecast_atk_hit.text = "HIT: " + str(atk_hit) + "%"
 		field.forecast_atk_crit.text = "CRIT: " + str(atk_crit) + "%"
 
@@ -357,7 +359,7 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 			field.forecast_def_crit.text = ""
 			field.forecast_def_double.text = ""
 		else:
-			field.forecast_def_dmg.text = "COUNTER: " + str(def_dmg)
+			field.forecast_def_dmg.text = "COUNTER: " + str(def_dmg_base) + " (" + str(def_dmg) + ")"
 			field.forecast_def_hit.text = "HIT: " + str(def_hit) + "%"
 			field.forecast_def_crit.text = "CRIT: " + str(def_crit) + "%"
 			var def_doubles = (defender.speed - attacker.speed) >= 4

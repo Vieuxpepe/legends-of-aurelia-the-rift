@@ -179,6 +179,12 @@ static func run_strike_sequence(
 			var is_heal: bool = wpn != null and wpn.get("is_healing_staff") == true
 			var is_buff: bool = wpn != null and wpn.get("is_buff_staff") == true
 			var is_debuff: bool = wpn != null and wpn.get("is_debuff_staff") == true
+
+			# Face the combat pair (player attacks often skipped AI-only look_at; vertical adjacency needs non-X logic in look_at_pos).
+			if is_instance_valid(defender) and attacker.has_method("look_at_pos"):
+				attacker.look_at_pos(field.get_grid_pos(defender))
+			if is_instance_valid(attacker) and defender.has_method("look_at_pos"):
+				defender.look_at_pos(field.get_grid_pos(attacker))
 			
 			# ==========================================
 			# PHASE A: STAFF LOGIC (Heal, Buff, Debuff)
@@ -1473,7 +1479,16 @@ static func run_strike_sequence(
 			# PHASE C: ATTACK LUNGE OR SHOOT
 			# ==========================================
 			var orig_pos: Vector2 = attacker.global_position
-			var lunge_dir: Vector2 = (defender.global_position - attacker.global_position).normalized()
+			# Grid-dominant direction keeps melee read cardinals (avoids diagonal lunge_dir from mixed origins / float tiles).
+			var raw_lunge: Vector2 = defender.global_position - attacker.global_position
+			var cell_delta: Vector2i = field.get_grid_pos(defender) - field.get_grid_pos(attacker)
+			var lunge_dir: Vector2
+			if cell_delta == Vector2i.ZERO:
+				lunge_dir = Vector2.RIGHT if raw_lunge.length_squared() < 0.0001 else raw_lunge.normalized()
+			elif absi(cell_delta.x) >= absi(cell_delta.y):
+				lunge_dir = Vector2(signf(float(cell_delta.x)), 0.0) if cell_delta.x != 0 else Vector2(0.0, signf(float(cell_delta.y)))
+			else:
+				lunge_dir = Vector2(0.0, signf(float(cell_delta.y))) if cell_delta.y != 0 else Vector2(signf(float(cell_delta.x)), 0.0)
 			var did_melee_crit_animation: bool = false
 			var did_melee_normal_animation: bool = false
 			var used_ranged_projectile: bool = false
@@ -1560,12 +1575,30 @@ static func run_strike_sequence(
 				
 			else:
 				# --- MELEE ATTACK ---
+				var melee_phys: int = int(WeaponData.PhysicalSubtype.SLASHING)
+				if wpn != null:
+					if not is_magic:
+						melee_phys = field.resolve_physical_subtype(wpn)
+					elif WeaponData.get_weapon_family(int(wpn.weapon_type)) == WeaponData.WeaponType.LANCE:
+						melee_phys = field.resolve_physical_subtype(wpn)
 				if is_crit and attack_hits:
 					did_melee_crit_animation = true
-					await field._run_melee_crit_lunge(attacker, defender, orig_pos, lunge_dir)
+					match melee_phys:
+						int(WeaponData.PhysicalSubtype.PIERCING):
+							await field._run_melee_crit_lunge_piercing(attacker, defender, orig_pos, lunge_dir)
+						int(WeaponData.PhysicalSubtype.BLUDGEONING):
+							await field._run_melee_crit_lunge_bludgeoning(attacker, defender, orig_pos, lunge_dir)
+						_:
+							await field._run_melee_crit_lunge(attacker, defender, orig_pos, lunge_dir)
 				else:
 					did_melee_normal_animation = true
-					await field._run_melee_normal_lunge(attacker, defender, orig_pos, lunge_dir)
+					match melee_phys:
+						int(WeaponData.PhysicalSubtype.PIERCING):
+							await field._run_melee_normal_lunge_piercing(attacker, defender, orig_pos, lunge_dir)
+						int(WeaponData.PhysicalSubtype.BLUDGEONING):
+							await field._run_melee_normal_lunge_bludgeoning(attacker, defender, orig_pos, lunge_dir)
+						_:
+							await field._run_melee_normal_lunge(attacker, defender, orig_pos, lunge_dir)
 			
 			# ==========================================
 			# PHASE D: DEFENSIVE ABILITIES & PARRY

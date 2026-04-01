@@ -18,6 +18,8 @@
 [ext_resource type="Texture2D" uid="uid://cfig6wee7qtmg" path="res://Assets/UI/Bottom Bar UI.png" id="11_isduc"]
 [ext_resource type="AudioStream" uid="uid://b7yve2nxanae3" path="res://SoundEffects/selecting_a_unit_in__#4-1771002768683.wav" id="11_qryvh"]
 [ext_resource type="AudioStream" uid="uid://c1l68wat5t453" path="res://SoundEffects/attacking_a_unit_in__#3-1771002816393.wav" id="12_ne017"]
+[ext_resource type="AudioStream" uid="uid://chtvs1op5q5f8" path="res://SoundEffects/ShieldBashSound.mp3" id="35_bludgeon_hit"]
+[ext_resource type="AudioStream" uid="uid://bmh3ebl1gwv17" path="res://SoundEffects/ArrowImpact.mp3" id="36_pierce_hit"]
 [ext_resource type="Texture2D" uid="uid://wd7yasg4yc66" path="res://Assets/UI/End Turn Button Resized.png" id="13_fxhft"]
 [ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="13_ne017"]
 [ext_resource type="Texture2D" uid="uid://cv4fglc1d6q36" path="res://Assets/UI/Player Phase.png" id="14_5opl8"]
@@ -723,6 +725,16 @@ stream = ExtResource("11_qryvh")
 
 [node name="AttackSound" type="AudioStreamPlayer" parent="." unique_id=1761563384]
 stream = ExtResource("12_ne017")
+
+[node name="BludgeonHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563385]
+stream = ExtResource("35_bludgeon_hit")
+volume_db = 1.5
+pitch_scale = 0.88
+
+[node name="PiercingHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563386]
+stream = ExtResource("36_pierce_hit")
+volume_db = -1.5
+pitch_scale = 1.06
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("13_ne017")

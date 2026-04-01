@@ -9,17 +9,30 @@ static func handle_camera_panning(field, delta: float) -> void:
 
 	var viewport_size = field.get_viewport().get_visible_rect().size
 	var mouse_pos = field.get_viewport().get_mouse_position()
-	var move_vec = Vector2.ZERO
+	var move_vec_mouse := Vector2.ZERO
+	var move_vec_keys := Vector2.ZERO
 
 	if mouse_pos.x < field.edge_margin:
-		move_vec.x = -1
+		move_vec_mouse.x = -1
 	elif mouse_pos.x > viewport_size.x - field.edge_margin:
-		move_vec.x = 1
+		move_vec_mouse.x = 1
 
 	if mouse_pos.y < field.edge_margin:
-		move_vec.y = -1
+		move_vec_mouse.y = -1
 	elif mouse_pos.y > viewport_size.y - field.edge_margin:
-		move_vec.y = 1
+		move_vec_mouse.y = 1
+
+	# Keyboard pan (WASD) mirrors edge-pan behavior for players who prefer keys.
+	if Input.is_key_pressed(KEY_A):
+		move_vec_keys.x -= 1.0
+	if Input.is_key_pressed(KEY_D):
+		move_vec_keys.x += 1.0
+	if Input.is_key_pressed(KEY_W):
+		move_vec_keys.y -= 1.0
+	if Input.is_key_pressed(KEY_S):
+		move_vec_keys.y += 1.0
+
+	var move_vec: Vector2 = move_vec_mouse + move_vec_keys
 
 	if move_vec != Vector2.ZERO:
 		field.main_camera.position += move_vec.normalized() * CampaignManager.camera_pan_speed * delta
@@ -44,6 +57,49 @@ static func clamp_camera_position(field) -> void:
 
 	field.main_camera.position.x = clamp(field.main_camera.position.x, -extra_scroll_margin, map_limit_x + extra_scroll_margin)
 	field.main_camera.position.y = clamp(field.main_camera.position.y, -extra_scroll_margin, map_limit_y + extra_scroll_margin)
+
+
+static func _find_custom_avatar_unit(field) -> Node2D:
+	for container in [field.player_container, field.ally_container]:
+		if container == null:
+			continue
+		for child in container.get_children():
+			var unit: Node2D = child as Node2D
+			if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+				continue
+			if unit.get("is_custom_avatar") == true:
+				if unit.get("current_hp") != null and int(unit.current_hp) <= 0:
+					continue
+				if unit.visible == false:
+					continue
+				return unit
+	return null
+
+
+## Keyboard QoL: center camera on the custom avatar (Kaelen avatar unit) when requested.
+## Returns true if a jump was performed and input should be consumed.
+static func try_jump_camera_to_custom_avatar(field, duration: float = 0.22) -> bool:
+	if field == null or field.main_camera == null:
+		return false
+	# Keep deployment Space/Enter behavior unchanged.
+	if field.current_state == field.pre_battle_state:
+		return false
+	var avatar: Node2D = _find_custom_avatar_unit(field)
+	if avatar == null:
+		return false
+
+	var target_cam_pos: Vector2 = avatar.global_position + Vector2(32, 32)
+	if field.main_camera.anchor_mode == Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT:
+		var vp_size: Vector2 = field.get_viewport_rect().size
+		target_cam_pos -= (vp_size * 0.5) / field.main_camera.zoom
+
+	var tw: Tween = field.create_tween()
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(field.main_camera, "global_position", target_cam_pos, duration)
+	tw.finished.connect(func() -> void:
+		clamp_camera_position(field)
+	)
+	return true
 
 
 func apply_camera_zoom(field, direction: int) -> void:

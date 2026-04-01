@@ -4,7 +4,9 @@ extends RefCounted
 static func process(field, delta: float) -> void:
 	field.update_cursor_pos()
 	field.update_cursor_color()
+	field._refresh_overhead_unit_bars()
 	field.update_unit_info_panel()
+	field._refresh_unit_hotkey_hud()
 	if field.current_state == field.pre_battle_state:
 		field._update_mock_coop_start_battle_button_state()
 	sanitize_player_phase_active_unit_for_mock_coop_ownership(field)
@@ -294,4 +296,3 @@ static func should_pulse_skip_button_end_turn_nudge(field) -> bool:
 	if mock_coop_player_phase_ready_sync_active(field) and field._mock_coop_local_player_phase_ready:
 		return false
 	return local_player_fielded_commandable_units_all_exhausted(field)
-

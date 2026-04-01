@@ -990,6 +990,16 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "SHOW UNIT HEALTH BARS"
 
+[node name="UiUnitBarsAtFeetToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PLACE UNIT BARS AT FEET"
+
+[node name="UiFocusUnitBarsToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SMART UNIT BARS (full on selected/active/hovered)"
+
 [node name="UiShowPhaseBannerToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2

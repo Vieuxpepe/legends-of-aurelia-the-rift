@@ -9,6 +9,7 @@ static func process_phase_f_durability_and_return(
 	orig_pos: Vector2
 ) -> void:
 	if is_instance_valid(attacker):
+		field._melee_reset_melee_sprite_visual(attacker)
 		if not did_melee_normal_animation:
 			var return_tween: Tween = field.create_tween()
 			return_tween.tween_property(attacker, "global_position", orig_pos, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)

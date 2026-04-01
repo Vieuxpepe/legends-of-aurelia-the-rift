@@ -8,6 +8,7 @@ extends GameState
 class_name PlayerTurnState
 
 const CombatTurnHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatTurnHelpers.gd")
+const UNIT_HOTKEY_MAX: int = 6
 
 var is_waiting_for_defend_confirm: bool = false
 var active_unit: Node2D = null
@@ -47,6 +48,13 @@ func handle_input(event: InputEvent) -> void:
 
 	if battlefield.has_method("is_mock_partner_placeholder_active") and battlefield.is_mock_partner_placeholder_active():
 		return
+
+	# --- Numeric hotkeys: 1..6 select player units quickly ---
+	if event is InputEventKey and event.pressed and not event.echo:
+		var hotkey_slot: int = _unit_hotkey_slot_from_key(event as InputEventKey)
+		if hotkey_slot >= 0:
+			_handle_unit_hotkey_select(hotkey_slot)
+			return
 
 	# --- Undo / deselect (Right-click or Escape) ---
 	if event.is_action_pressed("ui_cancel") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed):
@@ -165,17 +173,7 @@ func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 	var occupant: Node2D = battlefield.get_occupant_at(cursor_pos)
 
 	if unit != null and not unit.is_exhausted:
-		if not battlefield.try_allow_local_player_select_unit_for_command(unit):
-			return
-		battlefield.inspected_unit = null
-		active_unit = unit
-		original_pos = battlefield.get_grid_pos(active_unit)
-		active_unit.set_selected_glow(true)
-		battlefield.astar.set_point_solid(cursor_pos, false)
-		battlefield.calculate_ranges(active_unit)
-		if battlefield.select_sound != null and battlefield.select_sound.stream != null:
-			battlefield.select_sound.pitch_scale = randf_range(0.95, 1.05)
-			battlefield.select_sound.play()
+		_select_player_unit_for_command(unit)
 	elif occupant != null and occupant.get("data") != null:
 		battlefield.inspected_unit = occupant
 		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
@@ -194,6 +192,81 @@ func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 		battlefield.inspected_unit = null
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 		battlefield.clear_ranges()
+
+
+func _unit_hotkey_slot_from_key(ev: InputEventKey) -> int:
+	match ev.keycode:
+		KEY_1, KEY_KP_1:
+			return 0
+		KEY_2, KEY_KP_2:
+			return 1
+		KEY_3, KEY_KP_3:
+			return 2
+		KEY_4, KEY_KP_4:
+			return 3
+		KEY_5, KEY_KP_5:
+			return 4
+		KEY_6, KEY_KP_6:
+			return 5
+		_:
+			return -1
+
+
+func _hotkey_selectable_player_units() -> Array[Node2D]:
+	var out: Array[Node2D] = []
+	if battlefield == null or battlefield.player_container == null:
+		return out
+	for child in battlefield.player_container.get_children():
+		var unit: Node2D = child as Node2D
+		if unit == null or not is_instance_valid(unit) or unit.is_queued_for_deletion():
+			continue
+		if unit.visible == false:
+			continue
+		if unit.get("current_hp") != null and int(unit.current_hp) <= 0:
+			continue
+		if unit.get("is_exhausted") == true:
+			continue
+		if battlefield.is_local_player_command_blocked_for_mock_coop_unit(unit):
+			continue
+		out.append(unit)
+		if out.size() >= UNIT_HOTKEY_MAX:
+			break
+	return out
+
+
+func _handle_unit_hotkey_select(hotkey_slot: int) -> void:
+	if battlefield == null:
+		return
+	if is_forecasting:
+		return
+	var units: Array[Node2D] = _hotkey_selectable_player_units()
+	if hotkey_slot < 0 or hotkey_slot >= units.size():
+		return
+	var target_unit: Node2D = units[hotkey_slot]
+	if target_unit == null or not is_instance_valid(target_unit):
+		return
+	if active_unit != null and is_instance_valid(active_unit):
+		if active_unit == target_unit:
+			return
+		# Hotkey cycling should swap armed selection without forcing movement undo.
+		clear_active_unit()
+	_select_player_unit_for_command(target_unit)
+
+
+func _select_player_unit_for_command(unit: Node2D) -> void:
+	if unit == null or not is_instance_valid(unit):
+		return
+	if not battlefield.try_allow_local_player_select_unit_for_command(unit):
+		return
+	battlefield.inspected_unit = null
+	active_unit = unit
+	original_pos = battlefield.get_grid_pos(active_unit)
+	active_unit.set_selected_glow(true)
+	battlefield.astar.set_point_solid(original_pos, false)
+	battlefield.calculate_ranges(active_unit)
+	if battlefield.select_sound != null and battlefield.select_sound.stream != null:
+		battlefield.select_sound.pitch_scale = randf_range(0.95, 1.05)
+		battlefield.select_sound.play()
 
 
 func _handle_defend_click() -> void:

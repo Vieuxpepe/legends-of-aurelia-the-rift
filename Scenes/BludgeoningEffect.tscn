@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://dwoa6cionwv2v"]
+
+[ext_resource type="Texture2D" uid="uid://d3mkdsiuaq4gy" path="res://sprite-sheet.png" id="1_tika1"]
+[ext_resource type="Script" uid="uid://b2qgqo8ydoiq0" path="res://SlashEffect.gd" id="2_l03vo"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n1xy0"]
+atlas = ExtResource("1_tika1")
+region = Rect2(0, 0, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_76dl3"]
+atlas = ExtResource("1_tika1")
+region = Rect2(128, 0, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jew8h"]
+atlas = ExtResource("1_tika1")
+region = Rect2(0, 128, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qpdrx"]
+atlas = ExtResource("1_tika1")
+region = Rect2(128, 128, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s1cen"]
+atlas = ExtResource("1_tika1")
+region = Rect2(0, 256, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_uhnnx"]
+atlas = ExtResource("1_tika1")
+region = Rect2(128, 256, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5758p"]
+atlas = ExtResource("1_tika1")
+region = Rect2(0, 384, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l2xhf"]
+atlas = ExtResource("1_tika1")
+region = Rect2(128, 384, 128, 128)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_pn1e3"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n1xy0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_76dl3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jew8h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qpdrx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s1cen")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_uhnnx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5758p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l2xhf")
+}],
+"loop": false,
+"name": &"default",
+"speed": 20.0
+}]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" unique_id=1600442802]
+scale = Vector2(0.5, 0.5)
+sprite_frames = SubResource("SpriteFrames_pn1e3")
+frame = 7
+frame_progress = 1.0
+speed_scale = 1.25
+script = ExtResource("2_l03vo")

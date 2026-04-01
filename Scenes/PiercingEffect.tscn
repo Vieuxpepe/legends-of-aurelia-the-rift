@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://8427a31bglaw"]
+
+[ext_resource type="SpriteFrames" uid="uid://ivqgh70yw42j" path="res://ThrustEffect.tres" id="1_6q0tn"]
+[ext_resource type="Script" uid="uid://b2qgqo8ydoiq0" path="res://SlashEffect.gd" id="2_pierce"]
+
+[node name="PiercingEffect" type="AnimatedSprite2D" unique_id=1054367213]
+scale = Vector2(0.05, 0.054)
+sprite_frames = ExtResource("1_6q0tn")
+frame = 16
+frame_progress = 1.0
+script = ExtResource("2_pierce")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1291078245]
+position = Vector2(300, -37.03705)
+scale = Vector2(1, 1.6640211)
+sprite_frames = ExtResource("1_6q0tn")
+frame = 16
+frame_progress = 1.0

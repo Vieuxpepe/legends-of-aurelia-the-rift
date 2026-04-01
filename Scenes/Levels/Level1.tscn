@@ -105,6 +105,8 @@
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="64_sx0kx"]
 [ext_resource type="AudioStream" uid="uid://cx2nrdjtlm8r5" path="res://SoundEffects/Level Up, Clean, Simple, 16 Bit, Heroic.mp3" id="67_be25e"]
 [ext_resource type="AudioStream" uid="uid://rrvy3o3cnmej" path="res://SoundEffects/CriticalHit.wav" id="70_314h1"]
+[ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="75_q63fc"]
+[ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="76_lfvqy"]
 [ext_resource type="PackedScene" uid="uid://dl0ahk8so1jdh" path="res://Scenes/HouseFireVFX.tscn" id="82_lkv2p"]
 [ext_resource type="PackedScene" uid="uid://c80ef0dbdtjjb" path="res://Scenes/fire_glow.tscn" id="83_8a6bc"]
 [ext_resource type="Texture2D" uid="uid://cx81cte88pqya" path="res://Assets/Backgrounds/BackgroundParallax.jpeg" id="85_0blb5"]
@@ -608,7 +610,7 @@ shader_parameter/inner_radius = 0.6
 shader_parameter/outer_radius = 1.0
 shader_parameter/vignette_strength = 0.8
 
-[node name="BattleField" type="Node2D" unique_id=1694060677]
+[node name="BattleField2" type="Node2D" unique_id=1694060677]
 position = Vector2(2, 0)
 script = ExtResource("1_rd2vd")
 player_unit_scene = ExtResource("4_0a0w2")
@@ -2191,6 +2193,16 @@ stream = ExtResource("24_nful3")
 
 [node name="AttackSound" type="AudioStreamPlayer" parent="." unique_id=1761563384]
 stream = ExtResource("25_l0b4w")
+
+[node name="BludgeonHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563385]
+stream = ExtResource("75_q63fc")
+volume_db = 1.5
+pitch_scale = 0.88
+
+[node name="PiercingHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563386]
+stream = ExtResource("76_lfvqy")
+volume_db = -1.5
+pitch_scale = 1.06
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("26_y7lbt")

@@ -5,7 +5,7 @@
 [ext_resource type="AudioStream" uid="uid://cdnaiwtsm0rwt" path="res://SoundEffects/Death Human.mp3" id="2_3si78"]
 [ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="2_oyvbx"]
 [ext_resource type="Texture2D" uid="uid://dw1qjm7ogo8jx" path="res://Assets/Portraits/kaelen_side.png" id="4_lnprg"]
-[ext_resource type="Resource" uid="uid://cbugs1gjcxkm8" path="res://Resources/Weapons/IronSword.tres" id="6_lnprg"]
+[ext_resource type="Resource" uid="uid://dyy30mxh0mxc7" path="res://Resources/GeneratedItems/Weapon_Holy_Lance.tres" id="6_6kkgn"]
 [ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="7_6kkgn"]
 [ext_resource type="Texture2D" uid="uid://bk8w43371ayu6" path="res://Assets/Sprites/Kaelen Sprite.png" id="7_8oxj0"]
 [ext_resource type="Resource" uid="uid://bt3ts5lcdbk0b" path="res://Resources/SupportConversations/Avatar_Kaelen.tres" id="8_6kkgn"]
@@ -17,7 +17,7 @@ is_recruitable = true
 death_quotes = Array[String](["Damn it… I was supposed to get you through this, not leave you in it.", "So this is my part done. Make yours count.", "Don’t stand there grieving — survive first, regret later.", "Tch… should’ve known I wouldn’t get to see how this ends."])
 level_up_quotes = Array[String](["There. Slightly less likely to die doing something stupid.", "Good. Maybe now I can stop doing everyone else’s work for them.", "Hnh. Rust scrapes off eventually."])
 character_class = ExtResource("1_8oxj0")
-starting_weapon = ExtResource("6_lnprg")
+starting_weapon = ExtResource("6_6kkgn")
 death_sound = ExtResource("2_3si78")
 supports = Array[ExtResource("7_6kkgn")]([ExtResource("8_6kkgn")])
 unit_sprite = ExtResource("7_8oxj0")

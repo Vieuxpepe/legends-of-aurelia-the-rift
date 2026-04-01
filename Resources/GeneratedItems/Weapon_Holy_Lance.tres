@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dyy30mxh0mxc7"]
 
 [ext_resource type="Script" uid="uid://b1atwvdvhdm0s" path="res://Resources/WeaponData.gd" id="1_wcb81"]
+[ext_resource type="PackedScene" uid="uid://pnj6nmwntq4y" path="res://Scenes/ArrowProjectile.tscn" id="2_hl_proj"]
 
 [resource]
 script = ExtResource("1_wcb81")
@@ -10,6 +11,8 @@ weapon_name = "Holy Lance"
 gold_cost = 8800
 damage_type = 1
 weapon_type = 1
+projectile_scene = ExtResource("2_hl_proj")
+projectile_scale = 0.62
 affected_stat = "magic"
 effect_amount = 0
 might = 19

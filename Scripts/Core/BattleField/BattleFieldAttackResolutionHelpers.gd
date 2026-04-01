@@ -14,6 +14,55 @@ static func _resolve_weapon_impact_family(wpn) -> int:
 	return WeaponData.get_weapon_family(int(wpn.weapon_type))
 
 
+static func _spawn_melee_hit_impact_vfx(
+	field,
+	defender: Node2D,
+	attacker: Node2D,
+	is_crit: bool,
+	weapon_impact_fam: int,
+	phys_subtype: int,
+	used_ranged_projectile: bool
+) -> void:
+	var dpos: Vector2 = defender.global_position
+	var apos: Vector2 = attacker.global_position
+	# Projectile already sells thrust/impact; a second pierce strip on contact feels like double motion.
+	if used_ranged_projectile:
+		if phys_subtype == int(WeaponData.PhysicalSubtype.PIERCING):
+			return
+		elif phys_subtype == int(WeaponData.PhysicalSubtype.BLUDGEONING):
+			field.spawn_bludgeon_impact_effect(dpos, apos, is_crit, weapon_impact_fam)
+		else:
+			field.spawn_slash_effect(dpos, apos, is_crit, weapon_impact_fam)
+		return
+	if phys_subtype == int(WeaponData.PhysicalSubtype.PIERCING):
+		field.spawn_piercing_strike_effect(dpos, apos, is_crit, weapon_impact_fam)
+	elif phys_subtype == int(WeaponData.PhysicalSubtype.BLUDGEONING):
+		field.spawn_bludgeon_impact_effect(dpos, apos, is_crit, weapon_impact_fam)
+	else:
+		field.spawn_slash_effect(dpos, apos, is_crit, weapon_impact_fam)
+
+
+static func _play_weapon_hit_sound(field, wpn, phys_subtype: int) -> void:
+	if phys_subtype == int(WeaponData.PhysicalSubtype.PIERCING):
+		var phs: AudioStreamPlayer = field.get("piercing_hit_sound") as AudioStreamPlayer
+		if phs != null and phs.stream != null:
+			phs.play()
+			return
+	if phys_subtype == int(WeaponData.PhysicalSubtype.BLUDGEONING):
+		var bhs: AudioStreamPlayer = field.get("bludgeon_hit_sound") as AudioStreamPlayer
+		if bhs != null and bhs.stream != null:
+			bhs.play()
+			return
+	if wpn != null and wpn.get("custom_hit_sound") != null:
+		var custom_audio := AudioStreamPlayer.new()
+		custom_audio.stream = wpn.custom_hit_sound
+		field.add_child(custom_audio)
+		custom_audio.play()
+		custom_audio.finished.connect(custom_audio.queue_free)
+	elif field.attack_sound != null and field.attack_sound.stream != null:
+		field.attack_sound.play()
+
+
 # Phase E: normal attack resolution (post Phase D defensive abilities).
 # Uses a context Dictionary to avoid an unmanageable parameter list.
 static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
@@ -105,23 +154,34 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 	var impact_damage_kind: int = 0
 	if is_magic or (wpn_fx != null and int(wpn_fx.damage_type) == int(WeaponData.DamageType.MAGIC)):
 		impact_damage_kind = 1
+	# Hit VFX subtype (pierce/bludgeon/slash). Magic lances (e.g. Holy Lance) still use lance presentation.
 	var phys_subtype: int = -1
-	if not is_magic and wpn_fx is WeaponData:
-		phys_subtype = field.resolve_physical_subtype(wpn_fx as WeaponData)
+	if wpn_fx != null and wpn_fx is WeaponData:
+		var wd_fx: WeaponData = wpn_fx as WeaponData
+		var fam_fx: int = WeaponData.get_weapon_family(int(wd_fx.weapon_type))
+		if not is_magic or fam_fx == WeaponData.WeaponType.LANCE:
+			phys_subtype = field.resolve_physical_subtype(wd_fx)
 
 	if not defense_resolved_and_won:
 		if attack_hits:
 			field._rookie_register_apprentice_magic_hit(attacker, ctx.get("wpn", null), is_magic, true)
 			var impact_focus: Vector2 = defender.global_position + Vector2(32, 32)
 
+			var is_bludgeon: bool = phys_subtype == int(WeaponData.PhysicalSubtype.BLUDGEONING)
 			if attack_hits and is_crit:
-				await field._play_critical_impact(impact_focus)
+				await field._play_critical_impact(impact_focus, is_bludgeon)
 			elif already_staggered or will_stagger:
 				await field._play_guard_break_impact(impact_focus)
 			elif used_ranged_projectile:
-				await field._play_light_hit_impact(impact_focus)
+				if is_bludgeon:
+					await field._play_heavy_bludgeon_hit_impact(impact_focus)
+				else:
+					await field._play_light_hit_impact(impact_focus)
 			elif did_melee_normal_animation:
-				await field._play_normal_hit_impact(impact_focus)
+				if is_bludgeon:
+					await field._play_heavy_bludgeon_hit_impact(impact_focus)
+				else:
+					await field._play_normal_hit_impact(impact_focus)
 
 			var final_dmg: int = damage * 3 if is_crit else damage
 
@@ -224,8 +284,11 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								current_hit_dmg = int(float(current_hit_dmg) * pow(0.75, hit_idx - 4))
 							current_hit_dmg = int(max(1, current_hit_dmg))
 
-							if field.attack_sound.stream != null: field.attack_sound.play()
-							field.screen_shake(4.0, 0.05)
+							_play_weapon_hit_sound(field, wpn_fx, phys_subtype)
+							if is_bludgeon:
+								field.screen_shake(8.0, 0.11)
+							else:
+								field.screen_shake(4.0, 0.05)
 							attacker.position += lunge_dir * 4.0
 							var snap = field.create_tween()
 							snap.tween_property(attacker, "position", attacker.position - (lunge_dir * 4.0), 0.05)
@@ -238,7 +301,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								"rise_px": 36.0,
 							})
 
-							field.spawn_slash_effect(defender.global_position, attacker.global_position, false, weapon_impact_fam)
+							_spawn_melee_hit_impact_vfx(field, defender, attacker, false, weapon_impact_fam, phys_subtype, used_ranged_projectile)
 							field.spawn_blood_splatter(defender, attacker.global_position, false, impact_damage_kind)
 
 							var exp_tgt = attacker if (defender.current_hp <= current_hit_dmg or hit_idx == combo_hits - 1) else null
@@ -256,17 +319,15 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 						if attack_hits and is_crit:
 							if not did_melee_crit_animation and field.crit_sound.stream != null:
 								field.crit_sound.play()
-							field.screen_shake(15.0, 0.4)
+							if is_bludgeon:
+								field.screen_shake(19.0, 0.48)
+							else:
+								field.screen_shake(15.0, 0.4)
 						else:
 							var wpn = ctx.get("wpn", null)
-							if wpn != null and wpn.get("custom_hit_sound") != null:
-								var custom_audio = AudioStreamPlayer.new()
-								custom_audio.stream = wpn.custom_hit_sound
-								field.add_child(custom_audio)
-								custom_audio.play()
-								custom_audio.finished.connect(custom_audio.queue_free)
-							else:
-								if field.attack_sound.stream != null: field.attack_sound.play()
+							_play_weapon_hit_sound(field, wpn, phys_subtype)
+							if is_bludgeon:
+								field.screen_shake(11.5, 0.33)
 
 						field.add_combat_log(attacker.unit_name + " hit " + defender.unit_name + " for " + str(final_dmg) + (" (CRIT)" if is_crit else ""), "gold" if is_crit else "white")
 						if is_crit and atk_rel.get("crit_bonus", 0) > 0 and attacker.get("unit_name") != null:
@@ -285,7 +346,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 							"rise_px": 48.0 if is_crit else 42.0,
 							"scatter_amount": 14.0 if is_crit else 16.0,
 						})
-						field.spawn_slash_effect(defender.global_position, attacker.global_position, is_crit, weapon_impact_fam)
+						_spawn_melee_hit_impact_vfx(field, defender, attacker, is_crit, weapon_impact_fam, phys_subtype, used_ranged_projectile)
 						field.spawn_blood_splatter(defender, attacker.global_position, is_crit, impact_damage_kind)
 
 						# Earn support points (copied as-is: uses field funcs/containers)
@@ -324,7 +385,9 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if not is_instance_valid(defender) or defender.current_hp <= 0:
 									break
 								var slash_dmg: int = int(max(1.0, float(damage) * severing_strike_damage_multiplier))
-								if field.attack_sound and field.attack_sound.stream != null: field.attack_sound.play()
+								_play_weapon_hit_sound(field, wpn_fx, phys_subtype)
+								if is_bludgeon:
+									field.screen_shake(9.0, 0.19)
 								field.spawn_loot_text(str(slash_dmg), Color(0.70, 0.90, 1.00), defender.global_position + Vector2(32, -12) + Vector2(randf_range(-10.0, 10.0), randf_range(-8.0, 8.0)), {
 									"stack_anchor": defender,
 									"font_size": 19,
@@ -332,7 +395,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 									"scatter_amount": 11.0,
 									"rise_px": 38.0,
 								})
-								field.spawn_slash_effect(defender.global_position, attacker.global_position, force_crit, weapon_impact_fam)
+								_spawn_melee_hit_impact_vfx(field, defender, attacker, force_crit, weapon_impact_fam, phys_subtype, used_ranged_projectile)
 								if phys_subtype >= 0:
 									defender.set_meta("last_damage_subtype", phys_subtype)
 								field._apply_hit_with_support_reactions(defender, slash_dmg, attacker, attacker, false)

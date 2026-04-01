@@ -91,6 +91,8 @@ func _find_ui(node_name: String) -> Node:
 @onready var ui_hud_scale_option: OptionButton = _find_ui("UiHudScaleOption") as OptionButton
 @onready var ui_show_damage_numbers_toggle: CheckBox = _find_ui("UiShowDamageNumbersToggle") as CheckBox
 @onready var ui_show_health_bars_toggle: CheckBox = _find_ui("UiShowHealthBarsToggle") as CheckBox
+@onready var ui_unit_bars_at_feet_toggle: CheckBox = _find_ui("UiUnitBarsAtFeetToggle") as CheckBox
+@onready var ui_focus_unit_bars_toggle: CheckBox = _find_ui("UiFocusUnitBarsToggle") as CheckBox
 @onready var ui_show_phase_banner_toggle: CheckBox = _find_ui("UiShowPhaseBannerToggle") as CheckBox
 @onready var ui_show_status_effects_toggle: CheckBox = _find_ui("UiShowStatusEffectsToggle") as CheckBox
 @onready var ui_skip_loot_window_toggle: CheckBox = _find_ui("UiSkipLootWindowToggle") as CheckBox
@@ -956,6 +958,8 @@ func _connect_all_signals() -> void:
 		ui_combat_log_font_option.item_selected.connect(_on_ui_combat_log_font_selected)
 	_connect_toggle_signal(ui_show_damage_numbers_toggle, _on_ui_show_damage_numbers_toggled)
 	_connect_toggle_signal(ui_show_health_bars_toggle, _on_ui_show_health_bars_toggled)
+	_connect_toggle_signal(ui_unit_bars_at_feet_toggle, _on_ui_unit_bars_at_feet_toggled)
+	_connect_toggle_signal(ui_focus_unit_bars_toggle, _on_ui_focus_unit_bars_toggled)
 	_connect_toggle_signal(ui_show_phase_banner_toggle, _on_ui_show_phase_banner_toggled)
 	_connect_toggle_signal(ui_show_status_effects_toggle, _on_ui_show_status_effects_toggled)
 	_connect_toggle_signal(ui_cursor_high_contrast_toggle, _on_ui_cursor_high_contrast_toggled)
@@ -1320,6 +1324,10 @@ func _sync_interface_ui_from_campaign() -> void:
 		ui_show_damage_numbers_toggle.button_pressed = CampaignManager.interface_show_damage_numbers
 	if ui_show_health_bars_toggle:
 		ui_show_health_bars_toggle.button_pressed = CampaignManager.interface_show_health_bars
+	if ui_unit_bars_at_feet_toggle:
+		ui_unit_bars_at_feet_toggle.button_pressed = CampaignManager.interface_unit_bars_at_feet
+	if ui_focus_unit_bars_toggle:
+		ui_focus_unit_bars_toggle.button_pressed = CampaignManager.interface_focus_unit_bars
 	if ui_show_phase_banner_toggle:
 		ui_show_phase_banner_toggle.button_pressed = CampaignManager.interface_show_phase_banner
 	if ui_show_status_effects_toggle:
@@ -1382,6 +1390,20 @@ func _on_ui_show_health_bars_toggled(toggled_on: bool) -> void:
 	if _is_syncing_ui:
 		return
 	CampaignManager.interface_show_health_bars = toggled_on
+	_persist_interface()
+
+
+func _on_ui_unit_bars_at_feet_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_unit_bars_at_feet = toggled_on
+	_persist_interface()
+
+
+func _on_ui_focus_unit_bars_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_focus_unit_bars = toggled_on
 	_persist_interface()
 
 
@@ -1688,6 +1710,8 @@ func _on_reset_defaults_pressed() -> void:
 	CampaignManager.battle_skip_loot_window = false
 	CampaignManager.interface_cursor_size = 0
 	CampaignManager.interface_cursor_high_contrast = false
+	CampaignManager.interface_unit_bars_at_feet = false
+	CampaignManager.interface_focus_unit_bars = true
 
 	_sync_ui_from_settings()
 	_sync_audio_ui_from_campaign()
