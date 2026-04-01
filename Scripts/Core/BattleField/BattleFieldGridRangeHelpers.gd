@@ -40,6 +40,7 @@ static func get_occupant_at(field, pos: Vector2i) -> Node2D:
 					if field.get_grid_pos(child) == pos:
 						return child
 
+	return null
 
 
 static func unit_footprint_tiles(field, unit: Node2D) -> Array[Vector2i]:
@@ -485,4 +486,3 @@ static func calculate_full_danger_zone(field) -> void:
 	for k in union_attack.keys():
 		field.danger_zone_attack_tiles.append(k)
 	field.queue_redraw()
-

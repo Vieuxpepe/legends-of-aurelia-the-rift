@@ -79,12 +79,16 @@ const CoopHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopHelpe
 const CoopReplayHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopReplayHelpers.gd")
 const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
 const SupportHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSupportHelpers.gd")
+const SupportRelationshipHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSupportRelationshipHelpers.gd")
 const InventoryUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryUiHelpers.gd")
 const DrawHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDrawHelpers.gd")
 const PathCursorHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPathfindingCursorHelpers.gd")
+const PathPreviewHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPathPreviewHelpers.gd")
+const CameraFxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCameraFxHelpers.gd")
 const TradeInventoryHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTradeInventoryHelpers.gd")
 const CombatOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatOrchestrationHelpers.gd")
 const InventoryActionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryActionHelpers.gd")
+const InventoryTradeFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryTradeFlowHelpers.gd")
 const PromotionChoiceUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionChoiceUiHelpers.gd")
 const PromotionVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionVfxHelpers.gd")
 const ObjectiveUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldObjectiveUiHelpers.gd")
@@ -101,11 +105,14 @@ const BattleFieldQteMinigameHelpers = preload("res://Scripts/Core/BattleField/Ba
 const BattleFieldGridRangeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldGridRangeHelpers.gd")
 const DetailedUnitInfoHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoHelpers.gd")
 const DetailedUnitInfoRuntimeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoRuntimeHelpers.gd")
+const DetailedUnitInfoContentHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoContentHelpers.gd")
 const DialogueInteractionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd")
 const LevelUpPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldLevelUpPresentationHelpers.gd")
 const BattleEndFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleEndFlowHelpers.gd")
 const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
 const CampaignSetupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCampaignSetupHelpers.gd")
+const BattleFieldStartupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldStartupHelpers.gd")
+const BattleFieldSpecialModeSetupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSpecialModeSetupHelpers.gd")
 const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
 const DefensiveAbilityFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveAbilityFlowHelpers.gd")
 const AttackResolutionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldAttackResolutionHelpers.gd")
@@ -122,6 +129,7 @@ const CoopRemoteSyncActionHelpers = preload("res://Scripts/Core/BattleField/Batt
 const CoopRngSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRngSyncHelpers.gd")
 const CoopMockSessionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopMockSessionHelpers.gd")
 const CoopBattleRuntimeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopBattleRuntimeHelpers.gd")
+const BattleFieldFogOfWarHelpers = preload("res://Scripts/Core/BattleField/BattleFieldFogOfWarHelpers.gd")
 
 # Character-creation passives (not Shove/Grapple). Forecast tactical button can show class_tactical_ability (e.g. Fire Sage â†’ Fire Trap).
 const PASSIVE_FORECAST_SLOT_ABILITIES: Array[String] = [
@@ -590,6 +598,8 @@ var _camera_zoom_tween: Tween
 
 var _hit_stop_active: bool = false
 var _impact_restore_tween: Tween
+var _impact_snap_tween: Tween
+var _screen_shake_tween: Tween
 
 var _path_pulse_tween: Tween
 var _path_pulse_active := false
@@ -1492,57 +1502,22 @@ func _style_tactical_item_list(item_list: ItemList) -> void:
 	item_list.add_theme_color_override("font_selected_color", Color.WHITE)
 
 func _resolve_inventory_ui_nodes() -> void:
-	if inventory_panel == null:
-		return
-	inv_desc_label = inventory_panel.get_node_or_null("ItemDescLabel") as RichTextLabel
-	inv_scroll = inventory_panel.get_node_or_null("InventoryScroll") as ScrollContainer
-	unit_grid = null
-	convoy_grid = null
-	if inv_scroll != null:
-		var vbox_node := inv_scroll.get_node_or_null("InventoryVBox")
-		if vbox_node != null:
-			unit_grid = vbox_node.get_node_or_null("UnitGrid") as GridContainer
-			convoy_grid = vbox_node.get_node_or_null("ConvoyGrid") as GridContainer
+	InventoryTradeFlowHelpers.resolve_inventory_ui_nodes(self)
 
 func _stylebox_bump_all_content_margins(sb: StyleBox, delta: float) -> void:
-	if sb == null:
-		return
-	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
-		sb.set_content_margin(side, sb.get_content_margin(side) + delta)
+	InventoryTradeFlowHelpers.stylebox_bump_all_content_margins(sb, delta)
 
 func _inventory_scroll_apply_content_padding(scroll: ScrollContainer, pad: int) -> void:
-	var sb: StyleBox = scroll.get_theme_stylebox("panel")
-	if sb != null:
-		sb = sb.duplicate() as StyleBox
-	else:
-		var flat := StyleBoxFlat.new()
-		flat.bg_color = Color(0, 0, 0, 0)
-		sb = flat
-	_stylebox_bump_all_content_margins(sb, float(pad))
-	scroll.add_theme_stylebox_override("panel", sb)
+	InventoryTradeFlowHelpers.inventory_scroll_apply_content_padding(scroll, pad)
 
 func _style_inventory_item_info_backdrop(info_bg: Panel) -> void:
-	if info_bg == null:
-		return
-	_style_tactical_panel(info_bg, TACTICAL_UI_BG_ALT, TACTICAL_UI_BORDER, 2, 12)
-	info_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info_bg.z_index = -1
+	InventoryTradeFlowHelpers.style_inventory_item_info_backdrop(self, info_bg)
 
 func _apply_inventory_panel_spacing() -> void:
 	InventoryUiHelpers.apply_inventory_panel_spacing(self)
 
 func _apply_inventory_panel_item_list_extra_margins(inv_item_list: ItemList) -> void:
-	if inv_item_list == null or inventory_panel == null:
-		return
-	if inventory_panel.get_meta("_inv_itemlist_extra_margin", false):
-		return
-	inventory_panel.set_meta("_inv_itemlist_extra_margin", true)
-	var sb := inv_item_list.get_theme_stylebox("panel")
-	if sb == null:
-		return
-	var d := sb.duplicate() as StyleBox
-	_stylebox_bump_all_content_margins(d, float(INVENTORY_UI_ITEMLIST_EXTRA_MARGIN))
-	inv_item_list.add_theme_stylebox_override("panel", d)
+	InventoryTradeFlowHelpers.apply_inventory_panel_item_list_extra_margins(self, inv_item_list)
 
 func _resolve_loot_ui_nodes() -> void:
 	BattleResultPresentationHelpers.resolve_loot_ui_nodes(self)
@@ -1554,40 +1529,13 @@ func _ensure_loot_item_info_ui() -> void:
 	BattleResultPresentationHelpers.ensure_loot_item_info_ui(self)
 
 func _queue_refit_item_description_panels() -> void:
-	var t := Timer.new()
-	t.wait_time = 0.03
-	t.one_shot = true
-	t.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(t)
-	t.timeout.connect(func():
-		BattleResultPresentationHelpers.refit_loot_description_panel_height(self)
-		_refit_inventory_description_panel_height()
-		t.queue_free()
-	, CONNECT_ONE_SHOT)
-	t.start()
+	InventoryTradeFlowHelpers.queue_refit_item_description_panels(self)
 
 func _refit_loot_description_panel_height() -> void:
 	BattleResultPresentationHelpers.refit_loot_description_panel_height(self)
 
 func _refit_inventory_description_panel_height() -> void:
-	if inv_desc_label == null or inventory_panel == null:
-		return
-	if not inventory_panel.visible:
-		return
-	inv_desc_label.scroll_active = false
-	var w := inv_desc_label.size.x
-	if w < 8.0:
-		return
-	var ch := inv_desc_label.get_content_height()
-	var th := clampf(ch + ITEM_DESC_RICHTEXT_EXTRA_PAD, INVENTORY_DESC_PANEL_MIN_H, ITEM_DESC_RICHTEXT_MAX_H)
-	inv_desc_label.offset_top = inv_desc_label.offset_bottom - th
-	var bg := inventory_panel.get_node_or_null("Panel") as Panel
-	if bg != null:
-		var pad := INVENTORY_DESC_PANEL_PAD
-		var r := inv_desc_label.get_rect()
-		bg.position = r.position - Vector2(pad, pad)
-		bg.size = r.size + Vector2(2.0 * pad, 2.0 * pad)
-		_style_inventory_item_info_backdrop(bg)
+	InventoryTradeFlowHelpers.refit_inventory_description_panel_height(self)
 
 func _unit_info_primary_bar_definitions() -> Array[Dictionary]:
 	return DetailedUnitInfoRuntimeHelpers.unit_info_primary_bar_definitions()
@@ -2074,418 +2022,20 @@ func _assign_mock_coop_unit_ownership_fielded_order_fallback_deprecated() -> voi
 
 ## Visible battle-start UX for mock co-op only (combat log charter). No-op if no active context.
 func _present_mock_coop_joint_expedition_charter() -> void:
-	if _mock_coop_battle_context == null or not _mock_coop_battle_context.active:
-		return
-	var ctx: MockCoopBattleContext = _mock_coop_battle_context
-	var exp_title: String = ctx.get_expedition_display_title()
-	var loc: String = ctx.get_local_participant_label()
-	var rem: String = ctx.get_remote_participant_label()
-	var role_cap: String = ctx.local_role.capitalize()
-	if ctx.context_valid:
-		add_combat_log("â”€â”€â”€â”€â”€â”€â”€â”€ Joint Expedition Charter (Mock Co-op) â”€â”€â”€â”€â”€â”€â”€â”€", "gold")
-		add_combat_log("Expedition: %s" % exp_title, "cyan")
-		add_combat_log("Commanders: %s  Â·  %s" % [loc, rem], "cyan")
-		add_combat_log("Your role: %s" % role_cap, "cyan")
-		add_combat_log("Shared contract â€” this sortie is fought together.", "gray")
-	else:
-		add_combat_log("â”€â”€â”€â”€â”€â”€â”€â”€ Joint Expedition Charter (incomplete data) â”€â”€â”€â”€â”€â”€â”€â”€", "orange")
-		add_combat_log("Expedition: %s â€” verify session before relying on co-op data." % exp_title, "yellow")
-		add_combat_log("Commanders: %s  Â·  %s  |  Your role: %s" % [loc, rem, role_cap], "yellow")
-		add_combat_log("Issues: %s" % str(ctx.validation_errors), "orange")
+	BattleFieldStartupHelpers.present_mock_coop_joint_expedition_charter(self)
+
 
 var _ui_sfx_block_until_msec := 0
 var _tactical_ui_resize_hooked: bool = false
 
 func _ready() -> void:
-	if has_node("LevelMusic"):
-		var level_music := get_node("LevelMusic") as AudioStreamPlayer
-		if level_music != null:
-			level_music.bus = "Music"
-	# 1. SETUP ASTAR GRID
-	astar.region = Rect2i(0, 0, GRID_SIZE.x, GRID_SIZE.y)
-	astar.cell_size = CELL_SIZE
-	astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
-	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
-	astar.update()
-	
-	# 1B. SETUP FLYING ASTAR GRID
-	flying_astar.region = Rect2i(0, 0, GRID_SIZE.x, GRID_SIZE.y)
-	flying_astar.cell_size = CELL_SIZE
-	flying_astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
-	flying_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
-	flying_astar.update()
-	
-	# 2. INITIALIZE STATES
-	player_state = PlayerTurnState.new()
-	ally_state = AITurnState.new("ally")
-	enemy_state = AITurnState.new("enemy")
-	pre_battle_state = PreBattleState.new()
-	
-	ally_state.turn_finished.connect(_on_ally_turn_finished)
-	enemy_state.turn_finished.connect(_on_enemy_turn_finished)
-	
-	# 3. CONNECT SIGNALS (For units already in the scene)
-	if player_container:
-		for u in player_container.get_children():
-			u.died.connect(_on_unit_died)
-			u.leveled_up.connect(_on_unit_leveled_up)
-			
-	if ally_container:
-		for a in ally_container.get_children():
-			a.died.connect(_on_unit_died)
-			a.leveled_up.connect(_on_unit_leveled_up)
-			
-	if enemy_container:
-		for e in enemy_container.get_children():
-			e.died.connect(_on_unit_died)
-			e.leveled_up.connect(_on_unit_leveled_up)
+	BattleFieldStartupHelpers.on_ready(self)
 
-	# 4. UI CONNECTIONS
-	trade_popup_btn.pressed.connect(_on_trade_popup_confirm)
-	trade_close_btn.pressed.connect(_on_trade_window_close)
-	trade_left_list.item_selected.connect(func(idx): _on_trade_item_clicked(idx, "left"))
-	trade_right_list.item_selected.connect(func(idx): _on_trade_item_clicked(idx, "right"))
-	$UI/CombatForecastPanel/ConfirmButton.pressed.connect(_on_forecast_confirm)
-	$UI/CombatForecastPanel/CancelButton.pressed.connect(_on_forecast_cancel)
-	if forecast_talk_btn:
-		forecast_talk_btn.pressed.connect(_on_forecast_talk)
-	if forecast_ability_btn:
-		forecast_ability_btn.pressed.connect(_on_forecast_ability_pressed)
-	convoy_button.pressed.connect(_on_convoy_pressed)
-	open_inv_button.pressed.connect(_on_open_inv_pressed)
-	$UI/InventoryPanel/EquipButton.pressed.connect(_on_equip_pressed)
-	$UI/InventoryPanel/CloseButton.pressed.connect(_on_close_inv_pressed)
-	$UI/InventoryPanel/UseButton.pressed.connect(_on_use_pressed)
-	close_loot_button.pressed.connect(_on_close_loot_pressed)
-	loot_item_list.fixed_icon_size = Vector2i(64, 64)
-	trade_left_list.fixed_icon_size = Vector2i(32, 32)
-	trade_right_list.fixed_icon_size = Vector2i(32, 32)
-	loot_item_list.item_selected.connect(_on_loot_item_selected)
-	if popup_talk_btn: popup_talk_btn.pressed.connect(_on_support_talk_pressed)
-	if talk_next_btn: talk_next_btn.pressed.connect(func(): emit_signal("dialogue_advanced"))
-	if support_btn: support_btn.pressed.connect(_on_support_btn_pressed)
-	if unit_details_button and not unit_details_button.pressed.is_connected(_on_unit_details_button_pressed):
-		unit_details_button.pressed.connect(_on_unit_details_button_pressed)
-	if close_support_btn: close_support_btn.pressed.connect(func(): support_tracker_panel.visible = false)
-	if main_camera != null:
-		_camera_zoom_target = main_camera.zoom.x
-		
-	_ensure_forecast_support_labels()
-	_apply_inventory_panel_spacing()
-
-	# 4B. Phase 2 support reactions: reset battle-local Defy Death tracking (once per unit per battle).
-	_defy_death_used.clear()
-	_grief_units.clear()
-	_relationship_event_awarded.clear()
-	_enemy_damagers.clear()
-	# Boss Personal Dialogue: reset one-time pre-attack tracking per battle.
-	_boss_personal_dialogue_played.clear()
-
-	# 5. ENVIRONMENT CONNECTIONS
-	if destructibles_container:
-		for d in destructibles_container.get_children():
-			# THE FIX: Only connect the signal if the object actually has one!
-			if d.has_signal("died"):
-				d.died.connect(_on_destructible_died)
-			
-	# Note: We set chest solidity later in rebuild_grid, but we can do a safety check here
-	if chests_container:
-		for c in chests_container.get_children():
-			if not c.is_queued_for_deletion() and c.is_locked: 
-				astar.set_point_solid(get_grid_pos(c), true)
-
-	# 6. AUDIO SETTINGS
-	if select_sound: select_sound.process_mode = Node.PROCESS_MODE_ALWAYS
-	if epic_level_up_sound: epic_level_up_sound.process_mode = Node.PROCESS_MODE_ALWAYS
-	if level_up_sound: level_up_sound.process_mode = Node.PROCESS_MODE_ALWAYS
-	if crit_sound: crit_sound.process_mode = Node.PROCESS_MODE_ALWAYS
-	if miss_sound: miss_sound.process_mode = Node.PROCESS_MODE_ALWAYS				
-	
-	# 7. LOAD SAVE DATA (Restores Player Stats)
-	if CampaignManager.player_roster.is_empty():
-		# Direct Scene Start (F6) Debugging
-		var test_path = CampaignManager.get_save_path(1)
-		if FileAccess.file_exists(test_path):
-			print("Direct Scene Start detected. Loading existing save data from Slot 1...")
-			CampaignManager.load_game(1)
-
-	_consumed_mock_coop_battle_handoff = CampaignManager.consume_pending_mock_coop_battle_handoff()
-	load_campaign_data()
-	_init_path_preview_nodes()
-	apply_campaign_settings()
-	_seed_mock_coop_command_ids_for_live_battle_nodes()
-
-	_mock_coop_battle_context = null
-	_mock_coop_ownership_assignments.clear()
-	_reset_mock_coop_prebattle_ready_state()
-	_reset_mock_coop_player_phase_ready_state()
-	var has_live_runtime_coop_phase: bool = (
-			CoopExpeditionSessionManager.uses_runtime_network_coop_transport()
-			and CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.NONE
-	)
-	if has_live_runtime_coop_phase:
-		CoopExpeditionSessionManager.register_runtime_coop_battle_sync_target(self)
-	if not _consumed_mock_coop_battle_handoff.is_empty():
-		_mock_coop_battle_context = MockCoopBattleContext.from_consumed_handoff(_consumed_mock_coop_battle_handoff)
-		if _mock_coop_battle_context != null:
-			var ctx_line: String = _mock_coop_battle_context.get_debug_summary_line()
-			print("[MockCoopBattleContext] %s snapshot=%s" % [ctx_line, str(_mock_coop_battle_context.get_snapshot())])
-		print("[MockCoopHandoff] battle start keys=%s" % str(_consumed_mock_coop_battle_handoff.keys()))
-		_present_mock_coop_joint_expedition_charter()
-		_assign_mock_coop_unit_ownership_from_context()
-		if is_mock_coop_unit_ownership_active() and has_live_runtime_coop_phase:
-			CoopExpeditionSessionManager.try_publish_runtime_coop_battle_rng_seed()
-	elif has_live_runtime_coop_phase and OS.is_debug_build():
-		push_warning("BattleField: network co-op battle loaded without a pending mock handoff; battle sync is registered, but ownership is inactive.")
-	if has_live_runtime_coop_phase and not is_mock_coop_unit_ownership_active() and OS.is_debug_build():
-		push_warning("BattleField: network co-op battle has no active mock ownership assignment; local player moves will not mirror until the handoff/ownership path is valid.")
-	
-	# --- INITIALIZE FOG OF WAR ---
-	if use_fog_of_war:
-		fog_drawer = Node2D.new()
-		fog_drawer.z_index = 80 
-		fog_drawer.name = "FogDrawer"
-		
-		# THE MAGIC BULLET: Force Godot to aggressively blur the texture!
-		fog_drawer.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-		
-		fog_drawer.draw.connect(_on_fog_draw)
-		add_child(fog_drawer)
-		
-		# Create a tiny image where 1 Pixel = 1 Grid Cell
-		fow_image = Image.create(GRID_SIZE.x, GRID_SIZE.y, false, Image.FORMAT_RGBA8)
-		
-		for x in range(GRID_SIZE.x):
-			for y in range(GRID_SIZE.y):
-				var p = Vector2i(x, y)
-				fow_grid[p] = 0 
-				fow_display_alphas[p] = 0.85 
-				# Color the pixel dark blue-black
-				fow_image.set_pixel(x, y, Color(0.05, 0.05, 0.1, 0.85))
-				
-		# Convert the image into a texture we can draw
-		fow_texture = ImageTexture.create_from_image(fow_image)
-
-	# 8. --- SKIRMISH LOGIC ---
-	# is_skirmish_mode is also set for expedition runs (world-map return routing). Those use story scenes
-	# with pre-placed enemies â€” do NOT run random undead spawn (requires enemy_scene in inspector).
-	if CampaignManager.is_skirmish_mode and not CampaignManager.is_expedition_run:
-		setup_skirmish_battle()
-		_reset_rookie_battle_tracking()
-
-	if CampaignManager.is_expedition_run:
-		var exp_mod_line: String = CampaignManager.get_active_expedition_modifier_display_line()
-		if exp_mod_line != "":
-			add_combat_log(exp_mod_line, "cyan")
-
-	# --- ARENA LOGIC ---
-	if ArenaManager.current_opponent_data.size() > 0:
-		is_arena_match = true
-		setup_arena_battle()
-		_reset_rookie_battle_tracking()
-
-	# ==========================================
-	# --- VIP ESCORT VICTORY CHECK ---
-	# ==========================================
-	if map_objective == Objective.DEFEND_TARGET and is_instance_valid(vip_target):
-		if vip_target.has_signal("reached_destination"):
-			# Defer victory handling to the ally-phase flow so co-op can sync the escort turn first.
-			vip_target.reached_destination.connect(func(): 
-				if has_method("add_combat_log"):
-					add_combat_log("MISSION ACCOMPLISHED: The convoy escaped!", "lime")
-				if _battle_resonance_allowed():
-					CampaignManager.mark_battle_resonance("protected_civilians_first")
-				_coop_pending_escort_destination_victory = true
-			)
-			
-	# ==========================================
-	# --- BASE DEFENSE HIJACK ---
-	# ==========================================
-	if CampaignManager.is_base_defense_active:
-		print("--- INITIALIZING DATA-DRIVEN SIEGE ---")
-		map_objective = Objective.ROUT_ENEMY
-		custom_objective_text = "Survive the Siege"
-		
-		intro_dialogue.clear()
-		outro_dialogue.clear()
-		
-		if is_instance_valid(vip_target) and not vip_target.is_queued_for_deletion():
-			vip_target.queue_free()
-			vip_target = null
-			
-		if skirmish_music != null and has_node("LevelMusic"):
-			var audio = get_node("LevelMusic")
-			audio.stream = skirmish_music
-			audio.play()
-
-		# 1. Clear existing map enemies
-		for child in enemy_container.get_children():
-			child.queue_free()
-		
-		# --- CLEAR LEFTOVER STORY SPAWNERS ---
-		if destructibles_container != null:
-			for d in destructibles_container.get_children():
-				# If it's a spawner and it belongs to the enemy (faction 0), vaporize it!
-				if d.has_method("process_turn") and d.get("spawner_faction") == 0:
-					d.queue_free()
-			
-		# 2. Retrieve the scaling level directly from the CampaignManager
-		var max_roster_level = CampaignManager.get_highest_garrison_level()
-				
-		# 3. Select the correct .tres file based on the highest level
-		var chosen_data_path = "res://Resources/Units/LowLevelBandit.tres" # Default fallback
-		
-		if max_roster_level >= 12:
-			chosen_data_path = "res://Resources/Units/HulkingOrc.tres"
-		elif max_roster_level >= 10:
-			chosen_data_path = "res://Resources/Units/EtherealImp.tres"
-		elif max_roster_level >= 5:
-			chosen_data_path = "res://Resources/Units/ArmoredMercenary.tres"
-			
-		var loaded_unit_data = load(chosen_data_path)
-		if loaded_unit_data == null:
-			push_warning("Siege unit data path invalid. Check your .tres file locations.")
-			return
-			
-		# 4. Find all valid map edge coordinates
-		var edge_tiles = []
-		for x in range(GRID_SIZE.x):
-			edge_tiles.append(Vector2i(x, 0))
-			edge_tiles.append(Vector2i(x, GRID_SIZE.y - 1))
-		for y in range(1, GRID_SIZE.y - 1):
-			edge_tiles.append(Vector2i(0, y))
-			edge_tiles.append(Vector2i(GRID_SIZE.x - 1, y))
-			
-		edge_tiles.shuffle()
-		
-# 5. Spawn the enemies and inject the data
-		var spawn_count = randi_range(6, 9)
-		var spawned = 0
-		
-		for pos in edge_tiles:
-			if spawned >= spawn_count: break
-			
-			if not astar.is_point_solid(pos) and get_unit_at(pos) == null:
-				
-				# --- THE CRASH FIX: Use player_unit_scene instead of enemy_scene ---
-				if player_unit_scene == null:
-					push_warning("CRITICAL: player_unit_scene is not assigned in the Inspector.")
-					return
-					
-				var enemy = player_unit_scene.instantiate()
-				
-				# Force the unit to act as an enemy
-				if "team" in enemy: enemy.team = 1
-				if "is_enemy" in enemy: enemy.is_enemy = true
-				
-				enemy.position = Vector2(pos.x * CELL_SIZE.x, pos.y * CELL_SIZE.y)
-				enemy_container.add_child(enemy)
-				
-				# Connect critical signals
-				if not enemy.died.is_connected(_on_unit_died):
-					enemy.died.connect(_on_unit_died)
-				if not enemy.leveled_up.is_connected(_on_unit_leveled_up):
-					enemy.leveled_up.connect(_on_unit_leveled_up)
-				
-				# --- DATA INJECTION ---
-				enemy.data = loaded_unit_data.duplicate(true)
-				enemy.level = max_roster_level
-				enemy.unit_name = enemy.data.get("unit_name") if enemy.data.get("unit_name") != null else "Raider"
-				enemy.set("is_custom_avatar", false)
-				
-				var base_hp = enemy.data.get("max_hp") if enemy.data.get("max_hp") != null else 20
-				var base_str = enemy.data.get("strength") if enemy.data.get("strength") != null else 5
-				var base_def = enemy.data.get("defense") if enemy.data.get("defense") != null else 3
-				var base_spd = enemy.data.get("speed") if enemy.data.get("speed") != null else 4
-				
-				enemy.max_hp = base_hp + (max_roster_level * 2)
-				enemy.current_hp = enemy.max_hp
-				enemy.strength = base_str + int(max_roster_level * 0.8)
-				enemy.defense = base_def + int(max_roster_level * 0.5)
-				enemy.speed = base_spd + int(max_roster_level * 0.5)
-				
-				if enemy.get("health_bar") != null:
-					enemy.health_bar.max_value = enemy.max_hp
-					enemy.health_bar.value = enemy.current_hp
-				
-				var spr = enemy.get_node_or_null("Sprite")
-				if spr == null: spr = enemy.get_node_or_null("Sprite2D")
-				if spr and enemy.data.get("unit_sprite") != null:
-					spr.texture = enemy.data.unit_sprite
-					
-				# --- THE STRICT TYPING FIX ---
-				# We explicitly declare an Array[Resource] so Godot doesn't crash
-				var strict_inventory: Array[Resource] = []
-				
-				if enemy.data.get("starting_weapon") != null:
-					enemy.equipped_weapon = enemy.data.starting_weapon.duplicate(true)
-					strict_inventory.append(enemy.equipped_weapon)
-				else:
-					var wpn = WeaponData.new()
-					wpn.weapon_name = "Siege Blade"
-					wpn.might = 5 + int(max_roster_level * 0.5)
-					wpn.hit_bonus = 10
-					wpn.min_range = 1
-					wpn.max_range = 1
-					enemy.equipped_weapon = wpn
-					strict_inventory.append(wpn)
-					
-				# Assign the strictly typed array back to the unit
-				enemy.inventory = strict_inventory
-				
-				enemy.ai_behavior = 2 
-				spawned += 1
-			
-	# 9. REBUILD GRID (Moved to END so it accounts for Skirmish Spawns)
-	rebuild_grid()
-	_setup_objective_ui()
-	_queue_tactical_ui_overhaul()
-	update_fog_of_war()
-	
-	# 10. START GAME
-	$UI/StartBattleButton.pressed.connect(_on_start_battle_pressed)
-	
-	# Wait a fraction of a second so the map renders, then start the Cinematic!
-	get_tree().create_timer(0.6).timeout.connect(_start_intro_sequence)
-	
 func _process(delta: float) -> void:
 	TurnOrchestrationHelpers.process(self, delta)
 
 func _handle_camera_panning(delta: float) -> void:
-	# Allow panning during player phase and pre-battle deployment so the player can look around the map.
-	if current_state != player_state and current_state != pre_battle_state:
-		return
-
-	var viewport_size = get_viewport().get_visible_rect().size
-	var mouse_pos = get_viewport().get_mouse_position()
-	var move_vec = Vector2.ZERO
-
-	# Check Left/Right edges
-	if mouse_pos.x < edge_margin:
-		move_vec.x = -1
-	elif mouse_pos.x > viewport_size.x - edge_margin:
-		move_vec.x = 1
-
-	# Check Top/Bottom edges
-	if mouse_pos.y < edge_margin:
-		move_vec.y = -1
-	elif mouse_pos.y > viewport_size.y - edge_margin:
-		move_vec.y = 1
-
-	# Apply movement to the camera node
-	if move_vec != Vector2.ZERO:
-		main_camera.position += move_vec.normalized() * CampaignManager.camera_pan_speed * delta
-		
-		# --- ALLOW NEGATIVE PANNING ---
-		# How many pixels past the map edge the camera is allowed to go
-		var extra_scroll_margin = 400 
-		
-		var map_limit_x = GRID_SIZE.x * CELL_SIZE.x
-		var map_limit_y = GRID_SIZE.y * CELL_SIZE.y
-		
-		# Clamp between negative margin and max limit + margin
-		main_camera.position.x = clamp(main_camera.position.x, -extra_scroll_margin, map_limit_x + extra_scroll_margin)
-		main_camera.position.y = clamp(main_camera.position.y, -extra_scroll_margin, map_limit_y + extra_scroll_margin)
+	CameraFxHelpers.handle_camera_panning(self, delta)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# --- Mouse wheel zoom ---
@@ -2734,200 +2284,43 @@ func get_path_preview_tick_positions_for_draw() -> Array[Vector2]:
 
 
 func _init_path_preview_nodes() -> void:
-	for ln in [path_line_under, path_line]:
-		if ln == null:
-			continue
-		ln.z_as_relative = false
-		ln.joint_mode = Line2D.LINE_JOINT_ROUND
-		ln.begin_cap_mode = Line2D.LINE_CAP_ROUND
-		ln.end_cap_mode = Line2D.LINE_CAP_ROUND
-		ln.antialiased = true
-	if path_line_under != null:
-		path_line_under.z_index = PATH_PREVIEW_Z
-		path_line_under.width = PATH_PREVIEW_UNDER_WIDTH
-	if path_line != null:
-		path_line.z_index = PATH_PREVIEW_Z + 1
-		path_line.width = PATH_PREVIEW_FG_WIDTH
-	if path_preview_ticks != null:
-		path_preview_ticks.z_as_relative = false
-		path_preview_ticks.z_index = PATH_PREVIEW_Z + 3
-	if path_end_marker != null:
-		path_end_marker.z_as_relative = false
-		path_end_marker.z_index = PATH_PREVIEW_Z + 2
-		var diamond: Polygon2D = path_end_marker.get_node_or_null("Diamond") as Polygon2D
-		if diamond == null:
-			for c in path_end_marker.get_children():
-				if c is Polygon2D:
-					diamond = c as Polygon2D
-					break
-		if diamond != null:
-			diamond.polygon = PackedVector2Array([Vector2(0, -9), Vector2(11, 0), Vector2(0, 9), Vector2(-11, 0)])
+	PathPreviewHelpers.init_path_preview_nodes(self)
 
 
 func _hide_path_preview_visuals() -> void:
-	_path_preview_tick_world.clear()
-	_set_path_pulse(false)
-	if path_line_under != null:
-		path_line_under.clear_points()
-		path_line_under.visible = false
-	if path_line != null:
-		path_line.clear_points()
-		path_line.visible = false
-		path_line.material = null
-	if path_preview_ticks != null:
-		path_preview_ticks.queue_redraw()
-	if path_end_marker != null:
-		path_end_marker.visible = false
+	PathPreviewHelpers.hide_path_preview_visuals(self)
 
 
 func _cell_center_world(cell: Vector2i) -> Vector2:
-	return Vector2(
-		float(cell.x * CELL_SIZE.x) + float(CELL_SIZE.x) * 0.5,
-		float(cell.y * CELL_SIZE.y) + float(CELL_SIZE.y) * 0.5
-	)
+	return PathPreviewHelpers.cell_center_world(self, cell)
 
 
 func _single_step_enter_cost(unit: Node2D, cell: Vector2i) -> float:
-	if unit == null:
-		return 1.0
-	if unit.get("move_type") == 2:
-		return 1.0
-	var base_cost: float = astar.get_point_weight_scale(cell)
-	if unit.get("move_type") == 1 and base_cost > 1.0:
-		base_cost += 1.0
-	return base_cost
+	return PathPreviewHelpers.single_step_enter_cost(self, unit, cell)
 
 
 func _chamfer_world_polyline(pts: PackedVector2Array, inset: float) -> PackedVector2Array:
-	if pts.size() < 3 or inset <= 0.0:
-		return pts
-	var out: PackedVector2Array = PackedVector2Array()
-	out.append(pts[0])
-	for i in range(1, pts.size() - 1):
-		var prev: Vector2 = pts[i - 1]
-		var curr: Vector2 = pts[i]
-		var next: Vector2 = pts[i + 1]
-		var v1: Vector2 = curr - prev
-		var v2: Vector2 = next - curr
-		var len1: float = v1.length()
-		var len2: float = v2.length()
-		if len1 < 0.001 or len2 < 0.001:
-			out.append(curr)
-			continue
-		v1 /= len1
-		v2 /= len2
-		if absf(v1.dot(v2)) > 0.995:
-			out.append(curr)
-			continue
-		var r: float = minf(inset, minf(len1 * 0.48, len2 * 0.48))
-		out.append(curr - v1 * r)
-		out.append(curr + v2 * r)
-	out.append(pts[pts.size() - 1])
-	return out
+	return PathPreviewHelpers.chamfer_world_polyline(pts, inset)
 
 
 func _grid_path_to_world_polyline(path: Array, unit: Node2D) -> PackedVector2Array:
-	var raw: PackedVector2Array = PackedVector2Array()
-	for i in range(path.size()):
-		raw.append(_cell_center_world(path[i] as Vector2i))
-	var smooth_level: int = CampaignManager.battle_path_corner_smoothing
-	var inset: float = 0.0
-	if smooth_level == 1:
-		inset = PATH_PREVIEW_CORNER_INSET_LOW * (float(CELL_SIZE.x) / 64.0)
-	elif smooth_level >= 2:
-		inset = PATH_PREVIEW_CORNER_INSET_HIGH * (float(CELL_SIZE.x) / 64.0)
-	return _chamfer_world_polyline(raw, inset)
+	return PathPreviewHelpers.grid_path_to_world_polyline(self, path, unit)
 
 
 func _gather_path_cost_ticks(path: Array, unit: Node2D) -> void:
-	_path_preview_tick_world.clear()
-	if not CampaignManager.battle_path_cost_ticks or path.size() < 2:
-		return
-	var cum: float = 0.0
-	var next_tick_threshold: int = 1
-	for i in range(1, path.size()):
-		var cell: Vector2i = path[i] as Vector2i
-		var prev_cell: Vector2i = path[i - 1] as Vector2i
-		var step_cost: float = _single_step_enter_cost(unit, cell)
-		var prev_cum: float = cum
-		cum += step_cost
-		var p0: Vector2 = _cell_center_world(prev_cell)
-		var p1: Vector2 = _cell_center_world(cell)
-		while float(next_tick_threshold) <= cum + 0.001:
-			var denom: float = cum - prev_cum
-			var t: float = 1.0 if denom <= 0.0001 else clampf((float(next_tick_threshold) - prev_cum) / denom, 0.0, 1.0)
-			_path_preview_tick_world.append(p0.lerp(p1, t))
-			next_tick_threshold += 1
+	PathPreviewHelpers.gather_path_cost_ticks(self, path, unit)
 
 
 func _ensure_path_fg_dash_material() -> ShaderMaterial:
-	if _path_fg_dash_material == null:
-		_path_fg_dash_material = ShaderMaterial.new()
-		_path_fg_dash_material.shader = PATH_PREVIEW_DASH_SHADER
-	return _path_fg_dash_material
+	return PathPreviewHelpers.ensure_path_fg_dash_material(self)
 
 
 func _apply_path_preview_style(ghost: bool, canto: bool) -> void:
-	var style: int = CampaignManager.battle_path_style
-	var minimal: bool = style == CampaignManager.BATTLE_PATH_STYLE_MINIMAL
-	var dashed: bool = style == CampaignManager.BATTLE_PATH_STYLE_DASHED
-
-	var fg := Color(0.82, 0.96, 1.0, 1.0)
-	var under := Color(0.03, 0.05, 0.12, 0.92)
-	var scroll_mult: float = 1.0
-	if canto:
-		fg = Color(1.0, 0.92, 0.55, 1.0)
-		under = Color(0.14, 0.09, 0.02, 0.9)
-		scroll_mult = 1.45
-	if ghost:
-		fg = Color(1.0, 0.45, 0.42, 0.55)
-		under = Color(0.22, 0.04, 0.04, 0.6)
-		scroll_mult = 1.65
-
-	if path_line_under != null:
-		path_line_under.default_color = under
-		path_line_under.width = PATH_PREVIEW_UNDER_WIDTH
-	if path_line == null:
-		return
-
-	if minimal:
-		path_line.width = maxf(PATH_PREVIEW_FG_WIDTH, 5.5)
-	else:
-		path_line.width = PATH_PREVIEW_FG_WIDTH
-
-	if dashed and not minimal:
-		path_line.default_color = Color.WHITE
-		var smat: ShaderMaterial = _ensure_path_fg_dash_material()
-		smat.set_shader_parameter("line_color", fg)
-		smat.set_shader_parameter("scroll_speed", 1.15 * scroll_mult)
-		smat.set_shader_parameter("dash_repeat", 12.0 * (1.1 if canto else 1.0))
-		path_line.material = smat
-	else:
-		path_line.material = null
-		path_line.default_color = fg
+	PathPreviewHelpers.apply_path_preview_style(self, ghost, canto)
 
 
 func _update_path_endpoint_marker(path: Array, ghost: bool, canto: bool) -> void:
-	if path_end_marker == null:
-		return
-	if not CampaignManager.battle_path_endpoint_marker:
-		path_end_marker.visible = false
-		return
-	var diamond: Polygon2D = path_end_marker.get_node_or_null("Diamond") as Polygon2D
-	if diamond == null:
-		for c in path_end_marker.get_children():
-			if c is Polygon2D:
-				diamond = c as Polygon2D
-				break
-	path_end_marker.visible = true
-	path_end_marker.position = _cell_center_world(path[path.size() - 1] as Vector2i)
-	var col := Color(0.9, 0.98, 1.0, 0.92)
-	if canto:
-		col = Color(1.0, 0.95, 0.55, 0.95)
-	if ghost:
-		col = Color(1.0, 0.5, 0.48, 0.65)
-	if diamond != null:
-		diamond.color = col
+	PathPreviewHelpers.update_path_endpoint_marker(self, path, ghost, canto)
 
 func _draw() -> void:
 	if current_state == pre_battle_state:
@@ -3635,28 +3028,8 @@ func _run_strike_sequence(attacker: Node2D, defender: Node2D, force_active_abili
 	await StrikeSequenceHelpers.run_strike_sequence(self, attacker, defender, force_active_ability, force_single_attack)
 
 func screen_shake(intensity: float = 12.0, duration: float = 0.4) -> void:
-	if main_camera == null:
-		return
+	CameraFxHelpers.screen_shake(self, intensity, duration)
 
-	if _screen_shake_tween:
-		_screen_shake_tween.kill()
-
-	main_camera.offset = Vector2.ZERO
-
-	_screen_shake_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-
-	var steps: int = 8
-	var step_time: float = duration / float(steps)
-
-	for i in range(steps):
-		var random_offset = Vector2(
-			randf_range(-intensity, intensity),
-			randf_range(-intensity, intensity)
-		)
-		_screen_shake_tween.tween_property(main_camera, "offset", random_offset, step_time)
-
-	_screen_shake_tween.tween_property(main_camera, "offset", Vector2.ZERO, step_time)
-		
 
 func get_triangle_advantage(attacker: Node2D, defender: Node2D) -> int:
 	var a_wpn = attacker.equipped_weapon
@@ -3715,32 +3088,10 @@ func update_gold_display() -> void:
 	gold_label.text = "Gold: " + str(player_gold)
 
 func _on_convoy_pressed() -> void:
-	if current_state != player_state or player_state.is_forecasting: return
-	if convoy_grid == null or inv_scroll == null:
-		return
-		
-	unit_managing_inventory = null
-	player_state.is_forecasting = true 
-	
-	_populate_convoy_list()
-	
-	equip_button.visible = false
-	use_button.visible = false
-	inventory_panel.visible = true
+	InventoryTradeFlowHelpers.on_convoy_pressed(self)
 
 func _on_open_inv_pressed() -> void:
-	if current_state != player_state or player_state.active_unit == null: return
-	if unit_grid == null:
-		return
-		
-	unit_managing_inventory = player_state.active_unit
-	player_state.is_forecasting = true 
-	
-	_populate_unit_inventory_list()
-	
-	equip_button.visible = true
-	use_button.visible = true
-	inventory_panel.visible = true
+	InventoryTradeFlowHelpers.on_open_inv_pressed(self)
 
 func _populate_convoy_list() -> void:
 	TradeInventoryHelpers.populate_convoy_list(self)
@@ -3755,343 +3106,60 @@ func _build_grid_items(grid: GridContainer, item_array: Array, source_type: Stri
 	TradeInventoryHelpers.build_grid_items(self, grid, item_array, source_type, owner_unit, min_slots)
 							
 func _on_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
-	if select_sound and select_sound.stream != null:
-		select_sound.pitch_scale = 1.2
-		select_sound.play()
-		
-	selected_inventory_meta = meta
-	
-	var grid_children: Array[Node] = []
-	if unit_grid != null:
-		grid_children.append_array(unit_grid.get_children())
-	if convoy_grid != null:
-		grid_children.append_array(convoy_grid.get_children())
-	for child in grid_children:
-		child.modulate = Color.WHITE
-	btn.modulate = Color(1.5, 1.5, 1.5)
-	
-	var item = meta["item"]
-	var count = meta.get("count", 1)
-	var viewer_unit = meta.get("unit", null)
-	if inv_desc_label != null:
-		inv_desc_label.text = _get_item_detailed_info(item, count, viewer_unit)
-		_queue_refit_item_description_panels()
-	
-	equip_button.disabled = false
-	use_button.disabled = false
-	
+	InventoryTradeFlowHelpers.on_grid_item_clicked(self, btn, meta)
+
 func _on_equip_pressed() -> void:
 	InventoryActionHelpers.on_equip_pressed(self)
 
 func _on_close_inv_pressed() -> void:
-	inventory_panel.visible = false
-	if current_state == player_state:
-		player_state.is_forecasting = false
-	unit_managing_inventory = null
+	InventoryTradeFlowHelpers.on_close_inv_pressed(self)
 
 func _on_use_pressed() -> void:
 	await InventoryActionHelpers.on_use_pressed(self)
 
 func _get_item_display_text(item: Resource) -> String:
-	var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-	var dur_str = ""
-	var broken_tag = ""
-	
-	if item.get("current_durability") != null:
-		dur_str = " [%d/%d]" % [item.current_durability, item.max_durability]
-		if item.current_durability <= 0:
-			broken_tag = "[BROKEN] "
-	elif item.get("uses") != null:
-		dur_str = " (" + str(item.uses) + " Uses)"
-			
-	return "%s%s%s" % [broken_tag, i_name, dur_str]
+	return InventoryTradeFlowHelpers.get_item_display_text(item)
 
 func _bbcode_escape_user_text(s: String) -> String:
-	return str(s).replace("[", "[lb]")
+	return InventoryTradeFlowHelpers.bbcode_escape_user_text(s)
 
 func _item_detail_soft_rule() -> String:
-	# Middle dots via \u escapes — avoids mojibake if the .gd file is mis-saved as Latin-1.
-	return "[color=#5c4f41]%s[/color]" % (" \u00b7").repeat(18)
+	return InventoryTradeFlowHelpers.item_detail_soft_rule()
 
 func _item_detail_section_heading(title: String) -> String:
-	return "[font_size=20][color=#c4943a]\u25b6 [/color][b][color=#f2d680]" + str(title).to_upper() + "[/color][/b][/font_size]"
+	return InventoryTradeFlowHelpers.item_detail_section_heading(title)
 
 func _item_detail_callout(accent_hex: String, body_hex: String, escaped_msg: String) -> String:
-	return "[font_size=19][color=%s]\u25b8 [/color][color=%s]%s[/color][/font_size]" % [accent_hex, body_hex, escaped_msg]
+	return InventoryTradeFlowHelpers.item_detail_callout(accent_hex, body_hex, escaped_msg)
 
 func _item_detail_line(lbl: String, value_bb: String) -> String:
-	return "[font_size=19][color=#c4bba8][b]" + lbl + "[/b][/color][color=#5a5248]   [/color]" + value_bb + "[/font_size]"
+	return InventoryTradeFlowHelpers.item_detail_line(lbl, value_bb)
 
 func _item_detail_effect_row(body_color: String, escaped_inner: String) -> String:
-	return "[font_size=19]   [color=#e0b858]\u25c6[/color][color=#5a5248]   [/color][color=%s]%s[/color][/font_size]" % [body_color, escaped_inner]
+	return InventoryTradeFlowHelpers.item_detail_effect_row(body_color, escaped_inner)
 
 
 func _weapon_compare_delta_fragments_bbcode(sel: WeaponData, equipped: WeaponData) -> PackedStringArray:
-	var out: PackedStringArray = []
-	if sel.damage_type != equipped.damage_type:
-		return out
-	const C_UP: String = "#a8e8b8"
-	const C_DN: String = "#ffa898"
-	var md: int = int(sel.might) - int(equipped.might)
-	var hd: int = int(sel.hit_bonus) - int(equipped.hit_bonus)
-	if md != 0:
-		var c: String = C_UP if md > 0 else C_DN
-		out.append("[color=%s][b]%s Might[/b][/color]" % [c, "%+d" % md])
-	if hd != 0:
-		var c2: String = C_UP if hd > 0 else C_DN
-		out.append("[color=%s][b]%s Hit[/b][/color]" % [c2, "%+d" % hd])
-	return out
+	return InventoryTradeFlowHelpers.weapon_compare_delta_fragments_bbcode(sel, equipped)
 
 
 func _weapon_stat_compare_line_bbcode(sel: WeaponData, equipped: WeaponData) -> String:
-	var frags: PackedStringArray = _weapon_compare_delta_fragments_bbcode(sel, equipped)
-	if frags.is_empty():
-		return ""
-	var sep: String = "[color=#5a5248] \u00b7 [/color]"
-	return (
-		"[font_size=19][color=#b8a890]vs equipped[/color]%s%s[/font_size]"
-		% [sep, sep.join(frags)]
-	)
+	return InventoryTradeFlowHelpers.weapon_stat_compare_line_bbcode(sel, equipped)
 
 
 func _add_equipped_badge_to_inv_button(btn: Button) -> void:
-	if btn == null:
-		return
-	if btn.get_node_or_null("EquippedBadge") != null:
-		return
-	var badge := Label.new()
-	badge.name = "EquippedBadge"
-	badge.text = "E"
-	badge.add_theme_font_size_override("font_size", 15)
-	badge.add_theme_color_override("font_color", Color(1.0, 0.92, 0.45))
-	badge.add_theme_constant_override("outline_size", 4)
-	badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(badge)
-	badge.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	badge.offset_left = 4
-	badge.offset_bottom = -2
-	badge.grow_horizontal = Control.GROW_DIRECTION_END
+	InventoryTradeFlowHelpers.add_equipped_badge_to_inv_button(btn)
 
 
 func _play_inv_slot_flash(btn: Button) -> void:
-	if btn == null or not is_instance_valid(btn):
-		return
-	btn.pivot_offset = btn.size * 0.5
-	var peak: Vector2 = Vector2(1.11, 1.11)
-	var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(btn, "scale", peak, 0.085)
-	tw.tween_property(btn, "scale", Vector2.ONE, 0.11)
-	var base_col: Color = Color.WHITE
-	if btn is Control and btn.has_meta("hover_base_modulate"):
-		base_col = btn.get_meta("hover_base_modulate") as Color
-	var tw2 := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw2.tween_property(btn, "modulate", base_col * Color(1.32, 1.22, 1.05), 0.07)
-	tw2.tween_property(btn, "modulate", base_col, 0.13)
+	InventoryTradeFlowHelpers.play_inv_slot_flash(self, btn)
 
 
 func _battle_try_flash_pending_inv_slot(grid: GridContainer) -> void:
-	if _battle_inv_flash_item == null or grid == null:
-		return
-	var want: Resource = _battle_inv_flash_item
-	_battle_inv_flash_item = null
-	for c in grid.get_children():
-		if c is Button and (c as Button).has_meta("inv_data"):
-			var d: Dictionary = (c as Button).get_meta("inv_data") as Dictionary
-			if d.get("item") == want:
-				_play_inv_slot_flash(c as Button)
-				return
+	InventoryTradeFlowHelpers.battle_try_flash_pending_inv_slot(self, grid)
 
 func _get_item_detailed_info(item: Resource, stack_count: int = 1, viewer_unit: Node2D = null) -> String:
-	var lines: PackedStringArray = []
-	const C_MUTED: String = "#c4bba8"
-	const C_BODY: String = "#faf6eb"
-	const C_DIM: String = "#8a8274"
-	const C_VALUE: String = "#f0d78c"
-	const C_OK: String = "#a8e8b8"
-	const C_BAD: String = "#ffa898"
-	const C_STAT: String = "#ffd4b8"
-
-	var rarity: String = item.get("rarity") if item.get("rarity") != null else "Common"
-	var cost: int = item.get("gold_cost") if item.get("gold_cost") != null else 0
-
-	var rarity_hex: String = "#f2ede0"
-	match rarity:
-		"Uncommon":
-			rarity_hex = "#8ae89e"
-		"Rare":
-			rarity_hex = "#8ed4ff"
-		"Epic":
-			rarity_hex = "#d4a8ff"
-		"Legendary":
-			rarity_hex = "#ffe090"
-
-	lines.append("[font_size=28][b][color=%s]%s[/color][/b][/font_size]" % [rarity_hex, str(rarity).to_upper()])
-	var meta: String = (
-		"[font_size=20][color=#d4a85c]\u2022 [/color][color=%s]Value[/color][color=#5a5248]   [/color][color=%s][b]%d[/b][/color][color=%s]g[/color]"
-		% [C_MUTED, C_VALUE, cost, C_DIM]
-	)
-	if stack_count > 1:
-		meta += "[color=#5a5248]        [/color][color=#b89858]\u2022 [/color][color=%s]Stack[/color][color=#5a5248]   [/color][color=%s][b]\u00d7%d[/b][/color]" % [C_MUTED, C_BODY, stack_count]
-	meta += "[/font_size]"
-	lines.append(meta)
-	lines.append(_item_detail_soft_rule())
-	lines.append("")
-
-	if item is WeaponData:
-		if item.get("current_durability") != null and item.current_durability <= 0:
-			lines.append("[font_size=20][b][color=%s]Broken \u2014 half effectiveness. Repair to restore full power.[/color][/b][/font_size]" % C_BAD)
-			lines.append("")
-
-		lines.append(_item_detail_section_heading("Combat stats"))
-		lines.append("")
-
-		var w_type_str: String = "Unknown"
-		if item.get("weapon_type") != null:
-			w_type_str = _weapon_type_name_safe(int(item.weapon_type))
-		var d_type_str: String = "Physical" if item.get("damage_type") != null and item.damage_type == 0 else "Magical"
-
-		lines.append(
-			_item_detail_line(
-				"Weapon",
-				"[color=%s]%s[/color][color=%s]   \u00b7   [/color][color=%s]%s[/color]"
-				% [C_BODY, w_type_str, C_DIM, C_DIM, d_type_str]
-			)
-		)
-		lines.append(
-			_item_detail_line("Might", "[color=%s]%d[/color]" % [C_STAT, int(item.might)])
-		)
-		lines.append(
-			_item_detail_line("Hit", "[color=%s]+%d[/color]" % [C_VALUE, int(item.hit_bonus)])
-		)
-		lines.append(
-			_item_detail_line(
-				"Range",
-				"[color=%s]%d[/color][color=%s]\u2013[/color][color=%s]%d[/color]"
-				% [C_BODY, int(item.min_range), C_DIM, C_BODY, int(item.max_range)]
-			)
-		)
-
-		if item.get("current_durability") != null:
-			lines.append(
-				_item_detail_line(
-					"Durability",
-					"[color=%s]%d[/color][color=%s] / [/color][color=%s]%d[/color]"
-					% [C_BODY, int(item.current_durability), C_DIM, C_BODY, int(item.max_durability)]
-				)
-			)
-
-		var eq_weapon: Resource = viewer_unit.get("equipped_weapon") if viewer_unit != null else null
-		if (
-				eq_weapon != null
-				and eq_weapon is WeaponData
-				and item != eq_weapon
-		):
-			var cmp_line: String = _weapon_stat_compare_line_bbcode(item as WeaponData, eq_weapon as WeaponData)
-			if cmp_line != "":
-				lines.append("")
-				lines.append(cmp_line)
-
-		if viewer_unit != null:
-			lines.append("")
-			var usable: bool = _unit_can_use_item_for_ui(viewer_unit, item)
-			if usable:
-				lines.append("[font_size=20][color=%s][b]Equippable[/b][/color][color=#5a5248] \u2014 [/color][color=%s]This unit can use this weapon.[/color][/font_size]" % [C_OK, C_BODY])
-			else:
-				lines.append("[font_size=20][color=%s][b]Locked[/b][/color][color=#5a5248] \u2014 [/color][color=%s]This unit cannot equip this weapon.[/color][/font_size]" % [C_BAD, C_MUTED])
-
-		var effects: Array = []
-		if item.get("is_healing_staff") == true:
-			effects.append("Restores %d HP" % int(item.effect_amount))
-
-		if item.get("is_buff_staff") == true or item.get("is_debuff_staff") == true:
-			var word: String = "Grants +" if item.get("is_buff_staff") == true else "Inflicts -"
-			if item.get("affected_stat") != null and str(item.affected_stat) != "":
-				var stats: PackedStringArray = str(item.affected_stat).split(",")
-				var formatted_stats: PackedStringArray = []
-				for s in stats:
-					formatted_stats.append(s.strip_edges().capitalize())
-				effects.append(word + str(item.effect_amount) + " to " + ", ".join(formatted_stats))
-
-		if effects.size() > 0:
-			lines.append("")
-			lines.append(_item_detail_section_heading("Effects"))
-			lines.append("")
-			for e in effects:
-				lines.append(_item_detail_effect_row(C_BODY, _bbcode_escape_user_text(str(e))))
-
-	elif item is ConsumableData:
-		lines.append(_item_detail_section_heading("Overview"))
-		lines.append(_item_detail_line("Kind", "[color=%s]Consumable[/color]" % C_BODY))
-
-		var effects: Array = []
-		if item.heal_amount > 0:
-			effects.append("Restores %d HP" % int(item.heal_amount))
-
-		var boosts: PackedStringArray = []
-		if item.hp_boost > 0:
-			boosts.append("+%d HP" % int(item.hp_boost))
-		if item.str_boost > 0:
-			boosts.append("+%d STR" % int(item.str_boost))
-		if item.mag_boost > 0:
-			boosts.append("+%d MAG" % int(item.mag_boost))
-		if item.def_boost > 0:
-			boosts.append("+%d DEF" % int(item.def_boost))
-		if item.res_boost > 0:
-			boosts.append("+%d RES" % int(item.res_boost))
-		if item.spd_boost > 0:
-			boosts.append("+%d SPD" % int(item.spd_boost))
-		if item.agi_boost > 0:
-			boosts.append("+%d AGI" % int(item.agi_boost))
-
-		if boosts.size() > 0:
-			effects.append("Permanent stat boost: " + ", ".join(boosts))
-
-		if effects.size() > 0:
-			lines.append("")
-			lines.append(_item_detail_section_heading("Effects"))
-			lines.append("")
-			for e in effects:
-				lines.append(_item_detail_effect_row(C_BODY, _bbcode_escape_user_text(str(e))))
-
-	elif item is MaterialData:
-		lines.append(_item_detail_section_heading("Overview"))
-		lines.append(_item_detail_line("Kind", "[color=%s]Crafting material[/color]" % C_BODY))
-	else:
-		lines.append(_item_detail_section_heading("Overview"))
-		lines.append(
-			_item_detail_callout(
-				"#a89878",
-				"#e8dfd4",
-				"Unclassified treasure \u2014 still worth its weight on the market."
-			)
-		)
-
-	lines.append("")
-	lines.append(_item_detail_soft_rule())
-	lines.append(_item_detail_section_heading("Details"))
-	lines.append("")
-	if item.get("description") != null and item.description.strip_edges() != "":
-		var raw_desc: String = item.description.strip_edges()
-		for piece: String in raw_desc.split("\n"):
-			var row: String = piece.strip_edges()
-			if row == "":
-				lines.append("")
-				continue
-			lines.append(
-				"[font_size=19][color=#b8a890]\u25b8[/color][color=#5a5248]  [/color][color=%s]%s[/color][/font_size]"
-				% [C_BODY, _bbcode_escape_user_text(row)]
-			)
-	else:
-		lines.append(
-			_item_detail_callout(
-				"#7a7064",
-				"#c8beb2",
-				"No written notes for this entry \u2014 check its name in the list or try it in battle."
-			)
-		)
-
-	return "\n".join(lines)
+	return InventoryTradeFlowHelpers.get_item_detailed_info(self, item, stack_count, viewer_unit)
 
 
 ## Units/terrain live under the level root as [ BattleField ] siblings; parenting floaters there + last index keeps them above map actors.
@@ -4471,57 +3539,11 @@ func get_terrain_data(grid_pos: Vector2i) -> Dictionary:
 
 
 func _reset_path_pulse_visuals() -> void:
-	if path_line != null:
-		var c: Color = path_line.modulate
-		c.a = 1.0
-		path_line.modulate = c
-	if path_line_under != null:
-		var cu: Color = path_line_under.modulate
-		cu.a = 1.0
-		path_line_under.modulate = cu
+	PathPreviewHelpers.reset_path_pulse_visuals(self)
 
 
 func _set_path_pulse(active: bool) -> void:
-	if not active:
-		if _path_pulse_tween != null and _path_pulse_tween.is_valid():
-			_path_pulse_tween.kill()
-		_path_pulse_active = false
-		_reset_path_pulse_visuals()
-		return
-
-	if path_line == null:
-		return
-	if _path_pulse_active:
-		return
-	_path_pulse_active = true
-	if _path_pulse_tween != null and _path_pulse_tween.is_valid():
-		_path_pulse_tween.kill()
-
-	var fg_w_base: float = path_line.width
-	var un_w_base: float = path_line_under.width if path_line_under != null else fg_w_base
-
-	var pm: Color = path_line.modulate
-	pm.a = PATH_ALPHA_MIN
-	path_line.modulate = pm
-	if path_line_under != null:
-		var pu: Color = path_line_under.modulate
-		pu.a = PATH_ALPHA_MIN
-		path_line_under.modulate = pu
-
-	var apply_pulse: Callable = func(alpha: float) -> void:
-		path_line.modulate.a = alpha
-		if path_line_under != null:
-			path_line_under.modulate.a = alpha
-		var span: float = PATH_ALPHA_MAX - PATH_ALPHA_MIN
-		var u: float = 0.0 if span <= 0.0001 else clampf((alpha - PATH_ALPHA_MIN) / span, 0.0, 1.0)
-		path_line.width = fg_w_base + PATH_PREVIEW_PULSE_W_FG * u
-		if path_line_under != null:
-			path_line_under.width = un_w_base + PATH_PREVIEW_PULSE_W_UNDER * u
-
-	_path_pulse_tween = create_tween()
-	_path_pulse_tween.set_loops()
-	_path_pulse_tween.tween_method(apply_pulse, PATH_ALPHA_MIN, PATH_ALPHA_MAX, PATH_PULSE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_path_pulse_tween.tween_method(apply_pulse, PATH_ALPHA_MAX, PATH_ALPHA_MIN, PATH_PULSE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	PathPreviewHelpers.set_path_pulse(self, active)
 
 func play_ui_sfx(kind: int) -> void:
 	var now := Time.get_ticks_msec()
@@ -4557,66 +3579,12 @@ func play_ui_sfx(kind: int) -> void:
 	player.play()
 
 func _clamp_camera_position() -> void:
-	if main_camera == null:
-		return
-
-	# How many pixels past the map edge the camera is allowed to go
-	var extra_scroll_margin := 400
-
-	var map_limit_x := GRID_SIZE.x * CELL_SIZE.x
-	var map_limit_y := GRID_SIZE.y * CELL_SIZE.y
-
-	main_camera.position.x = clamp(main_camera.position.x, -extra_scroll_margin, map_limit_x + extra_scroll_margin)
-	main_camera.position.y = clamp(main_camera.position.y, -extra_scroll_margin, map_limit_y + extra_scroll_margin)
+	CameraFxHelpers.clamp_camera_position(self)
 
 
 func _apply_camera_zoom(direction: int) -> void:
-	if main_camera == null:
-		return
+	await CameraFxHelpers.new().apply_camera_zoom(self, direction)
 
-	# Optional: block zoom during impact freeze / heavy cinematic moments
-	if _hit_stop_active:
-		return
-
-	var old_target: float = _camera_zoom_target
-	_camera_zoom_target = clampf(
-		_camera_zoom_target + zoom_step * float(direction),
-		min_zoom,
-		max_zoom
-	)
-
-	if is_equal_approx(old_target, _camera_zoom_target):
-		return
-
-	var before_mouse_world: Vector2 = Vector2.ZERO
-	if zoom_to_cursor:
-		before_mouse_world = get_global_mouse_position()
-
-	if _camera_zoom_tween != null and _camera_zoom_tween.is_valid():
-		_camera_zoom_tween.kill()
-
-	_camera_zoom_tween = create_tween()
-	_camera_zoom_tween.set_parallel(true)
-	_camera_zoom_tween.set_trans(Tween.TRANS_SINE)
-	_camera_zoom_tween.set_ease(Tween.EASE_OUT)
-
-	_camera_zoom_tween.tween_property(
-		main_camera,
-		"zoom",
-		Vector2(_camera_zoom_target, _camera_zoom_target),
-		0.12
-	)
-
-	if zoom_to_cursor:
-		await get_tree().process_frame
-		var after_mouse_world: Vector2 = get_global_mouse_position()
-		main_camera.global_position += (before_mouse_world - after_mouse_world)
-		_clamp_camera_position()
-
-	_camera_zoom_tween.finished.connect(func():
-		_clamp_camera_position()
-	)
-	
 
 # Shared battlefield QTE polish (defensive reaction UI + cinematic layers).
 func _apply_battlefield_qte_ui_polish(
@@ -4718,19 +3686,7 @@ func setup_skirmish_battle() -> void:
 # LOOT WINDOW INFO PANEL
 # ==========================================
 func _on_loot_item_selected(index: int) -> void:
-	if loot_desc_label == null: return
-	
-	# --- NEW: Read from Metadata instead of the raw array! ---
-	var meta = loot_item_list.get_item_metadata(index)
-	if meta == null: return
-	
-	var stack_amt = meta.get("count", 1)
-	loot_desc_label.text = _get_item_detailed_info(meta["item"], stack_amt)
-	_queue_refit_item_description_panels()
-	
-	if select_sound and select_sound.stream != null:
-		select_sound.pitch_scale = 1.2
-		select_sound.play()
+	InventoryTradeFlowHelpers.on_loot_item_selected(self, index)
 
 # ==========================================
 # INVENTORY WINDOW INFO PANEL
@@ -4777,151 +3733,35 @@ func toggle_danger_zone() -> void:
 # TRADE SYSTEM LOGIC
 # ==========================================
 func show_trade_popup(ally: Node2D) -> void:
-	# 1. Position the menu
-	trade_popup.position = ally.get_global_transform_with_canvas().origin + Vector2(40, -40)
-	trade_popup.visible = true
-	
-	# 2. Hide the Talk button by default
-	popup_talk_btn.visible = false
-	
-	# 3. Check if a Support Conversation is ready!
-	var initiator = player_state.active_unit
-	if initiator == null or initiator.get("data") == null or ally.get("data") == null: return
-	
-	# --- THE FIX: USE CODENAMES ---
-	var init_name = get_support_name(initiator)
-	var ally_name = get_support_name(ally)
-	
-	var bond = CampaignManager.get_support_bond(init_name, ally_name)
-	
-	var support_file_found = null
-	
-	for s_file in initiator.data.supports:
-		if s_file.partner_name == ally_name:
-			support_file_found = s_file
-			break
-			
-	if support_file_found == null:
-		for s_file in ally.data.supports:
-			if s_file.partner_name == init_name:
-				support_file_found = s_file
-				break
-				
-	# If we found a valid link between these two, check the points!
-	if support_file_found != null:
-		var rank = bond["rank"]
-		if rank == 0 and bond["points"] >= support_file_found.points_for_c: popup_talk_btn.visible = true
-		elif rank == 1 and bond["points"] >= support_file_found.points_for_b: popup_talk_btn.visible = true
-		elif rank == 2 and bond["points"] >= support_file_found.points_for_a: popup_talk_btn.visible = true
-	
+	InventoryTradeFlowHelpers.show_trade_popup(self, ally)
+
 func hide_trade_popup() -> void:
-	trade_popup.visible = false
-	
+	InventoryTradeFlowHelpers.hide_trade_popup(self)
+
 func _on_trade_popup_confirm() -> void:
-	hide_trade_popup()
-	if player_state.active_unit != null and player_state.trade_target_ally != null:
-		open_trade_window(player_state.active_unit, player_state.trade_target_ally)
+	InventoryTradeFlowHelpers.on_trade_popup_confirm(self)
 
 func open_trade_window(unit_a: Node2D, unit_b: Node2D) -> void:
-	trade_unit_a = unit_a
-	trade_unit_b = unit_b
-	trade_selected_side = ""
-	trade_selected_index = -1
-	
-	player_state.is_forecasting = true # Freeze the map
-	
-	# Setup Portraits and Names
-	trade_left_name.text = unit_a.unit_name
-	trade_right_name.text = unit_b.unit_name
-	if unit_a.data and unit_a.data.portrait: trade_left_portrait.texture = unit_a.data.portrait
-	if unit_b.data and unit_b.data.portrait: trade_right_portrait.texture = unit_b.data.portrait
-	
-	refresh_trade_window()
-	trade_window.visible = true
+	InventoryTradeFlowHelpers.open_trade_window(self, unit_a, unit_b)
 
 func refresh_trade_window() -> void:
-	trade_left_list.clear()
-	trade_right_list.clear()
-	
-	_fill_trade_list(trade_left_list, trade_unit_a)
-	_fill_trade_list(trade_right_list, trade_unit_b)
-	
-	# Keep the item highlighted if they are mid-swap
-	if trade_selected_side == "left" and trade_selected_index != -1:
-		trade_left_list.select(trade_selected_index)
-	elif trade_selected_side == "right" and trade_selected_index != -1:
-		trade_right_list.select(trade_selected_index)
+	InventoryTradeFlowHelpers.refresh_trade_window(self)
 
 func _fill_trade_list(list: ItemList, unit: Node2D) -> void:
-	var inv = []
-	if "inventory" in unit:
-		inv = unit.inventory
-	
-	# Always draw exactly 5 slots
-	for i in range(5):
-		if i < inv.size() and inv[i] != null:
-			var item = inv[i]
-			var text = _get_item_display_text(item)
-			if item == unit.equipped_weapon: text = "[E] " + text
-			var img = item.get("icon") if item.get("icon") != null else null
-			list.add_item(text, img)
-		else:
-			list.add_item("--- Empty ---", null)
+	InventoryTradeFlowHelpers.fill_trade_list(list, unit)
 
 func _on_trade_item_clicked(index: int, side: String) -> void:
-	if select_sound.stream != null: select_sound.play()
-	
-	# Click 1: Select the first item
-	if trade_selected_side == "":
-		trade_selected_side = side
-		trade_selected_index = index
-		return
-		
-	# Click 2 (Same Item): Deselect it
-	if trade_selected_side == side and trade_selected_index == index:
-		trade_selected_side = ""
-		trade_selected_index = -1
-		refresh_trade_window()
-		return
-		
-	# Click 2 (Different Item or Empty Slot): Execute the Swap!
-	_execute_trade_swap(trade_selected_side, trade_selected_index, side, index)
-	
-	# Reset state after swapping
-	trade_selected_side = ""
-	trade_selected_index = -1
-	refresh_trade_window()
+	InventoryTradeFlowHelpers.on_trade_item_clicked(self, index, side)
 
 func _execute_trade_swap(side1: String, idx1: int, side2: String, idx2: int) -> void:
 	TradeInventoryHelpers.execute_trade_swap(self, side1, idx1, side2, idx2)
 
 func _on_trade_window_close() -> void:
-	trade_window.visible = false
-	player_state.is_forecasting = false
-	player_state.trade_target_ally = null
-	
-	# Ensure nobody is holding a ghost weapon they just traded away
-	_validate_equipment(trade_unit_a)
-	_validate_equipment(trade_unit_b)
-	update_unit_info_panel()
+	InventoryTradeFlowHelpers.on_trade_window_close(self)
 
 func _validate_equipment(unit: Node2D) -> void:
-	if unit == null:
-		return
+	InventoryTradeFlowHelpers.validate_equipment(self, unit)
 
-	if unit.equipped_weapon != null:
-		var still_has_weapon: bool = unit.inventory.has(unit.equipped_weapon)
-		var still_allowed: bool = _unit_can_equip_weapon(unit, unit.equipped_weapon)
-
-		if not still_has_weapon or not still_allowed:
-			unit.equipped_weapon = null
-
-	if unit.equipped_weapon == null:
-		for item in unit.inventory:
-			if item is WeaponData and _unit_can_equip_weapon(unit, item):
-				unit.equipped_weapon = item
-				break
-	
 func execute_talk(initiator: Node2D, target: Node2D) -> void:
 	await DialogueInteractionHelpers.execute_talk(self, initiator, target)
 
@@ -4935,165 +3775,32 @@ func play_support_dialogue(initiator: Node2D, target: Node2D) -> void:
 	await DialogueInteractionHelpers.play_support_dialogue(self, initiator, target)
 
 func get_support_name(unit: Node2D) -> String:
-	if unit.get("is_custom_avatar") == true:
-		return "Avatar" # This is the codename you will type in the Inspector!
-	return unit.unit_name
+	return SupportRelationshipHelpers.support_name_from_unit(unit)
 
 # --- Relationship Web V1: central identity for relationship lookups (future-proof for unit_id migration). ---
 func get_relationship_id(unit_or_name: Variant) -> String:
-	if unit_or_name is Node2D:
-		return get_support_name(unit_or_name)
-	if unit_or_name is String:
-		return unit_or_name
-	return ""
+	return SupportRelationshipHelpers.get_relationship_id(unit_or_name)
 
 # --- Relationship Web V1: tag and combat modifiers. ---
 ## Returns unit_tags array from unit or unit.data; empty if missing.
 func get_unit_tags(unit: Node2D) -> Array:
-	if unit == null:
-		return []
-	var tags = unit.get("unit_tags")
-	if tags is Array:
-		return tags
-	var data = unit.get("data")
-	if data != null:
-		var dt = data.get("unit_tags")
-		if dt is Array:
-			return dt
-	return []
+	return SupportRelationshipHelpers.get_unit_tags(unit)
 
 ## Returns combat modifiers from relationship web + grief + fear tags. hit/avo/crit_bonus/dmg_bonus/support_chance_bonus (additive).
 func get_relationship_combat_modifiers(unit: Node2D) -> Dictionary:
-	var out := {"hit": 0, "avo": 0, "crit_bonus": 0, "dmg_bonus": 0, "support_chance_bonus": 0}
-	if unit == null:
-		return out
-	var my_id: String = get_relationship_id(unit)
-	var my_pos: Vector2i = get_grid_pos(unit)
-	var is_allied := (unit.get_parent() == player_container or (ally_container != null and unit.get_parent() == ally_container))
-
-	# Grief: temporary penalty after witnessing trusted ally die (battle-local only)
-	if _grief_units.get(my_id, false):
-		out["hit"] += RELATIONSHIP_GRIEF_HIT_PENALTY
-		out["avo"] += RELATIONSHIP_GRIEF_AVO_PENALTY
-
-	# Fear/disgust: penalty when adjacent to any unit (enemy or ally) with certain tags
-	var directions := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-	for dir in directions:
-		var neighbor_pos: Vector2i = my_pos + dir
-		var neighbor: Node2D = get_occupant_at(neighbor_pos)
-		if neighbor == null or neighbor == unit:
-			continue
-		var etags: Array = get_unit_tags(neighbor)
-		for tag in FEAR_TAGS:
-			if tag in etags:
-				out["hit"] += RELATIONSHIP_FEAR_HIT_PENALTY
-				out["avo"] += RELATIONSHIP_FEAR_AVO_PENALTY
-				break
-
-	# Trust / rivalry / mentorship: only for allied units
-	if not is_allied:
-		return out
-	var allies: Array[Node2D] = []
-	if player_container:
-		for c in player_container.get_children():
-			if c is Node2D and c != unit and is_instance_valid(c) and (c.get("current_hp") != null and int(c.current_hp) > 0):
-				allies.append(c)
-	if ally_container:
-		for c in ally_container.get_children():
-			if c is Node2D and c != unit and is_instance_valid(c) and (c.get("current_hp") != null and int(c.current_hp) > 0):
-				allies.append(c)
-	for ally in allies:
-		var dist: int = abs(get_grid_pos(ally).x - my_pos.x) + abs(get_grid_pos(ally).y - my_pos.y)
-		if dist > SUPPORT_COMBAT_RANGE_MANHATTAN:
-			continue
-		var rel: Dictionary = CampaignManager.get_relationship(my_id, get_relationship_id(ally))
-		if rel["trust"] >= RELATIONSHIP_TRUST_THRESHOLD:
-			out["support_chance_bonus"] = maxi(out["support_chance_bonus"], RELATIONSHIP_TRUST_SUPPORT_CHANCE_BONUS)
-		if rel["rivalry"] >= RELATIONSHIP_RIVALRY_THRESHOLD:
-			out["crit_bonus"] += RELATIONSHIP_RIVALRY_CRIT_BONUS
-			out["dmg_bonus"] += RELATIONSHIP_RIVALRY_DMG_BONUS
-		if rel["mentorship"] >= RELATIONSHIP_MENTORSHIP_THRESHOLD:
-			out["hit"] += RELATIONSHIP_MENTORSHIP_HIT_BONUS
-
-	if DEBUG_RELATIONSHIP_COMBAT and (out["hit"] != 0 or out["avo"] != 0 or out["crit_bonus"] != 0 or out["dmg_bonus"] != 0 or out["support_chance_bonus"] != 0):
-		print("[RelationshipCombat] ", my_id, " mods: ", out)
-	return out
-
-## Lightweight Bond Pulse: floating text at world_pos (rise + fade via existing FloatingText).
-func _show_bond_pulse(world_pos: Vector2, text: String, color: Color) -> void:
-	spawn_loot_text(text, color, world_pos)
+	return SupportRelationshipHelpers.get_relationship_combat_modifiers(self, unit)
 
 ## True if mentor is higher level than mentee with gap >= MENTORSHIP_LEVEL_GAP_MIN; both allied and valid.
 func _can_gain_mentorship(mentor: Node2D, mentee: Node2D) -> bool:
-	if mentor == null or mentee == null or mentor == mentee:
-		return false
-	if not is_instance_valid(mentor) or not is_instance_valid(mentee):
-		return false
-	var mentor_parent: Node = mentor.get_parent()
-	var mentee_parent: Node = mentee.get_parent()
-	var mentor_allied: bool = (mentor_parent == player_container or (ally_container != null and mentor_parent == ally_container))
-	var mentee_allied: bool = (mentee_parent == player_container or (ally_container != null and mentee_parent == ally_container))
-	if not mentor_allied or not mentee_allied:
-		return false
-	var _ml: Variant = mentor.get("level")
-	var _el: Variant = mentee.get("level")
-	var mentor_lv: int = 1 if _ml == null else int(_ml)
-	var mentee_lv: int = 1 if _el == null else int(_el)
-	if mentor_lv <= mentee_lv:
-		return false
-	return (mentor_lv - mentee_lv) >= MENTORSHIP_LEVEL_GAP_MIN
+	return SupportRelationshipHelpers.can_gain_mentorship(self, mentor, mentee)
 
 ## Awards a relationship stat (trust/mentorship/rivalry) from an event; one gain per pair per event_type per battle. Shows Bond Pulse; "Formed" log on threshold cross.
 func _award_relationship_stat_event(unit_a: Variant, unit_b: Variant, stat: String, event_type: String, amount: int = 1) -> void:
-	var id_a: String = get_relationship_id(unit_a)
-	var id_b: String = get_relationship_id(unit_b)
-	if id_a.is_empty() or id_b.is_empty():
-		return
-	var key: String = CampaignManager.get_support_key(id_a, id_b) + "_" + event_type
-	if _relationship_event_awarded.get(key, false):
-		return
-	_relationship_event_awarded[key] = true
-	var rel: Dictionary = CampaignManager.get_relationship(id_a, id_b)
-	var old_val: int = int(rel.get(stat, 0))
-	CampaignManager.add_relationship_value(id_a, id_b, stat, amount)
-	var new_val: int = old_val + amount
-
-	var pulse_text: String = ""
-	var pulse_color: Color = BOND_PULSE_COLOR_TRUST
-	if stat == "trust":
-		pulse_text = "Trust +1"
-		pulse_color = BOND_PULSE_COLOR_TRUST
-	elif stat == "mentorship":
-		if new_val >= MENTORSHIP_FORMED_THRESHOLD and old_val < MENTORSHIP_FORMED_THRESHOLD:
-			pulse_text = "Mentorship Formed"
-			add_combat_log("Mentorship has formed between " + id_a + " and " + id_b + ".", "gold")
-		else:
-			pulse_text = "Mentorship +1"
-		pulse_color = BOND_PULSE_COLOR_MENTORSHIP
-	elif stat == "rivalry":
-		if new_val >= RIVALRY_FORMED_THRESHOLD and old_val < RIVALRY_FORMED_THRESHOLD:
-			pulse_text = "Rivalry Formed"
-			add_combat_log("A rivalry ignites between " + id_a + " and " + id_b + ".", "tomato")
-		else:
-			pulse_text = "Rivalry +1"
-		pulse_color = BOND_PULSE_COLOR_RIVALRY
-	else:
-		return
-
-	var pos: Vector2 = Vector2.ZERO
-	if unit_a is Node2D and unit_b is Node2D:
-		pos = (unit_a.global_position + unit_b.global_position) * 0.5
-	elif unit_a is Node2D:
-		pos = unit_a.global_position
-	elif unit_b is Node2D:
-		pos = unit_b.global_position
-	else:
-		return
-	_show_bond_pulse(pos + Vector2(32, -24), pulse_text, pulse_color)
+	SupportRelationshipHelpers.award_relationship_stat_event(self, unit_a, unit_b, stat, event_type, amount)
 
 ## Trust-only shorthand (calls _award_relationship_stat_event with stat "trust").
 func _award_relationship_event(unit_a: Variant, unit_b: Variant, event_type: String, amount: int = 1) -> void:
-	_award_relationship_stat_event(unit_a, unit_b, "trust", event_type, amount)
+	SupportRelationshipHelpers.award_relationship_event(self, unit_a, unit_b, event_type, amount)
 
 # --- Boss Personal Dialogue (V1): identity helpers; lookup via BossPersonalDialogueDB.get_line. ---
 ## Returns stable boss/commander ID for dialogue lookup (unit_name or data.display_name).
@@ -5110,7 +3817,7 @@ func _get_boss_dialogue_id(unit: Node2D) -> String:
 
 ## Returns stable playable unit ID for dialogue lookup (reuses get_support_name: unit_name or "Avatar").
 func _get_playable_dialogue_id(unit: Node2D) -> String:
-	return get_support_name(unit) if unit != null else ""
+	return SupportRelationshipHelpers.support_name_from_unit(unit) if unit != null else ""
 
 ## Returns personal dialogue line for boss_id + unit_id + event_type (pre_attack/death/retreat); queries BossPersonalDialogueDB.
 func _get_boss_personal_line(boss_id: String, unit_id: String, event_type: String) -> String:
@@ -5118,45 +3825,15 @@ func _get_boss_personal_line(boss_id: String, unit_id: String, event_type: Strin
 
 ## Returns support_personality from unit's UnitData; empty string if missing. Used for Defy Death rescue line lookup.
 func _get_support_personality(unit: Node2D) -> String:
-	if unit == null:
-		return ""
-	var d = unit.get("data")
-	if d == null:
-		return ""
-	var p = d.get("support_personality")
-	return str(p).strip_edges() if p != null else ""
+	return SupportRelationshipHelpers.get_support_personality(unit)
 
 ## Returns savior-spoken rescue line for Defy Death; uses savior's personality and victim's display name.
 func _get_defy_death_rescue_line(savior: Node2D, victim_name: String) -> String:
-	var personality: String = _get_support_personality(savior)
-	return SupportRescueDialogueDB.get_line(personality, victim_name)
+	return SupportRelationshipHelpers.get_defy_death_rescue_line(savior, victim_name)
 
 ## Shows TalkPanel with savior portrait and rescue line for a short time. Does not pause the game.
 func _show_defy_death_savior_portrait(savior: Node2D, savior_name: String, rescue_line: String) -> void:
-	if talk_panel == null:
-		return
-	var portrait_tex: Texture2D = null
-	if savior != null and savior.get("data") != null:
-		var p = savior.data.get("portrait")
-		if p is Texture2D:
-			portrait_tex = p
-	talk_left_portrait.texture = portrait_tex
-	talk_left_portrait.modulate = Color.WHITE
-	talk_left_portrait.visible = true
-	if talk_right_portrait != null:
-		talk_right_portrait.texture = null
-		talk_right_portrait.visible = false
-	talk_name.text = savior_name
-	talk_name.modulate = Color.GOLD
-	talk_text.text = "[center]" + rescue_line + "[/center]"
-	talk_text.visible_ratio = 1.0
-	if talk_next_btn != null:
-		talk_next_btn.visible = false
-	talk_panel.visible = true
-	await get_tree().create_timer(2.0).timeout
-	talk_panel.visible = false
-	if talk_next_btn != null:
-		talk_next_btn.visible = true
+	await SupportRelationshipHelpers.new().show_defy_death_savior_portrait(self, savior, savior_name, rescue_line)
 
 # Normalizes support rank from bond data to 0..3. Handles int, string "C"/"B"/"A", null/missing; malformed => 0.
 func _normalize_support_rank(bond: Variant) -> int:
@@ -5175,37 +3852,7 @@ func get_support_combat_bonus(unit: Node2D) -> Dictionary:
 ## Outputs: Dictionary with "partner" (Node2D or null), "rank" (int 0..3), "in_range" (bool), "can_react" (bool).
 ## Side effects: None. Missing/invalid data => partner null, rank 0, can_react false.
 func get_best_support_context(unit: Node2D) -> Dictionary:
-	var empty := {"partner": null, "rank": 0, "in_range": false, "can_react": false}
-	if unit == null or unit.get_parent() == destructibles_container:
-		return empty
-	var is_allied := (unit.get_parent() == player_container or (ally_container != null and unit.get_parent() == ally_container))
-	if not is_allied:
-		return empty
-	var my_pos: Vector2i = get_grid_pos(unit)
-	var my_name: String = get_support_name(unit)
-	var best_rank_ref: Array = [0]
-	var best_partner_ref: Array = [null]
-	var collect := func(container: Node) -> void:
-		if container == null: return
-		for c in container.get_children():
-			if not (c is Node2D) or c == unit: continue
-			if not is_instance_valid(c) or c.is_queued_for_deletion(): continue
-			if c.get("current_hp") != null and int(c.current_hp) <= 0: continue
-			var dist: int = abs(get_grid_pos(c).x - my_pos.x) + abs(get_grid_pos(c).y - my_pos.y)
-			if dist > SUPPORT_COMBAT_RANGE_MANHATTAN:
-				continue
-			var bond: Dictionary = CampaignManager.get_support_bond(my_name, get_support_name(c))
-			var rank: int = _normalize_support_rank(bond)
-			if rank > best_rank_ref[0]:
-				best_rank_ref[0] = rank
-				best_partner_ref[0] = c
-	collect.call(player_container)
-	if ally_container: collect.call(ally_container)
-	var best_partner: Node2D = best_partner_ref[0]
-	var best_rank: int = best_rank_ref[0]
-	var in_range: bool = best_partner != null
-	var can_react: bool = (best_partner != null and is_instance_valid(best_partner) and not best_partner.is_queued_for_deletion() and best_partner.get_parent() != destructibles_container and (best_partner.get("current_hp") != null and int(best_partner.current_hp) > 0))
-	return {"partner": best_partner, "rank": best_rank, "in_range": in_range, "can_react": can_react}
+	return SupportRelationshipHelpers.get_best_support_context(self, unit)
 
 ## Applies one hit with Phase 2 support reactions: Guard (redirect one hit to partner), then Defy Death (survive at 1 HP once per battle).
 ## Purpose: Single insertion point for Guard/Defy so forecast and resolution stay consistent; prevents redirect loops via is_redirected.
@@ -5216,69 +3863,7 @@ func _apply_hit_with_support_reactions(victim: Node2D, damage: int, source: Node
 	await SupportHelpers.apply_hit_with_support_reactions(self, victim, damage, source, exp_tgt, is_redirected)
 
 func _on_support_btn_pressed() -> void:
-	if select_sound and select_sound.stream != null: select_sound.play()
-	
-	# 1. Figure out whose supports we are checking
-	var target_unit = null
-	if current_state == player_state and player_state.active_unit != null:
-		target_unit = player_state.active_unit
-	else:
-		target_unit = get_occupant_at(cursor_grid_pos)
-		
-	if target_unit == null: return
-	
-	var u_name = get_support_name(target_unit)
-	var display_text = "[center][b][color=gold]--- " + target_unit.unit_name.to_upper() + "'S BONDS ---[/color][/b][/center]\n\n"
-	var found_any_friends = false
-	
-	# 2. Loop through the global memory and find their friends!
-	for key in CampaignManager.support_bonds.keys():
-		var names: PackedStringArray = CampaignManager.parse_relationship_key(key)
-		var partner_name := ""
-		if names.size() >= 2:
-			if names[0] == u_name: partner_name = names[1]
-			elif names[1] == u_name: partner_name = names[0]
-
-		# If we found a match, format their current standing!
-		if partner_name != "":
-			found_any_friends = true
-			# --- Translate 'Avatar' back to the real name for display ---
-			var display_partner_name := partner_name
-			if partner_name == "Avatar":
-				for p_unit in player_container.get_children():
-					if p_unit.get("is_custom_avatar") == true:
-						display_partner_name = p_unit.unit_name
-						break
-			var bond = CampaignManager.get_support_bond(u_name, partner_name)
-			var pts = bond["points"]
-			var rank_color = "gray"
-			var rank_letter = "None"
-			var next_goal = 10 # Default points for C rank
-			
-			if bond["rank"] == 1: 
-				rank_letter = "C"
-				rank_color = "cyan"
-				next_goal = 25
-			elif bond["rank"] == 2: 
-				rank_letter = "B"
-				rank_color = "lime"
-				next_goal = 45
-			elif bond["rank"] == 3: 
-				rank_letter = "A (MAX)"
-				rank_color = "gold"
-				
-			# Build the visual row using the TRANSLATED name
-			if bond["rank"] < 3:
-				display_text += display_partner_name + "  -  Rank [color=" + rank_color + "]" + rank_letter + "[/color]  [color=gray](" + str(pts) + "/" + str(next_goal) + " pts)[/color]\n"
-			else:
-				display_text += display_partner_name + "  -  [color=gold]Rank A (MAX)[/color]\n"
-				
-	if not found_any_friends:
-		display_text += "[center][color=gray]No bonds formed yet.\nFight adjacent to allies to grow closer![/color][/center]"
-		
-	# 3. Show the UI
-	support_list_text.text = display_text
-	support_tracker_panel.visible = true
+	SupportRelationshipHelpers.on_support_btn_pressed(self)
 
 func execute_promotion(unit: Node2D, advanced_class: Resource) -> void:
 	# 0. Lock input during the sequence
@@ -5622,51 +4207,7 @@ func _trigger_victory() -> void:
 # --- FOG OF WAR & LINE OF SIGHT ---
 # ==========================================
 func update_fog_of_war() -> void:
-	if not use_fog_of_war or fog_drawer == null: return
-	
-	# 1. Demote all currently "Visible" (2) tiles to "Fogged/Remembered" (1)
-	for key in fow_grid.keys():
-		if fow_grid[key] == 2:
-			fow_grid[key] = 1
-			
-	# 2. Gather all units that grant vision
-	var vision_sources = []
-	if player_container: vision_sources += player_container.get_children()
-	if ally_container: vision_sources += ally_container.get_children()
-	
-	# 3. Cast Line of Sight for every friendly unit
-	for u in vision_sources:
-		if not is_instance_valid(u) or u.is_queued_for_deletion() or u.current_hp <= 0:
-			continue
-			
-		var start = get_grid_pos(u)
-		var v_range = u.get("vision_range") if u.get("vision_range") != null else default_vision_range
-		
-		# The unit can always see the tile they are standing on
-		fow_grid[start] = 2 
-		
-		for x in range(start.x - v_range, start.x + v_range + 1):
-			for y in range(start.y - v_range, start.y + v_range + 1):
-				var target = Vector2i(x, y)
-				
-				# Ensure target is inside map bounds
-				if target.x >= 0 and target.x < GRID_SIZE.x and target.y >= 0 and target.y < GRID_SIZE.y:
-					# Check if it's within the circular/diamond radius
-					if abs(start.x - target.x) + abs(start.y - target.y) <= v_range:
-						# Trace a ray to see if a wall blocks it
-						if _check_line_of_sight(start, target):
-							fow_grid[target] = 2
-							
-	# 4. Hide/Reveal Enemies based on the new vision map
-	_apply_fow_visibility(enemy_container)
-	_apply_fow_visibility(destructibles_container)
-	_apply_fow_visibility(chests_container)
-	_apply_decor_fow_shadow()
-	
-	# Force the black squares to redraw
-	fog_drawer.queue_redraw()
-
-	
+	BattleFieldFogOfWarHelpers.update_fog_of_war(self)
 
 func _check_line_of_sight(start: Vector2i, target: Vector2i) -> bool:
 	return BattleFieldGridRangeHelpers.check_line_of_sight(self, start, target)
@@ -5678,84 +4219,25 @@ func _is_wall_at(pos: Vector2i) -> bool:
 
 
 func _apply_fow_visibility(container: Node) -> void:
-	if container == null: return
-	for child in container.get_children():
-		if not is_instance_valid(child) or child.is_queued_for_deletion(): continue
-		
-		var pos = get_grid_pos(child)
-		# An enemy is only visible if their tile is currently State 2 (Visible)
-		var tile_visible: bool = fow_grid.has(pos) and fow_grid[pos] == 2
-		child.visible = tile_visible
+	BattleFieldFogOfWarHelpers.apply_fow_visibility(self, container)
 
 func _decor_base_modulate(item: CanvasItem) -> Color:
-	var key: int = item.get_instance_id()
-	if not _decor_fow_base_modulates.has(key):
-		_decor_fow_base_modulates[key] = item.modulate
-	return _decor_fow_base_modulates[key]
+	return BattleFieldFogOfWarHelpers.decor_base_modulate(self, item)
 
 func _decor_tile_currently_visible(node: Node2D) -> bool:
-	for tile in _unit_footprint_tiles(node):
-		if fow_grid.has(tile) and fow_grid[tile] == 2:
-			return true
-	return false
+	return BattleFieldFogOfWarHelpers.decor_tile_currently_visible(self, node)
 
 func _apply_decor_fow_shadow() -> void:
-	if decor_layer == null:
-		return
-	for child in decor_layer.get_children():
-		var item: CanvasItem = child as CanvasItem
-		if item == null or not is_instance_valid(item) or item.is_queued_for_deletion():
-			continue
-		var base: Color = _decor_base_modulate(item)
-		var node_2d: Node2D = child as Node2D
-		if node_2d == null or _decor_tile_currently_visible(node_2d):
-			item.modulate = base
-			continue
-		item.modulate = Color(
-			base.r * DECOR_FOG_SHADOW_TINT.r,
-			base.g * DECOR_FOG_SHADOW_TINT.g,
-			base.b * DECOR_FOG_SHADOW_TINT.b,
-			base.a * DECOR_FOG_SHADOW_TINT.a
-		)
+	BattleFieldFogOfWarHelpers.apply_decor_fow_shadow(self)
 
 func _process_fog(delta: float) -> void:
-	if not use_fog_of_war or fog_drawer == null: return
-	
-	var needs_redraw = false
-	
-	for pos in fow_grid.keys():
-		var state = fow_grid[pos]
-		var target_a = 0.85 
-		
-		if state == 1: target_a = 0.45 
-		elif state == 2: target_a = 0.00 
-			
-		var current_a = fow_display_alphas.get(pos, 0.85)
-		
-		if abs(current_a - target_a) > 0.01:
-			var new_a = lerp(current_a, target_a, 10.0 * delta)
-			fow_display_alphas[pos] = new_a
-			
-			# Paint the updated transparency onto the exact pixel
-			fow_image.set_pixel(pos.x, pos.y, Color(0.05, 0.05, 0.1, new_a))
-			needs_redraw = true
-			
-	if needs_redraw:
-		# Push the updated image to the GPU and redraw
-		fow_texture.update(fow_image)
-		fog_drawer.queue_redraw()
+	BattleFieldFogOfWarHelpers.process_fog(self, delta)
 
 func animate_flying_gold(world_pos: Vector2, amount: int) -> void:
 	GoldVfxHelpers.animate_flying_gold(self, world_pos, amount)
 		
 func _on_fog_draw() -> void:
-	if not use_fog_of_war or fow_texture == null: return
-	
-	# Stretch the tiny image over the massive map.
-	# Because we set texture_filter to LINEAR, the GPU smoothly blends 
-	# the pixels together, creating flawless, cloud-like soft edges!
-	var map_rect = Rect2(0, 0, GRID_SIZE.x * CELL_SIZE.x, GRID_SIZE.y * CELL_SIZE.y)
-	fog_drawer.draw_texture_rect(fow_texture, map_rect, false)
+	BattleFieldFogOfWarHelpers.on_fog_draw(self)
 
 # --- TACTICAL ABILITY (Momentum QTE) ---
 func _run_tactical_action_minigame(attacker: Node2D, ability_name: String) -> bool:
@@ -5918,209 +4400,16 @@ func _maybe_log_enemy_reinforcement_warning_for_player_phase() -> void:
 # --- MULTIVERSE ARENA SPAWNER ---
 # ==========================================
 func setup_arena_battle() -> void:
-	print("--- INITIALIZING MULTIVERSE ARENA ---")
-	var opp_data = ArenaManager.current_opponent_data
-	
-	# Delete any pre-placed enemies left over in the editor
-	for child in enemy_container.get_children():
-		child.queue_free()
-		
-	var meta = opp_data.get("metadata", {})
-	var roster = meta.get("roster", [])
-	var dragons = meta.get("dragons", [])
-	
-	# Find empty, walkable tiles on the right side of the map for enemies
-	var valid_spawn_points = []
-	for x in range(int(GRID_SIZE.x / 2.0), GRID_SIZE.x): 
-		for y in range(GRID_SIZE.y):
-			var pos = Vector2i(x, y)
-			if not astar.is_point_solid(pos) and get_unit_at(pos) == null:
-				valid_spawn_points.append(pos)
-				
-	valid_spawn_points.shuffle()
-	var spawn_index = 0
-	
-	# 1. SPAWN THE GHOST HEROES
-	for unit_dict in roster:
-		if spawn_index >= valid_spawn_points.size(): break 
-		
-		var ghost = player_unit_scene.instantiate()
-		ghost.is_arena_ghost = true 
-		enemy_container.add_child(ghost) 
-		
-		# --- FIX: CONNECT SIGNALS SO THE GAME KNOWS THEY DIED ---
-		ghost.died.connect(_on_unit_died)
-		ghost.leveled_up.connect(_on_unit_leveled_up)
-		
-		# Force them to the enemy team
-		if "team" in ghost: ghost.team = 1 
-		if "is_enemy" in ghost: ghost.is_enemy = true
-		
-		var grid_pos = valid_spawn_points[spawn_index]
-		ghost.position = Vector2(grid_pos.x * CELL_SIZE.x, grid_pos.y * CELL_SIZE.y)
-		
-		# Inject Cloud Stats
-		ghost.unit_name = unit_dict.get("unit_name", "Gladiator")
-		ghost.unit_class_name = unit_dict.get("class", "Mercenary")
-		ghost.level = unit_dict.get("level", 1)
-		ghost.max_hp = unit_dict.get("max_hp", 20)
-		ghost.current_hp = ghost.max_hp 
-		ghost.strength = unit_dict.get("strength", 5)
-		ghost.magic = unit_dict.get("magic", 0)
-		ghost.defense = unit_dict.get("defense", 3)
-		ghost.resistance = unit_dict.get("resistance", 1)
-		ghost.speed = unit_dict.get("speed", 4)
-		ghost.agility = unit_dict.get("agility", 3)
-		ghost.move_range = unit_dict.get("move_range", 4)
-		ghost.ability = unit_dict.get("ability", "None")
-		
-		# Give them a dummy "Ghost Weapon" so they can deal actual damage!
-		var dummy_wpn = WeaponData.new()
-		dummy_wpn.weapon_name = unit_dict.get("equipped_weapon_name", "Ghost Blade")
-		dummy_wpn.might = 5
-		dummy_wpn.hit_bonus = 10
-		dummy_wpn.min_range = 1
-		dummy_wpn.max_range = 1
-		ghost.equipped_weapon = dummy_wpn
-		
-		if ghost.data == null: ghost.data = UnitData.new()
-		
-		# --- RESTORE VISUALS FROM THE CLOUD ---
-		var s_path = unit_dict.get("sprite_path", "")
-		var p_path = unit_dict.get("portrait_path", "")
-		
-		if s_path != "" and ResourceLoader.exists(s_path):
-			var sprite_node = ghost.get_node_or_null("Sprite")
-			if sprite_node == null: sprite_node = ghost.get_node_or_null("Sprite2D")
-			if sprite_node: sprite_node.texture = load(s_path)
-			
-		if p_path != "" and ResourceLoader.exists(p_path):
-			ghost.data.portrait = load(p_path)
-			
-		# Tint them slightly red so players know they are enemy ghosts!
-		ghost.base_color = Color(1.0, 0.7, 0.7)
-		ghost.modulate = ghost.base_color
-		
-		if ghost.has_method("setup_ghost_ui"):
-			ghost.setup_ghost_ui()
-			
-		spawn_index += 1
-		
-	# 2. SPAWN THE GHOST DRAGONS
-	for d_dict in dragons:
-		if spawn_index >= valid_spawn_points.size(): break
-		
-		var ghost_dragon = player_unit_scene.instantiate()
-		ghost_dragon.is_arena_ghost = true 
-		enemy_container.add_child(ghost_dragon)
-		
-		ghost_dragon.died.connect(_on_unit_died)
-		ghost_dragon.leveled_up.connect(_on_unit_leveled_up)
-		
-		if "team" in ghost_dragon: ghost_dragon.team = 1
-		if "is_enemy" in ghost_dragon: ghost_dragon.is_enemy = true
-		
-		var grid_pos = valid_spawn_points[spawn_index]
-		ghost_dragon.position = Vector2(grid_pos.x * CELL_SIZE.x, grid_pos.y * CELL_SIZE.y)
-		
-		ghost_dragon.unit_name = d_dict.get("name", "Dragon")
-		ghost_dragon.unit_class_name = d_dict.get("element", "Fire") + " Dragon"
-		ghost_dragon.max_hp = d_dict.get("max_hp", 25)
-		ghost_dragon.current_hp = ghost_dragon.max_hp
-		ghost_dragon.strength = d_dict.get("strength", 8)
-		ghost_dragon.magic = d_dict.get("magic", 8)
-		ghost_dragon.defense = d_dict.get("defense", 5)
-		ghost_dragon.resistance = d_dict.get("resistance", 4)
-		ghost_dragon.speed = d_dict.get("speed", 5)
-		ghost_dragon.agility = d_dict.get("agility", 4)
-		ghost_dragon.move_range = 5 
-		ghost_dragon.set_meta("is_dragon", true)
-		
-		# Give dragons a built-in weapon so they can attack
-		var fang = WeaponData.new()
-		fang.weapon_name = "Ghost Fang"
-		fang.might = 6
-		fang.min_range = 1
-		fang.max_range = 1
-		ghost_dragon.equipped_weapon = fang
-		
-		if ghost_dragon.data == null: ghost_dragon.data = UnitData.new()
-		
-		# Auto-assign the correct dragon sprite based on their element!
-		var elem = d_dict.get("element", "Fire").to_lower()
-		var d_path = "res://Assets/Sprites/" + elem + "_dragon_sprite.png"
-		if ResourceLoader.exists(d_path):
-			var sprite_node = ghost_dragon.get_node_or_null("Sprite")
-			if sprite_node == null: sprite_node = ghost_dragon.get_node_or_null("Sprite2D")
-			if sprite_node: sprite_node.texture = load(d_path)
-			
-		ghost_dragon.base_color = Color(1.0, 0.7, 0.7)
-		ghost_dragon.modulate = ghost_dragon.base_color
-		
-		if ghost_dragon.has_method("setup_ghost_ui"):
-			ghost_dragon.setup_ghost_ui()
-			
-		spawn_index += 1
+	BattleFieldSpecialModeSetupHelpers.setup_arena_battle(self)
 
 func _do_hit_stop(freeze_duration: float, slow_scale: float = 0.12, slow_duration: float = 0.10) -> void:
-	if _hit_stop_active:
-		return
-
-	_hit_stop_active = true
-	var old_scale: float = Engine.time_scale
-
-	# Tiny real freeze
-	Engine.time_scale = 0.01
-	await get_tree().create_timer(freeze_duration, true, false, true).timeout
-
-	# Short dramatic slow-motion tail
-	Engine.time_scale = slow_scale
-	await get_tree().create_timer(slow_duration, true, false, true).timeout
-
-	Engine.time_scale = old_scale
-	_hit_stop_active = false
-
-var _impact_snap_tween: Tween
-var _screen_shake_tween: Tween
+	await CameraFxHelpers.new().do_hit_stop(self, freeze_duration, slow_scale, slow_duration)
 
 func _start_impact_camera(focus_world: Vector2, _zoom_mult: float, snap_t: float, restore_t: float) -> void:
-	if main_camera == null:
-		return
+	CameraFxHelpers.start_impact_camera(self, focus_world, _zoom_mult, snap_t, restore_t)
 
-	if _impact_snap_tween:
-		_impact_snap_tween.kill()
-	if _impact_restore_tween:
-		_impact_restore_tween.kill()
-
-	var old_offset: Vector2 = main_camera.offset
-	var camera_center: Vector2 = main_camera.get_screen_center_position()
-	var dir_to_impact: Vector2 = focus_world - camera_center
-
-	var punch_offset := Vector2.ZERO
-	if dir_to_impact.length() > 0.001:
-		var punch_strength: float = clamp(dir_to_impact.length() * 0.08, 10.0, 24.0)
-		punch_offset = dir_to_impact.normalized() * punch_strength
-
-	_impact_snap_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	_impact_snap_tween.tween_property(main_camera, "offset", old_offset + punch_offset, snap_t).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-	_impact_snap_tween.finished.connect(func():
-		_impact_restore_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		_impact_restore_tween.tween_property(main_camera, "offset", Vector2.ZERO, restore_t).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	)		
 func _spawn_fullscreen_impact_flash(color: Color, alpha: float, duration: float) -> void:
-	var flash = ColorRect.new()
-	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
-	flash.color = color
-	flash.modulate.a = 0.0
-	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	$UI.add_child(flash)
-
-	var tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.tween_property(flash, "modulate:a", alpha, duration * 0.16)
-	tw.tween_property(flash, "modulate:a", alpha * 0.35, duration * 0.18)
-	tw.tween_property(flash, "modulate:a", 0.0, duration * 0.66)
-	tw.finished.connect(flash.queue_free)
+	CameraFxHelpers.spawn_fullscreen_impact_flash(self, color, alpha, duration)
 		
 func _play_arena_vs_screen() -> void:
 	if arena_vs_layer == null:
@@ -6264,175 +4553,23 @@ func _spawn_levelup_halo(unit: Node2D, accent_color: Color) -> Node2D:
 
 
 func _get_support_threshold_for_next_rank(unit_a: Node2D, unit_b: Node2D, current_rank: int) -> int:
-	if unit_a == null or unit_b == null:
-		return -1
-	if unit_a.get("data") == null or unit_b.get("data") == null:
-		return -1
-
-	var name_a = get_support_name(unit_a)
-	var name_b = get_support_name(unit_b)
-
-	var support_file_found = null
-
-	for s_file in unit_a.data.supports:
-		if s_file.partner_name == name_b:
-			support_file_found = s_file
-			break
-
-	if support_file_found == null:
-		for s_file in unit_b.data.supports:
-			if s_file.partner_name == name_a:
-				support_file_found = s_file
-				break
-
-	if support_file_found == null:
-		return -1
-
-	if current_rank == 0:
-		return int(support_file_found.points_for_c)
-	elif current_rank == 1:
-		return int(support_file_found.points_for_b)
-	elif current_rank == 2:
-		return int(support_file_found.points_for_a)
-
-	return -1
+	return SupportRelationshipHelpers.get_support_threshold_for_next_rank(self, unit_a, unit_b, current_rank)
 
 
 func _get_next_support_rank_letter(current_rank: int) -> String:
-	match current_rank:
-		0:
-			return "C"
-		1:
-			return "B"
-		2:
-			return "A"
-		_:
-			return ""
+	return SupportRelationshipHelpers.get_next_support_rank_letter(current_rank)
 
 
 func _queue_support_ready_if_needed(unit_a: Node2D, unit_b: Node2D) -> void:
-	if unit_a == null or unit_b == null:
-		return
-
-	var name_a = get_support_name(unit_a)
-	var name_b = get_support_name(unit_b)
-	var bond_key = CampaignManager.get_support_key(name_a, name_b)
-
-	if _battle_support_ready_seen.has(bond_key):
-		return
-
-	var bond = CampaignManager.get_support_bond(name_a, name_b)
-
-	var current_rank: int = int(bond.get("rank", 0))
-	if current_rank >= 3:
-		return
-
-	var current_points: int = int(bond.get("points", 0))
-	var needed_points: int = _get_support_threshold_for_next_rank(unit_a, unit_b, current_rank)
-
-	if needed_points < 0:
-		return
-
-	if current_points >= needed_points:
-		_battle_support_ready_seen[bond_key] = true
-		_battle_support_ready_queue.append({
-			"bond_key": bond_key,
-			"unit_a_name": unit_a.unit_name,
-			"unit_b_name": unit_b.unit_name,
-			"next_rank": _get_next_support_rank_letter(current_rank)
-		})
-		_show_next_support_ready_popup()
+	SupportRelationshipHelpers.queue_support_ready_if_needed(self, unit_a, unit_b)
 
 
 func _show_next_support_ready_popup() -> void:
-	if _support_popup_busy:
-		return
-	if _battle_support_ready_queue.is_empty():
-		return
-
-	_support_popup_busy = true
-	var data: Dictionary = _battle_support_ready_queue.pop_front()
-
-	var popup_layer := CanvasLayer.new()
-	popup_layer.layer = 160
-	popup_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(popup_layer)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(520, 100)
-	panel.position = Vector2((get_viewport_rect().size.x - 520) * 0.5, 70)
-	panel.scale = Vector2(0.85, 0.85)
-	panel.modulate.a = 0.0
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_theme_stylebox_override("panel", _make_levelup_style(
-		Color(0.06, 0.06, 0.10, 0.96),
-		Color(0.85, 0.75, 0.25, 1.0),
-		14
-	))
-	popup_layer.add_child(panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 14
-	vbox.offset_top = 12
-	vbox.offset_right = -14
-	vbox.offset_bottom = -12
-	vbox.add_theme_constant_override("separation", 4)
-	panel.add_child(vbox)
-
-	var title := Label.new()
-	title.text = "SUPPORT READY!"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 26)
-	title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.42))
-	vbox.add_child(title)
-
-	var body := Label.new()
-	body.text = data["unit_a_name"] + " & " + data["unit_b_name"] + " can now view Rank " + data["next_rank"] + "."
-	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	body.add_theme_font_size_override("font_size", 20)
-	body.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
-	vbox.add_child(body)
-
-	var sub := Label.new()
-	sub.text = "Visit a support conversation after battle."
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 16)
-	sub.add_theme_color_override("font_color", Color(0.75, 0.78, 0.84))
-	vbox.add_child(sub)
-
-	if level_up_sound and level_up_sound.stream != null:
-		level_up_sound.pitch_scale = 1.08
-		level_up_sound.play()
-
-	var tw := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.set_parallel(true)
-	tw.tween_property(panel, "modulate:a", 1.0, 0.18)
-	tw.tween_property(panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await tw.finished
-
-	await get_tree().create_timer(2.1, true, false, true).timeout
-
-	var out_tw := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	out_tw.tween_property(panel, "modulate:a", 0.0, 0.18)
-	out_tw.tween_property(panel, "position:y", panel.position.y - 20.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	await out_tw.finished
-
-	popup_layer.queue_free()
-	_support_popup_busy = false
-
-	if not _battle_support_ready_queue.is_empty():
-		_show_next_support_ready_popup()
+	await SupportRelationshipHelpers.new().show_next_support_ready_popup(self)
 
 
 func _add_support_points_and_check(unit_a: Node2D, unit_b: Node2D, amount: int) -> void:
-	if unit_a == null or unit_b == null:
-		return
-	if amount <= 0:
-		return
-
-	CampaignManager.add_support_points(get_support_name(unit_a), get_support_name(unit_b), amount)
-	_queue_support_ready_if_needed(unit_a, unit_b)
+	SupportRelationshipHelpers.add_support_points_and_check(self, unit_a, unit_b, amount)
 
 
 func _get_forecast_support_text(unit: Node2D) -> String:
@@ -6625,507 +4762,47 @@ func _hide_detailed_unit_info_panel() -> void:
 	DetailedUnitInfoHelpers.hide_detailed_unit_info_panel(self)
 
 func _ensure_detailed_unit_info_primary_widgets_style() -> void:
-	for bar_def in _unit_info_primary_bar_definitions():
-		var bar_key: String = str(bar_def.get("key", ""))
-		if not detailed_unit_info_primary_widgets.has(bar_key):
-			continue
-		var widgets: Dictionary = detailed_unit_info_primary_widgets[bar_key]
-		var name_label := widgets.get("name") as Label
-		var value_chip := widgets.get("value_chip") as Panel
-		var value_label := widgets.get("value") as Label
-		var bar := widgets.get("bar") as ProgressBar
-		var desc_label := widgets.get("desc") as Label
-		if name_label != null:
-			_style_tactical_label(name_label, TACTICAL_UI_TEXT_MUTED, 14, 2)
-		if value_chip != null:
-			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), Color(0.36, 0.32, 0.22, 0.90), 1, 6)
-		if value_label != null:
-			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 18, 2)
-			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		if bar != null:
-			bar.min_value = 0.0
-		if desc_label != null:
-			_style_tactical_label(desc_label, TACTICAL_UI_TEXT_MUTED, 13, 1)
+	DetailedUnitInfoContentHelpers.ensure_detailed_unit_info_primary_widgets_style(self)
 
 func _resolve_detailed_unit_info_class_label(unit: Node2D) -> String:
-	if unit == null:
-		return "Unknown"
-	var class_res: Resource = null
-	if unit.get("active_class_data") != null:
-		class_res = unit.active_class_data
-	if class_res != null and class_res.get("job_name") != null:
-		return str(class_res.job_name)
-	if unit.get("unit_class_name") != null:
-		return str(unit.unit_class_name)
-	return "Unknown"
+	return DetailedUnitInfoContentHelpers.resolve_detailed_unit_info_class_label(unit)
 
 func _build_detailed_unit_info_meta_line(unit: Node2D) -> String:
-	if unit == null:
-		return ""
-	var level_value: int = int(unit.get("level")) if unit.get("level") != null else 1
-	var move_value: int = int(unit.get("move_range")) if unit.get("move_range") != null else 0
-	return "LV %d  |  MOVE %d  |  CLASS %s" % [level_value, move_value, _resolve_detailed_unit_info_class_label(unit).to_upper()]
+	return DetailedUnitInfoContentHelpers.build_detailed_unit_info_meta_line(self, unit)
 
 func _build_detailed_unit_info_summary_text(unit: Node2D) -> String:
-	if unit == null:
-		return ""
-	var lines: Array[String] = []
-	var ability_name: String = ""
-	if "unlocked_abilities" in unit and unit.unlocked_abilities.size() > 0:
-		ability_name = ", ".join(unit.unlocked_abilities)
-	elif unit.get("ability") != null and str(unit.ability).strip_edges() != "":
-		ability_name = str(unit.ability)
-	if ability_name != "":
-		lines.append("[color=#87d4ff]Ability:[/color] [color=#e9f8ff]%s[/color]" % ability_name)
-	var inventory_count: int = unit.inventory.size() if "inventory" in unit else 0
-	lines.append("[color=#f2bf59]Inventory:[/color] [color=#fff0c8]%d carried item%s[/color]" % [inventory_count, "" if inventory_count == 1 else "s"])
-	return "\n".join(lines)
+	return DetailedUnitInfoContentHelpers.build_detailed_unit_info_summary_text(self, unit)
 
 func _detailed_unit_info_stat_description(stat_key: String) -> String:
-	match stat_key:
-		"strength":
-			return "Raises damage with swords, lances, axes, bows, and many physical techniques."
-		"magic":
-			return "Raises damage with spells, magic weapons, and abilities that scale from magical power."
-		"defense":
-			return "Reduces damage taken from physical attacks like blades, arrows, claws, and blunt impacts."
-		"resistance":
-			return "Reduces damage taken from spells, elemental attacks, curses, and other magical effects."
-		"speed":
-			return "Helps this unit strike twice before slower enemies and avoid being struck twice by faster ones."
-		"agility":
-			return "Improves dodge and evasive reactions, and it is the main stat feeding base critical chance before weapon, skill, and battle bonuses."
-		_:
-			return ""
+	return DetailedUnitInfoContentHelpers.detailed_unit_info_stat_description(stat_key)
 
 func _detailed_unit_info_stat_label(stat_key: String) -> String:
-	match stat_key:
-		"strength":
-			return "STRENGTH"
-		"magic":
-			return "MAGIC"
-		"defense":
-			return "DEFENSE"
-		"resistance":
-			return "RESISTANCE"
-		"speed":
-			return "SPEED"
-		"agility":
-			return "AGILITY"
-		_:
-			return stat_key.to_upper()
+	return DetailedUnitInfoContentHelpers.detailed_unit_info_stat_label(stat_key)
 
 func _detailed_unit_info_stat_hint_specs(stat_key: String) -> Array[Dictionary]:
-	match stat_key:
-		"speed":
-			return [
-				{"text": "x2", "color": Color(0.45, 0.78, 1.0, 1.0)},
-				{"text": "TEMPO", "color": Color(0.58, 0.84, 1.0, 1.0)},
-			]
-		"agility":
-			return [
-				{"text": "CRIT", "color": Color(1.0, 0.78, 0.30, 1.0)},
-				{"text": "EVADE", "color": Color(0.60, 0.94, 0.76, 1.0)},
-			]
-		_:
-			return []
+	return DetailedUnitInfoContentHelpers.detailed_unit_info_stat_hint_specs(stat_key)
 
 func _detailed_unit_info_growth_label(growth_key: String) -> String:
-	match growth_key:
-		"hp_growth_bonus":
-			return "HEALTH GROWTH"
-		"str_growth_bonus":
-			return "STRENGTH GROWTH"
-		"mag_growth_bonus":
-			return "MAGIC GROWTH"
-		"def_growth_bonus":
-			return "DEFENSE GROWTH"
-		"res_growth_bonus":
-			return "RESISTANCE GROWTH"
-		"spd_growth_bonus":
-			return "SPEED GROWTH"
-		"agi_growth_bonus":
-			return "AGILITY GROWTH"
-		_:
-			return growth_key.replace("_", " ").to_upper()
+	return DetailedUnitInfoContentHelpers.detailed_unit_info_growth_label(growth_key)
 
 func _detailed_unit_info_primary_description(bar_key: String) -> String:
-	match bar_key:
-		"hp":
-			return "Life total. If HP reaches 0, the unit is defeated or forced out of the fight."
-		"poise":
-			return "Stagger resistance. Higher Poise helps resist breaks, shock, and forced openings. It is usually improved by sturdier classes, defensive bonuses, certain gear, dragon effects, or traits."
-		"xp":
-			return "Current experience toward the next level, where the unit can gain stronger stats and improve overall combat power."
-		_:
-			return ""
+	return DetailedUnitInfoContentHelpers.detailed_unit_info_primary_description(bar_key)
 
 func _populate_detailed_unit_info_weapon_row(unit: Node2D) -> void:
-	if detailed_unit_info_weapon_badge == null or detailed_unit_info_weapon_name == null or detailed_unit_info_weapon_icon == null:
-		return
-	if unit == null or unit.get("equipped_weapon") == null:
-		detailed_unit_info_weapon_badge.text = "--"
-		detailed_unit_info_weapon_name.text = "UNARMED"
-		detailed_unit_info_weapon_icon.texture = null
-		return
-	var weapon: WeaponData = unit.equipped_weapon as WeaponData
-	if weapon == null:
-		detailed_unit_info_weapon_badge.text = "--"
-		detailed_unit_info_weapon_name.text = "UNARMED"
-		detailed_unit_info_weapon_icon.texture = null
-		return
-	detailed_unit_info_weapon_badge.text = _forecast_weapon_marker(weapon)
-	detailed_unit_info_weapon_name.text = String(weapon.weapon_name).to_upper()
-	detailed_unit_info_weapon_icon.texture = weapon.icon
+	DetailedUnitInfoContentHelpers.populate_detailed_unit_info_weapon_row(self, unit)
 
 func _detailed_unit_info_growth_fill_color(stat_key: String, growth_value: int) -> Color:
-	var base_key: String = stat_key.replace("_growth_bonus", "")
-	if base_key == "str":
-		return Color(0.92, 0.48, 0.36, 1.0)
-	if base_key == "mag":
-		return Color(0.82, 0.54, 0.98, 1.0)
-	if base_key == "def":
-		return Color(0.55, 0.89, 0.52, 1.0)
-	if base_key == "res":
-		return Color(0.40, 0.92, 0.88, 1.0)
-	if base_key == "spd":
-		return Color(0.44, 0.72, 0.98, 1.0)
-	if base_key == "agi":
-		return Color(0.95, 0.82, 0.43, 1.0)
-	if base_key == "hp":
-		return Color(0.48, 0.88, 0.55, 1.0)
-	if growth_value < 0:
-		return Color(0.84, 0.36, 0.32, 1.0)
-	return TACTICAL_UI_ACCENT_SOFT
+	return DetailedUnitInfoContentHelpers.detailed_unit_info_growth_fill_color(self, stat_key, growth_value)
 
 func _refresh_detailed_unit_info_growth_widgets(unit: Node2D, animate: bool, tween: Tween = null) -> void:
-	if unit == null:
-		return
-	var class_res: Resource = unit.get("active_class_data") if unit.get("active_class_data") != null else null
-	var index: int = 0
-	for growth_key in [
-		"hp_growth_bonus",
-		"str_growth_bonus",
-		"mag_growth_bonus",
-		"def_growth_bonus",
-		"res_growth_bonus",
-		"spd_growth_bonus",
-		"agi_growth_bonus",
-	]:
-		if not detailed_unit_info_growth_widgets.has(growth_key):
-			continue
-		var widgets: Dictionary = detailed_unit_info_growth_widgets[growth_key]
-		var panel := widgets.get("panel") as Panel
-		var name_label := widgets.get("name") as Label
-		var value_chip := widgets.get("value_chip") as Panel
-		var value_label := widgets.get("value") as Label
-		var bar := widgets.get("bar") as ProgressBar
-		var sheen := widgets.get("sheen") as ColorRect
-		var label_text: String = _detailed_unit_info_growth_label(String(growth_key))
-		var growth_value: int = 0
-		if class_res != null and class_res.get(growth_key) != null:
-			growth_value = int(class_res.get(growth_key))
-		var fill_color := _detailed_unit_info_growth_fill_color(String(growth_key), growth_value)
-		if name_label != null:
-			name_label.text = label_text
-			_style_tactical_label(name_label, fill_color, 15, 2)
-		if value_chip != null:
-			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color.lightened(0.10), 1, 5)
-		if value_label != null:
-			value_label.text = "%+d%%" % growth_value
-			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 14, 1)
-			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		if panel != null:
-			_style_tactical_panel(panel, Color(0.10, 0.09, 0.07, 0.84), fill_color if growth_value != 0 else TACTICAL_UI_BORDER_MUTED, 1, 7)
-		if bar != null:
-			bar.max_value = 100.0
-			bar.min_value = 0.0
-			_style_unit_info_stat_bar(bar, fill_color, growth_value >= 50)
-			var target: float = clampf(absf(float(growth_value)), 0.0, 100.0)
-			if not animate:
-				bar.value = target
-			else:
-				bar.value = 0.0
-				var delay := 0.06 + float(index) * 0.03
-				if panel != null:
-					panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
-					tween.tween_property(panel, "modulate", Color.WHITE, 0.14).set_delay(delay)
-				tween.tween_property(bar, "value", target, 0.24).set_delay(delay)
-				if sheen != null:
-					_animate_unit_info_bar_sheen(sheen, bar, delay + 0.03)
-		index += 1
+	DetailedUnitInfoContentHelpers.refresh_detailed_unit_info_growth_widgets(self, unit, animate, tween)
 
 func _build_detailed_unit_info_relationship_cards(unit: Node2D) -> void:
-	if detailed_unit_info_relationships_root == null:
-		return
-	for child in detailed_unit_info_relationships_root.get_children():
-		child.queue_free()
-	if unit == null:
-		return
-	var unit_id: String = get_relationship_id(unit)
-	var candidate_ids: Array = []
-	if player_container != null:
-		for ally in player_container.get_children():
-			if is_instance_valid(ally) and ally != unit:
-				candidate_ids.append(get_relationship_id(ally))
-	var rel_entries: Array = CampaignManager.get_top_relationship_entries_for_unit(unit_id, candidate_ids, 6)
-	if rel_entries.is_empty():
-		var empty_label := Label.new()
-		_style_tactical_label(empty_label, TACTICAL_UI_TEXT_MUTED, 16, 2)
-		empty_label.text = "No notable bonds in this deployment yet."
-		detailed_unit_info_relationships_root.add_child(empty_label)
-		return
-
-	for entry_raw in rel_entries:
-		var entry: Dictionary = entry_raw as Dictionary
-		var stat: String = str(entry.get("stat")) if entry.get("stat") != null else ""
-		var value: int = int(entry.get("value")) if entry.get("value") != null else 0
-		var formed: bool = bool(entry.get("formed")) if entry.get("formed") != null else false
-		var partner_id: String = str(entry.get("partner_id")) if entry.get("partner_id") != null else "?"
-		var tint: Color = CampaignManager.get_relationship_type_color(stat)
-		var effect_hint: String = CampaignManager.get_relationship_effect_hint(stat, value)
-
-		var card := Panel.new()
-		card.custom_minimum_size = Vector2(0, 96)
-		_style_tactical_panel(card, Color(0.11, 0.10, 0.08, 0.92), tint.lightened(0.08), 1, 9)
-		detailed_unit_info_relationships_root.add_child(card)
-
-		var box := VBoxContainer.new()
-		box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
-		box.add_theme_constant_override("separation", 5)
-		card.add_child(box)
-
-		var top_row := HBoxContainer.new()
-		top_row.add_theme_constant_override("separation", 8)
-		box.add_child(top_row)
-
-		var partner_label := Label.new()
-		partner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_style_tactical_label(partner_label, TACTICAL_UI_TEXT, 18, 2)
-		partner_label.text = partner_id
-		top_row.add_child(partner_label)
-
-		var state_chip := Panel.new()
-		state_chip.custom_minimum_size = Vector2(144, 28)
-		_style_tactical_panel(state_chip, Color(0.10, 0.09, 0.07, 0.96), tint, 1, 6)
-		top_row.add_child(state_chip)
-
-		var state_label := Label.new()
-		state_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
-		_style_tactical_label(state_label, TACTICAL_UI_TEXT, 15, 2)
-		state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		state_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		state_label.text = ("%s FORMED" % CampaignManager.get_relationship_type_display_name(stat).to_upper()) if formed else ("%s %d" % [CampaignManager.get_relationship_type_display_name(stat).to_upper(), value])
-		state_chip.add_child(state_label)
-
-		var hint_label := Label.new()
-		_style_tactical_label(hint_label, tint.lightened(0.18), 16, 2)
-		hint_label.text = effect_hint
-		box.add_child(hint_label)
-
-		var bar := ProgressBar.new()
-		bar.custom_minimum_size = Vector2(0, 14)
-		bar.max_value = 100.0
-		bar.value = clampf(float(value), 0.0, 100.0)
-		_style_unit_info_stat_bar(bar, tint, formed)
-		box.add_child(bar)
-		var sheen := _attach_unit_info_bar_sheen(bar)
-		_animate_unit_info_bar_sheen(sheen, bar, 0.02)
+	DetailedUnitInfoContentHelpers.build_detailed_unit_info_relationship_cards(self, unit)
 
 func _refresh_detailed_unit_info_visuals(unit: Node2D, animate: bool = false) -> void:
-	if unit == null:
-		return
-	if detailed_unit_info_anim_tween != null:
-		detailed_unit_info_anim_tween.kill()
-		detailed_unit_info_anim_tween = null
+	DetailedUnitInfoContentHelpers.refresh_detailed_unit_info_visuals(self, unit, animate)
 
-	var current_poise: int = 0
-	var max_poise: int = 1
-	if unit.has_method("get_current_poise") and unit.has_method("get_max_poise"):
-		current_poise = int(unit.get_current_poise())
-		max_poise = max(1, int(unit.get_max_poise()))
-	elif unit.get("poise") != null:
-		current_poise = int(unit.get("poise"))
-		max_poise = max(1, int(unit.get("max_poise")) if unit.get("max_poise") != null else current_poise)
-
-	var xp_current: int = int(unit.get("experience")) if unit.get("experience") != null else 0
-	var xp_max: int = unit.get_exp_required() if unit.has_method("get_exp_required") else 100
-	xp_max = max(1, xp_max)
-
-	var current_hp: int = int(unit.get("current_hp")) if unit.get("current_hp") != null else 0
-	var max_hp: int = max(1, int(unit.get("max_hp")) if unit.get("max_hp") != null else 1)
-	var primary_rows: Dictionary = {
-		"hp": {"current": current_hp, "max": max_hp, "text": "%d/%d" % [current_hp, max_hp]},
-		"poise": {"current": current_poise, "max": max_poise, "text": "%d/%d" % [current_poise, max_poise]},
-		"xp": {"current": xp_current, "max": xp_max, "text": "%d/%d" % [xp_current, xp_max]},
-	}
-
-	var primary_targets: Dictionary = {}
-	for bar_def in _unit_info_primary_bar_definitions():
-		var bar_key: String = str(bar_def.get("key", ""))
-		if not detailed_unit_info_primary_widgets.has(bar_key):
-			continue
-		var row_data: Dictionary = primary_rows.get(bar_key, {})
-		var current_value: int = int(row_data.get("current", 0))
-		var max_value: int = max(1, int(row_data.get("max", 1)))
-		var display_text: String = str(row_data.get("text", "%d/%d" % [current_value, max_value]))
-		var fill_color := _unit_info_primary_fill_color(bar_key, current_value, max_value)
-		var widgets: Dictionary = detailed_unit_info_primary_widgets[bar_key]
-		var panel := widgets.get("panel") as Panel
-		var name_label := widgets.get("name") as Label
-		var hints_root := widgets.get("hints") as HBoxContainer
-		var value_chip := widgets.get("value_chip") as Panel
-		var value_label := widgets.get("value") as Label
-		var bar := widgets.get("bar") as ProgressBar
-		var desc_label := widgets.get("desc") as Label
-		if panel != null:
-			var panel_border := Color(min(fill_color.r + 0.08, 1.0), min(fill_color.g + 0.08, 1.0), min(fill_color.b + 0.08, 1.0), 0.76)
-			var tinted_fill := Color(
-				lerpf(0.10, fill_color.r, 0.10),
-				lerpf(0.09, fill_color.g, 0.10),
-				lerpf(0.07, fill_color.b, 0.10),
-				0.92
-			)
-			_style_tactical_panel(panel, tinted_fill, panel_border, 1, 8)
-		if name_label != null:
-			name_label.text = str(bar_def.get("label", bar_key))
-			_style_tactical_label(name_label, fill_color, 16, 2)
-		if value_chip != null:
-			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color.lightened(0.10), 1, 6)
-		if value_label != null:
-			value_label.text = display_text
-			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 18, 2)
-		if bar != null:
-			bar.max_value = float(max_value)
-			_style_unit_info_primary_bar(bar, fill_color, bar_key)
-			primary_targets[bar_key] = float(clampf(float(current_value), 0.0, float(max_value)))
-			if not animate:
-				bar.value = primary_targets[bar_key]
-		if desc_label != null:
-			desc_label.text = _detailed_unit_info_primary_description(bar_key)
-			_style_tactical_label(desc_label, TACTICAL_UI_TEXT_MUTED, 13, 1)
-
-	var stat_targets: Dictionary = {}
-	for stat_def in _unit_info_stat_definitions():
-		var stat_key: String = str(stat_def.get("key", ""))
-		if not detailed_unit_info_stat_widgets.has(stat_key):
-			continue
-		var raw_value: int = int(unit.get(stat_key)) if unit.get(stat_key) != null else 0
-		var display_value: float = _unit_info_stat_display_value(raw_value)
-		var fill_color := _unit_info_stat_fill_color(stat_key, raw_value)
-		var overcap: bool = raw_value >= int(UNIT_INFO_STAT_BAR_CAP)
-		var widgets: Dictionary = detailed_unit_info_stat_widgets[stat_key]
-		var panel := widgets.get("panel") as Panel
-		var name_label := widgets.get("name") as Label
-		var hints_root := widgets.get("hints") as HBoxContainer
-		var value_chip := widgets.get("value_chip") as Panel
-		var value_label := widgets.get("value") as Label
-		var bar := widgets.get("bar") as ProgressBar
-		var desc_label := widgets.get("desc") as Label
-		if panel != null:
-			var tinted_fill := Color(
-				lerpf(0.10, fill_color.r, 0.16),
-				lerpf(0.09, fill_color.g, 0.16),
-				lerpf(0.07, fill_color.b, 0.16),
-				0.92
-			)
-			_style_tactical_panel(panel, tinted_fill, fill_color if overcap else fill_color.darkened(0.20), 1, 6)
-		if name_label != null:
-			name_label.text = _detailed_unit_info_stat_label(stat_key)
-			_style_tactical_label(name_label, fill_color, 17, 2)
-		if hints_root != null:
-			for child in hints_root.get_children():
-				child.queue_free()
-			for spec in _detailed_unit_info_stat_hint_specs(stat_key):
-				var chip := Panel.new()
-				chip.custom_minimum_size = Vector2(52, 20)
-				var chip_color: Color = spec.get("color", fill_color)
-				_style_tactical_panel(chip, Color(0.10, 0.09, 0.07, 0.95), chip_color, 1, 5)
-				hints_root.add_child(chip)
-
-				var chip_label := Label.new()
-				chip_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
-				_style_tactical_label(chip_label, chip_color, 10, 1)
-				chip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				chip_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-				chip_label.text = str(spec.get("text", ""))
-				chip.add_child(chip_label)
-		if value_chip != null:
-			_style_tactical_panel(value_chip, Color(0.10, 0.09, 0.07, 0.98), fill_color, 1, 4)
-		if value_label != null:
-			value_label.text = str(raw_value)
-			_style_tactical_label(value_label, TACTICAL_UI_TEXT, 16, 1)
-			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		if bar != null:
-			bar.max_value = UNIT_INFO_STAT_BAR_CAP
-			_style_unit_info_stat_bar(bar, fill_color, overcap)
-			stat_targets[stat_key] = display_value
-			if not animate:
-				bar.value = display_value
-		if desc_label != null:
-			desc_label.text = _detailed_unit_info_stat_description(stat_key)
-			_style_tactical_label(desc_label, TACTICAL_UI_TEXT_MUTED, 13, 1)
-
-	if not animate:
-		_refresh_detailed_unit_info_growth_widgets(unit, false, null)
-		return
-
-	detailed_unit_info_anim_tween = create_tween().set_parallel(true)
-	var primary_defs := _unit_info_primary_bar_definitions()
-	for idx in range(primary_defs.size()):
-		var bar_key: String = str(primary_defs[idx].get("key", ""))
-		if not detailed_unit_info_primary_widgets.has(bar_key):
-			continue
-		var widgets: Dictionary = detailed_unit_info_primary_widgets[bar_key]
-		var panel := widgets.get("panel") as Panel
-		var bar := widgets.get("bar") as ProgressBar
-		var desc_label := widgets.get("desc") as Label
-		var sheen := widgets.get("sheen") as ColorRect
-		var delay := float(idx) * 0.05
-		if panel != null:
-			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
-			detailed_unit_info_anim_tween.tween_property(panel, "modulate", Color.WHITE, 0.18).set_delay(delay)
-		if bar != null:
-			bar.value = 0.0
-			detailed_unit_info_anim_tween.tween_property(bar, "value", float(primary_targets.get(bar_key, 0.0)), 0.30).set_delay(delay)
-		if sheen != null and bar != null:
-			_animate_unit_info_bar_sheen(sheen, bar, delay + 0.05)
-		if desc_label != null:
-			desc_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
-			detailed_unit_info_anim_tween.tween_property(desc_label, "modulate", Color.WHITE, 0.16).set_delay(delay + 0.03)
-
-	var stat_defs := _unit_info_stat_definitions()
-	for idx in range(stat_defs.size()):
-		var stat_key: String = str(stat_defs[idx].get("key", ""))
-		if not detailed_unit_info_stat_widgets.has(stat_key):
-			continue
-		var widgets: Dictionary = detailed_unit_info_stat_widgets[stat_key]
-		var panel := widgets.get("panel") as Panel
-		var bar := widgets.get("bar") as ProgressBar
-		var sheen := widgets.get("sheen") as ColorRect
-		var delay := 0.16 + float(idx) * 0.04
-		if panel != null:
-			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
-			detailed_unit_info_anim_tween.tween_property(panel, "modulate", Color.WHITE, 0.16).set_delay(delay)
-		if bar != null:
-			bar.value = 0.0
-			detailed_unit_info_anim_tween.tween_property(bar, "value", float(stat_targets.get(stat_key, 0.0)), 0.24).set_delay(delay)
-			if sheen != null and bar != null:
-				_animate_unit_info_bar_sheen(sheen, bar, delay + 0.04)
-		var desc_label := widgets.get("desc") as Label
-		if desc_label != null:
-			desc_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
-			detailed_unit_info_anim_tween.tween_property(desc_label, "modulate", Color.WHITE, 0.18).set_delay(delay + 0.03)
-
-	_refresh_detailed_unit_info_growth_widgets(unit, animate, detailed_unit_info_anim_tween)
-
-	detailed_unit_info_anim_tween.finished.connect(func():
-		detailed_unit_info_anim_tween = null
-	, CONNECT_ONE_SHOT)
-	
 func _build_detailed_unit_info_text(unit: Node2D) -> String:
 	return DetailedUnitInfoHelpers.build_detailed_unit_info_text(self, unit)
 
@@ -7139,96 +4816,7 @@ func _build_detailed_unit_info_right_text(unit: Node2D) -> String:
 	return DetailedUnitInfoHelpers.build_detailed_unit_info_right_text(self, unit)
 
 func _build_detailed_unit_info_record_text(unit: Node2D) -> String:
-	if unit == null:
-		return ""
-
-	var lines: Array[String] = []
-	var class_res: Resource = unit.get("active_class_data") if unit.get("active_class_data") != null else null
-
-	lines.append("[color=gold]Field Doctrine[/color]")
-	lines.append("Class: [color=cyan]%s[/color]" % _resolve_detailed_unit_info_class_label(unit))
-	lines.append("Move: %d" % (int(unit.get("move_range")) if unit.get("move_range") != null else 0))
-	lines.append("")
-
-	if class_res != null:
-		lines.append("[color=gold]Weapon Permissions[/color]")
-		lines.append(_format_class_weapon_permissions(class_res))
-		lines.append("")
-
-		lines.append("[color=gold]Class Bonuses[/color]")
-		var class_bonus_parts: Array[String] = []
-		for pair in [
-			["hp_bonus", "HP", ""],
-			["str_bonus", "STR", "coral"],
-			["mag_bonus", "MAG", "orchid"],
-			["def_bonus", "DEF", "palegreen"],
-			["res_bonus", "RES", "aquamarine"],
-			["spd_bonus", "SPD", "skyblue"],
-			["agi_bonus", "AGI", "wheat"],
-		]:
-			var key: String = String(pair[0])
-			if class_res.get(key) == null or int(class_res.get(key)) == 0:
-				continue
-			var chunk: String = "%s %+d" % [String(pair[1]), int(class_res.get(key))]
-			var tint: String = String(pair[2])
-			class_bonus_parts.append(chunk if tint == "" else "[color=%s]%s[/color]" % [tint, chunk])
-		lines.append("None" if class_bonus_parts.is_empty() else ", ".join(class_bonus_parts))
-		lines.append("")
-
-		lines.append("[color=gold]Promotion Bonuses[/color]")
-		var promo_parts: Array[String] = []
-		for pair in [
-			["promo_hp_bonus", "HP", ""],
-			["promo_str_bonus", "STR", "coral"],
-			["promo_mag_bonus", "MAG", "orchid"],
-			["promo_def_bonus", "DEF", "palegreen"],
-			["promo_res_bonus", "RES", "aquamarine"],
-			["promo_spd_bonus", "SPD", "skyblue"],
-			["promo_agi_bonus", "AGI", "wheat"],
-		]:
-			var key: String = String(pair[0])
-			if class_res.get(key) == null or int(class_res.get(key)) == 0:
-				continue
-			var chunk: String = "%s %+d" % [String(pair[1]), int(class_res.get(key))]
-			var tint: String = String(pair[2])
-			promo_parts.append(chunk if tint == "" else "[color=%s]%s[/color]" % [tint, chunk])
-		lines.append("None" if promo_parts.is_empty() else ", ".join(promo_parts))
-		lines.append("")
-
-	if "unlocked_abilities" in unit and unit.unlocked_abilities.size() > 0:
-		lines.append("[color=gold]Abilities[/color]")
-		lines.append(", ".join(unit.unlocked_abilities))
-		lines.append("")
-	elif unit.get("ability") != null and str(unit.ability) != "":
-		lines.append("[color=gold]Ability[/color]")
-		lines.append(str(unit.ability))
-		lines.append("")
-
-	lines.append("[color=gold]Inventory[/color]")
-	if "inventory" in unit and unit.inventory.size() > 0:
-		for item in unit.inventory:
-			if item == null:
-				continue
-			var item_name: String = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
-			var marker: String = ""
-			if item is WeaponData:
-				marker = " [color=lime](usable)[/color]" if _unit_can_use_item_for_ui(unit, item) else " [color=red](locked)[/color]"
-				var w_type: String = _weapon_type_name_safe(int(item.weapon_type))
-				var extra: String = " | Mt " + str(item.might) + " | Hit +" + str(item.hit_bonus) + " | Rng " + str(item.min_range) + "-" + str(item.max_range)
-				lines.append("- " + str(item_name) + " (" + w_type + ")" + marker)
-				lines.append("  " + extra)
-			else:
-				lines.append("- " + str(item_name))
-	else:
-		lines.append("None")
-
-	lines.append("")
-	lines.append("[color=gold]Notes[/color]")
-	lines.append("Growth outlook and bond cards are surfaced above.")
-	lines.append("Green = usable")
-	lines.append("Red = class locked")
-
-	return "[font_size=24]" + "\n".join(lines) + "[/font_size]"
+	return DetailedUnitInfoContentHelpers.build_detailed_unit_info_record_text(self, unit)
 
 func _is_valid_combat_unit(node: Node2D) -> bool:
 	if node == null or node.is_queued_for_deletion():
