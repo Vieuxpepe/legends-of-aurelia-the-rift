@@ -460,6 +460,13 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 - **Parity-sensitive:** `_on_unit_died` still calls `trigger_victory(field)` **without** `await` (matches pre-extract fire-and-forget). Grid clear via `astar.set_point_solid` + loot/co-op capture unchanged.
 - **Verification:** `ReadLints` — clean. Godot smoke: run locally (defeat, rout victory, continue/restart, arena, co-op defer paths).
 
+### 37) Campaign / deployment / roster load extraction — **completed**
+- **Moved to:** `Scripts/Core/BattleField/BattleFieldCampaignSetupHelpers.gd`
+- **Delegated from:** `Scripts/Core/BattleField.gd`
+- **Extracted:** dragon deploy gate + `make_dragon_battle_entry`, deployment roster (+ mock co-op snapshot hydrate), `load_campaign_data` (gold/inventory, base defense / arena overrides, deployment zone spawn loop, avatar/dragon/visual restore), `setup_skirmish_battle`, `start_battle_from_deployment` (battle-start meta resets + `change_state(player_state)`).
+- **Not moved:** `_setup_objective_ui` (already `ObjectiveUiHelpers`); intro / arena VS (`_start_intro_sequence`) left on field.
+- **Verification:** `ReadLints` — clean. Smoke: new game / load → deployment → start battle; skirmish; mock co-op roster snapshot if used.
+
 ---
 
 ## Verification log
@@ -474,6 +481,7 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 - **Milestone #34 (2026-03-30):** `ReadLints` on `BattleField.gd` + `BattleFieldCoopRngSyncHelpers.gd` + `BattleFieldCoopMockSessionHelpers.gd` — clean. Godot 4.6 run `res://Scenes/Levels/Level1.tscn` — scripts reload, level boots; no new `Parser Error` / `ERROR:` attributable to this extraction (pre-existing warnings only).
 - **Milestone #35 (2026-03-31):** Level-up presentation extraction — `ReadLints` on `BattleField.gd` + `BattleFieldLevelUpPresentationHelpers.gd` — clean. Godot smoke: not executed in agent session; run editor/Level1 + level-up or promo reveal locally to confirm parity.
 - **Milestone #36 (2026-03-31):** Battle-end flow — `ReadLints` on `BattleField.gd` + `BattleFieldBattleEndFlowHelpers.gd` — clean. Godot: exercise unit death → loot → victory/defeat UI, continue/restart, arena + co-op defeat continue path locally.
+- **Milestone #37 (2026-03-31):** Campaign setup — `ReadLints` on `BattleField.gd` + `BattleFieldCampaignSetupHelpers.gd` — clean. Godot: deployment roster, start battle, skirmish spawn path locally.
 - Visual parity checks:
   - `_draw()` pre-battle deployment overlay drift was corrected in `BattleFieldDrawHelpers.gd` and verified.
   - Cursor/path preview + loot-close still require runtime smoke confirmation for final “no drift” proof (lint does not validate visuals).
