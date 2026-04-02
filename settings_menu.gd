@@ -973,8 +973,8 @@ func _sync_ui_from_settings() -> void:
 		move_speed_slider.value = CampaignManager.unit_move_speed
 	_ensure_game_speed_option_items()
 	if game_speed_option:
-		var gs := CampaignManager.game_speed_scale
-		var sel := 0
+		var gs: float = float(CampaignManager.game_speed_scale)
+		var sel: int = 0
 		for i in range(GAME_SPEED_CHOICES.size()):
 			if is_equal_approx(gs, GAME_SPEED_CHOICES[i]):
 				sel = i

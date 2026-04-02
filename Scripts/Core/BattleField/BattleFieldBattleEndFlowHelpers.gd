@@ -1,6 +1,7 @@
 extends RefCounted
 
 const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
 
 
 static func remove_dead_player_dragon(field, unit: Node2D) -> void:
@@ -73,6 +74,9 @@ static func on_unit_died(field, unit: Node2D, killer: Node2D) -> void:
 		field._spawn_skeleton_bone_pile_for_dead_unit(bone_payload, unit.global_position)
 	else:
 		field.astar.set_point_solid(grid_pos, false)
+
+	if bone_payload == null:
+		Map01EnemyPassivesHelpers.try_ashburst_on_enemy_death(field, unit, grid_pos)
 
 	if unit.get_parent() == field.player_container and unit.get_meta("is_dragon", false):
 		remove_dead_player_dragon(field, unit)

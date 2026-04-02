@@ -7,6 +7,7 @@ const AttackResolutionHelpers = preload("res://Scripts/Core/BattleField/BattleFi
 const PostStrikeCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPostStrikeCleanupHelpers.gd")
 const ForcedMovementTacticalHelpers = preload("res://Scripts/Core/BattleField/BattleFieldForcedMovementTacticalHelpers.gd")
 const CombatCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatCleanupHelpers.gd")
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
 
 static func _compute_projectile_target_point(defender: Node2D, lunge_dir: Vector2, attack_hits: bool) -> Vector2:
 	var defender_center: Vector2 = defender.global_position + Vector2(32, 32)
@@ -1406,7 +1407,7 @@ static func run_strike_sequence(
 	
 			# --- FINAL HIT CHANCE MATH (support-combat: atk_sup hit, def_sup avo; relationship: atk_rel hit, def_rel avo) ---
 			var hit_chance: int = int(clamp(80 + (wpn.hit_bonus if wpn else 0) + tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100))
-			hit_chance = int(clamp(hit_chance + battle_cry_bonus_hit + chakra_bonus_hit + frenzy_bonus_hit + rookie_hit - int(defender.get_meta("inner_peace_avo_bonus_temp", 0)), 0, 100))
+			hit_chance = int(clamp(hit_chance + battle_cry_bonus_hit + chakra_bonus_hit + frenzy_bonus_hit + rookie_hit + Map01EnemyPassivesHelpers.map01_striker_hit_bonus(field, attacker, defender, wpn) - int(defender.get_meta("inner_peace_avo_bonus_temp", 0)), 0, 100))
 			if focused_failed: hit_chance = 0 
 			
 			# --- ARMOR PIERCING CALCULATION ---

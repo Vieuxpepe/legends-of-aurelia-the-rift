@@ -1,5 +1,6 @@
 extends RefCounted
 
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
 const UNIT_SCENE: PackedScene = preload("res://Resources/Unit.tscn")
 const BONE_PILE_TEXTURE: Texture2D = preload("res://Assets/Sprites/Pile Of Bones.png")
 
@@ -235,6 +236,8 @@ static func _reform_one_animated(field, entry: Dictionary) -> void:
 		nu.died.connect(field._on_unit_died)
 	if nu.has_signal("leveled_up") and not nu.leveled_up.is_connected(field._on_unit_leveled_up):
 		nu.leveled_up.connect(field._on_unit_leveled_up)
+
+	Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, nu)
 
 	var u_spr: Sprite2D = nu.sprite
 	var s0: Vector2 = u_spr.scale if u_spr != null else Vector2.ONE

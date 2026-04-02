@@ -363,8 +363,8 @@ func _refresh_node_visuals() -> void:
 		var progression_locked: bool = (not has_expedition_requirement) and i > CampaignManager.max_unlocked_index
 		var expedition_locked := _is_expedition_locked_for_index(i)
 		var is_locked := progression_locked or expedition_locked
-		var is_current := i == CampaignManager.current_level_index
-		var is_completed := i < CampaignManager.max_unlocked_index
+		var is_current: bool = i == int(CampaignManager.current_level_index)
+		var is_completed: bool = i < int(CampaignManager.max_unlocked_index)
 
 		if has_expedition_requirement:
 			node.visible = not expedition_locked

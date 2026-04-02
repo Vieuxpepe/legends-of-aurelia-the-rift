@@ -895,6 +895,9 @@ func reset_turn() -> void:
 	if has_meta("rookie_villager_desperate_turn"):
 		remove_meta("rookie_villager_desperate_turn")
 
+	if has_meta("map01_scorched"):
+		remove_meta("map01_scorched")
+
 func finish_turn() -> void:
 	in_canto_phase = false
 	canto_move_budget = 0.0

@@ -48,6 +48,12 @@ class_name UnitData
 ## Enemies only. If > 0, kills not dealt as bludgeoning collapse into a bone pile and reform after this many battle turn increments (end of enemy phase).
 @export var bone_pile_reform_rounds: int = 0
 
+@export_category("Map 01 (tutorial fire map)")
+## Obsidian Circle kit id for Map 01 enemy passives (Ashburst, Ash Sight, Ember Wake, Kindle Slash, Panic Hunger).
+@export_enum("None", "SoulReaver", "CinderArcher", "PyreDisciple", "AshCultist") var map01_enemy_kit: int = 0
+## Used by Panic Hunger (HIT): treat as civilian / escort-style target.
+@export var counts_as_civilian_escort_target: bool = false
+
 @export_category("Character Growth Rates (%)")
 @export var hp_growth: int = 40
 @export var str_growth: int = 30

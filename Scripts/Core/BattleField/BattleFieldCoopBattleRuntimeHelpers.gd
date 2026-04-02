@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+
 ## Runtime co-op battlefield glue: wire snapshots, enemy-phase setup sync, loot capture/apply, grid solidity around mirror units, relationship-id lookup, remote combat replay orchestration, post-authoritative outcome checks.
 
 
@@ -180,6 +182,7 @@ static func instantiate_runtime_unit_from_snapshot(field, entry: Dictionary, tar
 		unit.died.connect(field._on_unit_died)
 	if unit.has_signal("leveled_up") and not unit.leveled_up.is_connected(field._on_unit_leveled_up):
 		unit.leveled_up.connect(field._on_unit_leveled_up)
+	Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, unit)
 	return unit
 
 

@@ -1,6 +1,8 @@
 @tool # <--- Allows the colored tile to draw inside the Godot Editor!
 extends Node2D
 
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+
 signal died(node: Node2D, killer: Node2D)
 signal damaged(current_hp: int)
 
@@ -266,6 +268,8 @@ func _try_spawn_unit(battlefield: Node2D, slot: int) -> bool:
 
 			if new_unit.has_signal("leveled_up"):
 				new_unit.leveled_up.connect(battlefield._on_unit_leveled_up)
+
+			Map01EnemyPassivesHelpers.ensure_finished_turn_hook(battlefield, new_unit)
 			
 			if "has_moved" in new_unit: new_unit.has_moved = true
 			if "is_exhausted" in new_unit: new_unit.is_exhausted = true

@@ -5,6 +5,7 @@ const CombatVfxHelpersRef = preload("res://Scripts/Core/BattleField/BattleFieldC
 const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
 
 const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
 
 static func _resolve_weapon_impact_family(wpn) -> int:
 	if wpn == null:
@@ -203,6 +204,9 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 				field.add_combat_log(attacker.unit_name + " attacked " + defender.unit_name + " but dealt no damage!", "gray")
 				field.screen_shake(3.0, 0.15)
 
+				if combo_hits == 0:
+					Map01EnemyPassivesHelpers.apply_kindle_slash_on_hit(field, attacker, defender)
+
 				if will_stagger:
 					field.spawn_loot_text("GUARD BREAK!", Color(1.0, 0.62, 0.18), defender.global_position + Vector2(28, -46), {
 						"stack_anchor": defender,
@@ -372,6 +376,10 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 						if phys_subtype >= 0:
 							defender.set_meta("last_damage_subtype", phys_subtype)
 						field._apply_hit_with_support_reactions(defender, final_dmg, attacker, attacker, false)
+
+						if combo_hits == 0:
+							Map01EnemyPassivesHelpers.apply_kindle_slash_on_hit(field, attacker, defender)
+							Map01EnemyPassivesHelpers.try_ember_wake(field, attacker, defender, wpn_fx, is_magic)
 
 						if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
 							defender.set_meta("is_burning", true)

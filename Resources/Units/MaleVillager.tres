@@ -20,4 +20,5 @@ max_hp = 12
 strength = 1
 speed = 2
 agility = 1
+counts_as_civilian_escort_target = true
 metadata/_custom_type_script = "uid://3jului3v2v6"

@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+
 static func _mark_dragon_weapon_flags(wpn: WeaponData) -> void:
 	if wpn == null:
 		return
@@ -164,6 +166,7 @@ static func load_campaign_data(field) -> void:
 
 		new_unit.died.connect(field._on_unit_died)
 		new_unit.leveled_up.connect(field._on_unit_leveled_up)
+		Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, new_unit)
 
 		if i < max_to_deploy and i < deployment_slots.size():
 			var slot_pos = deployment_slots[i]

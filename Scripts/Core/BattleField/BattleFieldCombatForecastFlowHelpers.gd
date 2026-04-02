@@ -4,6 +4,7 @@ extends RefCounted
 # Panel micro-widgets / bar styling live in `BattleFieldCombatForecastHelpers.gd`.
 
 const ForecastUI = preload("res://Scripts/Core/BattleField/BattleFieldCombatForecastHelpers.gd")
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
 
 
 ## Matches `BattleFieldCombatOrchestrationHelpers.execute_combat` / strike staff gate (heal, buff, debuff).
@@ -104,6 +105,9 @@ static func build_forecast_reaction_summary(field, attacker: Node2D, defender: N
 
 	if field._attacker_has_attack_skill(attacker, "Rain of Arrows"):
 		lines.append("Rain of Arrows: rear-rank pressure â€” extra damage to a foe in the tile behind the target (same line); non-perfect splash favors that foe when you must pick one.")
+
+	for map01_line: String in Map01EnemyPassivesHelpers.forecast_extra_lines(field, attacker, defender, atk_wpn):
+		lines.append(map01_line)
 
 	if lines.is_empty():
 		return ""
@@ -253,6 +257,7 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		atk_hit = clampi(atk_hit + int(fr_rookie.get("hit", 0)), 0, 100)
 		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
 		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
+		atk_hit = clampi(atk_hit + Map01EnemyPassivesHelpers.map01_striker_hit_bonus(field, attacker, defender, atk_wpn), 0, 100)
 
 	# Physical subtype multipliers (forecast must match resolution)
 	var atk_dmg_base: int = int(atk_dmg)

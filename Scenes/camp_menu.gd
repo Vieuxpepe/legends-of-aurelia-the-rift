@@ -10274,7 +10274,7 @@ func _refresh_world_map_button() -> void:
 	if world_map_button == null or next_battle_button == null:
 		return
 
-	var unlocked := CampaignManager.max_unlocked_index >= 2
+	var unlocked: bool = int(CampaignManager.max_unlocked_index) >= 2
 	world_map_button.visible = unlocked
 	next_battle_button.text = "Continue Story" if unlocked else "Next Battle"
 

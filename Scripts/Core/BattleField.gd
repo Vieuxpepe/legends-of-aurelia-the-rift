@@ -109,6 +109,7 @@ const DetailedUnitInfoContentHelpers = preload("res://Scripts/Core/BattleField/B
 const DialogueInteractionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd")
 const LevelUpPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldLevelUpPresentationHelpers.gd")
 const BattleEndFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleEndFlowHelpers.gd")
+const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
 const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
 const CampaignSetupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCampaignSetupHelpers.gd")
 const BattleFieldStartupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldStartupHelpers.gd")
@@ -2306,6 +2307,10 @@ func _count_pending_skeleton_bone_piles() -> int:
 
 func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
 	BattleEndFlowHelpers.on_unit_died(self, unit, killer)
+
+
+func _map01_on_unit_finished_turn(unit: Node2D) -> void:
+	Map01EnemyPassivesHelpers.on_unit_finished_turn_scorched_tick(self, unit)
 
 
 func trigger_game_over(result: String) -> void:

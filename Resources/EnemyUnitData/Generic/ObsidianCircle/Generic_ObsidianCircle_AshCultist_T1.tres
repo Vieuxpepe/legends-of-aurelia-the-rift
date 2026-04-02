@@ -29,3 +29,4 @@ min_gold_drop = 4
 max_gold_drop = 8
 drops_equipped_weapon = true
 equipped_weapon_chance = 10
+map01_enemy_kit = 4

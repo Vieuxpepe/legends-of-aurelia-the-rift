@@ -4479,7 +4479,7 @@ func _get_pending_support_for(unit: Dictionary) -> Dictionary:
 			continue
 		if my_token != parts[0] and my_token != parts[1]:
 			continue
-		var data := CampaignManager.get_support_bond(parts[0], parts[1])
+		var data: Dictionary = CampaignManager.get_support_bond(parts[0], parts[1])
 		var pts := int(data.get("points", 0))
 		var rank := int(data.get("rank", 0))
 		
@@ -4956,7 +4956,7 @@ func _build_support_tooltip(unit: Dictionary) -> String:
 		if my_token == parts[0] or my_token == parts[1]:
 			has_bonds = true
 			var partner_token := parts[1] if parts[0] == my_token else parts[0]
-			var data := CampaignManager.get_support_bond(parts[0], parts[1])
+			var data: Dictionary = CampaignManager.get_support_bond(parts[0], parts[1])
 			var pts := int(data.get("points", 0))
 			var rank := int(data.get("rank", 0))
 

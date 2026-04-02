@@ -1701,7 +1701,7 @@ func _refresh_save_ui() -> void:
 
 
 func _update_save_slot_ui(slot_button: Button, slot_num: int, is_auto: bool) -> void:
-	var path := CampaignManager.get_save_path(slot_num, is_auto)
+	var path: String = str(CampaignManager.get_save_path(slot_num, is_auto))
 	var portrait_rect := slot_button.get_node_or_null("MarginContainer/HBox/Portrait") as TextureRect
 	var name_label := slot_button.get_node_or_null("MarginContainer/HBox/TextVBox/NameLabel") as Label
 	var loc_label := slot_button.get_node_or_null("MarginContainer/HBox/TextVBox/LocationLabel") as Label
@@ -1925,14 +1925,14 @@ func _on_continue_pressed() -> void:
 	var newest_is_auto := false
 	var newest_time := 0
 	for i in range(1, 4):
-		var man_path := CampaignManager.get_save_path(i, false)
+		var man_path: String = str(CampaignManager.get_save_path(i, false))
 		if FileAccess.file_exists(man_path):
 			var mod_time := FileAccess.get_modified_time(man_path)
 			if mod_time > newest_time:
 				newest_time = mod_time
 				newest_slot = i
 				newest_is_auto = false
-		var auto_path := CampaignManager.get_save_path(i, true)
+		var auto_path: String = str(CampaignManager.get_save_path(i, true))
 		if FileAccess.file_exists(auto_path):
 			var auto_time := FileAccess.get_modified_time(auto_path)
 			if auto_time > newest_time:
