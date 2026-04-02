@@ -45,6 +45,7 @@ agility = 1
 phys_mult_slashing = 0.9
 phys_mult_piercing = 1.05
 phys_mult_bludgeoning = 1.25
+bone_pile_reform_rounds = 2
 min_gold_drop = 5
 max_gold_drop = 10
 drops_equipped_weapon = true

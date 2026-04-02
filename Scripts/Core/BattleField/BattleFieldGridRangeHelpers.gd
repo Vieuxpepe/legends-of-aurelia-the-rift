@@ -213,6 +213,19 @@ static func rebuild_grid(field) -> void:
 		for e in field.enemy_container.get_children():
 			apply_solidity.call(e, true)
 
+	# --- SKELETON BONE PILES (temporary tile block until reform) ---
+	var bone_entries: Variant = field.get("_skeleton_bone_pile_entries")
+	if bone_entries != null:
+		for be in bone_entries:
+			if not (be is Dictionary):
+				continue
+			var bg: Variant = (be as Dictionary).get("grid", null)
+			if bg is Vector2i:
+				var tile: Vector2i = bg
+				if tile.x >= 0 and tile.x < field.GRID_SIZE.x and tile.y >= 0 and tile.y < field.GRID_SIZE.y:
+					field.astar.set_point_solid(tile, true)
+					field.flying_astar.set_point_solid(tile, true)
+
 	# --- PLAYER & ALLIES ---
 	var all_units = field.player_container.get_children()
 	if field.ally_container:

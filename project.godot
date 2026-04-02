@@ -23,6 +23,7 @@ buses/default_bus_layout="uid://e5vvflvlsf20"
 [autoload]
 
 SteamService="*res://Scripts/Steam/SteamService.gd"
+DiscordService="*res://Scripts/Discord/DiscordService.gd"
 CampaignManager="*uid://c1w4cwv2yy8pu"
 ArenaManager="*uid://bqxptofjm5sjr"
 SceneTransition="*uid://bni8bid8xtcdi"
@@ -35,6 +36,15 @@ DialogueDatabase="*uid://xxc4kh1tx0q1"
 ItemDatabase="*uid://borft2uumnmjj"
 ScavengerManager="*uid://b3lf5jw2mhkfh"
 CoopExpeditionSessionManager="*res://Scripts/Coop/CoopExpeditionSessionManager.gd"
+
+[discord]
+
+presence/client_id=1486415003853787296
+presence/large_image_key="loa_logo"
+presence/large_image_text="Legends of Aurelia : The Rift"
+presence/small_image_key_default=""
+presence/small_image_text_default=""
+presence/update_interval_sec=1.0
 
 [display]
 

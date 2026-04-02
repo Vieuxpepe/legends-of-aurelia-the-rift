@@ -44,6 +44,10 @@ class_name UnitData
 @export var phys_mult_piercing: float = 1.0
 @export var phys_mult_bludgeoning: float = 1.0
 
+@export_category("Undead / Bone pile reform")
+## Enemies only. If > 0, kills not dealt as bludgeoning collapse into a bone pile and reform after this many battle turn increments (end of enemy phase).
+@export var bone_pile_reform_rounds: int = 0
+
 @export_category("Character Growth Rates (%)")
 @export var hp_growth: int = 40
 @export var str_growth: int = 30

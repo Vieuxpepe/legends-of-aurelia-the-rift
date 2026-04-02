@@ -776,17 +776,22 @@ func move_along_path(path: Array[Vector2i]) -> void:
 	
 ## Emits [signal died], hides visuals, optionally waits for death sound, then [method Node.queue_free].
 func die(killer: Node2D = null) -> void:
+	var battlefield: Node = _get_battlefield_node()
+	var will_collapse_to_bone_pile: bool = false
+	if battlefield != null and battlefield.has_method("_register_skeleton_bone_pile_if_applicable"):
+		battlefield._register_skeleton_bone_pile_if_applicable(self, killer)
+		if battlefield.has_method("_unit_has_pending_skeleton_bone_pile_payload"):
+			will_collapse_to_bone_pile = battlefield._unit_has_pending_skeleton_bone_pile_payload(self)
+
 	if data != null and data.death_sound != null and death_sound_player != null:
 		death_sound_player.stream = data.death_sound
 		death_sound_player.pitch_scale = randf_range(0.9, 1.1)
 		death_sound_player.play()
 	emit_signal("died", self, killer)
-	var battlefield: Node = _get_battlefield_node()
 	if battlefield != null and battlefield.has_method("is_coop_remote_combat_replay_active") and battlefield.is_coop_remote_combat_replay_active():
 		_set_remote_coop_pending_death_visual()
 		return
-	if sprite != null:
-		sprite.visible = false
+
 	if health_bar != null:
 		health_bar.visible = false
 	if health_bar_delay != null:
@@ -799,6 +804,12 @@ func die(killer: Node2D = null) -> void:
 		defend_icon.visible = false
 	if level_badge != null:
 		level_badge.visible = false
+
+	if will_collapse_to_bone_pile and battlefield != null and battlefield.has_method("_await_skeleton_collapse_to_bone_pile"):
+		await battlefield._await_skeleton_collapse_to_bone_pile(self)
+	elif sprite != null:
+		sprite.visible = false
+
 	if death_sound_player != null and death_sound_player.stream != null:
 		await death_sound_player.finished
 	queue_free()

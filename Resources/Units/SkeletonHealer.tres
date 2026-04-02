@@ -27,4 +27,5 @@ visual_scale = 2.5
 max_hp = 20
 drops_equipped_weapon = true
 extra_loot = Array[ExtResource("2_b7mu5")]([SubResource("Resource_6bxmx")])
+bone_pile_reform_rounds = 2
 metadata/_custom_type_script = "uid://3jului3v2v6"

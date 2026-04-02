@@ -129,6 +129,7 @@ const CoopRemoteSyncActionHelpers = preload("res://Scripts/Core/BattleField/Batt
 const CoopRngSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRngSyncHelpers.gd")
 const CoopMockSessionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopMockSessionHelpers.gd")
 const CoopBattleRuntimeHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopBattleRuntimeHelpers.gd")
+const SkeletonBonePileHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSkeletonBonePileHelpers.gd")
 const BattleFieldFogOfWarHelpers = preload("res://Scripts/Core/BattleField/BattleFieldFogOfWarHelpers.gd")
 const OverheadBarHelpers = preload("res://Scripts/Core/BattleField/BattleFieldOverheadBarHelpers.gd")
 const UnitHotkeyHudHelpers = preload("res://Scripts/Core/BattleField/BattleFieldUnitHotkeyHudHelpers.gd")
@@ -669,6 +670,11 @@ const MENTORSHIP_LEVEL_GAP_MIN: int = 3
 
 # Rivalry: enemy instance id -> list of relationship ids that damaged it this battle.
 var _enemy_damagers: Dictionary = {} # int (instance_id) -> Array[String]
+
+## Skeleton undead ([member UnitData.bone_pile_reform_rounds]): non-bludgeoning deaths leave a bone pile and reform after N battle turn increments.
+var _skeleton_bone_pile_death_payloads: Dictionary = {}
+var _skeleton_bone_pile_entries: Array = []
+var _skeleton_bone_piles_root: Node2D = null
 
 # Boss Personal Dialogue (V1): one-time-per-battle pre-attack per boss/playable pair. Key: "boss_id|unit_id".
 var _boss_personal_dialogue_played: Dictionary = {}
@@ -2147,6 +2153,10 @@ func _tick_burn_status_effects() -> void:
 		add_combat_log(nm + " burns for " + str(dmg) + " damage.", "orange")
 		spawn_loot_text("-" + str(dmg) + " BURN", Color(1.0, 0.42, 0.12), unit.global_position + Vector2(32, -26))
 
+		# Burn lethal must not reuse a stale weapon subtype (e.g. prior bludgeon) for bone-pile eligibility.
+		if int(unit.current_hp) - dmg <= 0 and unit.has_meta("last_damage_subtype"):
+			unit.remove_meta("last_damage_subtype")
+
 		if unit.has_method("take_damage"):
 			await unit.take_damage(dmg, null)
 		await get_tree().create_timer(0.07, true, false, true).timeout
@@ -2264,6 +2274,34 @@ func on_unit_committed_move_enter_cell(unit: Node2D, cell: Vector2i) -> void:
 
 func _remove_dead_player_dragon(unit: Node2D) -> void:
 	BattleEndFlowHelpers.remove_dead_player_dragon(self, unit)
+
+
+func _register_skeleton_bone_pile_if_applicable(unit: Node2D, killer: Node2D) -> void:
+	SkeletonBonePileHelpers.register_pending_death_if_applicable(self, unit, killer)
+
+
+func _consume_skeleton_bone_pile_payload(unit_iid: int) -> Variant:
+	return SkeletonBonePileHelpers.take_death_payload(self, unit_iid)
+
+
+func _spawn_skeleton_bone_pile_for_dead_unit(payload: Dictionary, unit_corner: Vector2) -> void:
+	SkeletonBonePileHelpers.spawn_bone_pile_visual(self, payload, unit_corner)
+
+
+func _tick_skeleton_bone_piles_async() -> void:
+	await SkeletonBonePileHelpers.tick_async(self)
+
+
+func _unit_has_pending_skeleton_bone_pile_payload(unit: Node2D) -> bool:
+	return unit != null and _skeleton_bone_pile_death_payloads.has(unit.get_instance_id())
+
+
+func _await_skeleton_collapse_to_bone_pile(unit: Node2D) -> void:
+	await SkeletonBonePileHelpers.animate_skeleton_collapse_into_bone_pile(self, unit)
+
+
+func _count_pending_skeleton_bone_piles() -> int:
+	return _skeleton_bone_pile_entries.size()
 
 
 func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
@@ -3407,7 +3445,7 @@ func _on_destructible_died(node: Node2D, killer: Node2D = null) -> void:
 	update_objective_ui()
 
 	if map_objective == Objective.ROUT_ENEMY:
-		if _count_alive_enemies() == 0 and _count_active_enemy_spawners(node) == 0:
+		if _count_alive_enemies() == 0 and _count_active_enemy_spawners(node) == 0 and _count_pending_skeleton_bone_piles() == 0:
 			add_combat_log("MISSION ACCOMPLISHED: All enemies routed.", "lime")
 			_trigger_victory()				
 						

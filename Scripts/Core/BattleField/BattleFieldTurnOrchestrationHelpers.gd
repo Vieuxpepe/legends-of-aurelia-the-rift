@@ -167,6 +167,7 @@ static func on_enemy_turn_finished(field) -> void:
 	# Tick the turn counter
 	field.current_turn += 1
 	field.tick_fire_tiles_for_new_turn()
+	await field._tick_skeleton_bone_piles_async()
 
 	field.update_objective_ui()
 

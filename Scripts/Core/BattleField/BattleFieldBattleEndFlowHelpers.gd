@@ -62,17 +62,27 @@ static func on_unit_died(field, unit: Node2D, killer: Node2D) -> void:
 	print(display_name + " died saying: " + final_words)
 
 	var grid_pos = field.get_grid_pos(unit)
-	field.astar.set_point_solid(grid_pos, false)
 	if field._coop_remote_combat_replay_active:
+		field.astar.set_point_solid(grid_pos, false)
 		field.update_fog_of_war()
 		field.update_objective_ui()
 		return
+
+	var bone_payload: Variant = field._consume_skeleton_bone_pile_payload(unit.get_instance_id())
+	if bone_payload != null:
+		field._spawn_skeleton_bone_pile_for_dead_unit(bone_payload, unit.global_position)
+	else:
+		field.astar.set_point_solid(grid_pos, false)
+
 	if unit.get_parent() == field.player_container and unit.get_meta("is_dragon", false):
 		remove_dead_player_dragon(field, unit)
 		field.add_combat_log(unit.unit_name + " has fallen permanently!", "red")
 	if unit.get_parent() == field.enemy_container:
-		field.enemy_kills_count += 1
-		field.add_combat_log(unit.unit_name + " has been defeated!", "tomato")
+		if bone_payload != null:
+			field.add_combat_log(unit.unit_name + " collapses into a pile of bones!", "lightgray")
+		else:
+			field.enemy_kills_count += 1
+			field.add_combat_log(unit.unit_name + " has been defeated!", "tomato")
 	elif unit.get_parent() == field.player_container:
 		field.player_deaths_count += 1
 		field.add_combat_log(unit.unit_name + " has fallen in battle!", "crimson")
@@ -201,7 +211,7 @@ static func on_unit_died(field, unit: Node2D, killer: Node2D) -> void:
 
 	match field.map_objective:
 		field.Objective.ROUT_ENEMY:
-			if field._count_alive_enemies(unit) == 0 and field._count_active_enemy_spawners() == 0:
+			if field._count_alive_enemies(unit) == 0 and field._count_active_enemy_spawners() == 0 and field._count_pending_skeleton_bone_piles() == 0:
 				field.add_combat_log("MISSION ACCOMPLISHED: All enemies routed.", "lime")
 				if field._defer_battle_result_until_loot_if_needed("VICTORY"):
 					pass

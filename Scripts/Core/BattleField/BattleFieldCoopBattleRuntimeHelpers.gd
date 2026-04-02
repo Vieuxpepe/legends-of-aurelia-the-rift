@@ -439,7 +439,7 @@ static func validate_authoritative_post_combat_outcome(field) -> void:
 	# Same ordinals as BattleField.Objective: ROUT_ENEMY=0, SURVIVE_TURNS=1, DEFEND_TARGET=2
 	var mobj: int = int(field.map_objective)
 	if mobj == 0:
-		if field._count_alive_enemies() == 0 and field._count_active_enemy_spawners() == 0:
+		if field._count_alive_enemies() == 0 and field._count_active_enemy_spawners() == 0 and field._count_pending_skeleton_bone_piles() == 0:
 			field.add_combat_log("MISSION ACCOMPLISHED: All enemies routed.", "lime")
 			field._trigger_victory()
 			return
