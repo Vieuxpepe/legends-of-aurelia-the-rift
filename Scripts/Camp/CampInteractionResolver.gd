@@ -89,7 +89,7 @@ func peek_walker_interaction_kind(walker_node: Node) -> String:
 			return "pair_snippet"
 		if not CampaignManager.get_available_camp_lore(unit_name).is_empty():
 			return "lore"
-	if _requests.offer_giver_name == unit_name:
+	if _side_stories_allowed_for_request_status(status) and _requests.offer_giver_name == unit_name:
 		return "request_offer"
 	return "idle_talk"
 
@@ -159,7 +159,7 @@ func would_single_walker_priority(nearest: Node) -> bool:
 			return true
 		if CampaignManager.get_available_camp_lore(unit_name).is_empty() == false:
 			return true
-	if _requests.offer_giver_name == unit_name:
+	if _side_stories_allowed_for_request_status(status) and _requests.offer_giver_name == unit_name:
 		return true
 	return false
 
@@ -242,7 +242,7 @@ func open_dialogue(walker_node: Node) -> void:
 		if not lore.is_empty():
 			_dialogue.show_lore_snippet(walker_node, unit_name, lore)
 			return
-	if _requests.offer_giver_name == unit_name and _requests.pending_offer.is_empty():
+	if _side_stories_allowed_for_request_status(status) and _requests.offer_giver_name == unit_name and _requests.pending_offer.is_empty():
 		var roster_names: Array = []
 		for w in _ctx.walker_nodes:
 			if w is CampRosterWalker:
@@ -252,7 +252,7 @@ func open_dialogue(walker_node: Node) -> void:
 		var personal_eligible: bool = CampaignManager.is_personal_quest_eligible(unit_name) if CampaignManager else false
 		_requests.pending_offer = CampRequestDB.get_offer(unit_name, CampRequestDB.get_personality(unit_data, unit_name), roster_names, item_names, status == "active" or status == "ready_to_turn_in", giver_tier, personal_eligible)
 		_requests.offer_is_personal = str(_requests.pending_offer.get("request_depth", "")).strip_edges().to_lower() == "personal"
-	if not _requests.pending_offer.is_empty() and _requests.offer_giver_name == unit_name:
+	if _side_stories_allowed_for_request_status(status) and not _requests.pending_offer.is_empty() and _requests.offer_giver_name == unit_name:
 		_dialogue.show_offer_panel(walker_node, unit_name, unit_data, _requests.pending_offer)
 		return
 	_dialogue.show_idle_talk(walker_node, unit_name, unit_data)
