@@ -41,6 +41,8 @@ var pair_scene_walker_a: Node = null
 var pair_scene_walker_b: Node = null
 var pair_scenes_shown_this_visit: Dictionary = {}
 
+var _dialogue_panel_tween: Tween = null
+
 var direct_conversation_active: bool = false
 var direct_conversations_shown_this_visit: Dictionary = {}
 var _direct_conv_data: Dictionary = {}
@@ -87,6 +89,51 @@ func bind_dialogue_nodes(
 	interact_prompt = prompt
 
 
+func _kill_dialogue_panel_tween() -> void:
+	if _dialogue_panel_tween != null and is_instance_valid(_dialogue_panel_tween):
+		_dialogue_panel_tween.kill()
+	_dialogue_panel_tween = null
+
+
+func apply_dialogue_panel_visible(on: bool) -> void:
+	if dialogue_panel == null:
+		return
+	_kill_dialogue_panel_tween()
+	if on:
+		if dialogue_panel.visible and dialogue_panel.modulate.a >= 0.995 and dialogue_panel.scale.distance_to(Vector2.ONE) < 0.008:
+			return
+		var intro: bool = not dialogue_panel.visible
+		dialogue_panel.visible = true
+		if intro:
+			dialogue_panel.modulate.a = 0.0
+			dialogue_panel.scale = Vector2(0.97, 0.97)
+			var psz: Vector2 = dialogue_panel.size
+			if psz.x < 4.0 or psz.y < 4.0:
+				psz = dialogue_panel.get_combined_minimum_size()
+			dialogue_panel.pivot_offset = psz * 0.5
+			_dialogue_panel_tween = _explore.create_tween()
+			_dialogue_panel_tween.set_parallel(true)
+			_dialogue_panel_tween.tween_property(dialogue_panel, "modulate:a", 1.0, 0.11).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			_dialogue_panel_tween.tween_property(dialogue_panel, "scale", Vector2.ONE, 0.13).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		else:
+			dialogue_panel.modulate.a = 1.0
+			dialogue_panel.scale = Vector2.ONE
+	else:
+		if not dialogue_panel.visible:
+			dialogue_panel.modulate.a = 1.0
+			dialogue_panel.scale = Vector2.ONE
+			dialogue_panel.pivot_offset = Vector2.ZERO
+			return
+		_dialogue_panel_tween = _explore.create_tween()
+		_dialogue_panel_tween.tween_property(dialogue_panel, "modulate:a", 0.0, 0.09)
+		_dialogue_panel_tween.tween_callback(func() -> void:
+			dialogue_panel.visible = false
+			dialogue_panel.modulate.a = 1.0
+			dialogue_panel.scale = Vector2.ONE
+			dialogue_panel.pivot_offset = Vector2.ZERO
+		)
+
+
 func setup_branching_choice_container() -> void:
 	if dialogue_panel == null:
 		return
@@ -123,8 +170,7 @@ func hide_branching_choices() -> void:
 
 
 func hide_dialogue_visual() -> void:
-	if dialogue_panel:
-		dialogue_panel.visible = false
+	apply_dialogue_panel_visible(false)
 	hide_request_buttons()
 
 
@@ -208,8 +254,7 @@ func start_pair_scene(data: Dictionary) -> void:
 			(w as CampRosterWalker).set_wander_paused(true)
 	if interact_prompt:
 		interact_prompt.visible = false
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 	show_pair_scene_line()
 
 
@@ -240,8 +285,7 @@ func show_pair_scene_line() -> void:
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
 		dialogue_close_btn.text = "Continue" if pair_scene_index < pair_scene_lines.size() - 1 else "Close"
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func advance_pair_scene() -> void:
@@ -271,8 +315,7 @@ func end_pair_scene() -> void:
 	for w in _ctx.walker_nodes:
 		if w is CampRosterWalker:
 			(w as CampRosterWalker).set_wander_paused(false)
-	if dialogue_panel:
-		dialogue_panel.visible = false
+	apply_dialogue_panel_visible(false)
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.text = "Close"
@@ -312,8 +355,7 @@ func close_dialogue() -> void:
 	for w in _ctx.walker_nodes:
 		if w is CampRosterWalker:
 			(w as CampRosterWalker).set_wander_paused(false)
-	if dialogue_panel:
-		dialogue_panel.visible = false
+	apply_dialogue_panel_visible(false)
 	hide_request_buttons()
 
 
@@ -351,8 +393,7 @@ func start_branching_check(walker_node: Node, unit_name: String, unit_data: Vari
 		hide_request_buttons()
 		if dialogue_close_btn:
 			dialogue_close_btn.visible = true
-		if dialogue_panel:
-			dialogue_panel.visible = true
+		apply_dialogue_panel_visible(true)
 		return
 	branching_active = true
 	branching_data = data
@@ -386,8 +427,7 @@ func start_branching_check(walker_node: Node, unit_name: String, unit_data: Vari
 		btn.pressed.connect(on_branching_choice_pressed.bind(idx))
 		choice_container.add_child(btn)
 	choice_container.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func on_branching_choice_pressed(choice_index: int) -> void:
@@ -440,8 +480,7 @@ func show_special_camp_scene(walker_node: Node, unit_name: String, _unit_data: V
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_offer_panel(walker_node: Node, unit_name: String, unit_data: Variant, pending_offer: Dictionary) -> void:
@@ -467,8 +506,7 @@ func show_offer_panel(walker_node: Node, unit_name: String, unit_data: Variant, 
 		decline_btn.visible = true
 	if turn_in_btn:
 		turn_in_btn.visible = false
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_progress_panel(walker_node: Node, unit_name: String, unit_data: Variant) -> void:
@@ -499,8 +537,7 @@ func show_progress_panel(walker_node: Node, unit_name: String, unit_data: Varian
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_turn_in_panel(walker_node: Node, unit_name: String, unit_data: Variant) -> void:
@@ -530,8 +567,7 @@ func show_turn_in_panel(walker_node: Node, unit_name: String, unit_data: Variant
 		decline_btn.visible = false
 	if turn_in_btn:
 		turn_in_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_failed_reaction(walker_node: Node, unit_name: String, giver: String) -> void:
@@ -551,8 +587,7 @@ func show_failed_reaction(walker_node: Node, unit_name: String, giver: String) -
 	hide_branching_choices()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_talk_complete_return(walker_node: Node, unit_name: String, giver: String) -> void:
@@ -568,8 +603,7 @@ func show_talk_complete_return(walker_node: Node, unit_name: String, giver: Stri
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_pair_scene_snippet(walker_node: Node, unit_name: String, other_title: String, pair_scene: Dictionary) -> void:
@@ -586,8 +620,7 @@ func show_pair_scene_snippet(walker_node: Node, unit_name: String, other_title: 
 	hide_branching_choices()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 	pending_pair_scene_id = str(pair_scene.get("id", "")).strip_edges()
 
 
@@ -605,8 +638,7 @@ func show_lore_snippet(walker_node: Node, unit_name: String, lore: Dictionary) -
 	hide_branching_choices()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 	pending_lore_id = str(lore.get("id", "")).strip_edges()
 
 
@@ -631,8 +663,7 @@ func show_idle_talk(walker_node: Node, unit_name: String, unit_data: Variant) ->
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func reset_pair_scene_visit_flags() -> void:
@@ -667,8 +698,7 @@ func start_direct_conversation(walker_node: Node, conv: Dictionary) -> void:
 	dialogue_active = true
 	if interact_prompt:
 		interact_prompt.visible = false
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 	hide_request_buttons()
 	show_direct_conversation_line()
 
@@ -754,8 +784,7 @@ func show_direct_conversation_line() -> void:
 			dialogue_close_btn.text = "Close"
 		else:
 			dialogue_close_btn.text = "Continue"
-	if dialogue_panel:
-		dialogue_panel.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func advance_direct_conversation() -> void:
@@ -875,8 +904,7 @@ func end_direct_conversation(completed: bool) -> void:
 	for w in _ctx.walker_nodes:
 		if w is CampRosterWalker:
 			(w as CampRosterWalker).set_wander_paused(false)
-	if dialogue_panel:
-		dialogue_panel.visible = false
+	apply_dialogue_panel_visible(false)
 	if dialogue_close_btn:
 		dialogue_close_btn.text = "Close"
 	hide_request_buttons()

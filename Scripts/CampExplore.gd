@@ -16,6 +16,10 @@ const PLAYER_MIN_MOVE_SPEED_FOR_BOB: float = 20.0
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
 ## Dev-only: when true, F9 dumps direct-conversation + micro-bark diagnostics for the nearest walker (see debug_dump_camp_selection).
 const DEBUG_CAMP_SELECTION_DUMP: bool = false
+const INTERACT_PROMPT_SLIDE_PX: float = 10.0
+const INTERACT_PROMPT_FADE_IN_SEC: float = 0.13
+const INTERACT_PROMPT_SLIDE_SEC: float = 0.15
+const INTERACT_PROMPT_FADE_OUT_SEC: float = 0.11
 
 var _camp_music_tracks: Array[AudioStream] = []
 
@@ -60,6 +64,11 @@ var _dialogue: CampDialogueController
 var _interactions: CampInteractionResolver
 var _ambient: CampAmbientDirector
 var _spawn: CampSpawnController
+
+var _interact_prompt_base_offset_top: float = 0.0
+var _interact_prompt_tween: Tween = null
+var _interact_prompt_prev_nonempty: bool = false
+var _interact_prompt_prev_line: String = ""
 
 
 func _ready() -> void:
@@ -116,9 +125,15 @@ func _ready() -> void:
 	_requests.update_request_markers()
 	_dialogue.setup_branching_choice_container()
 	if interact_prompt:
+		_interact_prompt_base_offset_top = interact_prompt.offset_top
 		interact_prompt.visible = false
+		interact_prompt.modulate = Color(1, 1, 1, 1)
+		interact_prompt.offset_top = _interact_prompt_base_offset_top
 	if dialogue_panel:
 		dialogue_panel.visible = false
+		dialogue_panel.modulate = Color(1, 1, 1, 1)
+		dialogue_panel.scale = Vector2.ONE
+		dialogue_panel.pivot_offset = Vector2.ZERO
 	_dialogue.hide_request_buttons()
 	_dialogue.reset_pair_scene_visit_flags()
 	_dialogue.reset_direct_conversation_visit_flags()
@@ -251,7 +266,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	_bubble_ctrl.update_ambient_bubble_position()
+	_bubble_ctrl.update_ambient_bubble_position(delta)
 	if _dialogue.dialogue_active:
 		_bubble_ctrl.hide_ambient_bubble()
 		return
@@ -400,20 +415,66 @@ func debug_dump_camp_selection_for_nearest() -> void:
 	debug_dump_camp_selection((n as CampRosterWalker).unit_name)
 
 
+func _kill_interact_prompt_tween() -> void:
+	if _interact_prompt_tween != null and is_instance_valid(_interact_prompt_tween):
+		_interact_prompt_tween.kill()
+	_interact_prompt_tween = null
+
+
+func _reset_interact_prompt_visual() -> void:
+	if interact_prompt == null:
+		return
+	interact_prompt.modulate = Color(1, 1, 1, 1)
+	interact_prompt.offset_top = _interact_prompt_base_offset_top
+
+
 func _update_interact_prompt() -> void:
 	if interact_prompt == null:
 		return
 	if _dialogue.dialogue_active:
+		_kill_interact_prompt_tween()
 		interact_prompt.visible = false
+		_reset_interact_prompt_visual()
+		_interact_prompt_prev_nonempty = false
+		_interact_prompt_prev_line = ""
 		return
 	var nearest: Node = _get_nearest_walker_in_range()
 	var eligible_pair: Dictionary = _dialogue.get_eligible_pair_scene()
 	var prompt_line: String = _interactions.get_interact_prompt_primary_line(nearest, eligible_pair)
-	if prompt_line != "":
-		interact_prompt.visible = true
+	var want_show: bool = prompt_line != ""
+	if want_show:
 		interact_prompt.text = prompt_line
+		if not _interact_prompt_prev_nonempty:
+			_kill_interact_prompt_tween()
+			interact_prompt.visible = true
+			interact_prompt.modulate.a = 0.0
+			interact_prompt.offset_top = _interact_prompt_base_offset_top + INTERACT_PROMPT_SLIDE_PX
+			_interact_prompt_tween = create_tween()
+			_interact_prompt_tween.set_parallel(true)
+			_interact_prompt_tween.tween_property(interact_prompt, "modulate:a", 1.0, INTERACT_PROMPT_FADE_IN_SEC)
+			_interact_prompt_tween.tween_property(interact_prompt, "offset_top", _interact_prompt_base_offset_top, INTERACT_PROMPT_SLIDE_SEC)
+		elif prompt_line != _interact_prompt_prev_line:
+			_kill_interact_prompt_tween()
+			_interact_prompt_tween = create_tween()
+			_interact_prompt_tween.tween_property(interact_prompt, "modulate", Color(1.14, 1.06, 0.9, 1.0), 0.06)
+			_interact_prompt_tween.tween_property(interact_prompt, "modulate", Color(1, 1, 1, 1), 0.12)
+		_interact_prompt_prev_nonempty = true
+		_interact_prompt_prev_line = prompt_line
 	else:
-		interact_prompt.visible = false
+		if _interact_prompt_prev_nonempty and interact_prompt.visible:
+			_kill_interact_prompt_tween()
+			_interact_prompt_tween = create_tween()
+			_interact_prompt_tween.set_parallel(true)
+			_interact_prompt_tween.tween_property(interact_prompt, "modulate:a", 0.0, INTERACT_PROMPT_FADE_OUT_SEC)
+			_interact_prompt_tween.tween_property(interact_prompt, "offset_top", _interact_prompt_base_offset_top + INTERACT_PROMPT_SLIDE_PX, INTERACT_PROMPT_FADE_OUT_SEC)
+			_interact_prompt_tween.chain().tween_callback(func() -> void:
+				interact_prompt.visible = false
+				_reset_interact_prompt_visual()
+			)
+		elif not interact_prompt.visible:
+			_reset_interact_prompt_visual()
+		_interact_prompt_prev_nonempty = false
+		_interact_prompt_prev_line = ""
 
 
 func _try_interact() -> void:

@@ -88,6 +88,11 @@ var _arrive_tween: Tween = null
 var _reaction_tween: Tween = null
 var _turn_tween: Tween = null
 
+var _marker_rest_offset_top: float = -48.0
+var _marker_anim_phase: float = 0.0
+const MARKER_BOB_PX: float = 2.8
+const MARKER_PHASE_SPEED: float = 3.2
+
 const SOCIAL_STATE_FREE := 0
 const SOCIAL_STATE_APPROACH := 1
 const SOCIAL_STATE_SETTLED := 2
@@ -137,10 +142,13 @@ func get_ambient_social_pose() -> String:
 func _ready() -> void:
 	home_position = global_position
 	_target_pos = home_position
+	var phase_seed: float = float(get_instance_id() & 1023) / 1023.0
 	if sprite != null:
 		_base_sprite_offset = sprite.position
-		var phase_seed: float = float(get_instance_id() & 1023) / 1023.0
 		_drift_phase = phase_seed * TAU
+	if marker_label != null:
+		_marker_rest_offset_top = marker_label.offset_top
+		_marker_anim_phase = phase_seed * TAU
 
 ## Call from CampExplore when dialogue opens/closes so wander pauses.
 func set_wander_paused(paused: bool) -> void:
@@ -203,26 +211,39 @@ func start_behavior() -> void:
 
 func _process(_delta: float) -> void:
 	if marker_label != null:
+		var marker_txt: String = ""
+		var marker_on: bool = false
 		if request_marker == "offer":
-			marker_label.text = "!"
-			marker_label.visible = true
+			marker_txt = "!"
+			marker_on = true
 		elif request_marker == "offer_personal":
-			marker_label.text = "!!"
-			marker_label.visible = true
+			marker_txt = "!!"
+			marker_on = true
 		elif request_marker == "turn_in":
-			marker_label.text = "?"
-			marker_label.visible = true
+			marker_txt = "?"
+			marker_on = true
 		elif request_marker == "request_target":
-			marker_label.text = ">"
-			marker_label.visible = true
+			marker_txt = ">"
+			marker_on = true
 		elif request_marker == "request_progress":
-			marker_label.text = "+"
-			marker_label.visible = true
+			marker_txt = "+"
+			marker_on = true
 		elif request_marker == "request_failed":
-			marker_label.text = "×"
+			marker_txt = "×"
+			marker_on = true
+		if marker_on:
+			marker_label.text = marker_txt
 			marker_label.visible = true
+			_marker_anim_phase += _delta * MARKER_PHASE_SPEED
+			var bob: float = sin(_marker_anim_phase) * MARKER_BOB_PX
+			var glint: float = 0.93 + 0.07 * sin(_marker_anim_phase * 1.85)
+			marker_label.offset_top = _marker_rest_offset_top + bob
+			marker_label.modulate = Color(glint, glint, glint * 0.96, 1.0)
 		else:
 			marker_label.visible = false
+			marker_label.offset_top = _marker_rest_offset_top
+			marker_label.modulate = Color(1, 1, 1, 1)
+			_marker_anim_phase = 0.0
 	if _wander_paused or sprite == null:
 		_move_velocity = Vector2.ZERO
 		_walk_cycle = 0.0
