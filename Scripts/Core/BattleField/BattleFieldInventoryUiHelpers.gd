@@ -15,10 +15,10 @@ const FATE_CARD_BUTTON_BG: Color = Color(0.28, 0.21, 0.13, 0.94)
 const FATE_CARD_WIDTH: float = 282.0
 const FATE_CARD_HEIGHT: float = 320.0
 const FATE_CARD_FALLBACK_PORTRAIT_PATH: String = "res://Assets/Portraits/FateCardMatte/Portrait Hero 1.png"
-const FATE_REVEAL_TARGET_SCALE_X: float = 0.78
-const FATE_REVEAL_TARGET_SCALE_Y: float = 0.78
-const FATE_REVEAL_POP_SCALE_X: float = 0.90
-const FATE_REVEAL_POP_SCALE_Y: float = 0.90
+const FATE_REVEAL_TARGET_SCALE_X: float = 0.94
+const FATE_REVEAL_TARGET_SCALE_Y: float = 0.94
+const FATE_REVEAL_POP_SCALE_X: float = 1.02
+const FATE_REVEAL_POP_SCALE_Y: float = 1.02
 
 static func apply_inventory_panel_spacing(field) -> void:
 	if field.inventory_panel == null:
@@ -357,7 +357,7 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 
 	var outro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	outro.tween_property(root, "modulate:a", 0.0, 0.18)
-	outro.tween_property(card_panel, "scale", Vector2(0.95, 0.95), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	outro.tween_property(card_panel, "scale", Vector2(0.98, 0.98), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await outro.finished
 	if is_instance_valid(layer):
 		layer.queue_free()
@@ -441,6 +441,8 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	portrait.offset_bottom = -2.0
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	portrait.texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
 	portrait.texture = _fate_load_card_portrait(card, fallback_icon)
 	portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)

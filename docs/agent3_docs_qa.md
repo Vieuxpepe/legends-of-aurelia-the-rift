@@ -8,11 +8,11 @@
 
 ## Docs created/updated (log — maintain)
 
-*— append date + one line per doc change —*
+- Pass 1 rune persistence: `agent_master_handoff.md` (Agent 1 completed row), `agent3_docs_qa.md`, `camp_regression_checklist.md` (rune weapon regression section).
 
 ## Touched this sprint
 
-*— none —*
+- `docs/agent_master_handoff.md`, `docs/agent3_docs_qa.md`, `docs/camp_regression_checklist.md` — Pass 1 rune persistence QA / handoff refresh.
 
 ## Architecture risks (watchlist)
 
@@ -23,6 +23,7 @@
 
 ## Current QA priorities
 
+- **Pass 1 rune weapons:** run `camp_regression_checklist.md` → **Rune-capable weapon persistence (Pass 1)** after any `CampaignManager` item serialize / `duplicate_item` / co-op wire changes.
 - After Agent 1 or Manager changes: **prompts + open_dialogue + save/load** rows in `camp_regression_checklist.md`.
 - After Agent 2 bulk content: **once_ever / once_per_visit** and branching completion for one sample conversation per batch.
 

@@ -57,6 +57,16 @@ Run in a **debug** build when you need F9 diagnostics or `CampExplore` debug pri
 - [ ] `seen_camp_lore`, `seen_camp_pair_scenes`, `camp_memory`, `camp_unit_condition`, `camp_request_progress_level`, and request fields restore; explore session visit-only flags reset (new visit can use `once_per_visit` again).
 - [ ] Load older save: `load_game` infers some story flags from `camp_request_progress_level` (see `CampaignManager` load path) — spot-check conversations that depend on those flags.
 
+## Rune-capable weapon persistence (Pass 1 scaffolding)
+
+Use a **rune-capable** `WeaponData` (non-zero `rune_slot_count`, at least one socketed rune). Exercise only **Pass 1** surfaces below.
+
+- [ ] **Save / load:** After save + load, weapon still has correct `rune_slot_count` and `socketed_runes` (count respected; no truncation beyond slot cap — see `CampaignManager._serialize_socketed_runes_for_item` / deserialize).
+- [ ] **`duplicate_item` / `make_unique_item`:** Duplicated weapon keeps rune socket state independent of the source (no shared mutation when editing one copy).
+- [ ] **Equipped weapon restore:** Unit with runed weapon equipped: after load, equipped weapon matches pre-save rune state (path goes through `make_unique_item` / weapon hydrate in `CampaignManager` load).
+- [ ] **Camp shop stock restore:** If shop stock includes a runed weapon instance, after load the same item (or equivalent deserialized instance) retains sockets/runes (`camp_shop_stock` load path).
+- [ ] **Co-op wire / mock handoff:** Items rebuilt from co-op wire data (e.g. `BattleFieldCoopHelpers.coop_wire_deserialize_items` string-path branch using `duplicate_item`) preserve rune fields when the template loads as `WeaponData`.
+
 ## Injury / fatigue / visit theme
 
 - [ ] Units with camp condition **injured/fatigued** show appropriate walker visuals if implemented.

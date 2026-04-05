@@ -1550,6 +1550,8 @@ func _build_fate_card_widget(
 		portrait.offset_bottom = -portrait_edge
 		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		portrait.texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
 		portrait.texture = _load_card_portrait(card)
 		portrait_frame.add_child(portrait)
 		var shade: ColorRect = ColorRect.new()
@@ -2109,6 +2111,8 @@ func _build_fate_drag_visual(card: Dictionary, owned: bool, active: bool) -> Con
 	portrait.offset_bottom = -50.0
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	portrait.texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
 	portrait.texture = _load_card_portrait(card)
 	panel.add_child(portrait)
 	var portrait_shade: ColorRect = ColorRect.new()
