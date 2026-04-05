@@ -14,7 +14,7 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "common",
 		"summary": "+5% post-battle iron income.",
 		"description": "Scouts secure old mining roads. After battle victory, gain bonus iron from salvage routes.",
-		"portrait_path": "res://Assets/Portraits/Branik Portrait.png"
+		"portrait_path": "res://Assets/Portraits/FateCardMatte/Branik Portrait.png"
 	},
 	{
 		"id": "ash_watch",
@@ -22,7 +22,7 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "common",
 		"summary": "Reveal 1 extra enemy at start.",
 		"description": "A smoke-marked watchpost reports first movement. In fog-heavy maps, start with extra enemy intel.",
-		"portrait_path": "res://Assets/Portraits/Portrait Hero 1.png"
+		"portrait_path": "res://Assets/Portraits/FateCardMatte/Portrait Hero 1.png"
 	},
 	{
 		"id": "ember_tithe",
@@ -30,7 +30,7 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "rare",
 		"summary": "+1 random consumable after map clear.",
 		"description": "The Ember Brokers always collect. On battle clear, one bonus consumable is added to rewards.",
-		"portrait_path": "res://Assets/Portraits/Noemi Veyr Portrait.png"
+		"portrait_path": "res://Assets/Portraits/FateCardMatte/Noemi Veyr Portrait.png"
 	},
 	{
 		"id": "storm_compass",
@@ -38,7 +38,7 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "rare",
 		"summary": "+1 move for first player phase turn.",
 		"description": "A chart that predicts lethal wind lanes. One allied unit can move farther on the opening push.",
-		"portrait_path": "res://Assets/Portraits/Sorrel Portrait.png"
+		"portrait_path": "res://Assets/Portraits/FateCardMatte/Sorrel Portrait.png"
 	},
 	{
 		"id": "void_tax",
@@ -46,7 +46,7 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "epic",
 		"summary": "Elite enemies drop +1 void shard.",
 		"description": "The house claims a piece of every anomaly. Enhanced enemies yield extra void shards when defeated.",
-		"portrait_path": "res://Assets/Portraits/Portrait Malakor.png"
+		"portrait_path": "res://Assets/Portraits/FateCardMatte/Portrait Malakor.png"
 	},
 	{
 		"id": "wyrm_oath",
@@ -54,7 +54,7 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "legendary",
 		"summary": "Dragon units start with +10 poise.",
 		"description": "Ancient drake compacts harden scales before battle. Dragon allies enter combat with bonus poise.",
-		"portrait_path": "res://Assets/Portraits/Morgra Portrait.png"
+		"portrait_path": "res://Assets/Portraits/FateCardMatte/Morgra Portrait.png"
 	}
 ]
 

@@ -387,134 +387,9 @@ func run_deadeye_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker):
 		return 0
 
-	bf.get_tree().paused = true
-
-	var qte_layer := CanvasLayer.new()
-	qte_layer.layer = 200
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	bf.add_child(qte_layer)
-
-	var vp := bf.get_viewport_rect().size
-
-	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.0, 0.0, 0.0, 0.55)
-	dimmer.size = vp
-	qte_layer.add_child(dimmer)
-
-	var title := Label.new()
-	title.text = "DEADEYE SHOT"
-	title.position = Vector2(0, 110)
-	title.size = Vector2(vp.x, 40)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 38)
-	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.30))
-	title.add_theme_constant_override("outline_size", 8)
-	title.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(title)
-
-	var help := Label.new()
-	help.text = "PRESS SPACE INSIDE THE CENTER"
-	help.position = Vector2(0, 155)
-	help.size = Vector2(vp.x, 32)
-	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.add_theme_font_size_override("font_size", 22)
-	help.add_theme_color_override("font_color", Color.WHITE)
-	help.add_theme_constant_override("outline_size", 6)
-	help.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(help)
-	_apply_qte_visual_overhaul(qte_layer, title, help)
-
-	var bar_bg := ColorRect.new()
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
-	bar_bg.size = Vector2(520, 30)
-	bar_bg.position = Vector2((vp.x - bar_bg.size.x) * 0.5, (vp.y - bar_bg.size.y) * 0.5 - 20.0)
-	qte_layer.add_child(bar_bg)
-
-	var outer_good := ColorRect.new()
-	outer_good.color = Color(0.20, 0.85, 0.30, 0.95)
-	outer_good.size = Vector2(92, 30)
-	outer_good.position = Vector2(randf_range(160.0, bar_bg.size.x - 160.0), 0.0)
-	bar_bg.add_child(outer_good)
-
-	var perfect_zone := ColorRect.new()
-	perfect_zone.color = Color(1.0, 0.85, 0.20, 0.98)
-	perfect_zone.size = Vector2(24, 30)
-	perfect_zone.position = Vector2((outer_good.size.x - perfect_zone.size.x) * 0.5, 0.0)
-	outer_good.add_child(perfect_zone)
-
-	var cursor := ColorRect.new()
-	cursor.color = Color.WHITE
-	cursor.size = Vector2(8, 46)
-	cursor.position = Vector2(0.0, -8.0)
-	bar_bg.add_child(cursor)
-
-	Input.flush_buffered_events()
-
-	var result := 0
-	var sweep_ms := 920
-	var start_ms := Time.get_ticks_msec()
-	var end_hold_ms := -1
-
-	while true:
-		await bf.get_tree().process_frame
-
-		var now := Time.get_ticks_msec()
-		var elapsed := now - start_ms
-
-		if end_hold_ms > 0:
-			if now >= end_hold_ms:
-				break
-			continue
-
-		if elapsed >= sweep_ms:
-			help.text = "MISS"
-			help.add_theme_color_override("font_color", Color(1.0, 0.30, 0.30))
-			cursor.color = Color(0.90, 0.20, 0.20)
-			if bf.miss_sound and bf.miss_sound.stream != null:
-				bf.miss_sound.play()
-			end_hold_ms = now + 350
-			continue
-
-		var t := float(elapsed) / float(sweep_ms)
-		cursor.position.x = t * float(bar_bg.size.x - cursor.size.x)
-
-		if Input.is_action_just_pressed("ui_accept"):
-			var cursor_center := cursor.position.x + (cursor.size.x * 0.5)
-			var good_start := outer_good.position.x
-			var good_end := good_start + outer_good.size.x
-			var perfect_start := good_start + perfect_zone.position.x
-			var perfect_end := perfect_start + perfect_zone.size.x
-
-			if cursor_center >= perfect_start and cursor_center <= perfect_end:
-				result = 2
-				help.text = "PERFECT"
-				help.add_theme_color_override("font_color", Color(1.0, 0.85, 0.20))
-				cursor.color = Color(1.0, 0.85, 0.20)
-				outer_good.color = Color.WHITE
-				if bf.crit_sound and bf.crit_sound.stream != null:
-					bf.crit_sound.play()
-				bf.screen_shake(14.0, 0.22)
-			elif cursor_center >= good_start and cursor_center <= good_end:
-				result = 1
-				help.text = "GOOD"
-				help.add_theme_color_override("font_color", Color(0.30, 1.0, 0.35))
-				cursor.color = Color(0.30, 1.0, 0.35)
-				if bf.select_sound and bf.select_sound.stream != null:
-					bf.select_sound.pitch_scale = 1.25
-					bf.select_sound.play()
-				bf.screen_shake(7.0, 0.12)
-			else:
-				result = 0
-				help.text = "MISS"
-				help.add_theme_color_override("font_color", Color(1.0, 0.30, 0.30))
-				cursor.color = Color(0.90, 0.20, 0.20)
-				if bf.miss_sound and bf.miss_sound.stream != null:
-					bf.miss_sound.play()
-
-			end_hold_ms = now + 350
-
-	qte_layer.queue_free()
-	bf.get_tree().paused = false
+	var qte_bar = load("res://Scripts/Core/QTETimingBar.gd")
+	var qte = qte_bar.run(bf, "DEADEYE SHOT", "PRESS SPACE INSIDE THE CENTER", 920)
+	var result: int = await qte.qte_finished
 	return result
 
 # =========================================================
@@ -526,169 +401,9 @@ func run_volley_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker):
 		return 0
 
-	bf.get_tree().paused = true
-
-	var qte_layer := CanvasLayer.new()
-	qte_layer.layer = 200
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	bf.add_child(qte_layer)
-
-	var vp := bf.get_viewport_rect().size
-
-	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.02, 0.04, 0.08, 0.60)
-	dimmer.size = vp
-	qte_layer.add_child(dimmer)
-
-	var title := Label.new()
-	title.text = "VOLLEY"
-	title.position = Vector2(0, 100)
-	title.size = Vector2(vp.x, 42)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", Color(0.70, 0.92, 1.0))
-	title.add_theme_constant_override("outline_size", 8)
-	title.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(title)
-
-	var help := Label.new()
-	help.text = "MASH SPACE TO LOOSE MORE ARROWS"
-	help.position = Vector2(0, 145)
-	help.size = Vector2(vp.x, 30)
-	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.add_theme_font_size_override("font_size", 22)
-	help.add_theme_color_override("font_color", Color.WHITE)
-	help.add_theme_constant_override("outline_size", 6)
-	help.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(help)
-	_apply_qte_visual_overhaul(qte_layer, title, help)
-
-	var bar_bg := ColorRect.new()
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
-	bar_bg.size = Vector2(520, 34)
-	bar_bg.position = Vector2((vp.x - bar_bg.size.x) * 0.5, (vp.y - bar_bg.size.y) * 0.5 - 18.0)
-	qte_layer.add_child(bar_bg)
-
-	var good_line := ColorRect.new()
-	good_line.color = Color(0.30, 0.95, 0.35, 0.95)
-	good_line.size = Vector2(4, 34)
-	good_line.position = Vector2(bar_bg.size.x * 0.58, 0)
-	bar_bg.add_child(good_line)
-
-	var perfect_line := ColorRect.new()
-	perfect_line.color = Color(1.0, 0.86, 0.20, 0.98)
-	perfect_line.size = Vector2(4, 34)
-	perfect_line.position = Vector2(bar_bg.size.x * 0.84, 0)
-	bar_bg.add_child(perfect_line)
-
-	var fill := ColorRect.new()
-	fill.color = Color(0.55, 0.85, 1.0, 1.0)
-	fill.size = Vector2(0, 34)
-	fill.position = Vector2.ZERO
-	bar_bg.add_child(fill)
-
-	var arrow_1 := Label.new()
-	arrow_1.text = "ARROW I"
-	arrow_1.position = Vector2(bar_bg.position.x + 30, bar_bg.position.y + 55)
-	arrow_1.add_theme_font_size_override("font_size", 20)
-	arrow_1.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
-	arrow_1.add_theme_constant_override("outline_size", 5)
-	arrow_1.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(arrow_1)
-
-	var arrow_2 := Label.new()
-	arrow_2.text = "ARROW II"
-	arrow_2.position = Vector2(bar_bg.position.x + 210, bar_bg.position.y + 55)
-	arrow_2.add_theme_font_size_override("font_size", 20)
-	arrow_2.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
-	arrow_2.add_theme_constant_override("outline_size", 5)
-	arrow_2.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(arrow_2)
-
-	var arrow_3 := Label.new()
-	arrow_3.text = "ARROW III"
-	arrow_3.position = Vector2(bar_bg.position.x + 395, bar_bg.position.y + 55)
-	arrow_3.add_theme_font_size_override("font_size", 20)
-	arrow_3.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
-	arrow_3.add_theme_constant_override("outline_size", 5)
-	arrow_3.add_theme_color_override("font_outline_color", Color.BLACK)
-	qte_layer.add_child(arrow_3)
-
-	Input.flush_buffered_events()
-
-	var meter := 28.0
-	var total_ms := 2200
-	var start_ms := Time.get_ticks_msec()
-	var last_ms := start_ms
-	var end_hold_ms := -1
-	var result := 0
-
-	while true:
-		await bf.get_tree().process_frame
-
-		var now := Time.get_ticks_msec()
-
-		if end_hold_ms > 0:
-			if now >= end_hold_ms:
-				break
-			continue
-
-		var elapsed_total := now - start_ms
-		if elapsed_total >= total_ms:
-			if meter >= 84.0:
-				result = 2
-				help.text = "PERFECT VOLLEY"
-				help.add_theme_color_override("font_color", Color(1.0, 0.86, 0.20))
-				if bf.crit_sound and bf.crit_sound.stream != null:
-					bf.crit_sound.play()
-				bf.screen_shake(12.0, 0.20)
-			elif meter >= 58.0:
-				result = 1
-				help.text = "GOOD VOLLEY"
-				help.add_theme_color_override("font_color", Color(0.30, 1.0, 0.35))
-				if bf.select_sound and bf.select_sound.stream != null:
-					bf.select_sound.pitch_scale = 1.18
-					bf.select_sound.play()
-				bf.screen_shake(6.0, 0.10)
-			else:
-				result = 0
-				help.text = "WEAK VOLLEY"
-				help.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
-				if bf.miss_sound and bf.miss_sound.stream != null:
-					bf.miss_sound.play()
-			end_hold_ms = now + 350
-			continue
-
-		var dt := float(now - last_ms) / 1000.0
-		last_ms = now
-
-		meter -= 24.0 * dt
-		meter = clamp(meter, 0.0, 100.0)
-
-		if Input.is_action_just_pressed("ui_accept"):
-			meter += 13.0
-			meter = clamp(meter, 0.0, 100.0)
-
-			fill.color = Color(0.85, 0.96, 1.0, 1.0)
-
-			if bf.select_sound and bf.select_sound.stream != null:
-				bf.select_sound.pitch_scale = randf_range(1.15, 1.35)
-				bf.select_sound.play()
-
-		else:
-			fill.color = Color(0.55, 0.85, 1.0, 1.0)
-
-		fill.size.x = (meter / 100.0) * bar_bg.size.x
-
-		if meter >= 20.0:
-			arrow_1.add_theme_color_override("font_color", Color.WHITE)
-		if meter >= 58.0:
-			arrow_2.add_theme_color_override("font_color", Color(0.30, 1.0, 0.35))
-		if meter >= 84.0:
-			arrow_3.add_theme_color_override("font_color", Color(1.0, 0.86, 0.20))
-
-	qte_layer.queue_free()
-	bf.get_tree().paused = false
+	var qte_mash = load("res://Scripts/Core/QTEMashMeter.gd")
+	var qte = qte_mash.run(bf, "VOLLEY", "MASH SPACE TO LOOSE MORE ARROWS", 2200, 28.0)
+	var result: int = await qte.qte_finished
 	return result
 
 # =========================================================
@@ -697,8 +412,12 @@ func run_volley_minigame(bf: Node2D, attacker: Node2D) -> int:
 # Returns: 0 = fail, 1 = good barrage, 2 = perfect barrage
 # =========================================================
 func run_rain_of_arrows_minigame(bf: Node2D, attacker: Node2D) -> int:
-	var result: int = 0
-	if attacker == null or not is_instance_valid(attacker): return result
+	if attacker == null or not is_instance_valid(attacker): return 0
+
+	var qte_seq = load("res://Scripts/Core/QTESequenceMemory.gd")
+	var qte = qte_seq.run(bf, "RAIN OF ARROWS", "MEMORIZE THEN REPEAT THE PATTERN", 5)
+	var result: int = await qte.qte_finished
+	return result
 
 	bf.get_tree().paused = true
 

@@ -753,6 +753,44 @@ func duplicate_item(original: Resource) -> Resource:
 		return original
 	return dup
 
+
+func _serialize_socketed_runes_for_item(raw: Variant) -> Array:
+	var out: Array = []
+	if raw is Array:
+		for entry in raw as Array:
+			if not (entry is Dictionary):
+				continue
+			var e: Dictionary = entry as Dictionary
+			var rid: String = str(e.get("id", "")).strip_edges()
+			if rid == "":
+				continue
+			var row: Dictionary = {
+				"id": rid,
+				"rank": clampi(int(e.get("rank", 0)), 0, 999),
+			}
+			if e.has("charges"):
+				row["charges"] = clampi(int(e.get("charges", 0)), 0, 999999)
+			out.append(row)
+	return out
+
+
+func _deserialize_socketed_runes_for_item(raw: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if raw is Array:
+		for entry in raw as Array:
+			if not (entry is Dictionary):
+				continue
+			var e: Dictionary = entry as Dictionary
+			var rid: String = str(e.get("id", "")).strip_edges()
+			if rid == "":
+				continue
+			var row: Dictionary = {"id": rid, "rank": clampi(int(e.get("rank", 0)), 0, 999)}
+			if e.has("charges"):
+				row["charges"] = clampi(int(e.get("charges", 0)), 0, 999999)
+			out.append(row)
+	return out
+
+
 func _serialize_item(item: Resource) -> Dictionary:
 	if item == null:
 		return {}
@@ -783,13 +821,16 @@ func _serialize_item(item: Resource) -> Dictionary:
 		data["base_recipe_name"] = item.get_meta("base_recipe_name")
 
 	if item is WeaponData:
-		data["weapon_name"] = item.weapon_name
-		data["might"] = item.might
-		data["hit_bonus"] = item.hit_bonus
-		data["rarity"] = item.rarity
-		data["gold_cost"] = item.get("gold_cost") if item.get("gold_cost") != null else 0
-		data["current_durability"] = item.current_durability
-		data["max_durability"] = item.max_durability
+		var w: WeaponData = item as WeaponData
+		data["weapon_name"] = w.weapon_name
+		data["might"] = w.might
+		data["hit_bonus"] = w.hit_bonus
+		data["rarity"] = w.rarity
+		data["gold_cost"] = w.get("gold_cost") if w.get("gold_cost") != null else 0
+		data["current_durability"] = w.current_durability
+		data["max_durability"] = w.max_durability
+		data["rune_slot_count"] = clampi(w.rune_slot_count, 0, 8)
+		data["socketed_runes"] = _serialize_socketed_runes_for_item(w.socketed_runes)
 
 	return data
 
@@ -817,13 +858,18 @@ func _deserialize_item(d) -> Resource:
 		inst.set_meta("base_recipe_name", d["base_recipe_name"])
 
 	if inst is WeaponData:
-		if d.has("weapon_name"): inst.weapon_name = str(d["weapon_name"])
-		if d.has("might"): inst.might = int(d["might"])
-		if d.has("hit_bonus"): inst.hit_bonus = int(d["hit_bonus"])
-		if d.has("rarity"): inst.rarity = str(d["rarity"])
-		if d.has("gold_cost"): inst.gold_cost = int(d["gold_cost"])
-		if d.has("current_durability"): inst.current_durability = int(d["current_durability"])
-		if d.has("max_durability"): inst.max_durability = int(d["max_durability"])
+		var w: WeaponData = inst as WeaponData
+		if d.has("weapon_name"): w.weapon_name = str(d["weapon_name"])
+		if d.has("might"): w.might = int(d["might"])
+		if d.has("hit_bonus"): w.hit_bonus = int(d["hit_bonus"])
+		if d.has("rarity"): w.rarity = str(d["rarity"])
+		if d.has("gold_cost"): w.gold_cost = int(d["gold_cost"])
+		if d.has("current_durability"): w.current_durability = int(d["current_durability"])
+		if d.has("max_durability"): w.max_durability = int(d["max_durability"])
+		if d.has("rune_slot_count"):
+			w.rune_slot_count = clampi(int(d["rune_slot_count"]), 0, 8)
+		if d.has("socketed_runes"):
+			w.socketed_runes = _deserialize_socketed_runes_for_item(d["socketed_runes"])
 
 	return inst
 

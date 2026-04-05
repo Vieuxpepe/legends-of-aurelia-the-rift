@@ -597,7 +597,7 @@ func _ensure_fate_deck_ui() -> void:
 	if _fate_deck_panel != null and is_instance_valid(_fate_deck_panel):
 		return
 
-	_fate_card_fallback_portrait = _load_texture_safe("res://Assets/Portraits/Portrait Hero 1.png")
+	_fate_card_fallback_portrait = _load_texture_safe("res://Assets/Portraits/FateCardMatte/Portrait Hero 1.png")
 
 	_fate_overlay_layer = CanvasLayer.new()
 	_fate_overlay_layer.name = "FateDeckOverlayLayer"
@@ -1784,14 +1784,18 @@ func _load_texture_safe(path: String) -> Texture2D:
 	var clean_path: String = path.strip_edges()
 	if clean_path == "":
 		return null
+	if ResourceLoader.exists(clean_path):
+		var res: Resource = load(clean_path)
+		if res is Texture2D:
+			return res as Texture2D
 	var from_source: Texture2D = _load_texture_from_source_image(clean_path)
 	if from_source != null:
 		return from_source
 	var from_resource: Texture2D = _load_texture_from_resource_image(clean_path)
 	if from_resource != null:
 		return from_resource
-	var res: Resource = load(clean_path)
-	return res as Texture2D
+	var res_fallback: Resource = load(clean_path)
+	return res_fallback as Texture2D
 
 
 func _load_card_portrait(card: Dictionary) -> Texture2D:

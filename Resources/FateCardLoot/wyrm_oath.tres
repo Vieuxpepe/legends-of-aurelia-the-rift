@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="FateCardLootData" format=3]
 
 [ext_resource type="Script" uid="uid://dwunqturrt86j" path="res://Resources/FateCardLootData.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://Assets/Portraits/Morgra Portrait.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://Assets/Portraits/FateCardMatte/Morgra Portrait.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_script")

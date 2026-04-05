@@ -14,7 +14,7 @@ const FATE_CARD_TEXT_MUTED: Color = Color(0.76, 0.72, 0.66, 1.0)
 const FATE_CARD_BUTTON_BG: Color = Color(0.28, 0.21, 0.13, 0.94)
 const FATE_CARD_WIDTH: float = 282.0
 const FATE_CARD_HEIGHT: float = 320.0
-const FATE_CARD_FALLBACK_PORTRAIT_PATH: String = "res://Assets/Portraits/Portrait Hero 1.png"
+const FATE_CARD_FALLBACK_PORTRAIT_PATH: String = "res://Assets/Portraits/FateCardMatte/Portrait Hero 1.png"
 const FATE_REVEAL_TARGET_SCALE_X: float = 0.78
 const FATE_REVEAL_TARGET_SCALE_Y: float = 0.78
 const FATE_REVEAL_POP_SCALE_X: float = 0.90
@@ -526,6 +526,10 @@ static func _fate_lookup_card_by_id_or_name(card_id: String, card_name: String) 
 
 static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D) -> Texture2D:
 	var path: String = str(card.get("portrait_path", "")).strip_edges()
+	if path != "" and ResourceLoader.exists(path):
+		var tex: Resource = load(path)
+		if tex is Texture2D:
+			return tex as Texture2D
 	if path != "":
 		var source_tex: Texture2D = _fate_load_portrait_texture_from_source(path)
 		if source_tex != null:
@@ -537,6 +541,9 @@ static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D)
 		var fallback_from_tex: Texture2D = _fate_texture_with_dark_matte(fallback_icon)
 		return fallback_from_tex if fallback_from_tex != null else fallback_icon
 	if ResourceLoader.exists(FATE_CARD_FALLBACK_PORTRAIT_PATH):
+		var backup_tex: Resource = load(FATE_CARD_FALLBACK_PORTRAIT_PATH)
+		if backup_tex is Texture2D:
+			return backup_tex as Texture2D
 		var source_backup: Texture2D = _fate_load_portrait_texture_from_source(FATE_CARD_FALLBACK_PORTRAIT_PATH)
 		if source_backup != null:
 			return source_backup

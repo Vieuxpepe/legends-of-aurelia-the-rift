@@ -71,6 +71,11 @@ enum WeaponType {
 @export var max_durability: int = 30
 @export var current_durability: int = 30
 
+## Persistence-only scaffolding: no combat effects in Pass 1. Each entry: id (String), rank (int), optional charges (int).
+@export_category("Runes")
+@export_range(0, 8, 1) var rune_slot_count: int = 0
+@export var socketed_runes: Array[Dictionary] = []
+
 @export_category("Gladiator Arena Shop")
 @export var gladiator_token_cost: int = 0
 @export var required_arena_rank: String = "Bronze"
