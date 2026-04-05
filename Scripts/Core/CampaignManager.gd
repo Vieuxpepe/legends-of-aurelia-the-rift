@@ -754,10 +754,15 @@ func duplicate_item(original: Resource) -> Resource:
 	return dup
 
 
-func _serialize_socketed_runes_for_item(raw: Variant) -> Array:
+func _serialize_socketed_runes_for_item(raw: Variant, max_slots: int) -> Array:
+	var cap: int = clampi(max_slots, 0, 8)
 	var out: Array = []
+	if cap <= 0:
+		return out
 	if raw is Array:
 		for entry in raw as Array:
+			if out.size() >= cap:
+				break
 			if not (entry is Dictionary):
 				continue
 			var e: Dictionary = entry as Dictionary
@@ -774,10 +779,15 @@ func _serialize_socketed_runes_for_item(raw: Variant) -> Array:
 	return out
 
 
-func _deserialize_socketed_runes_for_item(raw: Variant) -> Array[Dictionary]:
+func _deserialize_socketed_runes_for_item(raw: Variant, max_slots: int) -> Array[Dictionary]:
+	var cap: int = clampi(max_slots, 0, 8)
 	var out: Array[Dictionary] = []
+	if cap <= 0:
+		return out
 	if raw is Array:
 		for entry in raw as Array:
+			if out.size() >= cap:
+				break
 			if not (entry is Dictionary):
 				continue
 			var e: Dictionary = entry as Dictionary
@@ -830,7 +840,7 @@ func _serialize_item(item: Resource) -> Dictionary:
 		data["current_durability"] = w.current_durability
 		data["max_durability"] = w.max_durability
 		data["rune_slot_count"] = clampi(w.rune_slot_count, 0, 8)
-		data["socketed_runes"] = _serialize_socketed_runes_for_item(w.socketed_runes)
+		data["socketed_runes"] = _serialize_socketed_runes_for_item(w.socketed_runes, w.rune_slot_count)
 
 	return data
 
@@ -869,7 +879,7 @@ func _deserialize_item(d) -> Resource:
 		if d.has("rune_slot_count"):
 			w.rune_slot_count = clampi(int(d["rune_slot_count"]), 0, 8)
 		if d.has("socketed_runes"):
-			w.socketed_runes = _deserialize_socketed_runes_for_item(d["socketed_runes"])
+			w.socketed_runes = _deserialize_socketed_runes_for_item(d["socketed_runes"], w.rune_slot_count)
 
 	return inst
 
