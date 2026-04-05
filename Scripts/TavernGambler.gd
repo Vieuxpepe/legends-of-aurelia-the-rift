@@ -1839,7 +1839,7 @@ func _image_to_dark_matte_texture(source_img: Image) -> Texture2D:
 	if source_img.get_width() <= 0 or source_img.get_height() <= 0:
 		return null
 	# Composite alpha onto dark matte to prevent white portrait wash/halos.
-	var img: Image = source_img.duplicate()
+	var img := source_img.duplicate() as Image
 	img.convert(Image.FORMAT_RGBA8)
 	var matte := Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
 	matte.fill(Color(0.03, 0.03, 0.03, 1.0))
