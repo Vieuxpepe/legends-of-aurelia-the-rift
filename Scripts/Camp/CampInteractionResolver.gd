@@ -125,6 +125,15 @@ func get_interact_prompt_primary_line(nearest: Node, eligible_pair: Dictionary) 
 	return ""
 
 
+## Presentation helper: true iff `get_interact_prompt_primary_line` would take the pair-listen branch (eligible overhear, single-walker quest line not overriding). Keeps Explore arrival feedback aligned without parsing prompt strings.
+func is_pair_listen_primary_prompt(nearest: Node, eligible_pair: Dictionary) -> bool:
+	if eligible_pair.is_empty():
+		return false
+	if nearest != null and would_single_walker_priority(nearest):
+		return false
+	return true
+
+
 func would_single_walker_priority(nearest: Node) -> bool:
 	if nearest == null or not (nearest is CampRosterWalker):
 		return false

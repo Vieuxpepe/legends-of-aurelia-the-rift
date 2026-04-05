@@ -15,8 +15,10 @@ const FATE_CARD_BUTTON_BG: Color = Color(0.28, 0.21, 0.13, 0.94)
 const FATE_CARD_WIDTH: float = 282.0
 const FATE_CARD_HEIGHT: float = 320.0
 const FATE_CARD_FALLBACK_PORTRAIT_PATH: String = "res://Assets/Portraits/Portrait Hero 1.png"
-const FATE_REVEAL_TARGET_SCALE: float = 0.68
-const FATE_REVEAL_POP_SCALE: float = 0.80
+const FATE_REVEAL_TARGET_SCALE_X: float = 0.78
+const FATE_REVEAL_TARGET_SCALE_Y: float = 0.78
+const FATE_REVEAL_POP_SCALE_X: float = 0.90
+const FATE_REVEAL_POP_SCALE_Y: float = 0.90
 
 static func apply_inventory_panel_spacing(field) -> void:
 	if field.inventory_panel == null:
@@ -245,8 +247,8 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	if loot_card == null:
 		return
 
-	var card_id: String = str(loot_card.card_id).strip_edges()
-	var card: Dictionary = FateCardCatalog.get_card(card_id)
+	var card_id: String = str(loot_card.card_id).strip_edges().to_lower()
+	var card: Dictionary = _fate_lookup_card_by_id_or_name(card_id, str(loot_card.card_name))
 	if card.is_empty():
 		card = {
 			"id": card_id,
@@ -259,6 +261,9 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 		card["name"] = FateCardLootHelpers.get_fate_card_loot_label(loot_card)
 	if str(card.get("rarity", "")).strip_edges() == "":
 		card["rarity"] = "common"
+	if str(card.get("id", "")).strip_edges() != "":
+		card_id = str(card.get("id", "")).strip_edges().to_lower()
+		card["id"] = card_id
 
 	var layer := CanvasLayer.new()
 	layer.layer = 260
@@ -291,7 +296,7 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	flash.offset_top = 0.0
 	flash.offset_right = 0.0
 	flash.offset_bottom = 0.0
-	flash.color = Color(1.0, 0.84, 0.36, 0.0)
+	flash.color = Color(1.0, 0.78, 0.28, 0.0)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(flash)
 
@@ -314,7 +319,8 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(title)
 
-	var card_panel: Control = _build_fate_drop_card_widget(card, loot_card.icon)
+	# Keep reveal portraits sourced from catalog card data to avoid icon overlays/masks.
+	var card_panel: Control = _build_fate_drop_card_widget(card, null)
 	card_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_panel.z_index = 3
 	root.add_child(card_panel)
@@ -324,9 +330,9 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 		card_size = Vector2(FATE_CARD_WIDTH, FATE_CARD_HEIGHT)
 	card_panel.pivot_offset = card_size * 0.5
 	card_panel.position = vp_size * 0.5 - card_size * 0.5 + Vector2(0.0, 18.0)
-	card_panel.scale = Vector2(0.02, FATE_REVEAL_TARGET_SCALE)
+	card_panel.scale = Vector2(0.02, FATE_REVEAL_TARGET_SCALE_Y)
 	card_panel.rotation_degrees = -14.0
-	card_panel.modulate.a = 0.0
+	card_panel.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 	if field.epic_level_up_sound != null and field.epic_level_up_sound.stream != null:
 		field.epic_level_up_sound.play()
@@ -338,26 +344,26 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 
 	var intro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	intro.tween_property(veil, "color:a", 0.76, 0.16)
-	intro.tween_property(card_panel, "modulate:a", 1.0, 0.10)
 	var flash_tw: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	flash_tw.tween_property(flash, "color:a", 0.42, 0.05)
-	flash_tw.tween_property(flash, "color:a", 0.0, 0.12)
+	flash_tw.tween_property(flash, "color:a", 0.22, 0.04)
+	flash_tw.tween_property(flash, "color:a", 0.0, 0.10)
 	await intro.finished
 
 	# Two-step self-turn: first swing through the back face, then settle front-facing.
 	var flip_in: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	flip_in.tween_property(card_panel, "scale:x", -FATE_REVEAL_POP_SCALE, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	flip_in.tween_property(card_panel, "scale:x", -FATE_REVEAL_POP_SCALE_X, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	flip_in.tween_property(card_panel, "scale:y", FATE_REVEAL_POP_SCALE_Y, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	flip_in.tween_property(card_panel, "rotation_degrees", 7.0, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	await flip_in.finished
 
 	var flip_out: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	flip_out.tween_property(card_panel, "scale:x", FATE_REVEAL_POP_SCALE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	flip_out.tween_property(card_panel, "scale:y", FATE_REVEAL_POP_SCALE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	flip_out.tween_property(card_panel, "scale:x", FATE_REVEAL_POP_SCALE_X, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	flip_out.tween_property(card_panel, "scale:y", FATE_REVEAL_POP_SCALE_Y, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	flip_out.tween_property(card_panel, "rotation_degrees", 0.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	await flip_out.finished
 
 	var settle: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	settle.tween_property(card_panel, "scale", Vector2(FATE_REVEAL_TARGET_SCALE, FATE_REVEAL_TARGET_SCALE), 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	settle.tween_property(card_panel, "scale", Vector2(FATE_REVEAL_TARGET_SCALE_X, FATE_REVEAL_TARGET_SCALE_Y), 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	settle.tween_property(card_panel, "rotation_degrees", 0.0, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await settle.finished
 	await field.get_tree().create_timer(0.74, true, false, true).timeout
@@ -373,7 +379,6 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Texture2D) -> Control:
 	var rarity: String = str(card.get("rarity", "common")).to_lower()
 	var rarity_color: Color = FateCardCatalog.get_rarity_color(rarity)
-	var rarity_rank: int = FateCardCatalog.get_rarity_rank(rarity)
 
 	var panel := PanelContainer.new()
 	panel.anchor_left = 0.0
@@ -408,7 +413,8 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	panel.add_child(body)
 
 	var portrait_frame := PanelContainer.new()
-	portrait_frame.custom_minimum_size = Vector2(0.0, 154.0)
+	# Match Fate hand card portrait footprint to keep reveal card proportions consistent.
+	portrait_frame.custom_minimum_size = Vector2(0.0, 174.0)
 	portrait_frame.clip_contents = true
 	portrait_frame.add_theme_stylebox_override(
 		"panel",
@@ -435,20 +441,9 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	portrait.texture = _fate_load_card_portrait(card, fallback_icon)
+	portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait_frame.add_child(portrait)
-
-	var shade := ColorRect.new()
-	shade.anchor_left = 0.0
-	shade.anchor_top = 0.62
-	shade.anchor_right = 1.0
-	shade.anchor_bottom = 1.0
-	shade.offset_left = 0.0
-	shade.offset_top = 0.0
-	shade.offset_right = 0.0
-	shade.offset_bottom = 0.0
-	shade.color = Color(0.0, 0.0, 0.0, 0.25)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait_frame.add_child(shade)
 
 	var rarity_accent := ColorRect.new()
 	rarity_accent.anchor_left = 0.0
@@ -463,14 +458,7 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	rarity_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_child(rarity_accent)
 
-	if rarity_rank >= 2:
-		var particles: CPUParticles2D = _fate_build_rarity_particles_node(rarity)
-		if particles != null:
-			portrait_frame.add_child(particles)
-		var glow: ColorRect = _fate_build_rarity_glow_overlay(rarity_color, rarity_rank)
-		if glow != null:
-			portrait_frame.add_child(glow)
-		_fate_add_rarity_sheen_animation(portrait_frame, rarity_rank)
+	# Keep the reveal portrait clean/readable; avoid extra overlays that can wash it out.
 
 	var chip_row := HBoxContainer.new()
 	chip_row.add_theme_constant_override("separation", 6)
@@ -517,6 +505,20 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	body.add_child(unlock_band)
 
 	return panel
+
+
+static func _fate_lookup_card_by_id_or_name(card_id: String, card_name: String) -> Dictionary:
+	var by_id: Dictionary = FateCardCatalog.get_card(card_id)
+	if not by_id.is_empty():
+		return by_id
+	var wanted_name: String = card_name.strip_edges().to_lower()
+	if wanted_name == "":
+		return {}
+	for card_any in FateCardCatalog.get_all_cards():
+		var c: Dictionary = card_any
+		if str(c.get("name", "")).strip_edges().to_lower() == wanted_name:
+			return c.duplicate(true)
+	return {}
 
 
 static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D) -> Texture2D:
