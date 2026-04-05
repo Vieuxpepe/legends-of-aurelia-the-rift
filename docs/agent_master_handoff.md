@@ -39,6 +39,6 @@
 
 | Agent | Last completed (describe + PR/branch if any) |
 |-------|-----------------------------------------------|
-| Agent 1 | **Pass 1 — weapon rune persistence scaffolding** (save/load `rune_slot_count` + `socketed_runes` via `CampaignManager` item serialization; `duplicate_item` / `make_unique_item`; equipped + camp shop stock restore; co-op wire deserialize uses `duplicate_item`). Commits: `727d1e4`, `4fbcc04`. |
+| Agent 1 | **Pass 1 — weapon rune persistence scaffolding** (save/load `rune_slot_count` + `socketed_runes` via `CampaignManager` item serialization; `duplicate_item` / `make_unique_item`; equipped + camp shop stock restore; co-op item wire deserialize; mock co-op roster snapshot via `_serialize_mock_coop_battle_roster_unit` → `hydrate_mock_coop_battle_roster_snapshot`). Commits: `727d1e4`, `4fbcc04`. |
 | Agent 2 | *— update after merge —* |
 | Agent 3 | *— update after merge —* |

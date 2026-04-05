@@ -1584,14 +1584,7 @@ func _build_fate_card_widget(
 				var particles: CPUParticles2D = _build_rarity_particles_node(rarity, preview_mode)
 				if particles != null:
 					portrait_frame.add_child(particles)
-				var glow: ColorRect = _build_rarity_glow_overlay(rarity_color, rarity_rank, preview_mode)
-				if glow != null:
-					portrait_frame.add_child(glow)
 			_add_rarity_sheen_animation(portrait_frame, rarity_rank, preview_mode)
-		elif strip_has_card and rarity_rank >= 2:
-			var glow_mini: ColorRect = _build_rarity_glow_overlay(rarity_color, rarity_rank, false)
-			if glow_mini != null:
-				portrait_frame.add_child(glow_mini)
 		if not is_active_strip_mini and not owned:
 			var lock_veil: ColorRect = ColorRect.new()
 			lock_veil.anchor_left = 0.0
@@ -2264,10 +2257,8 @@ func _build_rarity_glow_overlay(rarity_color: Color, rarity_rank: int, preview_m
 	glow.offset_top = 1.0
 	glow.offset_right = -1.0
 	glow.offset_bottom = -1.0
-	var alpha: float = 0.05 + (0.02 * float(rarity_rank))
-	if preview_mode:
-		alpha += 0.02
-	glow.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, clampf(alpha, 0.04, 0.16))
+	# Keep rarity color off the portrait art itself; border/accent already carry the color identity.
+	glow.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.0)
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return glow
 

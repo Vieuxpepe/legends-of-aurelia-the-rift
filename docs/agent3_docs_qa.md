@@ -9,6 +9,7 @@
 ## Docs created/updated (log — maintain)
 
 - Pass 1 rune persistence: `agent_master_handoff.md` (Agent 1 completed row), `agent3_docs_qa.md`, `camp_regression_checklist.md` (rune weapon regression section).
+- Rune QA: `duplicate_item` row cites co-op wire deserialize; dedicated row for `hydrate_mock_coop_battle_roster_snapshot`; handoff cites mock co-op serialize/hydrate + wire.
 
 ## Touched this sprint
 

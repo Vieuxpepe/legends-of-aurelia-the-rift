@@ -62,10 +62,10 @@ Run in a **debug** build when you need F9 diagnostics or `CampExplore` debug pri
 Use a **rune-capable** `WeaponData` (non-zero `rune_slot_count`, at least one socketed rune). Exercise only **Pass 1** surfaces below.
 
 - [ ] **Save / load:** After save + load, weapon still has correct `rune_slot_count` and `socketed_runes` (count respected; no truncation beyond slot cap — see `CampaignManager._serialize_socketed_runes_for_item` / deserialize).
-- [ ] **`duplicate_item` / `make_unique_item`:** Duplicated weapon keeps rune socket state independent of the source (no shared mutation when editing one copy).
+- [ ] **`duplicate_item` / `make_unique_item`:** Duplicated weapon keeps rune socket state independent of the source (no shared mutation when editing one copy). Spot-check co-op item wire rebuild (`BattleFieldCoopHelpers.coop_wire_deserialize_items` + `duplicate_item`) for `WeaponData`.
 - [ ] **Equipped weapon restore:** Unit with runed weapon equipped: after load, equipped weapon matches pre-save rune state (path goes through `make_unique_item` / weapon hydrate in `CampaignManager` load).
 - [ ] **Camp shop stock restore:** If shop stock includes a runed weapon instance, after load the same item (or equivalent deserialized instance) retains sockets/runes (`camp_shop_stock` load path).
-- [ ] **Co-op wire / mock handoff:** Items rebuilt from co-op wire data (e.g. `BattleFieldCoopHelpers.coop_wire_deserialize_items` string-path branch using `duplicate_item`) preserve rune fields when the template loads as `WeaponData`.
+- [ ] **Mock co-op roster snapshot hydrate:** `CampaignManager.build_mock_coop_battle_roster_snapshot` → `hydrate_mock_coop_battle_roster_snapshot`: runed weapons in unit `inventory` / `equipped_weapon` match pre-snapshot `rune_slot_count` + `socketed_runes` (`_serialize_mock_coop_battle_roster_unit` / `_deserialize_item`).
 
 ## Injury / fatigue / visit theme
 

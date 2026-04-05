@@ -659,8 +659,8 @@ static func _fate_build_rarity_glow_overlay(rarity_color: Color, rarity_rank: in
 	glow.offset_top = 1.0
 	glow.offset_right = -1.0
 	glow.offset_bottom = -1.0
-	var alpha: float = clampf(0.05 + (0.02 * float(rarity_rank)), 0.04, 0.16)
-	glow.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, alpha)
+	# Keep rarity color off the portrait art itself; border/accent already carry the color identity.
+	glow.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.0)
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return glow
 
