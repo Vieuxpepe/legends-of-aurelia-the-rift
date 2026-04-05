@@ -356,7 +356,7 @@ func _interact_arrival_check() -> void:
 	if cur_id == _interact_prev_nearest_id:
 		return
 	_interact_prev_nearest_id = cur_id
-	_fire_interact_arrival_feedback(nearest)
+	_fire_interact_arrival_feedback(nearest, prompt_line)
 
 
 func _kill_player_pulse_tween() -> void:
@@ -365,8 +365,10 @@ func _kill_player_pulse_tween() -> void:
 	_player_pulse_tween = null
 
 
-func _fire_interact_arrival_feedback(walker: Node) -> void:
-	if walker is CampRosterWalker:
+func _fire_interact_arrival_feedback(walker: Node, prompt_line: String) -> void:
+	# Pair listen uses nearest only for geometry; marker ping on a random nearest walker is misleading.
+	var pair_listen_prompt: bool = prompt_line.find("Listen") >= 0
+	if walker is CampRosterWalker and not pair_listen_prompt:
 		(walker as CampRosterWalker).play_interact_proximity_ping()
 	if _player_sprite != null:
 		_kill_player_pulse_tween()

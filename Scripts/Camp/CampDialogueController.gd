@@ -145,6 +145,9 @@ func refresh_dialogue_action_emphasis() -> void:
 	_reset_dialogue_action_visuals()
 	if dialogue_panel == null or not dialogue_panel.visible:
 		return
+	# Avoid pulsing actions while the panel is closing (dialogue_active cleared before fade-out finishes).
+	if not dialogue_active:
+		return
 	var primary: Button = _pick_primary_action_button()
 	if primary == null:
 		return
