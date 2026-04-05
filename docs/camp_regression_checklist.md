@@ -26,6 +26,7 @@ Run in a **debug** build when you need F9 diagnostics or `CampExplore` debug pri
 ## Camp requests
 
 - [ ] **Offer**: unit with `offer` marker (or `offer_personal`) shows offer panel; **Accept** sets `camp_request_status` active and clears offer marker; **Decline** sets `camp_request_unit_next_eligible_level` and recent giver list.
+- [ ] While `camp_request_status` is `active`, `ready_to_turn_in`, or `failed`, stale `offer_giver_name` / `pending_offer` must not surface: no **E Request offered**, no `request_offer` resolution, no unrelated offer panel (`CampInteractionResolver` gating).
 - [ ] **Item delivery**: progress line shows counts; when satisfied, giver promotes to turn-in; **Turn in** removes items, awards gold/affinity, clears request state.
 - [ ] **Talk-to-unit**: speaking to target at progress 0 advances to ready_to_turn_in (or branching if `branching_check`); branching success/fail updates status and markers.
 - [ ] **Failed** request: giver shows failure reaction; state clears; relationship penalty paths execute as authored.

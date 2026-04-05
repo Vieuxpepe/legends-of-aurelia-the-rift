@@ -39,6 +39,6 @@
 
 | Agent | Last completed (describe + PR/branch if any) |
 |-------|-----------------------------------------------|
-| Agent 1 | *— update after merge —* |
+| Agent 1 | Blocked stale request-offer surfacing while `camp_request_status` is `active`, `ready_to_turn_in`, or `failed`. `CampInteractionResolver` offer gating aligned across `peek_walker_interaction_kind`, `would_single_walker_priority`, and `open_dialogue`. |
 | Agent 2 | *— update after merge —* |
 | Agent 3 | *— update after merge —* |

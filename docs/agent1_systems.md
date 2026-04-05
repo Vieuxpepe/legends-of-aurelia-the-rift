@@ -13,7 +13,7 @@
 
 ## Current task
 
-*— fill in per sprint —*
+Post-merge: camp interaction / request regression covered via `docs/camp_regression_checklist.md` (including stale-offer gating when request status is active / ready_to_turn_in / failed).
 
 ## Blockers
 
@@ -21,7 +21,7 @@
 
 ## Touched this sprint
 
-*— none —*
+- `Scripts/Camp/CampInteractionResolver.gd` — blocked stale `offer_giver_name` / `pending_offer` from surfacing during `active` / `ready_to_turn_in` / `failed`; aligned peek, `would_single_walker_priority`, and `open_dialogue` so prompt priority and dialogue open match.
 
 ## Merge risks
 
