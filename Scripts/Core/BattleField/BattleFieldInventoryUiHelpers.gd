@@ -296,7 +296,7 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	flash.offset_top = 0.0
 	flash.offset_right = 0.0
 	flash.offset_bottom = 0.0
-	flash.color = Color(1.0, 0.78, 0.28, 0.0)
+	flash.color = Color(1.0, 0.68, 0.18, 0.0)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(flash)
 
@@ -345,7 +345,7 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	var intro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	intro.tween_property(veil, "color:a", 0.76, 0.16)
 	var flash_tw: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	flash_tw.tween_property(flash, "color:a", 0.22, 0.04)
+	flash_tw.tween_property(flash, "color:a", 0.08, 0.035)
 	flash_tw.tween_property(flash, "color:a", 0.0, 0.10)
 	await intro.finished
 

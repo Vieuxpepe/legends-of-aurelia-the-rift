@@ -24,6 +24,10 @@ const INTERACT_PROMPT_SLIDE_PX: float = 10.0
 const INTERACT_PROMPT_FADE_IN_SEC: float = 0.13
 const INTERACT_PROMPT_SLIDE_SEC: float = 0.15
 const INTERACT_PROMPT_FADE_OUT_SEC: float = 0.11
+const INTERACT_FOCUS_CLUSTER_RADIUS: float = 210.0
+const PAIR_LISTEN_LINE_ALPHA_BASE: float = 0.18
+const BUBBLE_INTERACT_PROMPT_NUDGE_PX: float = 38.0
+const RUMOR_PROMPT_SEPARATION_PX: float = 48.0
 
 var _camp_music_tracks: Array[AudioStream] = []
 
@@ -82,6 +86,11 @@ var _interact_prompt_tween: Tween = null
 var _interact_prompt_prev_nonempty: bool = false
 var _interact_prompt_prev_line: String = ""
 
+var _pair_listen_focus_line: Line2D = null
+var _pair_listen_line_phase: float = 0.0
+var _rumor_label_base_offset_top: float = 0.0
+var _rumor_label_base_offset_bottom: float = 0.0
+
 
 func _ready() -> void:
 	_ctx = CampContext.new()
@@ -137,6 +146,9 @@ func _ready() -> void:
 	_requests.validate_camp_request_roster()
 	_requests.update_request_markers()
 	_dialogue.setup_branching_choice_container()
+	if rumor_label:
+		_rumor_label_base_offset_top = rumor_label.offset_top
+		_rumor_label_base_offset_bottom = rumor_label.offset_bottom
 	if interact_prompt:
 		_interact_prompt_base_offset_top = interact_prompt.offset_top
 		interact_prompt.visible = false
@@ -161,6 +173,19 @@ func _ready() -> void:
 	_dialogue.bind_pacing_ambient(_ambient)
 	_ambient.set_debug_pacing(debug_camp_pacing)
 	_ambient.prime_attempt_timers_after_ready(now_time)
+	_setup_pair_listen_focus_line()
+
+
+func _setup_pair_listen_focus_line() -> void:
+	_pair_listen_focus_line = Line2D.new()
+	_pair_listen_focus_line.name = "PairListenFocusLine"
+	_pair_listen_focus_line.width = 2.2
+	_pair_listen_focus_line.default_color = Color(0.78, 0.71, 0.54, PAIR_LISTEN_LINE_ALPHA_BASE)
+	_pair_listen_focus_line.z_index = -3
+	_pair_listen_focus_line.visible = false
+	_pair_listen_focus_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	_pair_listen_focus_line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	add_child(_pair_listen_focus_line)
 
 
 func _pick_random_time_block() -> String:
@@ -280,13 +305,21 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	var bubble_nudge: float = 0.0
+	if interact_prompt != null and interact_prompt.visible:
+		bubble_nudge = BUBBLE_INTERACT_PROMPT_NUDGE_PX
+	_bubble_ctrl.set_interact_prompt_vertical_nudge(bubble_nudge)
 	_bubble_ctrl.update_ambient_bubble_position(delta)
 	if _dialogue.dialogue_active:
 		_bubble_ctrl.hide_ambient_bubble()
+		_clear_interact_focus_presentation()
+		_apply_rumor_prompt_vertical_separation(false)
 		return
 	_handle_movement(delta)
 	_interact_arrival_check()
 	_update_interact_prompt()
+	_update_interact_focus_presentation(delta)
+	_apply_rumor_prompt_vertical_separation(true)
 	_ambient.update_rumor(delta)
 	_apply_camp_atmosphere_idle(delta)
 
@@ -376,6 +409,77 @@ func _fire_interact_arrival_feedback(walker: Node, eligible_pair: Dictionary) ->
 		_player_pulse_tween = create_tween()
 		_player_pulse_tween.tween_property(_player_sprite, "scale", bs * 1.07, 0.07)
 		_player_pulse_tween.tween_property(_player_sprite, "scale", bs, 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _clear_interact_focus_presentation() -> void:
+	for w in _ctx.walker_nodes:
+		if w is CampRosterWalker:
+			(w as CampRosterWalker).set_interact_focus_presentation(0)
+	if _pair_listen_focus_line != null:
+		_pair_listen_focus_line.visible = false
+
+
+func _apply_rumor_prompt_vertical_separation(active: bool) -> void:
+	if rumor_label == null or interact_prompt == null:
+		return
+	if active and rumor_label.visible and interact_prompt.visible:
+		rumor_label.offset_top = _rumor_label_base_offset_top - RUMOR_PROMPT_SEPARATION_PX
+		rumor_label.offset_bottom = _rumor_label_base_offset_bottom - RUMOR_PROMPT_SEPARATION_PX
+	else:
+		rumor_label.offset_top = _rumor_label_base_offset_top
+		rumor_label.offset_bottom = _rumor_label_base_offset_bottom
+
+
+func _update_interact_focus_presentation(delta: float) -> void:
+	var cluster_sq: float = INTERACT_FOCUS_CLUSTER_RADIUS * INTERACT_FOCUS_CLUSTER_RADIUS
+	if player == null:
+		_clear_interact_focus_presentation()
+		return
+	var nearest: Node = _get_nearest_walker_in_range()
+	var eligible_pair: Dictionary = _dialogue.get_eligible_pair_scene()
+	var prompt_line: String = _interactions.get_interact_prompt_primary_line(nearest, eligible_pair)
+	if prompt_line == "":
+		_clear_interact_focus_presentation()
+		return
+	var pair_listen: bool = _interactions.is_pair_listen_primary_prompt(nearest, eligible_pair)
+	var p_pos: Vector2 = player.global_position
+	_pair_listen_line_phase += delta
+	if pair_listen:
+		var wa: Node = eligible_pair.get("walker_a", null)
+		var wb: Node = eligible_pair.get("walker_b", null)
+		if _pair_listen_focus_line != null and wa != null and wb != null and is_instance_valid(wa) and is_instance_valid(wb):
+			_pair_listen_focus_line.visible = true
+			var p0: Vector2 = (wa as Node2D).global_position
+			var p1: Vector2 = (wb as Node2D).global_position
+			_pair_listen_focus_line.points = PackedVector2Array([to_local(p0), to_local(p1)])
+			var pulse: float = 0.04 * sin(_pair_listen_line_phase * 2.1)
+			_pair_listen_focus_line.default_color = Color(0.78, 0.71, 0.54, PAIR_LISTEN_LINE_ALPHA_BASE + pulse)
+		else:
+			if _pair_listen_focus_line != null:
+				_pair_listen_focus_line.visible = false
+	else:
+		if _pair_listen_focus_line != null:
+			_pair_listen_focus_line.visible = false
+	for w in _ctx.walker_nodes:
+		if not is_instance_valid(w) or not (w is CampRosterWalker):
+			continue
+		var rw: CampRosterWalker = w as CampRosterWalker
+		var d_sq: float = p_pos.distance_squared_to(rw.global_position)
+		if d_sq > cluster_sq:
+			rw.set_interact_focus_presentation(0)
+			continue
+		if pair_listen:
+			var w_a: Node = eligible_pair.get("walker_a", null)
+			var w_b: Node = eligible_pair.get("walker_b", null)
+			if rw == w_a or rw == w_b:
+				rw.set_interact_focus_presentation(3)
+			else:
+				rw.set_interact_focus_presentation(1)
+		else:
+			if nearest != null and rw == nearest:
+				rw.set_interact_focus_presentation(2)
+			else:
+				rw.set_interact_focus_presentation(1)
 
 
 func _apply_camp_atmosphere_idle(delta: float) -> void:

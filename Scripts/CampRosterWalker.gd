@@ -96,6 +96,9 @@ const MARKER_BOB_PX: float = 2.8
 const MARKER_PHASE_SPEED: float = 3.2
 const PROXIMITY_PING_DECAY: float = 2.75
 
+## Presentation-only: Explore Camp interact focus (0=neutral, 1=soften non-primary nearby, 2=nearest primary, 3=pair overhear participants).
+var _interact_focus_tier: int = 0
+
 const SOCIAL_STATE_FREE := 0
 const SOCIAL_STATE_APPROACH := 1
 const SOCIAL_STATE_SETTLED := 2
@@ -131,6 +134,24 @@ func set_camp_context(ctx: CampContext) -> void:
 ## One-shot marker emphasis for proximity feedback; does not change marker symbols or request state.
 func play_interact_proximity_ping() -> void:
 	_proximity_ping = 1.0
+
+
+func set_interact_focus_presentation(tier: int) -> void:
+	_interact_focus_tier = clampi(tier, 0, 3)
+
+
+func _apply_interact_focus_sprite_modulate() -> void:
+	if sprite == null:
+		return
+	match _interact_focus_tier:
+		1:
+			sprite.modulate = Color(0.9, 0.9, 0.93, 1.0)
+		2:
+			sprite.modulate = Color(1.04, 1.04, 1.06, 1.0)
+		3:
+			sprite.modulate = Color(1.03, 1.02, 1.05, 1.0)
+		_:
+			sprite.modulate = Color(1, 1, 1, 1.0)
 
 
 func set_camp_visit_theme(theme: String) -> void:
@@ -219,6 +240,7 @@ func start_behavior() -> void:
 
 func _process(_delta: float) -> void:
 	_proximity_ping = move_toward(_proximity_ping, 0.0, _delta * PROXIMITY_PING_DECAY)
+	_apply_interact_focus_sprite_modulate()
 	if marker_label != null:
 		var marker_txt: String = ""
 		var marker_on: bool = false
@@ -247,12 +269,24 @@ func _process(_delta: float) -> void:
 			var ping: float = _proximity_ping
 			var bob: float = sin(_marker_anim_phase) * MARKER_BOB_PX + ping * 2.2 * sin(_marker_anim_phase * 2.4)
 			var glint: float = 0.93 + 0.07 * sin(_marker_anim_phase * 1.85) + ping * 0.11
+			var focus_mul: float = 1.0
+			var focus_a: float = 1.0
+			match _interact_focus_tier:
+				1:
+					focus_mul = 0.8
+					focus_a = 0.82
+				2:
+					focus_mul = 1.1
+				3:
+					focus_mul = 1.07
+				_:
+					pass
 			marker_label.offset_top = _marker_rest_offset_top + bob
 			marker_label.modulate = Color(
-				clampf(glint, 0.0, 1.0),
-				clampf(glint, 0.0, 1.0),
-				clampf(glint * 0.96, 0.0, 1.0),
-				1.0
+				clampf(glint * focus_mul, 0.0, 1.0),
+				clampf(glint * focus_mul, 0.0, 1.0),
+				clampf(glint * 0.96 * focus_mul, 0.0, 1.0),
+				focus_a
 			)
 		else:
 			marker_label.visible = false
