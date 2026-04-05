@@ -1903,23 +1903,7 @@ func execute_ai_turn(my_container: Node) -> void:
 			continue
 		active_unit = unit
 
-		var p: Dictionary = _plan_unit_turn(unit)
-		if p["hold"]:
-			var hold_unit: Node2D = p["unit"]
-			if is_instance_valid(hold_unit) and hold_unit.has_method("finish_turn"):
-				hold_unit.finish_turn()
-				_sync_host_authority_enemy_finish_turn(hold_unit)
-			battlefield.rebuild_grid()
-			await _await_ai_delay(0.2)
-			continue
-
-		await _execute_unit_post_move_action(p)
-
-		if not is_instance_valid(battlefield):
-			return
-
-		battlefield.rebuild_grid()
-		await _await_ai_delay(0.2)
+		var plan: Dictionary = get_best_plan_for(unit)
 		if plan.is_empty():
 			if unit.has_method("finish_turn"):
 				unit.finish_turn()

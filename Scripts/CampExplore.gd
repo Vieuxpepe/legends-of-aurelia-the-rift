@@ -90,6 +90,8 @@ var _pair_listen_focus_line: Line2D = null
 var _pair_listen_line_phase: float = 0.0
 var _rumor_label_base_offset_top: float = 0.0
 var _rumor_label_base_offset_bottom: float = 0.0
+var _prev_dialogue_active_for_ambient: bool = false
+var _had_ambient_ui_last_frame: bool = false
 
 
 func _ready() -> void:
@@ -312,16 +314,30 @@ func _process(delta: float) -> void:
 	_bubble_ctrl.update_ambient_bubble_position(delta)
 	if _dialogue.dialogue_active:
 		_bubble_ctrl.hide_ambient_bubble()
+		if not _prev_dialogue_active_for_ambient:
+			_ambient.clear_ambient_readability_for_dialogue_interrupt()
+		_prev_dialogue_active_for_ambient = true
 		_clear_interact_focus_presentation()
 		_apply_rumor_prompt_vertical_separation(false)
 		return
+	_prev_dialogue_active_for_ambient = false
 	_handle_movement(delta)
 	_interact_arrival_check()
 	_update_interact_prompt()
 	_update_interact_focus_presentation(delta)
 	_apply_rumor_prompt_vertical_separation(true)
 	_ambient.update_rumor(delta)
+	var ambient_ui_now: bool = _ambient_bubble_ui_visible()
+	if _had_ambient_ui_last_frame and not ambient_ui_now:
+		_ambient.clear_ambient_readability_for_dialogue_interrupt()
+	_had_ambient_ui_last_frame = ambient_ui_now
 	_apply_camp_atmosphere_idle(delta)
+
+
+func _ambient_bubble_ui_visible() -> bool:
+	var b: Control = _bubble_ctrl.ambient_speech_bubble
+	var r: Control = _bubble_ctrl.rumor_label
+	return (b != null and b.visible) or (r != null and r.visible)
 
 
 func _handle_movement(delta: float) -> void:

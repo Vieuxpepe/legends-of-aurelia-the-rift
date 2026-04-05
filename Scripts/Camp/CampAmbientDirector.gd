@@ -41,6 +41,7 @@ const SPONTANEOUS_SOCIAL_OBSERVER_RADIUS: float = 132.0
 const SPONTANEOUS_SOCIAL_MAX_OBSERVERS: int = 2
 const CHATTER_SOCIAL_PAIR_OFFSET: float = 16.0
 const SPONTANEOUS_SOCIAL_PAIR_OFFSET: float = 18.0
+const AMBIENT_READABILITY_SOFTEN_RADIUS: float = 195.0
 const AMBIENT_RECENT_SPEAKER_MAX: int = 4
 const AMBIENT_RECENT_EVENT_MAX: int = 6
 const AMBIENT_RECENT_SPEAKER_PENALTY: float = 1.1
@@ -181,6 +182,7 @@ func reset_visit_state() -> void:
 	_release_spontaneous_social_anchor_claims()
 	_release_chatter_anchor_claims()
 	_release_post_social_hold()
+	_clear_all_ambient_readability_tiers()
 	_bubble.hide_ambient_bubble()
 
 
@@ -200,6 +202,74 @@ func _release_chatter_anchor_claims() -> void:
 
 func _player_node() -> Node2D:
 	return _explore.get("player") as Node2D
+
+
+func clear_ambient_readability_for_dialogue_interrupt() -> void:
+	_clear_all_ambient_readability_tiers()
+
+
+func _clear_all_ambient_readability_tiers() -> void:
+	for w in _ctx.walker_nodes:
+		if w is CampRosterWalker:
+			(w as CampRosterWalker).clear_ambient_readability_presentation()
+
+
+func _soften_walkers_near_player_excluding(excluded: Array) -> void:
+	var player: Node2D = _player_node()
+	if player == null:
+		return
+	var r_sq: float = AMBIENT_READABILITY_SOFTEN_RADIUS * AMBIENT_READABILITY_SOFTEN_RADIUS
+	var ex_ids: Dictionary = {}
+	for x in excluded:
+		if x is CampRosterWalker and is_instance_valid(x):
+			ex_ids[(x as CampRosterWalker).get_instance_id()] = true
+	for w in _ctx.walker_nodes:
+		if not (w is CampRosterWalker) or not is_instance_valid(w):
+			continue
+		var rw: CampRosterWalker = w as CampRosterWalker
+		if ex_ids.has(rw.get_instance_id()):
+			continue
+		if player.global_position.distance_squared_to(rw.global_position) <= r_sq:
+			rw.set_ambient_readability_tier(3)
+
+
+func _apply_ambient_bubble_readability_pair(speaker: CampRosterWalker, partner: CampRosterWalker) -> void:
+	_clear_all_ambient_readability_tiers()
+	var ex: Array = []
+	if speaker != null and is_instance_valid(speaker):
+		speaker.set_ambient_readability_tier(1)
+		ex.append(speaker)
+	if partner != null and is_instance_valid(partner):
+		partner.set_ambient_readability_tier(2)
+		ex.append(partner)
+	_soften_walkers_near_player_excluding(ex)
+
+
+func _apply_ambient_bubble_readability_group(speaker: CampRosterWalker, participants: Array) -> void:
+	_clear_all_ambient_readability_tiers()
+	var ex: Array = []
+	for p in participants:
+		if not (p is CampRosterWalker) or not is_instance_valid(p):
+			continue
+		var w: CampRosterWalker = p as CampRosterWalker
+		if speaker != null and w == speaker:
+			w.set_ambient_readability_tier(1)
+		else:
+			w.set_ambient_readability_tier(2)
+		ex.append(w)
+	_soften_walkers_near_player_excluding(ex)
+
+
+func _apply_ambient_bubble_readability_single(speaker: CampRosterWalker, listener: CampRosterWalker = null) -> void:
+	_clear_all_ambient_readability_tiers()
+	var ex: Array = []
+	if speaker != null and is_instance_valid(speaker):
+		speaker.set_ambient_readability_tier(1)
+		ex.append(speaker)
+	if listener != null and is_instance_valid(listener):
+		listener.set_ambient_readability_tier(2)
+		ex.append(listener)
+	_soften_walkers_near_player_excluding(ex)
 
 
 func prime_attempt_timers_after_ready(now_time: float) -> void:
@@ -693,6 +763,7 @@ func update_rumor(_delta: float) -> void:
 	var fallback_label_active: bool = _bubble.rumor_label != null and _bubble.rumor_label.visible
 	if bubble_active or fallback_label_active:
 		if now >= _rumor_hide_at:
+			_clear_all_ambient_readability_tiers()
 			_bubble.hide_ambient_bubble()
 			_rumor_cooldown_until = now + RUMOR_COOLDOWN
 		return
@@ -722,6 +793,9 @@ func update_rumor(_delta: float) -> void:
 		var micro_speaker_walker: CampRosterWalker = _ctx.get_walker_by_name(mb_speaker)
 		_record_ambient_history("micro", micro_bark, mb_speaker)
 		_bubble.show_ambient_bubble(mb_text, micro_speaker_walker, mb_speaker)
+		var mb_listen: String = str(micro_bark.get("listener", "")).strip_edges()
+		var micro_listener_walker: CampRosterWalker = _ctx.get_walker_by_name(mb_listen) if mb_listen != "" else null
+		_apply_ambient_bubble_readability_single(micro_speaker_walker, micro_listener_walker)
 		var mid: String = str(micro_bark.get("id", "")).strip_edges()
 		if mid != "" and micro_bark.get("once_per_visit", false):
 			_micro_bark_shown_this_visit[mid] = true
@@ -740,9 +814,12 @@ func update_rumor(_delta: float) -> void:
 	if r_text == "":
 		return
 	var r_speaker: String = str(rumor.get("speaker", "")).strip_edges()
+	var r_listen: String = str(rumor.get("listener", "")).strip_edges()
 	var rumor_speaker_walker: CampRosterWalker = _ctx.get_walker_by_name(r_speaker)
+	var r_listen_w: CampRosterWalker = _ctx.get_walker_by_name(r_listen) if r_listen != "" else null
 	_record_ambient_history("rumor", rumor, r_speaker)
 	_bubble.show_ambient_bubble(r_text, rumor_speaker_walker, r_speaker)
+	_apply_ambient_bubble_readability_single(rumor_speaker_walker, r_listen_w)
 	var rid: String = str(rumor.get("id", "")).strip_edges()
 	if rid != "" and rumor.get("once_per_visit", false):
 		_rumor_shown_this_visit[rid] = true
@@ -751,7 +828,6 @@ func update_rumor(_delta: float) -> void:
 	_debug_minor_antispam_log_chosen("rumor", rumor, r_speaker, pre_r_pen, now)
 	_register_minor_antispam_after_play("rumor", rumor, r_speaker, now)
 	_last_minor_shown_label = "rumor:%s" % rid if rid != "" else "rumor:anon"
-	var r_listen: String = str(rumor.get("listener", "")).strip_edges()
 	if r_listen != "":
 		_bump_pair_soft_weight(_ctx.make_pair_key(r_speaker, r_listen))
 	_rumor_hide_at = now + _get_dynamic_ambient_duration(r_text, 1, RUMOR_DISPLAY_DURATION)
@@ -1016,6 +1092,7 @@ func _show_ambient_chatter_line() -> void:
 			other_walker.begin_listening()
 	_record_ambient_history("chatter", _chatter_entry, speaker, _chatter_index == 0)
 	_bubble.show_ambient_bubble(text, speaker_walker, speaker)
+	_apply_ambient_bubble_readability_pair(speaker_walker, other_walker)
 
 func _advance_ambient_chatter() -> void:
 	_chatter_index += 1
@@ -1054,6 +1131,7 @@ func _end_ambient_chatter() -> void:
 	_chatter_next_attempt_time = now + _pacing_spaced_interval(CHATTER_ATTEMPT_INTERVAL_MIN, CHATTER_ATTEMPT_INTERVAL_MAX, now)
 
 func _clear_chatter_speaking_state() -> void:
+	_clear_all_ambient_readability_tiers()
 	if _chatter_walker_a is CampRosterWalker:
 		var wa: CampRosterWalker = _chatter_walker_a as CampRosterWalker
 		wa.end_speaking()
@@ -1740,6 +1818,7 @@ func _get_social_participant_by_name(participants: Array, unit_name: String) -> 
 	return null
 
 func _clear_spontaneous_social_speaking_state() -> void:
+	_clear_all_ambient_readability_tiers()
 	for p in _spontaneous_social_participants:
 		if not (p is CampRosterWalker) or not is_instance_valid(p):
 			continue
@@ -1774,6 +1853,7 @@ func _show_spontaneous_social_line() -> void:
 			walker.begin_listening()
 	_record_ambient_history("social", _spontaneous_social_entry, speaker_name, _spontaneous_social_index == 0)
 	_bubble.show_ambient_bubble(text, speaker_walker, speaker_name)
+	_apply_ambient_bubble_readability_group(speaker_walker, _spontaneous_social_participants)
 	var now: float = Time.get_ticks_msec() / 1000.0
 	_spontaneous_social_current_until = now + _get_dynamic_ambient_duration(text, _spontaneous_social_participants.size(), float(_spontaneous_social_entry.get("duration", SPONTANEOUS_SOCIAL_LINE_DURATION)))
 

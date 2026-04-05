@@ -98,6 +98,8 @@ const PROXIMITY_PING_DECAY: float = 2.75
 
 ## Presentation-only: Explore Camp interact focus (0=neutral, 1=soften non-primary nearby, 2=nearest primary, 3=pair overhear participants).
 var _interact_focus_tier: int = 0
+## Presentation-only: ambient bubble / chatter (0=off, 1=speaker, 2=listener/partner, 3=nearby soften). Composes with interact focus on sprite only.
+var _ambient_readability_tier: int = 0
 
 const SOCIAL_STATE_FREE := 0
 const SOCIAL_STATE_APPROACH := 1
@@ -140,18 +142,38 @@ func set_interact_focus_presentation(tier: int) -> void:
 	_interact_focus_tier = clampi(tier, 0, 3)
 
 
+func set_ambient_readability_tier(tier: int) -> void:
+	_ambient_readability_tier = clampi(tier, 0, 3)
+
+
+func clear_ambient_readability_presentation() -> void:
+	_ambient_readability_tier = 0
+
+
 func _apply_interact_focus_sprite_modulate() -> void:
 	if sprite == null:
 		return
+	var fc: Color = Color(1, 1, 1, 1)
 	match _interact_focus_tier:
 		1:
-			sprite.modulate = Color(0.9, 0.9, 0.93, 1.0)
+			fc = Color(0.9, 0.9, 0.93, 1.0)
 		2:
-			sprite.modulate = Color(1.04, 1.04, 1.06, 1.0)
+			fc = Color(1.04, 1.04, 1.06, 1.0)
 		3:
-			sprite.modulate = Color(1.03, 1.02, 1.05, 1.0)
+			fc = Color(1.03, 1.02, 1.05, 1.0)
 		_:
-			sprite.modulate = Color(1, 1, 1, 1.0)
+			pass
+	var ac: Color = Color(1, 1, 1, 1)
+	match _ambient_readability_tier:
+		1:
+			ac = Color(1.06, 1.045, 1.03, 1.0)
+		2:
+			ac = Color(0.94, 0.95, 0.98, 1.0)
+		3:
+			ac = Color(0.91, 0.91, 0.94, 0.96)
+		_:
+			pass
+	sprite.modulate = Color(fc.r * ac.r, fc.g * ac.g, fc.b * ac.b, fc.a * ac.a)
 
 
 func set_camp_visit_theme(theme: String) -> void:

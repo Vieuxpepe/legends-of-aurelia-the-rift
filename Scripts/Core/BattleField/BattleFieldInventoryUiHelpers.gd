@@ -526,17 +526,69 @@ static func _fate_lookup_card_by_id_or_name(card_id: String, card_name: String) 
 
 static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D) -> Texture2D:
 	var path: String = str(card.get("portrait_path", "")).strip_edges()
-	if path != "" and ResourceLoader.exists(path):
-		var tex: Resource = load(path)
-		if tex is Texture2D:
-			return tex as Texture2D
+	if path != "":
+		var source_tex: Texture2D = _fate_load_portrait_texture_from_source(path)
+		if source_tex != null:
+			return source_tex
+		var res_tex: Texture2D = _fate_load_portrait_texture_from_resource(path)
+		if res_tex != null:
+			return res_tex
 	if fallback_icon != null:
-		return fallback_icon
+		var fallback_from_tex: Texture2D = _fate_texture_with_dark_matte(fallback_icon)
+		return fallback_from_tex if fallback_from_tex != null else fallback_icon
 	if ResourceLoader.exists(FATE_CARD_FALLBACK_PORTRAIT_PATH):
-		var backup: Resource = load(FATE_CARD_FALLBACK_PORTRAIT_PATH)
-		if backup is Texture2D:
-			return backup as Texture2D
+		var source_backup: Texture2D = _fate_load_portrait_texture_from_source(FATE_CARD_FALLBACK_PORTRAIT_PATH)
+		if source_backup != null:
+			return source_backup
+		var backup_from_res: Texture2D = _fate_load_portrait_texture_from_resource(FATE_CARD_FALLBACK_PORTRAIT_PATH)
+		if backup_from_res != null:
+			return backup_from_res
 	return null
+
+
+static func _fate_load_portrait_texture_from_source(path: String) -> Texture2D:
+	var clean_path: String = path.strip_edges()
+	if clean_path == "":
+		return null
+	var img := Image.new()
+	var err: Error = img.load(clean_path)
+	if err != OK:
+		return null
+	return _fate_image_with_dark_matte(img)
+
+
+static func _fate_load_portrait_texture_from_resource(path: String) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		return null
+	var tex_res: Resource = load(path)
+	if tex_res is Texture2D:
+		return _fate_texture_with_dark_matte(tex_res as Texture2D)
+	return null
+
+
+static func _fate_texture_with_dark_matte(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var img: Image = tex.get_image()
+	if img == null:
+		return tex
+	if img.get_width() <= 0 or img.get_height() <= 0:
+		return tex
+	var rebuilt: Texture2D = _fate_image_with_dark_matte(img)
+	return rebuilt if rebuilt != null else tex
+
+
+static func _fate_image_with_dark_matte(source_img: Image) -> Texture2D:
+	if source_img == null:
+		return null
+	if source_img.get_width() <= 0 or source_img.get_height() <= 0:
+		return null
+	var img: Image = source_img.duplicate()
+	img.convert(Image.FORMAT_RGBA8)
+	var matte := Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
+	matte.fill(Color(0.03, 0.03, 0.03, 1.0))
+	matte.blend_rect(img, Rect2i(0, 0, img.get_width(), img.get_height()), Vector2i.ZERO)
+	return ImageTexture.create_from_image(matte)
 
 
 static func _fate_make_panel_style(

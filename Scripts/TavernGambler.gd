@@ -1784,6 +1784,12 @@ func _load_texture_safe(path: String) -> Texture2D:
 	var clean_path: String = path.strip_edges()
 	if clean_path == "":
 		return null
+	var from_source: Texture2D = _load_texture_from_source_image(clean_path)
+	if from_source != null:
+		return from_source
+	var from_resource: Texture2D = _load_texture_from_resource_image(clean_path)
+	if from_resource != null:
+		return from_resource
 	var res: Resource = load(clean_path)
 	return res as Texture2D
 
@@ -1794,6 +1800,51 @@ func _load_card_portrait(card: Dictionary) -> Texture2D:
 	if loaded != null:
 		return loaded
 	return _fate_card_fallback_portrait
+
+
+func _load_texture_from_source_image(path: String) -> Texture2D:
+	if path == "":
+		return null
+	var img := Image.new()
+	var err: Error = img.load(path)
+	if err != OK:
+		return null
+	return _image_to_dark_matte_texture(img)
+
+
+func _load_texture_from_resource_image(path: String) -> Texture2D:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	var res: Resource = load(path)
+	if res is Texture2D:
+		return _texture_to_dark_matte_texture(res as Texture2D)
+	return null
+
+
+func _texture_to_dark_matte_texture(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var img: Image = tex.get_image()
+	if img == null:
+		return tex
+	if img.get_width() <= 0 or img.get_height() <= 0:
+		return tex
+	var rebuilt: Texture2D = _image_to_dark_matte_texture(img)
+	return rebuilt if rebuilt != null else tex
+
+
+func _image_to_dark_matte_texture(source_img: Image) -> Texture2D:
+	if source_img == null:
+		return null
+	if source_img.get_width() <= 0 or source_img.get_height() <= 0:
+		return null
+	# Composite alpha onto dark matte to prevent white portrait wash/halos.
+	var img: Image = source_img.duplicate()
+	img.convert(Image.FORMAT_RGBA8)
+	var matte := Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
+	matte.fill(Color(0.03, 0.03, 0.03, 1.0))
+	matte.blend_rect(img, Rect2i(0, 0, img.get_width(), img.get_height()), Vector2i.ZERO)
+	return ImageTexture.create_from_image(matte)
 
 
 func _on_parent_ui_resized() -> void:
