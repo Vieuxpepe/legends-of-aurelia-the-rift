@@ -15,7 +15,7 @@ const PLAYER_STEP_BOB_SPEED: float = 9.0
 const PLAYER_MIN_MOVE_SPEED_FOR_BOB: float = 20.0
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
 ## Dev-only: when true, F9 dumps direct-conversation + micro-bark diagnostics for the nearest walker (see debug_dump_camp_selection).
-const DEBUG_CAMP_SELECTION_DUMP: bool = true
+const DEBUG_CAMP_SELECTION_DUMP: bool = false
 
 var _camp_music_tracks: Array[AudioStream] = []
 
@@ -77,7 +77,7 @@ func _ready() -> void:
 	_spawn = CampSpawnController.new(self, _ctx, _requests)
 
 	_compute_bounds()
-	if not _debug_flags_logged_once:
+	if not _debug_flags_logged_once and OS.is_debug_build():
 		print("DEBUG_CAMP_FLAGS use_test=", debug_use_test_camp_roster, " replace_entirely=", debug_replace_roster_entirely)
 		_debug_flags_logged_once = true
 	var override: String = str(debug_time_block_override).strip_edges().to_lower()
@@ -241,8 +241,6 @@ func _input(event: InputEvent) -> void:
 		elif event.physical_keycode == KEY_J or event.keycode == KEY_J:
 			wants_task_log = true
 		if wants_task_log:
-			print("TASKLOG_OPEN_BRANCH_REACHED")
-			print("TASKLOG_OPEN_FUNCTION_CALL =", "_toggle_task_log")
 			_toggle_task_log()
 	if DEBUG_CAMP_SELECTION_DUMP and event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F9 or event.physical_keycode == KEY_F9:
@@ -305,6 +303,22 @@ func _get_nearest_walker_in_range() -> Node:
 		var d_sq: float = player.global_position.distance_squared_to(w.global_position)
 		if d_sq < best_d:
 			best_d = d_sq
+			best = w
+	return best
+
+
+func _get_nearest_walker_near_point(world_pos: Vector2, max_dist: float) -> Node:
+	var best: Node = null
+	var best_d_sq: float = INF
+	var max_d_sq: float = max_dist * max_dist
+	for w in _ctx.walker_nodes:
+		if not is_instance_valid(w) or not (w is CampRosterWalker):
+			continue
+		var d_sq: float = world_pos.distance_squared_to(w.global_position)
+		if d_sq > max_d_sq:
+			continue
+		if d_sq < best_d_sq:
+			best_d_sq = d_sq
 			best = w
 	return best
 
@@ -418,18 +432,24 @@ func _try_interact() -> void:
 
 
 func _try_click_interact(_screen_pos: Vector2) -> void:
+	if _dialogue.pair_scene_active:
+		return
 	var cam: Camera2D = get_viewport().get_camera_2d()
 	var world_pos: Vector2
 	if cam:
 		world_pos = cam.get_global_mouse_position()
 	else:
 		world_pos = get_viewport().get_mouse_position()
-	for w in _ctx.walker_nodes:
-		if not is_instance_valid(w):
-			continue
-		if w.global_position.distance_to(world_pos) <= INTERACT_RANGE:
-			_interactions.open_dialogue(w)
-			return
+	var clicked: Node = _get_nearest_walker_near_point(world_pos, INTERACT_RANGE)
+	var eligible_pair: Dictionary = _dialogue.get_eligible_pair_scene()
+	if clicked != null and _interactions.would_single_walker_priority(clicked):
+		_interactions.open_dialogue(clicked)
+		return
+	if not eligible_pair.is_empty():
+		_dialogue.start_pair_scene(eligible_pair)
+		return
+	if clicked != null:
+		_interactions.open_dialogue(clicked)
 
 
 func _on_accept_pressed() -> void:

@@ -611,8 +611,9 @@ func spawn_walkers(walkers_container: Node2D, debug_use_test_camp_roster: bool, 
 		if best_name != "":
 			_requests.offer_giver_name = best_name
 			_requests.offer_is_personal = str(best_offer.get("request_depth", "")).strip_edges().to_lower() == "personal"
-			print("EXPLORE_SELECTED_GIVER =", best_name)
-			print("EXPLORE_SELECTED_OFFER =", best_offer)
-			print("EXPLORE_STATUS =", str(CampaignManager.camp_request_status) if CampaignManager else "")
-			print("EXPLORE_GIVER_STORED =", _requests.offer_giver_name)
+			if OS.is_debug_build():
+				print("EXPLORE_SELECTED_GIVER =", best_name)
+				print("EXPLORE_SELECTED_OFFER =", best_offer)
+				print("EXPLORE_STATUS =", str(CampaignManager.camp_request_status) if CampaignManager else "")
+				print("EXPLORE_GIVER_STORED =", _requests.offer_giver_name)
 	return wc

@@ -1,55 +1,28 @@
-# Copy All Errors — Godot Editor Plugin
+# Legends of Aurelia: The Rift
 
-A simple Godot 4.x editor plugin that adds a **"Copy All"** button to the Debugger's **Errors** panel, allowing you to copy all errors and warnings to the clipboard with one click.
+Godot 4.6 tactical RPG project (`config/name` and `config/version` in `project.godot`). Main entry scene: `res://Scenes/studio_intro.tscn`.
 
-![Godot 4.x](https://img.shields.io/badge/Godot-4.x-blue?logo=godotengine&logoColor=white)
-![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+## Documentation
 
-## Features
+| Doc | Purpose |
+|-----|---------|
+| [docs/current_focus.md](docs/current_focus.md) | What is actively changing vs stable |
+| [docs/camp_system.md](docs/camp_system.md) | Explore Camp runtime architecture |
+| [docs/conversation_gating.md](docs/conversation_gating.md) | Direct conversations, lore, pair content gates |
+| [docs/camp_regression_checklist.md](docs/camp_regression_checklist.md) | Manual QA for camp iteration |
 
-- Injects a **Copy All** (复制全部) button into the built-in Errors panel toolbar
-- Copies all errors and warnings in a clean, formatted text
-- Distinguishes between **E** (error) and **W** (warning) entries
-- Includes child details (stack trace, error codes, etc.)
-- Button shows a brief "Copied N items!" flash feedback
-- Works with both English and Chinese editor locales
+## Repo map (high level)
 
-## Installation
+- **Campaign / meta:** `Scripts/Core/CampaignManager.gd` (autoload), saves, roster, camp request state, camp memory, lore/pair scene flags.
+- **Explore Camp scene:** `Scripts/CampExplore.gd` plus `Scripts/Camp/*.gd` controllers.
+- **Authored camp narrative data:** `Scripts/Narrative/CampConversationDB.gd`, `CampLoreDB`, `CampPairSceneDB`, `CampPairSceneTriggerDB`, `CampRumorDB`, `CampMicroBarkDB`, etc.
+- **Ongoing refactor notes:** `REFACTOR_PULSE.md` (BattleField extraction — not camp-specific).
+- **Design / production writing:** `NARRATIVE PLAN/` (may drift from shipped gates; verify against code when gating content).
 
-### From GitHub
+## Editor addons
 
-1. Download or clone this repository.
-2. Copy the `addons/copy_all_errors` folder into your project's `addons/` directory.
-3. In Godot, go to **Project → Project Settings → Plugins** and enable **Copy All Errors**.
-
-### From Godot Asset Library
-
-_(Coming soon)_
-
-## Usage
-
-1. Run your project and trigger some errors / warnings.
-2. Open the **Debugger → Errors** panel at the bottom of the editor.
-3. Click the **复制全部** (Copy All) button next to "Collapse All".
-4. Paste the copied content anywhere — issue trackers, chat, AI assistants, etc.
-
-### Example Output
-
-```
-E 0:00:02:145   MyScript.gd:42 — Attempted to call function 'foo' on a null instance.
-  <Error> Method not found
-  res://scripts/MyScript.gd:42
-
-W 0:00:03:012   AnotherScript.gd:10 — UNUSED_VARIABLE
-  <GDScript Warning> The local variable 'bar' is declared but never used.
-  res://scripts/AnotherScript.gd:10
-```
-
-## Compatibility
-
-- **Godot 4.0+** (tested on 4.5 / 4.6.1)
-- Works on Windows, macOS, and Linux
+This project enables third-party editor plugins (see `project.godot` → **EditorPlugins**). The **Copy All Errors** addon adds debugger utilities; it is not the game product described by this repository.
 
 ## License
 
-[MIT](LICENSE)
+See repository `LICENSE` if present.

@@ -1,5 +1,17 @@
 # CampInteractionResolver.gd
 # Resolves which interaction opens for a walker (same priority order as legacy _open_dialogue).
+#
+# Single-walker resolution order (must stay aligned across peek_walker_interaction_kind,
+# would_single_walker_priority, get_interact_prompt_primary_line, and open_dialogue):
+# 1) request_failed (giver, status failed)
+# 2) request_turn_in (giver ready, or active item delivery with items satisfied)
+# 3) request_progress (active giver, not auto-promoted to turn-in)
+# 4) request_target_talk / request_branching (active talk-to target at progress 0)
+# 5) special_scene, direct_conversation, pair_snippet, lore — only when no quest is
+#    active, ready_to_turn_in, or failed (side stories deferred until camp request cleared)
+# 6) request_offer
+# 7) idle_talk
+# Pair listen ("E  Listen") is chosen in CampExplore before single-walker when eligible.
 
 class_name CampInteractionResolver
 extends RefCounted
@@ -19,6 +31,11 @@ func _init(explore: Node2D, ctx: CampContext, dialogue: CampDialogueController, 
 
 func get_camp_request_status() -> String:
 	return _requests.get_camp_request_status()
+
+
+func _side_stories_allowed_for_request_status(status: String) -> bool:
+	var s: String = str(status).strip_edges().to_lower()
+	return s != "active" and s != "ready_to_turn_in" and s != "failed"
 
 
 func _gather_walker_names() -> Array:
@@ -56,7 +73,7 @@ func peek_walker_interaction_kind(walker_node: Node) -> String:
 			if payload_chk.get("branching_check") == true:
 				return "request_branching"
 			return "request_target_talk"
-	if status != "active" and status != "ready_to_turn_in" and status != "failed" and CampaignManager and unit_name != "":
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var tier: String = CampaignManager.get_avatar_relationship_tier(unit_name)
 		for scene_tier in ["close", "trusted"]:
 			var scene: Dictionary = CampRequestContentDB.get_special_camp_scene(unit_name, scene_tier)
@@ -126,7 +143,7 @@ func would_single_walker_priority(nearest: Node) -> bool:
 		var target: String = str(CampaignManager.camp_request_target_name).strip_edges()
 		if unit_name == target:
 			return true
-	if status != "active" and status != "ready_to_turn_in" and status != "failed" and CampaignManager and unit_name != "":
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var tier: String = CampaignManager.get_avatar_relationship_tier(unit_name)
 		for scene_tier in ["close", "trusted"]:
 			var scene: Dictionary = CampRequestContentDB.get_special_camp_scene(unit_name, scene_tier)
@@ -188,7 +205,7 @@ func open_dialogue(walker_node: Node) -> void:
 			_requests.update_request_markers()
 			_dialogue.show_talk_complete_return(walker_node, unit_name, giver)
 			return
-	if status != "active" and status != "ready_to_turn_in" and status != "failed" and CampaignManager and unit_name != "":
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var tier: String = CampaignManager.get_avatar_relationship_tier(unit_name)
 		for scene_tier in ["close", "trusted"]:
 			var scene: Dictionary = CampRequestContentDB.get_special_camp_scene(unit_name, scene_tier)
@@ -201,14 +218,14 @@ func open_dialogue(walker_node: Node) -> void:
 				continue
 			_dialogue.show_special_camp_scene(walker_node, unit_name, unit_data, scene, scene_tier)
 			return
-	if CampaignManager:
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var camp_ctx: Dictionary = _ctx.build_camp_context_dict()
 		var visit_snap_open: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
 		var best_conv: Dictionary = CampConversationDB.get_best_direct_conversation(unit_name, camp_ctx, _gather_walker_names(), visit_snap_open)
 		if not best_conv.is_empty():
 			_dialogue.start_direct_conversation(walker_node, best_conv)
 			return
-	if CampaignManager:
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var pair_scene: Dictionary = CampaignManager.get_available_pair_scene_for_unit(unit_name)
 		if not pair_scene.is_empty():
 			var other_name: String = unit_name
@@ -220,7 +237,7 @@ func open_dialogue(walker_node: Node) -> void:
 				other_name = "%s & %s" % [unit_name, a_name]
 			_dialogue.show_pair_scene_snippet(walker_node, unit_name, other_name, pair_scene)
 			return
-	if CampaignManager:
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var lore: Dictionary = CampaignManager.get_available_camp_lore(unit_name)
 		if not lore.is_empty():
 			_dialogue.show_lore_snippet(walker_node, unit_name, lore)
