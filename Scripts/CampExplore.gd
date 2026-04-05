@@ -8,8 +8,12 @@ const CAMP_MENU_PATH: String = "res://Scenes/camp_menu.tscn"
 const BOUNDS_MARGIN: float = 40.0
 const INTERACT_RANGE: float = 70.0
 const PLAYER_SPEED: float = 180.0
-const PLAYER_ACCEL: float = 10.0
-const PLAYER_FRICTION: float = 18.0
+const PLAYER_ACCEL: float = 13.5
+const PLAYER_FRICTION: float = 24.0
+const PLAYER_LEAN_SMOOTH: float = 18.0
+const PLAYER_LEAN_VEL_SCALE: float = 0.00032
+const PLAYER_LEAN_MAX_RAD: float = 0.068
+const PLAYER_BOB_SETTLE_SMOOTH: float = 16.0
 const PLAYER_STEP_BOB_HEIGHT: float = 2.0
 const PLAYER_STEP_BOB_SPEED: float = 9.0
 const PLAYER_MIN_MOVE_SPEED_FOR_BOB: float = 20.0
@@ -48,6 +52,14 @@ var _player_velocity: Vector2 = Vector2.ZERO
 var _player_walk_cycle: float = 0.0
 var _player_base_sprite_offset: Vector2 = Vector2.ZERO
 var _player_sprite: Sprite2D = null
+var _player_sprite_base_scale: Vector2 = Vector2.ONE
+var _player_bob_smoothed: float = 0.0
+var _player_lean_rad: float = 0.0
+var _player_pulse_tween: Tween = null
+var _interact_prev_nearest_id: int = 0
+var _background_color_base: Color = Color(0.18, 0.22, 0.15, 1.0)
+var _camp_bg_breathe_t: float = 0.0
+var _camp_ui_pulse_t: float = 0.0
 
 var _task_log: TaskLog = null
 @export_enum("auto", "dawn", "day", "night") var debug_time_block_override: String = "auto"
@@ -108,6 +120,7 @@ func _ready() -> void:
 	_player_sprite = spawned[1] as Sprite2D
 	if _player_sprite != null:
 		_player_base_sprite_offset = _player_sprite.position
+		_player_sprite_base_scale = _player_sprite.scale
 	_spawn.gather_camp_zones()
 	if CampaignManager:
 		CampaignManager.ensure_camp_unit_condition()
@@ -180,6 +193,7 @@ func _apply_time_of_day_visuals() -> void:
 				bg_col = bg_col.lerp(Color(0.14, 0.14, 0.15, 1.0), 0.16)
 			_:
 				pass
+		_background_color_base = bg_col
 		background.color = bg_col
 	if time_of_day_overlay != null:
 		var target: Color
@@ -271,8 +285,10 @@ func _process(delta: float) -> void:
 		_bubble_ctrl.hide_ambient_bubble()
 		return
 	_handle_movement(delta)
+	_interact_arrival_check()
 	_update_interact_prompt()
 	_ambient.update_rumor(delta)
+	_apply_camp_atmosphere_idle(delta)
 
 
 func _handle_movement(delta: float) -> void:
@@ -297,14 +313,19 @@ func _handle_movement(delta: float) -> void:
 	player.position.x = clampf(player.position.x, _ctx.walk_min.x, _ctx.walk_max.x)
 	player.position.y = clampf(player.position.y, _ctx.walk_min.y, _ctx.walk_max.y)
 	var speed_now: float = _player_velocity.length()
+	var bob_target: float = 0.0
+	if speed_now > PLAYER_MIN_MOVE_SPEED_FOR_BOB:
+		_player_walk_cycle += PLAYER_STEP_BOB_SPEED * delta
+		bob_target = sin(_player_walk_cycle) * PLAYER_STEP_BOB_HEIGHT
+	else:
+		_player_walk_cycle = 0.0
+		bob_target = 0.0
+	_player_bob_smoothed = lerpf(_player_bob_smoothed, bob_target, clampf(PLAYER_BOB_SETTLE_SMOOTH * delta, 0.0, 1.0))
+	var lean_target: float = clampf(_player_velocity.x * PLAYER_LEAN_VEL_SCALE, -PLAYER_LEAN_MAX_RAD, PLAYER_LEAN_MAX_RAD)
+	_player_lean_rad = lerpf(_player_lean_rad, lean_target, clampf(PLAYER_LEAN_SMOOTH * delta, 0.0, 1.0))
 	if _player_sprite != null:
-		if speed_now > PLAYER_MIN_MOVE_SPEED_FOR_BOB:
-			_player_walk_cycle += PLAYER_STEP_BOB_SPEED * delta
-			var bob: float = sin(_player_walk_cycle) * PLAYER_STEP_BOB_HEIGHT
-			_player_sprite.position = _player_base_sprite_offset + Vector2(0, bob)
-		else:
-			_player_walk_cycle = 0.0
-			_player_sprite.position = _player_base_sprite_offset
+		_player_sprite.rotation = _player_lean_rad
+		_player_sprite.position = _player_base_sprite_offset + Vector2(0, _player_bob_smoothed)
 
 
 func _get_nearest_walker_in_range() -> Node:
@@ -320,6 +341,56 @@ func _get_nearest_walker_in_range() -> Node:
 			best_d = d_sq
 			best = w
 	return best
+
+
+func _interact_arrival_check() -> void:
+	var nearest: Node = _get_nearest_walker_in_range()
+	var eligible_pair: Dictionary = _dialogue.get_eligible_pair_scene()
+	var prompt_line: String = _interactions.get_interact_prompt_primary_line(nearest, eligible_pair)
+	var cur_id: int = 0
+	if nearest != null and is_instance_valid(nearest) and prompt_line != "":
+		cur_id = nearest.get_instance_id()
+	if cur_id == 0:
+		_interact_prev_nearest_id = 0
+		return
+	if cur_id == _interact_prev_nearest_id:
+		return
+	_interact_prev_nearest_id = cur_id
+	_fire_interact_arrival_feedback(nearest)
+
+
+func _kill_player_pulse_tween() -> void:
+	if _player_pulse_tween != null and is_instance_valid(_player_pulse_tween):
+		_player_pulse_tween.kill()
+	_player_pulse_tween = null
+
+
+func _fire_interact_arrival_feedback(walker: Node) -> void:
+	if walker is CampRosterWalker:
+		(walker as CampRosterWalker).play_interact_proximity_ping()
+	if _player_sprite != null:
+		_kill_player_pulse_tween()
+		var bs: Vector2 = _player_sprite_base_scale
+		_player_pulse_tween = create_tween()
+		_player_pulse_tween.tween_property(_player_sprite, "scale", bs * 1.07, 0.07)
+		_player_pulse_tween.tween_property(_player_sprite, "scale", bs, 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _apply_camp_atmosphere_idle(delta: float) -> void:
+	if background != null:
+		_camp_bg_breathe_t += delta
+		var f: float = 1.0 + sin(_camp_bg_breathe_t * 0.19) * 0.0065
+		var b: Color = _background_color_base
+		background.color = Color(
+			clampf(b.r * f, 0.0, 1.0),
+			clampf(b.g * f, 0.0, 1.0),
+			clampf(b.b * f, 0.0, 1.0),
+			1.0
+		)
+	if back_btn != null:
+		_camp_ui_pulse_t += delta
+		var w: float = 0.992 + 0.008 * sin(_camp_ui_pulse_t * 0.55)
+		back_btn.modulate = Color(w, w * 1.01, w * 1.02, 1.0)
 
 
 func _get_nearest_walker_near_point(world_pos: Vector2, max_dist: float) -> Node:
@@ -526,6 +597,7 @@ func _on_accept_pressed() -> void:
 		turn_in_btn.visible = false
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
+	_dialogue.refresh_dialogue_action_emphasis()
 
 
 func _on_decline_pressed() -> void:
@@ -542,6 +614,7 @@ func _on_decline_pressed() -> void:
 		turn_in_btn.visible = false
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
+	_dialogue.refresh_dialogue_action_emphasis()
 
 
 func _on_turn_in_pressed() -> void:
@@ -552,6 +625,7 @@ func _on_turn_in_pressed() -> void:
 		turn_in_btn.visible = false
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
+	_dialogue.refresh_dialogue_action_emphasis()
 
 
 func _on_back_pressed() -> void:

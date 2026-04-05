@@ -90,8 +90,11 @@ var _turn_tween: Tween = null
 
 var _marker_rest_offset_top: float = -48.0
 var _marker_anim_phase: float = 0.0
+## Presentation-only: brief emphasis when player enters interact range (decays in _process).
+var _proximity_ping: float = 0.0
 const MARKER_BOB_PX: float = 2.8
 const MARKER_PHASE_SPEED: float = 3.2
+const PROXIMITY_PING_DECAY: float = 2.75
 
 const SOCIAL_STATE_FREE := 0
 const SOCIAL_STATE_APPROACH := 1
@@ -124,6 +127,11 @@ var _standing_activity_anchor: Node = null
 
 func set_camp_context(ctx: CampContext) -> void:
 	_camp_ctx = ctx
+
+## One-shot marker emphasis for proximity feedback; does not change marker symbols or request state.
+func play_interact_proximity_ping() -> void:
+	_proximity_ping = 1.0
+
 
 func set_camp_visit_theme(theme: String) -> void:
 	_camp_visit_theme = str(theme).strip_edges().to_lower()
@@ -210,6 +218,7 @@ func start_behavior() -> void:
 	_pick_next_idle()
 
 func _process(_delta: float) -> void:
+	_proximity_ping = move_toward(_proximity_ping, 0.0, _delta * PROXIMITY_PING_DECAY)
 	if marker_label != null:
 		var marker_txt: String = ""
 		var marker_on: bool = false
@@ -235,10 +244,16 @@ func _process(_delta: float) -> void:
 			marker_label.text = marker_txt
 			marker_label.visible = true
 			_marker_anim_phase += _delta * MARKER_PHASE_SPEED
-			var bob: float = sin(_marker_anim_phase) * MARKER_BOB_PX
-			var glint: float = 0.93 + 0.07 * sin(_marker_anim_phase * 1.85)
+			var ping: float = _proximity_ping
+			var bob: float = sin(_marker_anim_phase) * MARKER_BOB_PX + ping * 2.2 * sin(_marker_anim_phase * 2.4)
+			var glint: float = 0.93 + 0.07 * sin(_marker_anim_phase * 1.85) + ping * 0.11
 			marker_label.offset_top = _marker_rest_offset_top + bob
-			marker_label.modulate = Color(glint, glint, glint * 0.96, 1.0)
+			marker_label.modulate = Color(
+				clampf(glint, 0.0, 1.0),
+				clampf(glint, 0.0, 1.0),
+				clampf(glint * 0.96, 0.0, 1.0),
+				1.0
+			)
 		else:
 			marker_label.visible = false
 			marker_label.offset_top = _marker_rest_offset_top

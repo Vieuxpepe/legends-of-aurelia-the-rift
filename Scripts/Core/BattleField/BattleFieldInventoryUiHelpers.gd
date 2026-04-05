@@ -15,6 +15,8 @@ const FATE_CARD_BUTTON_BG: Color = Color(0.28, 0.21, 0.13, 0.94)
 const FATE_CARD_WIDTH: float = 282.0
 const FATE_CARD_HEIGHT: float = 320.0
 const FATE_CARD_FALLBACK_PORTRAIT_PATH: String = "res://Assets/Portraits/Portrait Hero 1.png"
+const FATE_REVEAL_TARGET_SCALE: float = 0.68
+const FATE_REVEAL_POP_SCALE: float = 0.80
 
 static func apply_inventory_panel_spacing(field) -> void:
 	if field.inventory_panel == null:
@@ -289,7 +291,7 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	flash.offset_top = 0.0
 	flash.offset_right = 0.0
 	flash.offset_bottom = 0.0
-	flash.color = Color(1.0, 0.96, 0.82, 0.0)
+	flash.color = Color(1.0, 0.84, 0.36, 0.0)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(flash)
 
@@ -322,8 +324,8 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 		card_size = Vector2(FATE_CARD_WIDTH, FATE_CARD_HEIGHT)
 	card_panel.pivot_offset = card_size * 0.5
 	card_panel.position = vp_size * 0.5 - card_size * 0.5 + Vector2(0.0, 18.0)
-	card_panel.scale = Vector2(0.72, 0.72)
-	card_panel.rotation_degrees = -8.0
+	card_panel.scale = Vector2(0.02, FATE_REVEAL_TARGET_SCALE)
+	card_panel.rotation_degrees = -14.0
 	card_panel.modulate.a = 0.0
 
 	if field.epic_level_up_sound != null and field.epic_level_up_sound.stream != null:
@@ -336,16 +338,27 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 
 	var intro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	intro.tween_property(veil, "color:a", 0.76, 0.16)
-	intro.tween_property(card_panel, "modulate:a", 1.0, 0.12)
-	intro.tween_property(card_panel, "scale", Vector2(1.06, 1.06), 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	intro.tween_property(card_panel, "rotation_degrees", 0.0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	intro.tween_property(card_panel, "modulate:a", 1.0, 0.10)
 	var flash_tw: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	flash_tw.tween_property(flash, "color:a", 0.92, 0.06)
-	flash_tw.tween_property(flash, "color:a", 0.0, 0.24)
+	flash_tw.tween_property(flash, "color:a", 0.42, 0.05)
+	flash_tw.tween_property(flash, "color:a", 0.0, 0.12)
 	await intro.finished
 
-	var settle: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	settle.tween_property(card_panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	# Two-step self-turn: first swing through the back face, then settle front-facing.
+	var flip_in: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	flip_in.tween_property(card_panel, "scale:x", -FATE_REVEAL_POP_SCALE, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	flip_in.tween_property(card_panel, "rotation_degrees", 7.0, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await flip_in.finished
+
+	var flip_out: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	flip_out.tween_property(card_panel, "scale:x", FATE_REVEAL_POP_SCALE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	flip_out.tween_property(card_panel, "scale:y", FATE_REVEAL_POP_SCALE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	flip_out.tween_property(card_panel, "rotation_degrees", 0.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await flip_out.finished
+
+	var settle: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	settle.tween_property(card_panel, "scale", Vector2(FATE_REVEAL_TARGET_SCALE, FATE_REVEAL_TARGET_SCALE), 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	settle.tween_property(card_panel, "rotation_degrees", 0.0, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await settle.finished
 	await field.get_tree().create_timer(0.74, true, false, true).timeout
 
@@ -395,7 +408,7 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	panel.add_child(body)
 
 	var portrait_frame := PanelContainer.new()
-	portrait_frame.custom_minimum_size = Vector2(0.0, 174.0)
+	portrait_frame.custom_minimum_size = Vector2(0.0, 154.0)
 	portrait_frame.clip_contents = true
 	portrait_frame.add_theme_stylebox_override(
 		"panel",
@@ -457,7 +470,7 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 		var glow: ColorRect = _fate_build_rarity_glow_overlay(rarity_color, rarity_rank)
 		if glow != null:
 			portrait_frame.add_child(glow)
-	_fate_add_rarity_sheen_animation(portrait_frame, rarity_rank)
+		_fate_add_rarity_sheen_animation(portrait_frame, rarity_rank)
 
 	var chip_row := HBoxContainer.new()
 	chip_row.add_theme_constant_override("separation", 6)

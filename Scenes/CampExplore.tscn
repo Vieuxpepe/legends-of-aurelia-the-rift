@@ -191,7 +191,7 @@ theme_override_constants/separation = 12
 [node name="AcceptButton" type="Button" parent="UI/DialoguePanel/VBox/ButtonRow" unique_id=1493082574]
 visible = false
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 19
 text = "Accept"
 
 [node name="DeclineButton" type="Button" parent="UI/DialoguePanel/VBox/ButtonRow" unique_id=1231257698]
@@ -203,7 +203,7 @@ text = "Decline"
 [node name="TurnInButton" type="Button" parent="UI/DialoguePanel/VBox/ButtonRow" unique_id=536113088]
 visible = false
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 19
 text = "Turn in"
 
 [node name="CloseButton" type="Button" parent="UI/DialoguePanel/VBox" unique_id=1577766482]

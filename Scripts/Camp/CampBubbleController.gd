@@ -16,6 +16,7 @@ var ambient_speech_text: Label
 var rumor_label: Label
 
 var _bubble_ui_tween: Tween = null
+var _ambient_drift_t: float = 0.0
 
 
 func _init(explore: Node2D) -> void:
@@ -136,6 +137,9 @@ func update_ambient_bubble_position(delta: float = 0.0) -> void:
 	if bubble_size.x <= 1.0 or bubble_size.y <= 1.0:
 		bubble_size = ambient_speech_bubble.get_combined_minimum_size()
 	var target: Vector2 = screen_pos - Vector2(bubble_size.x * 0.5, bubble_size.y)
+	_ambient_drift_t += delta
+	var drift: Vector2 = Vector2(sin(_ambient_drift_t * 0.62), cos(_ambient_drift_t * 0.48)) * 1.15
+	target += drift
 	var view_size: Vector2 = _explore.get_viewport_rect().size
 	target.x = clampf(target.x, 8.0, maxf(8.0, view_size.x - bubble_size.x - 8.0))
 	target.y = clampf(target.y, 8.0, maxf(8.0, view_size.y - bubble_size.y - 8.0))

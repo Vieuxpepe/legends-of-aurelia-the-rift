@@ -42,6 +42,7 @@ var pair_scene_walker_b: Node = null
 var pair_scenes_shown_this_visit: Dictionary = {}
 
 var _dialogue_panel_tween: Tween = null
+var _action_emphasis_tween: Tween = null
 
 var direct_conversation_active: bool = false
 var direct_conversations_shown_this_visit: Dictionary = {}
@@ -95,6 +96,64 @@ func _kill_dialogue_panel_tween() -> void:
 	_dialogue_panel_tween = null
 
 
+func _kill_action_emphasis_tween() -> void:
+	if _action_emphasis_tween != null and is_instance_valid(_action_emphasis_tween):
+		_action_emphasis_tween.kill()
+	_action_emphasis_tween = null
+
+
+func _reset_dialogue_action_visuals() -> void:
+	var btns: Array[Button] = []
+	if accept_btn:
+		btns.append(accept_btn)
+	if decline_btn:
+		btns.append(decline_btn)
+	if turn_in_btn:
+		btns.append(turn_in_btn)
+	if dialogue_close_btn:
+		btns.append(dialogue_close_btn)
+	for b in btns:
+		b.scale = Vector2.ONE
+		b.modulate = Color(1, 1, 1, 1)
+	if choice_container != null:
+		for c in choice_container.get_children():
+			if c is Button:
+				var cb: Button = c as Button
+				cb.scale = Vector2.ONE
+				cb.modulate = Color(1, 1, 1, 1)
+
+
+func _pick_primary_action_button() -> Button:
+	if turn_in_btn and turn_in_btn.visible:
+		return turn_in_btn
+	if accept_btn and accept_btn.visible:
+		return accept_btn
+	if decline_btn and decline_btn.visible:
+		return decline_btn
+	if choice_container != null and choice_container.visible:
+		for c in choice_container.get_children():
+			if c is Button:
+				return c as Button
+	if dialogue_close_btn and dialogue_close_btn.visible:
+		return dialogue_close_btn
+	return null
+
+
+## Presentation-only: re-run after button visibility settles (same buttons, clearer primary emphasis).
+func refresh_dialogue_action_emphasis() -> void:
+	_kill_action_emphasis_tween()
+	_reset_dialogue_action_visuals()
+	if dialogue_panel == null or not dialogue_panel.visible:
+		return
+	var primary: Button = _pick_primary_action_button()
+	if primary == null:
+		return
+	var base_scale: Vector2 = Vector2.ONE
+	_action_emphasis_tween = _explore.create_tween()
+	_action_emphasis_tween.tween_property(primary, "scale", base_scale * 1.045, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_action_emphasis_tween.tween_property(primary, "scale", base_scale, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+
+
 func apply_dialogue_panel_visible(on: bool) -> void:
 	if dialogue_panel == null:
 		return
@@ -146,7 +205,7 @@ func setup_branching_choice_container() -> void:
 	vbox.add_child(choice_container)
 
 
-func hide_request_buttons() -> void:
+func hide_request_buttons(skip_action_emphasis: bool = false) -> void:
 	if accept_btn:
 		accept_btn.visible = false
 	if decline_btn:
@@ -155,6 +214,8 @@ func hide_request_buttons() -> void:
 		turn_in_btn.visible = false
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
+	if not skip_action_emphasis:
+		refresh_dialogue_action_emphasis()
 
 
 func hide_branching_choices() -> void:
@@ -167,6 +228,7 @@ func hide_branching_choices() -> void:
 		accept_btn.get_parent().visible = true
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
+	refresh_dialogue_action_emphasis()
 
 
 func hide_dialogue_visual() -> void:
@@ -428,6 +490,7 @@ func start_branching_check(walker_node: Node, unit_name: String, unit_data: Vari
 		choice_container.add_child(btn)
 	choice_container.visible = true
 	apply_dialogue_panel_visible(true)
+	refresh_dialogue_action_emphasis()
 
 
 func on_branching_choice_pressed(choice_index: int) -> void:
@@ -455,6 +518,7 @@ func on_branching_choice_pressed(choice_index: int) -> void:
 		accept_btn.get_parent().visible = false
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
+	refresh_dialogue_action_emphasis()
 
 
 func show_special_camp_scene(walker_node: Node, unit_name: String, _unit_data: Variant, scene: Dictionary, scene_tier: String) -> void:
@@ -507,6 +571,7 @@ func show_offer_panel(walker_node: Node, unit_name: String, unit_data: Variant, 
 	if turn_in_btn:
 		turn_in_btn.visible = false
 	apply_dialogue_panel_visible(true)
+	refresh_dialogue_action_emphasis()
 
 
 func show_progress_panel(walker_node: Node, unit_name: String, unit_data: Variant) -> void:
@@ -568,6 +633,7 @@ func show_turn_in_panel(walker_node: Node, unit_name: String, unit_data: Variant
 	if turn_in_btn:
 		turn_in_btn.visible = true
 	apply_dialogue_panel_visible(true)
+	refresh_dialogue_action_emphasis()
 
 
 func show_failed_reaction(walker_node: Node, unit_name: String, giver: String) -> void:
@@ -699,7 +765,7 @@ func start_direct_conversation(walker_node: Node, conv: Dictionary) -> void:
 	if interact_prompt:
 		interact_prompt.visible = false
 	apply_dialogue_panel_visible(true)
-	hide_request_buttons()
+	hide_request_buttons(true)
 	show_direct_conversation_line()
 
 
@@ -772,7 +838,7 @@ func show_direct_conversation_line() -> void:
 	if dialogue_text:
 		dialogue_text.text = str(line.get("text", "")).strip_edges()
 	_apply_direct_line_portrait(raw_sp)
-	hide_request_buttons()
+	hide_request_buttons(true)
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = not _direct_conv_waiting_choice
 		var at_last_main: bool = (not _direct_conv_in_response) and _direct_conv_main_lines.size() > 0 and _direct_conv_main_idx >= _direct_conv_main_lines.size() - 1
@@ -785,6 +851,7 @@ func show_direct_conversation_line() -> void:
 		else:
 			dialogue_close_btn.text = "Continue"
 	apply_dialogue_panel_visible(true)
+	refresh_dialogue_action_emphasis()
 
 
 func advance_direct_conversation() -> void:
@@ -834,6 +901,7 @@ func _present_direct_conversation_choices() -> void:
 	choice_container.visible = true
 	if accept_btn and accept_btn.get_parent():
 		accept_btn.get_parent().visible = false
+	refresh_dialogue_action_emphasis()
 
 
 func on_direct_conversation_choice_pressed(choice_index: int) -> void:
