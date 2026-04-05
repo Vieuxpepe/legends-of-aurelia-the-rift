@@ -2,10 +2,15 @@
 
 This file is inferred from **code structure, recent edits, and inline documentation** in the workspace. It is not a product roadmap.
 
+## Multi-agent coordination
+
+- **Start here:** `docs/agent_master_handoff.md` (priorities, merge order, overlap).
+- **Per agent:** `docs/agent1_systems.md`, `docs/agent2_narrative.md`, `docs/agent3_docs_qa.md`.
+
 ## What looks actively evolving
 
-1. **Explore Camp narrative layer** — `Scripts/CampExplore.gd` and `Scripts/Camp/*` implement movement, ambient systems, dialogue UI, camp requests, pair overhears, and direct conversations. At the time this doc was written, the working tree had local modifications on `CampInteractionResolver.gd`, `CampSpawnController.gd`, and `CampExplore.gd` (verify with `git status` before relying on that signal).
-2. **Authored camp content at scale** — `Scripts/Narrative/CampConversationDB.gd` is a large authored database; small schema or gate mistakes affect eligibility for many lines.
+1. **Explore Camp narrative layer** — `Scripts/CampExplore.gd` and `Scripts/Camp/*.gd` (seven controller scripts) implement movement, ambient systems, dialogue UI, camp requests, pair overhears, and direct conversations.
+2. **Authored camp content at scale** — `Scripts/Narrative/Camp*.gd` databases (`CampConversationDB` is the largest); gate mistakes affect eligibility across many lines.
 3. **CampaignManager camp state** — `camp_request_*`, `camp_memory`, `seen_camp_lore`, `seen_camp_pair_scenes`, `camp_unit_condition`, and serialization blocks in `Scripts/Core/CampaignManager.gd` are the persistence backbone for the above.
 
 ## Parallel heavy work elsewhere
@@ -20,5 +25,4 @@ This file is inferred from **code structure, recent edits, and inline documentat
 
 ## Stale or misleading repo docs (explicit)
 
-- **Root `README.md` was replaced** in this pass; previously it described only the Copy All Errors editor plugin and did not identify the game project.
 - **`NARRATIVE PLAN/*.md`** is design/production prose; gate logic in shipped scripts (`get_camp_conversation_story_flags`, `_is_camp_lore_flag_satisfied`, `CampConversationDB`) is authoritative for eligibility.

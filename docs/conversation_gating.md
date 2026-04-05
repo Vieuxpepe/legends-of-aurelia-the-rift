@@ -1,5 +1,7 @@
 # Conversation and content gating (camp)
 
+**Coordination:** Agent 2 owns authored keys; verify with `docs/agent2_narrative.md` and `docs/agent_master_handoff.md`.
+
 Authoritative implementation: `Scripts/Narrative/CampConversationDB.gd` (`conversation_match_failure_reason`, `get_best_direct_conversation`) and `Scripts/Core/CampaignManager.gd` (`get_camp_conversation_story_flags`, `_is_camp_lore_flag_satisfied`, lore/pair snippet helpers).
 
 ## Direct conversations (`CampConversationDB`)

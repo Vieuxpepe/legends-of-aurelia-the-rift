@@ -1,5 +1,9 @@
 # Explore Camp system architecture
 
+## Coordination
+
+Parallel work: `docs/agent_master_handoff.md`, `docs/agent1_systems.md`, `docs/agent2_narrative.md`, `docs/agent3_docs_qa.md`. Regression: `docs/camp_regression_checklist.md`.
+
 ## Scene entry
 
 - **Scene:** Camp explore is a walkable `Node2D` driven by `Scripts/CampExplore.gd` (header comment: entered from `camp_menu` via “Explore Camp”; Back/Esc returns to `res://Scenes/camp_menu.tscn` via `SceneTransition.change_scene_to_file`).

@@ -6,6 +6,10 @@ Godot 4.6 tactical RPG project (`config/name` and `config/version` in `project.g
 
 | Doc | Purpose |
 |-----|---------|
+| [docs/agent_master_handoff.md](docs/agent_master_handoff.md) | Multi-agent priorities, merge order, overlaps |
+| [docs/agent1_systems.md](docs/agent1_systems.md) | Systems agent scope (camp runtime, `CampaignManager` camp) |
+| [docs/agent2_narrative.md](docs/agent2_narrative.md) | Narrative agent scope (`Camp*` narrative DBs) |
+| [docs/agent3_docs_qa.md](docs/agent3_docs_qa.md) | Docs/QA agent scope |
 | [docs/current_focus.md](docs/current_focus.md) | What is actively changing vs stable |
 | [docs/camp_system.md](docs/camp_system.md) | Explore Camp runtime architecture |
 | [docs/conversation_gating.md](docs/conversation_gating.md) | Direct conversations, lore, pair content gates |
