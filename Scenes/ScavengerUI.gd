@@ -513,6 +513,9 @@ func _on_item_clicked(btn: Button, meta: Dictionary) -> void:
 	item_desc.text = "[center][b]" + str(i_name) + "[/b]\n[color=#8a8a8a]" + str(rarity) + "  ·  " + category + "[/color][/center]\n\n"
 	if item.get("description") != null:
 		item_desc.text += "[color=#a0a0a0][i]\"" + str(item.description) + "\"[/i][/color]\n\n"
+	var rune_scav: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(item)
+	if rune_scav != "":
+		item_desc.text += rune_scav + "\n\n"
 	if meta["type"] == "convoy":
 		var owned: int = _get_convoy_stack_count(item)
 		var per_unit: int = max(1, int(base_cost * 0.25))

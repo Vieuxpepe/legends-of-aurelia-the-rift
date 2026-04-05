@@ -6724,6 +6724,14 @@ func _get_item_detailed_info(
 				)
 			)
 
+		var rune_camp: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(item)
+		if rune_camp != "":
+			lines.append(_camp_inv_section_heading("Runes"))
+			for rune_line in rune_camp.split("\n"):
+				var rl: String = rune_line.strip_edges()
+				if rl != "":
+					lines.append("[font_size=21]%s[/font_size]" % rl)
+
 		if compare_item != null and compare_item is WeaponData and item != compare_item:
 			if item.damage_type == compare_item.damage_type:
 				var m_diff_cmp: int = int(item.might) - int(compare_item.might)

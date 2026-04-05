@@ -1576,6 +1576,9 @@ func _format_auction_item_details(item: Resource) -> String:
 		lines.append("[color=#ffb26a]Might:[/color] %d    [color=#c9f57f]Hit:[/color] +%d    [color=#f7a4ff]Crit:[/color] +%d" % [might, hit_bonus, crit_bonus])
 		if max_durability > 0:
 			lines.append("[color=#9fe7ff]Durability:[/color] %d/%d" % [durability, max_durability])
+	var rune_auction: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(item)
+	if rune_auction != "":
+		lines.append(rune_auction)
 	var description_text: String = str(item.get("description") if item.get("description") != null else "").strip_edges()
 	if description_text == "":
 		description_text = "No description available."
@@ -2686,6 +2689,11 @@ func _refresh_auction_selected_view() -> void:
 		local_escrow,
 		time_left_text
 	]
+	var item_data_sel: Variant = listing.get("item_data", {})
+	if item_data_sel is Dictionary:
+		var rune_sel: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(item_data_sel as Dictionary)
+		if rune_sel != "":
+			auction_selected_listing_label.text += "\n\n" + rune_sel
 	if auction_bid_input != null:
 		auction_bid_input.placeholder_text = "Enter %d or more" % min_next_bid
 	var can_bid: bool = (status_text == "active" and time_left_text != "CLOSED" and not is_own_listing)
