@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PassiveCombatAbilityData" format=3 uid="uid://cpassashburst01"]
+
+[ext_resource type="Script" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+ability_id = "ashburst"
+display_name = "Ashburst"
+description = "On death, leaves a weak fire tile on this tile or a fixed neighbor."
+effect_kind = 1
+fire_tile_damage = 1
+fire_tile_duration_turns = 1

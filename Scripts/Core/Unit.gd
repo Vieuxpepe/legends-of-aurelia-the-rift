@@ -23,6 +23,10 @@
 extends Node2D
 class_name Unit
 
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
+const ClassDataRef = preload("res://Resources/Classes/ClassData.gd")
+
 # ------------------------------------------------------------------------------
 # Constants (match BattleField cell size when converting grid <-> world)
 # ------------------------------------------------------------------------------
@@ -48,6 +52,61 @@ const SELECT_PULSE_SPRITE_SCALE_MULT: float = 1.03
 const SELECT_PULSE_GLOW_ALPHA_MIN: float = 0.24
 const SELECT_PULSE_GLOW_ALPHA_MAX: float = 0.66
 const SELECT_PULSE_GLOW_SCALE_MULT: float = 1.03
+## Bone toxin: sprite [member Sprite2D.modulate] pulses green (root [member modulate] stays team-colored).
+const BONE_TOXIN_PULSE_MODULATE_DIM: Color = Color(0.58, 0.95, 0.68, 1.0)
+const BONE_TOXIN_PULSE_MODULATE_BRIGHT: Color = Color(0.82, 1.14, 0.93, 1.0)
+const BONE_TOXIN_PULSE_HALF_PERIOD_SEC: float = 0.55
+## [enum ClassData.MoveType.FLYING]: prep → arcing takeoff → cruise → hover → arcing landing (-Y = up).
+const FLIGHT_CRUISE_HEIGHT_PX: float = 27.0
+## Fractions of [i]total move duration[/i] (middle span is high cruise along path).
+const FLIGHT_TIME_PREP_FRAC: float = 0.065
+const FLIGHT_TIME_TAKEOFF_CLIMB_FRAC: float = 0.135
+const FLIGHT_TIME_LANDING_HOVER_FRAC: float = 0.055
+const FLIGHT_TIME_LANDING_DROP_FRAC: float = 0.125
+## >3 = more of the climb happens late (reads as a quick push off the ground).
+const FLIGHT_TAKEOFF_LIFT_POWER: float = 4.35
+## Slight apex past nominal cruise during takeoff for a stronger leap (0 = off).
+const FLIGHT_TAKEOFF_APEX_OVERSHOOT: float = 0.07
+## >2 = hold altitude longer, then a faster final plunge.
+const FLIGHT_LANDING_DROP_POWER: float = 3.05
+## Takeoff: [i]u[/i] lags height ([code]pow(w, power)[/code]) so the path curves through the air.
+const FLIGHT_TAKEOFF_U_FRAC_OF_PATH: float = 0.38
+const FLIGHT_TAKEOFF_HORIZONTAL_LAG_POWER: float = 2.55
+## Landing: hold [i]u[/i] this far short of the end (segment units), then close while dropping = swoop.
+const FLIGHT_LANDING_U_PULLBACK: float = 0.3
+## Drop timeline → horizontal closure; <1 closes forward motion slower (deeper arc before touching down).
+const FLIGHT_LANDING_FORWARD_EASE_POWER: float = 0.78
+## Cruise: no vertical bob (was reading as floaty pendulum with strides).
+## Forward strides: translation only ([member Sprite2D.rotation] stays 0); stroke = [code]max(0,sin)[/code] half-period only.
+const FLIGHT_STRIDE_DIAG_PX: float = 7.5
+const FLIGHT_WING_FLAP_HZ: float = 0.95
+const FLIGHT_WING_FLAP_SHAPE: float = 0.48
+const FLIGHT_WING_FLAP_CRUISE_MUL: float = 1.08
+## Takeoff/landing squash on [member Sprite2D.scale] (paired X/Y like [code]DragonActor[/code] [member Control.scale] on [code]body_pivot[/code]).
+const FLIGHT_TAKEOFF_STRETCH_Y: float = 0.34
+const FLIGHT_LANDING_SQUISH_Y: float = 0.32
+## When Y stretches, narrow X slightly; when Y squashes, widen X (reads as volume, not a thin resize).
+const FLIGHT_SQUISH_VOLUME_PAIR: float = 0.42
+## Prep: crouch builds to max at end of prep; takeoff: extra Y pop at commit (decays with climb phase).
+const FLIGHT_PREP_SQUISH_DEPTH: float = 0.14
+const FLIGHT_TAKEOFF_POP_Y: float = 0.17
+## Ground shadow under flier: alpha at ground / at full cruise altitude.
+const FLIGHT_SHADOW_ALPHA_GROUND: float = 0.58
+const FLIGHT_SHADOW_ALPHA_CRUISE: float = 0.16
+const FLIGHT_SHADOW_SCALE_XYZ_GROUND: Vector2 = Vector2(1.05, 0.88)
+const FLIGHT_SHADOW_SCALE_XYZ_CRUISE: Vector2 = Vector2(0.62, 0.52)
+const STATUS_STRIP_ICON_SCALE: float = 0.5
+## Max status textures in one row; beyond that, last slot becomes a +N overflow label.
+const STATUS_STRIP_MAX_ICONS: int = 5
+const STATUS_STRIP_GAP_PX: float = 3.0
+const STATUS_STRIP_ABOVE_HP_GAP_PX: float = 3.0
+const STATUS_STRIP_BADGE_H_MARGIN_PX: float = 4.0
+## When HP bar is hidden / not laid out yet (buff strip fallback); debuffs use this Y at feet.
+const STATUS_STRIP_FALLBACK_Y: float = 54.0
+## Debuff row at feet — above tile/sprite stack, same layer family as old PoisonedIcon.
+const STATUS_DEBUFF_STRIP_Z_INDEX: int = 15
+## Buff row above HP bar — over health bar (10) and level badge (12).
+const STATUS_BUFF_STRIP_Z_INDEX: int = 16
 
 # ------------------------------------------------------------------------------
 # Signals
@@ -71,6 +130,21 @@ enum AIBehavior { DEFAULT, THIEF, SUPPORT, COWARD, AGGRESSIVE, MINION }
 # ------------------------------------------------------------------------------
 @export var lightning_bolt_texture: Texture2D
 @export var is_promoted: bool = false
+## Layered flight move SFX (null = skip that layer). Assign a soft wind/wing loop to [code]flight_sound_cruise_loop[/code] if you want cruise bed (avoid phase-turn stings).
+@export_group("Flight move audio")
+@export var flight_sound_prep: AudioStream = preload("res://SoundEffects/DefenseMode.mp3")
+## Shared clip for takeoff commit + touchdown; use pitch to differentiate.
+@export var flight_sound_dragon_takeoff_land: AudioStream = preload("res://SoundEffects/dragon_landing.mp3")
+## Optional loop during cruise only — do [b]not[/b] use [code]next-turn.mp3[/code] (same as battle phase UI sting).
+@export var flight_sound_cruise_loop: AudioStream = null
+@export var flight_audio_prep_db: float = -10.0
+@export var flight_audio_takeoff_db: float = 0.0
+## Slightly below 1.15 keeps takeoff bright; lower = longer playback (same clip).
+@export var flight_audio_dragon_takeoff_pitch_scale: float = 1.05
+@export var flight_audio_cruise_db: float = -14.0
+@export var flight_audio_land_db: float = -2.0
+## Lower than takeoff for a heavy land; lower = longer playback (same clip).
+@export var flight_audio_dragon_land_pitch_scale: float = 0.78
 var promo_aura: Sprite2D = null
 
 var active_class_data: ClassData = null
@@ -78,6 +152,7 @@ var active_class_data: ClassData = null
 @onready var sprite: Sprite2D = $Sprite
 
 var selection_tween: Tween
+var _bone_toxin_pulse_tween: Tween
 var stagger_tween: Tween
 var _poise_bar_tween: Tween
 var _mock_coop_owner_sprite_tint: Color = Color.WHITE
@@ -92,6 +167,12 @@ var is_arena_ghost: bool = false
 var unit_name: String = ""
 var unit_class_name: String = ""
 var unit_tags: Array = []  # Relationship Web: e.g. undead, cultist, holy, beast
+
+
+func get_unit_type() -> UnitData.UnitType:
+	if data == null:
+		return UnitData.UnitType.UNSPECIFIED
+	return data.unit_type
 
 # ------------------------------------------------------------------------------
 # Stats & Growth
@@ -123,6 +204,8 @@ var rookie_legacies: Array = []
 var base_class_legacies: Array = []
 ## Stacked ids (promoted_great_knight, …) when leaving a promoted class for ascended.
 var promoted_class_legacies: Array = []
+## Battle-only status stack (co-op wire [code]cstat[/code]). See [UnitCombatStatusHelpers].
+var combat_statuses: Array = []
 
 # ------------------------------------------------------------------------------
 # Turn State
@@ -160,6 +243,12 @@ var trade_selected_index: int = -1
 @onready var level_badge: Label = get_node_or_null("LevelBadge") as Label
 @onready var team_glow: ColorRect = $TeamGlow
 @onready var defend_icon: Node = get_node_or_null("DefendIcon")
+var _status_buff_strip: Node2D = null
+var _status_buff_sprites: Array[Sprite2D] = []
+var _status_buff_overflow: Label = null
+var _status_debuff_strip: Node2D = null
+var _status_debuff_sprites: Array[Sprite2D] = []
+var _status_debuff_overflow: Label = null
 
 ## Drawn under [member health_bar]; lags behind on damage so hits feel heavier.
 var health_bar_delay: ProgressBar
@@ -173,6 +262,15 @@ var _overhead_layout_cache_ready: bool = false
 var _selection_base_sprite_scale: Vector2 = Vector2.ONE
 var _selection_base_glow_alpha: float = 0.3
 var _selection_pulse_active: bool = false
+var _flight_sfx_player: AudioStreamPlayer = null
+var _flight_cruise_player: AudioStreamPlayer = null
+var _flight_ground_shadow: Sprite2D = null
+static var _flight_shared_ground_shadow_texture: ImageTexture = null
+
+func _exit_tree() -> void:
+	_flight_stop_cruise_audio()
+	_flight_hide_ground_shadow()
+
 
 func _ready() -> void:
 	if data == null:
@@ -217,6 +315,8 @@ func _ready() -> void:
 			move_range = active_class_data.move_range
 		else:
 			move_range = 4
+		if active_class_data != null:
+			move_type = int(active_class_data.move_type)
 	# --- STANDARD UNIT LOGIC ---
 	else:
 		unit_name = data.display_name
@@ -275,6 +375,8 @@ func _ready() -> void:
 		sprite.position = Vector2(DEFAULT_CELL_SIZE / 2, DEFAULT_CELL_SIZE / 2)
 	if equipped_weapon != null and inventory.is_empty():
 		inventory.append(equipped_weapon)
+
+	ActiveCombatAbilityHelpers.bootstrap_unit(self)
 
 	_apply_overhead_bar_visuals()
 	_refresh_level_badge()
@@ -362,6 +464,8 @@ func _apply_overhead_bar_focus_state() -> void:
 		var poise_visible: bool = should_draw_overhead and int(get_current_poise()) < int(get_max_poise())
 		p_bar.visible = poise_visible
 		p_bar.modulate = ui_tint
+
+	_reposition_status_icon_strip_if_visible()
 
 
 func _style_level_badge() -> void:
@@ -477,6 +581,7 @@ func _layout_overhead_bars() -> void:
 
 	if health_bar_delay != null:
 		_sync_health_bar_delay_layout(false)
+	_reposition_status_icon_strip_if_visible()
 
 
 func _ensure_health_bar_delay() -> void:
@@ -552,6 +657,7 @@ func _refresh_level_badge() -> void:
 	var hp_tl_unit: Vector2 = to_local(hp_gr.position)
 	var badge_h: float = level_badge.size.y * absf(level_badge.scale.y)
 	level_badge.position = Vector2(hp_tl_unit.x + inset_x, hp_tl_unit.y - badge_h - gap)
+	_reposition_status_icon_strip_if_visible()
 
 
 ## Default under-tile ring color from parent container (PlayerUnits / EnemyUnits / other).
@@ -616,6 +722,7 @@ func _set_remote_coop_pending_death_visual() -> void:
 		team_glow.visible = false
 	if defend_icon != null:
 		defend_icon.visible = false
+	_hide_status_icon_strip()
 	if level_badge != null:
 		level_badge.visible = false
 	process_mode = Node.PROCESS_MODE_DISABLED
@@ -639,6 +746,7 @@ func clear_remote_coop_pending_death_visual() -> void:
 		team_glow.visible = true
 	if defend_icon != null:
 		defend_icon.visible = is_defending
+	_refresh_combat_status_icon_strip()
 	if level_badge != null:
 		level_badge.visible = true
 		_refresh_level_badge()
@@ -738,40 +846,481 @@ func level_up() -> void:
 	emit_signal("leveled_up", self, gains)
 	_refresh_level_badge()
 
+
+func _is_flying_move_unit() -> bool:
+	return int(move_type) == int(ClassDataRef.MoveType.FLYING)
+
+
+func _sprite_cell_center_offset() -> Vector2:
+	return Vector2(float(DEFAULT_CELL_SIZE) * 0.5, float(DEFAULT_CELL_SIZE) * 0.5)
+
+
+func _reset_flight_step_sprite_pose(scale_restore: Vector2 = Vector2.ZERO) -> void:
+	if sprite == null:
+		return
+	sprite.rotation = 0.0
+	sprite.position = _sprite_cell_center_offset()
+	if scale_restore.length_squared() > 0.0001:
+		sprite.scale = scale_restore
+
+
+func _flight_polyline_pos(waypoints: PackedVector2Array, u: float, seg_count: int) -> Vector2:
+	if u <= 0.0:
+		return waypoints[0]
+	if u >= float(seg_count):
+		return waypoints[seg_count]
+	var si: int = int(floor(u))
+	var fr: float = u - float(si)
+	return waypoints[si].lerp(waypoints[si + 1], fr)
+
+
+func _flight_smoothstep01(t: float) -> float:
+	var x: float = clampf(t, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+
+## Clamped phase lengths so a minimum slice remains for horizontal travel.
+func _flight_build_time_layout() -> Dictionary:
+	var prep: float = maxf(FLIGHT_TIME_PREP_FRAC, 0.0)
+	var take: float = maxf(FLIGHT_TIME_TAKEOFF_CLIMB_FRAC, 0.0)
+	var hover: float = maxf(FLIGHT_TIME_LANDING_HOVER_FRAC, 0.0)
+	var drop: float = maxf(FLIGHT_TIME_LANDING_DROP_FRAC, 0.0)
+	var sum4: float = prep + take + hover + drop
+	if sum4 > 0.88:
+		var s: float = 0.88 / sum4
+		prep *= s
+		take *= s
+		hover *= s
+		drop *= s
+	var span_travel: float = 1.0 - prep - take - hover - drop
+	if span_travel < 0.07:
+		var deficit: float = 0.07 - span_travel
+		var pool: float = prep + take + hover + drop
+		if pool > 0.0001:
+			var factor: float = clampf((pool - deficit) / pool, 0.42, 1.0)
+			prep *= factor
+			take *= factor
+			hover *= factor
+			drop *= factor
+		span_travel = 1.0 - prep - take - hover - drop
+	var prep_e: float = prep
+	var takeoff_e: float = prep + take
+	var travel_done_e: float = takeoff_e + span_travel
+	var drop_start: float = 1.0 - drop
+	return {
+		"prep_e": prep_e,
+		"takeoff_e": takeoff_e,
+		"travel_done_e": travel_done_e,
+		"drop_start": drop_start,
+	}
+
+
+## Takeoff climb: strong ease-out + small overshoot near the top for a powerful leap.
+func _flight_takeoff_climb_height_ratio(norm: float) -> float:
+	var x: float = clampf(norm, 0.0, 1.0)
+	var core: float = 1.0 - pow(1.0 - x, FLIGHT_TAKEOFF_LIFT_POWER)
+	var bump: float = FLIGHT_TAKEOFF_APEX_OVERSHOOT * sin(PI * x) * (1.0 - x)
+	return clampf(core + bump, 0.0, 1.12)
+
+
+## How far along the drop timeline the horizontal gap to the tile closes (ease-in = hang back, then tuck in).
+func _flight_landing_horizontal_blend(norm: float) -> float:
+	var w: float = clampf(norm, 0.0, 1.0)
+	return pow(w, FLIGHT_LANDING_FORWARD_EASE_POWER)
+
+
+## [code]u[/code] targets: partial progress after takeoff arc, and a short-of-end hover point before the landing swoop.
+func _flight_u_arc_targets(seg_count: int) -> Dictionary:
+	var sc: float = float(maxi(seg_count, 1))
+	var pull: float = clampf(FLIGHT_LANDING_U_PULLBACK, 0.07, sc * 0.52)
+	if pull >= sc - 0.03:
+		pull = clampf(sc * 0.24, 0.09, sc * 0.48)
+	var u_preland: float = maxf(sc - pull, 0.0)
+	var wish_takeoff: float = FLIGHT_TAKEOFF_U_FRAC_OF_PATH * sc
+	var u_takeoff_max: float = minf(wish_takeoff, maxf(u_preland - 0.06, 0.08))
+	return {"u_preland": u_preland, "u_takeoff_max": u_takeoff_max}
+
+
+## Landing: height multiplier 1→0 over the drop phase (linger high, then fall).
+func _flight_landing_drop_height_ratio(norm: float) -> float:
+	var x: float = clampf(norm, 0.0, 1.0)
+	return pow(1.0 - x, FLIGHT_LANDING_DROP_POWER)
+
+
+func _flight_altitude_timed(tn: float, layout: Dictionary, cruise_height: float) -> float:
+	var h: float = maxf(cruise_height, 0.0)
+	var prep_e: float = float(layout.get("prep_e", 0.0))
+	var takeoff_e: float = float(layout.get("takeoff_e", 0.0))
+	var drop_start: float = float(layout.get("drop_start", 1.0))
+	if tn < prep_e:
+		return 0.0
+	if tn < takeoff_e:
+		var denom: float = takeoff_e - prep_e
+		if denom < 0.0001:
+			return h
+		var w: float = clampf((tn - prep_e) / denom, 0.0, 1.0)
+		return h * _flight_takeoff_climb_height_ratio(w)
+	if tn < drop_start:
+		return h
+	var drop_span: float = 1.0 - drop_start
+	if drop_span < 0.0001:
+		return 0.0
+	var wl: float = clampf((tn - drop_start) / drop_span, 0.0, 1.0)
+	return h * _flight_landing_drop_height_ratio(wl)
+
+
+func _flight_horizontal_u_timed(tn: float, layout: Dictionary, seg_count: int, u_arc: Dictionary) -> float:
+	if seg_count <= 0:
+		return 0.0
+	var prep_e: float = float(layout.get("prep_e", 0.0))
+	var takeoff_e: float = float(layout.get("takeoff_e", 0.0))
+	var travel_done_e: float = float(layout.get("travel_done_e", 1.0))
+	var drop_start: float = float(layout.get("drop_start", 1.0))
+	var u_preland: float = float(u_arc.get("u_preland", float(seg_count)))
+	var u_takeoff_max: float = float(u_arc.get("u_takeoff_max", 0.0))
+	var scf: float = float(seg_count)
+	if tn < prep_e:
+		return 0.0
+	if tn < takeoff_e:
+		var denom: float = takeoff_e - prep_e
+		if denom < 0.0001:
+			return u_takeoff_max
+		var w: float = clampf((tn - prep_e) / denom, 0.0, 1.0)
+		return u_takeoff_max * pow(w, FLIGHT_TAKEOFF_HORIZONTAL_LAG_POWER)
+	if tn < travel_done_e:
+		var span: float = travel_done_e - takeoff_e
+		if span < 0.0001:
+			return u_preland
+		var t: float = clampf((tn - takeoff_e) / span, 0.0, 1.0)
+		return lerpf(u_takeoff_max, u_preland, _flight_smoothstep01(t))
+	if tn < drop_start:
+		return u_preland
+	var drop_span: float = 1.0 - drop_start
+	if drop_span < 0.0001:
+		return scf
+	var wl: float = clampf((tn - drop_start) / drop_span, 0.0, 1.0)
+	return lerpf(u_preland, scf, _flight_landing_horizontal_blend(wl))
+
+
+## Stretch/squash aligned to timed takeoff/landing (paired X/Y).
+func _flight_apply_vertical_squish_timed(
+	spr: Sprite2D, base_scale: Vector2, tn: float, layout: Dictionary
+) -> void:
+	var sy: float = 1.0
+	var prep_e: float = float(layout.get("prep_e", 0.0))
+	var takeoff_e: float = float(layout.get("takeoff_e", 0.0))
+	var drop_start: float = float(layout.get("drop_start", 1.0))
+	if prep_e > 0.0001 and tn < prep_e:
+		var pr: float = clampf(tn / prep_e, 0.0, 1.0)
+		sy = 1.0 - FLIGHT_PREP_SQUISH_DEPTH * _flight_smoothstep01(pr)
+	elif takeoff_e > prep_e + 0.0001 and tn < takeoff_e:
+		var xt: float = clampf((tn - prep_e) / (takeoff_e - prep_e), 0.0, 1.0)
+		var e: float = sin(PI * xt)
+		var pop: float = FLIGHT_TAKEOFF_POP_Y * exp(-xt * 6.2)
+		sy = 1.0 + FLIGHT_TAKEOFF_STRETCH_Y * e + pop
+	elif takeoff_e <= prep_e + 0.0001 and tn < takeoff_e:
+		var xt2: float = clampf(tn / maxf(takeoff_e, 0.0001), 0.0, 1.0)
+		var e2: float = sin(PI * xt2)
+		var pop2: float = FLIGHT_TAKEOFF_POP_Y * exp(-xt2 * 6.2)
+		sy = 1.0 + FLIGHT_TAKEOFF_STRETCH_Y * e2 + pop2
+	elif tn >= drop_start - 0.0001:
+		var span_drop: float = 1.0 - drop_start
+		if span_drop > 0.0001:
+			var xl: float = clampf((tn - drop_start) / span_drop, 0.0, 1.0)
+			var e2: float = pow(xl, 1.7)
+			sy = 1.0 - FLIGHT_LANDING_SQUISH_Y * e2
+	var d: float = sy - 1.0
+	var sx: float = 1.0 - d * FLIGHT_SQUISH_VOLUME_PAIR
+	spr.scale = Vector2(base_scale.x * sx, base_scale.y * sy)
+
+
+## Half-period positive sine only: neutral → power → neutral; no mirror swing (no rotation used).
+func _flight_forward_stride_unit(elapsed: float, hz: float) -> float:
+	var ph: float = elapsed * TAU * maxf(hz, 0.05)
+	return pow(maxf(0.0, sin(ph)), FLIGHT_WING_FLAP_SHAPE)
+
+
+## Same ground dash dust as [method BattleField.spawn_dash_effect]; [code]from_cell[/code] → [code]to_cell[/code] sets facing.
+func _flight_spawn_dash_effect_cells(battlefield: Node, from_cell: Vector2i, to_cell: Vector2i) -> void:
+	if battlefield == null or not battlefield.has_method("spawn_dash_effect"):
+		return
+	var cs: int = DEFAULT_CELL_SIZE
+	var a: Vector2 = Vector2(float(from_cell.x * cs), float(from_cell.y * cs))
+	var b: Vector2 = Vector2(float(to_cell.x * cs), float(to_cell.y * cs))
+	battlefield.spawn_dash_effect(a, b)
+
+
+static func _flight_shared_ellipse_shadow_texture() -> ImageTexture:
+	if _flight_shared_ground_shadow_texture != null:
+		return _flight_shared_ground_shadow_texture
+	var w: int = 56
+	var h: int = 22
+	var img: Image = Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cx: float = (w - 1) * 0.5
+	var cy: float = (h - 1) * 0.5
+	var rx: float = float(w) * 0.42
+	var ry: float = float(h) * 0.38
+	for y in range(h):
+		for x in range(w):
+			var dx: float = (float(x) - cx) / rx
+			var dy: float = (float(y) - cy) / ry
+			var d2: float = dx * dx + dy * dy
+			if d2 <= 1.0:
+				var edge: float = sqrt(d2)
+				var a: float = pow(1.0 - edge, 1.85) * 0.62
+				img.set_pixel(x, y, Color(0, 0, 0, a))
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	_flight_shared_ground_shadow_texture = tex
+	return tex
+
+
+func _flight_ensure_ground_shadow() -> void:
+	if _flight_ground_shadow != null:
+		return
+	var sh: Sprite2D = Sprite2D.new()
+	sh.name = "FlightGroundShadow"
+	sh.z_index = -8
+	sh.position = Vector2(float(DEFAULT_CELL_SIZE) * 0.5, float(DEFAULT_CELL_SIZE) * 0.86)
+	sh.texture = _flight_shared_ellipse_shadow_texture()
+	sh.modulate = Color(1, 1, 1, 0.0)
+	sh.visible = false
+	add_child(sh)
+	_flight_ground_shadow = sh
+
+
+func _flight_show_ground_shadow() -> void:
+	_flight_ensure_ground_shadow()
+	if _flight_ground_shadow != null:
+		_flight_ground_shadow.visible = true
+
+
+func _flight_hide_ground_shadow() -> void:
+	if _flight_ground_shadow != null:
+		_flight_ground_shadow.visible = false
+
+
+func _flight_update_ground_shadow(alt_px: float) -> void:
+	if _flight_ground_shadow == null or not _flight_ground_shadow.visible:
+		return
+	var h_ref: float = maxf(FLIGHT_CRUISE_HEIGHT_PX * 1.18, 1.0)
+	var t: float = clampf(alt_px / h_ref, 0.0, 1.0)
+	var a: float = lerpf(FLIGHT_SHADOW_ALPHA_GROUND, FLIGHT_SHADOW_ALPHA_CRUISE, t)
+	_flight_ground_shadow.modulate = Color(1, 1, 1, a)
+	var sx: float = lerpf(FLIGHT_SHADOW_SCALE_XYZ_GROUND.x, FLIGHT_SHADOW_SCALE_XYZ_CRUISE.x, t)
+	var sy: float = lerpf(FLIGHT_SHADOW_SCALE_XYZ_GROUND.y, FLIGHT_SHADOW_SCALE_XYZ_CRUISE.y, t)
+	_flight_ground_shadow.scale = Vector2(sx, sy)
+
+
+func _flight_configure_loop_stream(original: AudioStream) -> AudioStream:
+	if original == null:
+		return null
+	var d: AudioStream = original.duplicate()
+	if d is AudioStreamMP3:
+		(d as AudioStreamMP3).loop = true
+	elif d is AudioStreamOggVorbis:
+		(d as AudioStreamOggVorbis).loop = true
+	elif d is AudioStreamWAV:
+		(d as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	return d
+
+
+func _flight_ensure_audio_players() -> void:
+	if _flight_sfx_player != null:
+		return
+	_flight_sfx_player = AudioStreamPlayer.new()
+	_flight_sfx_player.name = "FlightSfxPlayer"
+	add_child(_flight_sfx_player)
+	_flight_cruise_player = AudioStreamPlayer.new()
+	_flight_cruise_player.name = "FlightCruisePlayer"
+	add_child(_flight_cruise_player)
+
+
+func _flight_play_flight_one_shot(stream: AudioStream, volume_db: float, pitch_scale: float = 1.0) -> void:
+	if stream == null:
+		return
+	_flight_ensure_audio_players()
+	if _flight_sfx_player == null:
+		return
+	_flight_sfx_player.stream = stream
+	_flight_sfx_player.volume_db = volume_db
+	_flight_sfx_player.pitch_scale = maxf(pitch_scale, 0.01)
+	_flight_sfx_player.play()
+
+
+func _flight_start_cruise_loop() -> void:
+	if flight_sound_cruise_loop == null:
+		return
+	_flight_ensure_audio_players()
+	if _flight_cruise_player == null:
+		return
+	if _flight_cruise_player.playing:
+		return
+	_flight_cruise_player.stream = _flight_configure_loop_stream(flight_sound_cruise_loop)
+	_flight_cruise_player.volume_db = flight_audio_cruise_db
+	_flight_cruise_player.play()
+
+
+func _flight_stop_cruise_audio() -> void:
+	if _flight_cruise_player != null and _flight_cruise_player.playing:
+		_flight_cruise_player.stop()
+
+
+func _flight_cleanup_move_fx() -> void:
+	_flight_stop_cruise_audio()
+	_flight_hide_ground_shadow()
+
+
+## One smooth vault along the whole path (not per-tile). Fires [method BattleField.on_unit_committed_move_enter_cell] at each tile boundary.
+func _move_along_path_flying_continuous(path: Array[Vector2i], battlefield: Node) -> void:
+	var seg_count: int = path.size() - 1
+	if seg_count <= 0:
+		return
+	var cs: float = float(DEFAULT_CELL_SIZE)
+	var waypoints: PackedVector2Array = PackedVector2Array()
+	waypoints.resize(path.size())
+	for i in path.size():
+		waypoints[i] = Vector2(float(path[i].x) * cs, float(path[i].y) * cs)
+	var total_duration: float = CampaignManager.unit_move_speed * float(seg_count)
+	total_duration = maxf(total_duration, 0.04)
+	var base_sp: Vector2 = _sprite_cell_center_offset()
+	var scale_base: Vector2 = sprite.scale if sprite != null else Vector2.ONE
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		_flight_cleanup_move_fx()
+		position = waypoints[seg_count]
+		_reset_flight_step_sprite_pose(scale_base)
+		return
+	_flight_show_ground_shadow()
+	var t_elapsed: float = 0.0
+	var last_usec: int = Time.get_ticks_usec()
+	var next_enter_idx: int = 1
+	var time_layout: Dictionary = _flight_build_time_layout()
+	var u_arc: Dictionary = _flight_u_arc_targets(seg_count)
+	var prep_e: float = float(time_layout.get("prep_e", 0.0))
+	var takeoff_e: float = float(time_layout.get("takeoff_e", 0.0))
+	var drop_start: float = float(time_layout.get("drop_start", 1.0))
+	var prev_tn: float = -1.0
+	var did_takeoff_dash: bool = false
+	var did_landing_dash: bool = false
+	var did_prep_sfx: bool = false
+	var did_takeoff_sfx: bool = false
+	var did_start_cruise_sfx: bool = false
+	var did_landing_sfx: bool = false
+	while true:
+		await tree.process_frame
+		if not is_instance_valid(self):
+			return
+		var now_usec: int = Time.get_ticks_usec()
+		t_elapsed += float(now_usec - last_usec) / 1_000_000.0
+		last_usec = now_usec
+		t_elapsed = minf(t_elapsed, total_duration)
+		var tn: float = t_elapsed / total_duration
+		if battlefield != null and battlefield.has_method("spawn_dash_effect") and path.size() >= 2:
+			if not did_takeoff_dash:
+				var cross_prep: bool = (prep_e <= 0.0001 and prev_tn < 0.0) or (prev_tn < prep_e and tn >= prep_e)
+				if cross_prep:
+					_flight_spawn_dash_effect_cells(battlefield, path[0], path[1])
+					did_takeoff_dash = true
+			if not did_landing_dash and prev_tn < drop_start and tn >= drop_start:
+				_flight_spawn_dash_effect_cells(battlefield, path[path.size() - 2], path[path.size() - 1])
+				did_landing_dash = true
+		if not did_prep_sfx and prep_e > 0.0001 and prev_tn < 0.0 and tn >= 0.0:
+			_flight_play_flight_one_shot(flight_sound_prep, flight_audio_prep_db)
+			did_prep_sfx = true
+		if not did_takeoff_sfx:
+			var cross_commit: bool = (prep_e <= 0.0001 and prev_tn < 0.0) or (prev_tn < prep_e and tn >= prep_e)
+			if cross_commit:
+				_flight_play_flight_one_shot(
+					flight_sound_dragon_takeoff_land, flight_audio_takeoff_db, flight_audio_dragon_takeoff_pitch_scale
+				)
+				did_takeoff_sfx = true
+		if not did_start_cruise_sfx and prev_tn < takeoff_e and tn >= takeoff_e:
+			_flight_start_cruise_loop()
+			did_start_cruise_sfx = true
+		if not did_landing_sfx and prev_tn < drop_start and tn >= drop_start:
+			_flight_stop_cruise_audio()
+			_flight_play_flight_one_shot(
+				flight_sound_dragon_takeoff_land, flight_audio_land_db, flight_audio_dragon_land_pitch_scale
+			)
+			did_landing_sfx = true
+		prev_tn = tn
+		var u: float = _flight_horizontal_u_timed(tn, time_layout, seg_count, u_arc)
+		var along: Vector2 = _flight_polyline_pos(waypoints, u, seg_count)
+		var alt: float = _flight_altitude_timed(tn, time_layout, FLIGHT_CRUISE_HEIGHT_PX)
+		position = along + Vector2(0.0, -alt)
+		_flight_update_ground_shadow(alt)
+		var seg_i: int = clampi(int(floor(u)), 0, seg_count - 1)
+		var face_idx: int = mini(seg_i + 1, path.size() - 1)
+		look_at_pos(path[face_idx])
+		if sprite != null:
+			_flight_apply_vertical_squish_timed(sprite, scale_base, tn, time_layout)
+			var in_cruise: bool = tn >= takeoff_e and tn < drop_start
+			if in_cruise:
+				var flap_mul: float = FLIGHT_WING_FLAP_CRUISE_MUL
+				var stride: float = _flight_forward_stride_unit(t_elapsed, FLIGHT_WING_FLAP_HZ * flap_mul)
+				var fh: float = -1.0 if sprite.flip_h else 1.0
+				var d: float = FLIGHT_STRIDE_DIAG_PX * flap_mul
+				sprite.position = base_sp + Vector2(fh * d * stride, -d * stride * 0.68)
+				sprite.rotation = 0.0
+			else:
+				sprite.position = base_sp
+				sprite.rotation = 0.0
+		if battlefield != null and battlefield.has_method("on_unit_committed_move_enter_cell"):
+			while next_enter_idx <= seg_count and u >= float(next_enter_idx) - 0.0001:
+				await battlefield.on_unit_committed_move_enter_cell(self, path[next_enter_idx])
+				if not is_instance_valid(self):
+					return
+				next_enter_idx += 1
+		if t_elapsed >= total_duration:
+			break
+	while next_enter_idx <= seg_count and battlefield != null and battlefield.has_method("on_unit_committed_move_enter_cell"):
+		await battlefield.on_unit_committed_move_enter_cell(self, path[next_enter_idx])
+		if not is_instance_valid(self):
+			return
+		next_enter_idx += 1
+	_flight_cleanup_move_fx()
+	position = waypoints[seg_count]
+	_reset_flight_step_sprite_pose(scale_base)
+
+
 func move_along_path(path: Array[Vector2i]) -> void:
 	# We check <= 1 so the wind doesn't spawn if they just click themselves to wait
 	if path.size() <= 1:
 		return
 		
-	# --- NEW: SPAWN THE DASH EFFECT ---
-	# The Unit is inside the 'PlayerUnits' folder, so get_parent().get_parent() finds the Battlefield!
+	# Ground: full-path dash. Fliers: dash only on takeoff/landing in [method _move_along_path_flying_continuous].
 	var battlefield: Node = get_parent().get_parent() if get_parent() != null else null
-	if battlefield != null and battlefield.has_method("spawn_dash_effect"):
+	if battlefield != null and battlefield.has_method("spawn_dash_effect") and not _is_flying_move_unit():
 		var cs: int = DEFAULT_CELL_SIZE
 		var start_pixel := Vector2(path[0].x * cs, path[0].y * cs)
 		var end_pixel := Vector2(path[-1].x * cs, path[-1].y * cs)
 		battlefield.spawn_dash_effect(start_pixel, end_pixel)
-	# ----------------------------------
 		
 	has_moved = true
 
-	# One step at a time so hazards (e.g. fire tiles) resolve on real entry, not path preview.
-	for i in range(1, path.size()):
-		if not is_instance_valid(self):
-			return
-		var grid_pos: Vector2i = path[i]
-		look_at_pos(grid_pos)
-		var world_target := Vector2(grid_pos.x * DEFAULT_CELL_SIZE, grid_pos.y * DEFAULT_CELL_SIZE)
-		var step_tween: Tween = create_tween()
-		step_tween.tween_property(self, "position", world_target, CampaignManager.unit_move_speed)
-		await step_tween.finished
-		if not is_instance_valid(self):
-			return
-		if battlefield != null and battlefield.has_method("on_unit_committed_move_enter_cell"):
-			await battlefield.on_unit_committed_move_enter_cell(self, grid_pos)
-		if not is_instance_valid(self):
-			return
+	if _is_flying_move_unit():
+		await _move_along_path_flying_continuous(path, battlefield)
+	else:
+		# Walkers: one step at a time so hazards (e.g. fire tiles) resolve on real entry, not path preview.
+		for i in range(1, path.size()):
+			if not is_instance_valid(self):
+				return
+			var grid_pos: Vector2i = path[i]
+			look_at_pos(grid_pos)
+			var world_target := Vector2(grid_pos.x * DEFAULT_CELL_SIZE, grid_pos.y * DEFAULT_CELL_SIZE)
+			var step_tween: Tween = create_tween()
+			step_tween.tween_property(self, "position", world_target, CampaignManager.unit_move_speed)
+			await step_tween.finished
+			if not is_instance_valid(self):
+				return
+			if battlefield != null and battlefield.has_method("on_unit_committed_move_enter_cell"):
+				await battlefield.on_unit_committed_move_enter_cell(self, grid_pos)
+			if not is_instance_valid(self):
+				return
 
+	if not is_instance_valid(self):
+		return
 	emit_signal("moved", path[path.size() - 1])
 	
 ## Emits [signal died], hides visuals, optionally waits for death sound, then [method Node.queue_free].
@@ -787,6 +1336,7 @@ func die(killer: Node2D = null) -> void:
 		death_sound_player.stream = data.death_sound
 		death_sound_player.pitch_scale = randf_range(0.9, 1.1)
 		death_sound_player.play()
+	UnitCombatStatusHelpers.clear_all(self)
 	emit_signal("died", self, killer)
 	if battlefield != null and battlefield.has_method("is_coop_remote_combat_replay_active") and battlefield.is_coop_remote_combat_replay_active():
 		_set_remote_coop_pending_death_visual()
@@ -802,6 +1352,7 @@ func die(killer: Node2D = null) -> void:
 		team_glow.visible = false
 	if defend_icon != null:
 		defend_icon.visible = false
+	_hide_status_icon_strip()
 	if level_badge != null:
 		level_badge.visible = false
 
@@ -861,6 +1412,357 @@ func take_damage(amount: int, attacker: Node2D = null) -> void:
 			attacker.gain_exp(15)
 		emit_signal("damaged", current_hp)
 
+func has_combat_status(status_id: String) -> bool:
+	return UnitCombatStatusHelpers.has_status(self, status_id)
+
+
+func add_combat_status(status_id: String, opts: Dictionary = {}) -> void:
+	UnitCombatStatusHelpers.add_status(self, status_id, opts)
+	refresh_combat_status_sprite_tint()
+
+
+func remove_combat_status(status_id: String) -> void:
+	UnitCombatStatusHelpers.remove_status(self, status_id)
+	refresh_combat_status_sprite_tint()
+
+
+func export_combat_statuses_wire() -> Array:
+	return UnitCombatStatusHelpers.export_wire(self)
+
+
+func import_combat_statuses_wire(raw: Variant) -> void:
+	UnitCombatStatusHelpers.import_wire(self, raw)
+	refresh_combat_status_sprite_tint()
+
+
+## Human-readable status names for hover popups / non-BBCode UI.
+func get_active_combat_status_plain_lines() -> PackedStringArray:
+	return UnitCombatStatusHelpers.build_plain_lines(self)
+
+
+## Grouped human-readable lines for battlefield hover popup columns.
+func get_active_combat_status_grouped_lines(include_descriptions: bool = false) -> Dictionary:
+	return UnitCombatStatusHelpers.build_plain_groups(self, include_descriptions)
+
+
+## Compact hash-like token for status popup refresh guards.
+func get_combat_status_signature() -> String:
+	return UnitCombatStatusHelpers.build_signature(self)
+
+
+## Returns BBCode fragments for battle HUD (ongoing effects).
+func get_active_combat_status_bbcode_badges() -> PackedStringArray:
+	return UnitCombatStatusHelpers.build_bbcode_badges(self)
+
+
+func _hide_status_icon_strip() -> void:
+	for nm: String in ["StatusBuffStrip", "StatusDebuffStrip", "StatusIconStrip"]:
+		var n: Node = get_node_or_null(nm)
+		if n != null:
+			n.visible = false
+
+
+func _append_strip_children(strip: Node2D, into_sprites: Array[Sprite2D]) -> Label:
+	into_sprites.clear()
+	var overflow: Label = null
+	for ch in strip.get_children():
+		if ch is Sprite2D:
+			into_sprites.append(ch as Sprite2D)
+		elif ch is Label and str(ch.name) == "StatusOverflow":
+			overflow = ch as Label
+	return overflow
+
+
+func _create_status_strip_package(strip_node_name: String, z_index: int, initial_position: Vector2) -> Node2D:
+	var strip := Node2D.new()
+	strip.name = strip_node_name
+	strip.z_index = z_index
+	strip.position = initial_position
+	strip.visible = false
+	add_child(strip)
+	for i in range(STATUS_STRIP_MAX_ICONS):
+		var spr := Sprite2D.new()
+		spr.name = "StripIcon%d" % i
+		spr.visible = false
+		spr.centered = true
+		strip.add_child(spr)
+	var ol := Label.new()
+	ol.name = "StatusOverflow"
+	ol.visible = false
+	ol.z_index = 1
+	ol.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ol.add_theme_font_size_override("font_size", 11)
+	ol.add_theme_color_override("font_color", Color(0.95, 0.95, 1.0, 1.0))
+	ol.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.08, 1.0))
+	ol.add_theme_constant_override("outline_size", 3)
+	strip.add_child(ol)
+	return strip
+
+
+func _ensure_status_strips() -> void:
+	if (
+		_status_buff_strip != null
+		and is_instance_valid(_status_buff_strip)
+		and _status_debuff_strip != null
+		and is_instance_valid(_status_debuff_strip)
+	):
+		return
+	if _status_debuff_strip == null or not is_instance_valid(_status_debuff_strip):
+		var ex_d: Node = get_node_or_null("StatusDebuffStrip")
+		if ex_d is Node2D:
+			_status_debuff_strip = ex_d as Node2D
+			_status_debuff_overflow = _append_strip_children(_status_debuff_strip, _status_debuff_sprites)
+		else:
+			_status_debuff_strip = _create_status_strip_package(
+				"StatusDebuffStrip",
+				STATUS_DEBUFF_STRIP_Z_INDEX,
+				Vector2(float(DEFAULT_CELL_SIZE) * 0.5, STATUS_STRIP_FALLBACK_Y)
+			)
+			_status_debuff_overflow = _append_strip_children(_status_debuff_strip, _status_debuff_sprites)
+	if _status_buff_strip == null or not is_instance_valid(_status_buff_strip):
+		var ex_b: Node = get_node_or_null("StatusBuffStrip")
+		if ex_b is Node2D:
+			_status_buff_strip = ex_b as Node2D
+			_status_buff_overflow = _append_strip_children(_status_buff_strip, _status_buff_sprites)
+		else:
+			_status_buff_strip = _create_status_strip_package(
+				"StatusBuffStrip",
+				STATUS_BUFF_STRIP_Z_INDEX,
+				Vector2(float(DEFAULT_CELL_SIZE) * 0.5, STATUS_STRIP_FALLBACK_Y)
+			)
+			_status_buff_overflow = _append_strip_children(_status_buff_strip, _status_buff_sprites)
+
+
+func _gather_tactical_status_textures_by_buff_flag(want_buff: bool) -> Array[Texture2D]:
+	var out: Array[Texture2D] = []
+	CombatStatusRegistry.ensure_loaded()
+	for e in combat_statuses:
+		if not e is Dictionary:
+			continue
+		var sid: String = str((e as Dictionary).get("id", "")).strip_edges()
+		if sid == "":
+			continue
+		var sdef: CombatStatusData = CombatStatusRegistry.get_optional(sid)
+		if sdef == null or sdef.tactical_icon == null:
+			continue
+		var is_buff: bool = str(sdef.hover_group).strip_edges().to_lower() == "buff"
+		if is_buff == want_buff:
+			out.append(sdef.tactical_icon)
+	return out
+
+
+func _apply_overflow_trim(textures: Array[Texture2D]) -> Dictionary:
+	var tex_list: Array[Texture2D] = []
+	for t in textures:
+		tex_list.append(t)
+	var overflow_n: int = 0
+	if tex_list.size() > STATUS_STRIP_MAX_ICONS:
+		overflow_n = tex_list.size() - (STATUS_STRIP_MAX_ICONS - 1)
+		var cap: int = STATUS_STRIP_MAX_ICONS - 1
+		var trimmed: Array[Texture2D] = []
+		for i in range(cap):
+			trimmed.append(tex_list[i])
+		tex_list = trimmed
+	return {"textures": tex_list, "overflow": overflow_n}
+
+
+func _layout_one_status_strip(
+	strip: Node2D,
+	sprites: Array[Sprite2D],
+	overflow_lbl: Label,
+	textures: Array[Texture2D],
+	overflow_extra: int
+) -> void:
+	if strip == null:
+		return
+	var n: int = textures.size()
+	for i in range(sprites.size()):
+		var spr: Sprite2D = sprites[i]
+		if i < n:
+			spr.texture = textures[i]
+			spr.scale = Vector2(STATUS_STRIP_ICON_SCALE, STATUS_STRIP_ICON_SCALE)
+			spr.visible = true
+		else:
+			spr.visible = false
+	var label_w: float = 0.0
+	if overflow_extra > 0 and overflow_lbl != null:
+		overflow_lbl.text = "+%d" % overflow_extra
+		overflow_lbl.visible = true
+		label_w = 22.0
+	else:
+		if overflow_lbl != null:
+			overflow_lbl.visible = false
+	var widths: Array[float] = []
+	var total: float = 0.0
+	var sc: float = STATUS_STRIP_ICON_SCALE
+	for i in n:
+		var sz: Vector2 = textures[i].get_size()
+		var w: float = sz.x * sc
+		widths.append(w)
+		total += w
+	if n > 1:
+		total += float(n - 1) * STATUS_STRIP_GAP_PX
+	if label_w > 0.0:
+		total += label_w + STATUS_STRIP_GAP_PX
+	var x: float = -total * 0.5
+	for i in n:
+		var spr_i: Sprite2D = sprites[i]
+		var wi: float = widths[i]
+		spr_i.position = Vector2(x + wi * 0.5, 0.0)
+		x += wi + STATUS_STRIP_GAP_PX
+	if overflow_extra > 0 and overflow_lbl != null:
+		overflow_lbl.position = Vector2(x + 2.0, -10.0)
+
+
+func _compute_strip_row_half_height(sprites: Array[Sprite2D], overflow_lbl: Label) -> float:
+	var max_h: float = 8.0
+	for spr in sprites:
+		if spr.visible and spr.texture != null:
+			max_h = maxf(max_h, spr.texture.get_size().y * absf(spr.scale.y))
+	if overflow_lbl != null and overflow_lbl.visible:
+		max_h = maxf(max_h, 16.0)
+	return max_h * 0.5
+
+
+## Buff row: just above the HP bar, centered in space to the right of the level badge.
+func _position_buff_strip_above_health_bar() -> void:
+	if _status_buff_strip == null or not is_instance_valid(_status_buff_strip):
+		return
+	var row_half: float = _compute_strip_row_half_height(_status_buff_sprites, _status_buff_overflow)
+	if health_bar == null or not health_bar.visible:
+		_status_buff_strip.position = Vector2(float(DEFAULT_CELL_SIZE) * 0.5, STATUS_STRIP_FALLBACK_Y)
+		return
+	var hp_gr: Rect2 = health_bar.get_global_rect()
+	if hp_gr.size.x < 1.0 or hp_gr.size.y < 1.0:
+		call_deferred("_reposition_status_icon_strip_if_visible")
+		return
+	var hp_tl: Vector2 = to_local(hp_gr.position)
+	var hp_br: Vector2 = to_local(hp_gr.position + Vector2(hp_gr.size.x, hp_gr.size.y))
+	var hp_left: float = minf(hp_tl.x, hp_br.x)
+	var hp_right: float = maxf(hp_tl.x, hp_br.x)
+	var hp_top: float = minf(hp_tl.y, hp_br.y)
+	var strip_cy: float = hp_top - STATUS_STRIP_ABOVE_HP_GAP_PX - row_half
+	var center_x: float = (hp_left + hp_right) * 0.5
+	if level_badge != null and level_badge.visible:
+		var bg: Rect2 = level_badge.get_global_rect()
+		var b_tl: Vector2 = to_local(bg.position)
+		var b_br: Vector2 = to_local(bg.position + Vector2(bg.size.x, bg.size.y))
+		var b_right: float = maxf(b_tl.x, b_br.x)
+		var b_top: float = minf(b_tl.y, b_br.y)
+		var b_bot: float = maxf(b_tl.y, b_br.y)
+		var usable_left: float = maxf(hp_left, b_right + STATUS_STRIP_BADGE_H_MARGIN_PX)
+		if usable_left < hp_right - 6.0:
+			center_x = (usable_left + hp_right) * 0.5
+		var s_top: float = strip_cy - row_half
+		var s_bot: float = strip_cy + row_half
+		if s_bot > b_top - 0.5 and s_top < b_bot + 0.5:
+			strip_cy = b_top - STATUS_STRIP_ABOVE_HP_GAP_PX - row_half
+	_status_buff_strip.position = Vector2(center_x, strip_cy)
+
+
+## Debuff row: centered at feet (same anchor as legacy PoisonedIcon).
+func _position_debuff_strip_at_feet() -> void:
+	if _status_debuff_strip == null or not is_instance_valid(_status_debuff_strip):
+		return
+	_status_debuff_strip.position = Vector2(float(DEFAULT_CELL_SIZE) * 0.5, STATUS_STRIP_FALLBACK_Y)
+
+
+func _reposition_status_icon_strip_if_visible() -> void:
+	if _status_buff_strip != null and is_instance_valid(_status_buff_strip) and _status_buff_strip.visible:
+		_position_buff_strip_above_health_bar()
+	if _status_debuff_strip != null and is_instance_valid(_status_debuff_strip) and _status_debuff_strip.visible:
+		_position_debuff_strip_at_feet()
+
+
+func _sync_status_strip_modulate_vs_exhaustion() -> void:
+	_ensure_status_strips()
+	var child_mod: Color
+	if is_exhausted:
+		var dim: Color = _exhausted_root_modulate()
+		const EPS: float = 0.001
+		child_mod = Color(
+			base_color.r / maxf(dim.r, EPS),
+			base_color.g / maxf(dim.g, EPS),
+			base_color.b / maxf(dim.b, EPS),
+			base_color.a / maxf(dim.a, EPS)
+		)
+	else:
+		child_mod = Color.WHITE
+	for strip in [_status_buff_strip, _status_debuff_strip]:
+		if strip == null or not is_instance_valid(strip):
+			continue
+		for ch in strip.get_children():
+			if ch is CanvasItem:
+				(ch as CanvasItem).modulate = child_mod
+
+
+func _refresh_combat_status_icon_strip() -> void:
+	_ensure_status_strips()
+	if _status_buff_strip == null or _status_debuff_strip == null:
+		return
+	_sync_status_strip_modulate_vs_exhaustion()
+	if has_meta("coop_remote_pending_death") or current_hp <= 0:
+		_status_buff_strip.visible = false
+		_status_debuff_strip.visible = false
+		return
+	var raw_buffs: Array[Texture2D] = _gather_tactical_status_textures_by_buff_flag(true)
+	var raw_debuffs: Array[Texture2D] = _gather_tactical_status_textures_by_buff_flag(false)
+	var buff_pack: Dictionary = _apply_overflow_trim(raw_buffs)
+	var deb_pack: Dictionary = _apply_overflow_trim(raw_debuffs)
+	var buff_tex: Array[Texture2D] = buff_pack["textures"]
+	var buff_ov: int = int(buff_pack["overflow"])
+	var deb_tex: Array[Texture2D] = deb_pack["textures"]
+	var deb_ov: int = int(deb_pack["overflow"])
+	var any_buff: bool = not buff_tex.is_empty() or buff_ov > 0
+	var any_deb: bool = not deb_tex.is_empty() or deb_ov > 0
+	if not any_buff:
+		_status_buff_strip.visible = false
+	else:
+		_layout_one_status_strip(_status_buff_strip, _status_buff_sprites, _status_buff_overflow, buff_tex, buff_ov)
+		_status_buff_strip.visible = true
+		_position_buff_strip_above_health_bar()
+	if not any_deb:
+		_status_debuff_strip.visible = false
+	else:
+		_layout_one_status_strip(_status_debuff_strip, _status_debuff_sprites, _status_debuff_overflow, deb_tex, deb_ov)
+		_status_debuff_strip.visible = true
+		_position_debuff_strip_at_feet()
+
+
+func refresh_combat_status_sprite_tint() -> void:
+	_refresh_combat_status_icon_strip()
+	if sprite == null:
+		return
+	if _selection_pulse_active:
+		return
+	if UnitCombatStatusHelpers.has_status(self, UnitCombatStatusHelpers.ID_BONE_TOXIN):
+		_ensure_bone_toxin_pulse_running()
+	else:
+		_stop_bone_toxin_pulse()
+		sprite.modulate = Color.WHITE
+
+
+func _stop_bone_toxin_pulse() -> void:
+	if _bone_toxin_pulse_tween != null and _bone_toxin_pulse_tween.is_valid():
+		_bone_toxin_pulse_tween.kill()
+	_bone_toxin_pulse_tween = null
+
+
+func _ensure_bone_toxin_pulse_running() -> void:
+	if sprite == null:
+		return
+	if _bone_toxin_pulse_tween != null and _bone_toxin_pulse_tween.is_valid():
+		return
+	sprite.modulate = BONE_TOXIN_PULSE_MODULATE_DIM
+	_bone_toxin_pulse_tween = create_tween().set_loops()
+	_bone_toxin_pulse_tween.tween_property(
+		sprite, "modulate", BONE_TOXIN_PULSE_MODULATE_BRIGHT, BONE_TOXIN_PULSE_HALF_PERIOD_SEC
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_bone_toxin_pulse_tween.tween_property(
+		sprite, "modulate", BONE_TOXIN_PULSE_MODULATE_DIM, BONE_TOXIN_PULSE_HALF_PERIOD_SEC
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
 ## Clears has_moved, is_exhausted, is_defending; resets poise meta and stagger visuals.
 func _exhausted_root_modulate() -> Color:
 	var m: Color = base_color * EXHAUSTED_MODULATE
@@ -873,6 +1775,9 @@ func _exhausted_root_modulate() -> Color:
 
 
 func reset_turn() -> void:
+	UnitCombatStatusHelpers.promote_legacy_metas_to_status_list(self)
+	UnitCombatStatusHelpers.expire_turn_start_statuses(self)
+
 	has_moved = false
 	move_points_used_this_turn = 0.0
 	in_canto_phase = false
@@ -882,6 +1787,7 @@ func reset_turn() -> void:
 	if defend_icon != null:
 		defend_icon.visible = false
 	modulate = base_color
+	_sync_status_strip_modulate_vs_exhaustion()
 	
 	# --- POISE RECOVERY ---
 	if has_meta("current_poise"):
@@ -895,8 +1801,7 @@ func reset_turn() -> void:
 	if has_meta("rookie_villager_desperate_turn"):
 		remove_meta("rookie_villager_desperate_turn")
 
-	if has_meta("map01_scorched"):
-		remove_meta("map01_scorched")
+	refresh_combat_status_sprite_tint()
 
 func finish_turn() -> void:
 	in_canto_phase = false
@@ -910,6 +1815,7 @@ func finish_turn() -> void:
 	# Force the sprite color to update immediately (preserve scene tint on enemies)
 	if is_exhausted:
 		modulate = _exhausted_root_modulate()
+	_sync_status_strip_modulate_vs_exhaustion()
 	
 	emit_signal("finished_turn", self)
 
@@ -941,6 +1847,7 @@ func set_selected(is_selected: bool) -> void:
 	else:
 		team_glow.color.a = maxf(team_glow.color.a, 0.3)
 		modulate = _exhausted_root_modulate() if is_exhausted else base_color
+		_sync_status_strip_modulate_vs_exhaustion()
 
 # Call this function with true to start glowing, false to stop.
 func set_selected_glow(is_selected: bool) -> void:
@@ -952,6 +1859,7 @@ func set_selected_glow(is_selected: bool) -> void:
 	if is_selected:
 		if sprite == null:
 			return
+		_stop_bone_toxin_pulse()
 		_selection_base_sprite_scale = sprite.scale
 		if team_glow != null:
 			_selection_base_glow_alpha = team_glow.color.a
@@ -961,12 +1869,15 @@ func set_selected_glow(is_selected: bool) -> void:
 		# Faster + stronger pulse for clearer active-unit read.
 		selection_tween = create_tween().set_loops()
 		selection_tween.tween_property(sprite, "modulate", SELECT_PULSE_SPRITE_BRIGHT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		selection_tween.parallel().tween_property(sprite, "scale", _selection_base_sprite_scale * SELECT_PULSE_SPRITE_SCALE_MULT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		# Fliers: do not tween sprite.scale — continuous flight squash uses non-uniform scale and would be overwritten every frame.
+		if not _is_flying_move_unit():
+			selection_tween.parallel().tween_property(sprite, "scale", _selection_base_sprite_scale * SELECT_PULSE_SPRITE_SCALE_MULT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		if team_glow != null:
 			selection_tween.parallel().tween_property(team_glow, "color:a", SELECT_PULSE_GLOW_ALPHA_MAX, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 			selection_tween.parallel().tween_property(team_glow, "scale", Vector2.ONE * SELECT_PULSE_GLOW_SCALE_MULT, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		selection_tween.tween_property(sprite, "modulate", Color.WHITE, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		selection_tween.parallel().tween_property(sprite, "scale", _selection_base_sprite_scale, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+		if not _is_flying_move_unit():
+			selection_tween.parallel().tween_property(sprite, "scale", _selection_base_sprite_scale, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 		if team_glow != null:
 			var target_base_alpha: float = maxf(_selection_base_glow_alpha, SELECT_PULSE_GLOW_ALPHA_MIN)
 			selection_tween.parallel().tween_property(team_glow, "color:a", target_base_alpha, SELECT_PULSE_HALF_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -977,8 +1888,8 @@ func set_selected_glow(is_selected: bool) -> void:
 		_selection_pulse_active = false
 		# Ensure the unit returns to normal color when deselected
 		if sprite != null:
-			sprite.modulate = Color.WHITE
 			sprite.scale = _selection_base_sprite_scale
+			refresh_combat_status_sprite_tint()
 		if team_glow != null:
 			var glow_color: Color = team_glow.color
 			glow_color.a = maxf(_selection_base_glow_alpha, SELECT_PULSE_GLOW_ALPHA_MIN)
@@ -1058,6 +1969,11 @@ func setup_from_save_data(save_dict: Dictionary) -> void:
 		promoted_class_legacies = save_dict["promoted_class_legacies"].duplicate()
 	else:
 		promoted_class_legacies.clear()
+
+	if save_dict.has("active_ability_cd"):
+		ActiveCombatAbilityHelpers.import_wire(self, save_dict["active_ability_cd"])
+	else:
+		ActiveCombatAbilityHelpers.bootstrap_unit(self)
 
 # --- NEW: PHYSICALLY UPDATE VISUALS ---
 func apply_custom_visuals(sprite_tex: Texture2D, portrait_tex: Texture2D) -> void:
@@ -1244,7 +2160,7 @@ func set_staggered_visuals(is_staggered: bool) -> void:
 		stagger_tween.tween_property(sprite, "modulate", Color.WHITE, 0.6).set_trans(Tween.TRANS_SINE)
 	else:
 		if sprite:
-			sprite.modulate = Color.WHITE
+			refresh_combat_status_sprite_tint()
 
 # ==========================================
 # ARENA GHOST UI SYNC

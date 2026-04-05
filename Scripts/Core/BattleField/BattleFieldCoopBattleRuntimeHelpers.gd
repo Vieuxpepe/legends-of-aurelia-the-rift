@@ -1,6 +1,8 @@
 extends RefCounted
 
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
 
 ## Runtime co-op battlefield glue: wire snapshots, enemy-phase setup sync, loot capture/apply, grid solidity around mirror units, relationship-id lookup, remote combat replay orchestration, post-authoritative outcome checks.
 
@@ -142,6 +144,9 @@ static func build_runtime_unit_wire_snapshot(field, unit: Node2D) -> Dictionary:
 		var ci: CanvasItem = unit as CanvasItem
 		entry["visible"] = ci.visible
 		entry["modulate"] = [ci.modulate.r, ci.modulate.g, ci.modulate.b, ci.modulate.a]
+	entry["cstat"] = UnitCombatStatusHelpers.export_wire(unit)
+	if ActiveCombatAbilityHelpers.collect_definitions(unit).size() > 0:
+		entry["acd"] = ActiveCombatAbilityHelpers.export_wire(unit)
 	return entry
 
 
@@ -182,7 +187,7 @@ static func instantiate_runtime_unit_from_snapshot(field, entry: Dictionary, tar
 		unit.died.connect(field._on_unit_died)
 	if unit.has_signal("leveled_up") and not unit.leveled_up.is_connected(field._on_unit_leveled_up):
 		unit.leveled_up.connect(field._on_unit_leveled_up)
-	Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, unit)
+	CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, unit)
 	return unit
 
 
@@ -254,6 +259,11 @@ static func apply_runtime_unit_wire_snapshot(field, entry: Dictionary, target_pa
 		if mod_raw is Array and (mod_raw as Array).size() >= 4:
 			var mod_arr: Array = mod_raw as Array
 			ci.modulate = Color(float(mod_arr[0]), float(mod_arr[1]), float(mod_arr[2]), float(mod_arr[3]))
+	UnitCombatStatusHelpers.import_wire(unit, entry.get("cstat", []))
+	if entry.has("acd"):
+		ActiveCombatAbilityHelpers.import_wire(unit, entry["acd"])
+	else:
+		ActiveCombatAbilityHelpers.bootstrap_unit(unit)
 	return unit
 
 

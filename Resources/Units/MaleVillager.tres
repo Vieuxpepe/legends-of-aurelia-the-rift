@@ -1,8 +1,10 @@
 [gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://8fvu7spfcys8"]
 
+[ext_resource type="Script" uid="uid://tpkerhjt8thg" path="res://Resources/CombatActives/ActiveCombatAbilityData.gd" id="1_3tino"]
 [ext_resource type="AudioStream" uid="uid://cdnaiwtsm0rwt" path="res://SoundEffects/Death Human.mp3" id="2_ag42o"]
 [ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_srgoe"]
 [ext_resource type="Texture2D" uid="uid://cgko7tmgslgud" path="res://Assets/Sprites/MaleVillager.png" id="4_8o2gw"]
+[ext_resource type="Script" uid="uid://c4kao7pckv6d1" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="4_oivo0"]
 [ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="5_r1cdt"]
 [ext_resource type="Resource" uid="uid://cbugs1gjcxkm8" path="res://Resources/Weapons/IronSword.tres" id="6_k2nmb"]
 [ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="7_nkcgd"]

@@ -9,6 +9,9 @@
 [ext_resource type="Resource" uid="uid://0qwbfdhj407u" path="res://Resources/Weapons/Heal Staff.tres" id="6_yb4a2"]
 [ext_resource type="Script" uid="uid://c4owfgww6ml1s" path="res://SupportData.gd" id="7_b7mu5"]
 [ext_resource type="Texture2D" uid="uid://cd5ifv7us0ykr" path="res://Assets/Skeleton_sprite.png" id="7_wjsoo"]
+[ext_resource type="Script" uid="uid://cpassiveability01" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="8_passive_cls"]
+[ext_resource type="Resource" uid="uid://cpassbonepile01" path="res://Resources/CombatPassives/Passive_BonePileReform.tres" id="9_bonepile"]
+[ext_resource type="Resource" uid="uid://cpassbonetoxin01" path="res://Resources/CombatPassives/Passive_BoneToxin.tres" id="10_bonetoxin"]
 
 [sub_resource type="Resource" id="Resource_6bxmx"]
 script = ExtResource("2_b7mu5")
@@ -18,6 +21,7 @@ metadata/_custom_type_script = "uid://qmryjywc3ivm"
 [resource]
 script = ExtResource("5_oytat")
 display_name = "Skeleton"
+unit_type = 7
 character_class = ExtResource("1_yb4a2")
 starting_weapon = ExtResource("6_yb4a2")
 death_sound = ExtResource("2_xobid")
@@ -27,5 +31,5 @@ visual_scale = 2.5
 max_hp = 20
 drops_equipped_weapon = true
 extra_loot = Array[ExtResource("2_b7mu5")]([SubResource("Resource_6bxmx")])
-bone_pile_reform_rounds = 2
+passive_combat_abilities = Array[ExtResource("8_passive_cls")]([ExtResource("9_bonepile"), ExtResource("10_bonetoxin")])
 metadata/_custom_type_script = "uid://3jului3v2v6"

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
 
 # Owns the "defensive reaction" orchestration glue (QTE mirror + outcome application),
 # not just the minigame implementations.
@@ -47,7 +48,8 @@ static func resolve_parry_and_shield_clash(
 				var final_counter_dmg = base_counter_dmg * 3
 
 				field.screen_shake(15.0, 0.4)
-				if field.crit_sound.stream != null: field.crit_sound.play()
+				if field.crit_sound.stream != null:
+					field.play_attack_hit_sound(field.crit_sound)
 				attacker.take_damage(final_counter_dmg, defender)
 				var sc_chunk: float = -1.0
 				if attacker.max_hp > 0:
@@ -87,9 +89,22 @@ static func resolve_parry_and_shield_clash(
 			var counter_defense = attacker.resistance if is_magic_counter else attacker.defense
 			var base_counter_dmg = max(1, (counter_offense + (def_wpn.might if def_wpn else 0)) - counter_defense)
 
-			if field.crit_sound.stream != null: field.crit_sound.play()
+			if field.crit_sound.stream != null:
+				field.play_attack_hit_sound(field.crit_sound)
 			attacker.take_damage(base_counter_dmg, defender)
 			field.spawn_loot_text(str(base_counter_dmg) + " DMG", Color(1.0, 1.0, 1.0), attacker.global_position + Vector2(32, -16))
+			if defender.get("combat_statuses") != null:
+				UnitCombatStatusHelpers.add_status(defender, UnitCombatStatusHelpers.ID_RESOLVE, {})
+			field.add_combat_log(
+				defender.unit_name + " gains Resolve (+Hit/Avo/Might until their next turn).",
+				"cornflowerblue"
+			)
+			field.spawn_loot_text("RESOLVE!", Color(0.45, 0.68, 1.0), defender.global_position + Vector2(32, -52), {
+				"stack_anchor": defender,
+				"font_size": 20,
+				"text_scale": 2.1,
+				"rise_px": 28.0,
+			})
 		else:
 			field.add_combat_log("Parry Failed! Timing missed!", "red")
 
@@ -122,6 +137,12 @@ static func resolve_last_stand_if_lethal(
 			ability_triggers_count += 2
 			field.add_combat_log(defender.unit_name + " defied death!", "gold")
 			field.spawn_loot_text("DEATH DEFIED!", Color(1.0, 0.8, 0.2), defender.global_position + Vector2(32, -16))
+			if defender.get("combat_statuses") != null:
+				UnitCombatStatusHelpers.add_status(defender, UnitCombatStatusHelpers.ID_RESOLVE, {})
+			field.add_combat_log(
+				defender.unit_name + " steels themselves: Resolve (+Hit/Avo/Might until next turn).",
+				"cornflowerblue"
+			)
 
 	return {
 		"death_defied": death_defied,

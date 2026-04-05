@@ -36,8 +36,9 @@ static func ask_for_promotion_choice(field, options: Array) -> Resource:
 
 	# Build a card for each option in the array
 	for class_res in options:
-		if class_res == null:
+		if not (class_res is Resource):
 			continue
+		var option_res: Resource = class_res
 
 		var btn = Button.new()
 		btn.custom_minimum_size = Vector2(450, 650)
@@ -53,7 +54,7 @@ static func ask_for_promotion_choice(field, options: Array) -> Resource:
 		btn.add_child(vbox)
 
 		var c_name = Label.new()
-		c_name.text = class_res.get("job_name") if class_res.get("job_name") else "Unknown"
+		c_name.text = option_res.get("job_name") if option_res.get("job_name") else "Unknown"
 		c_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		c_name.add_theme_font_size_override("font_size", 56)
 		c_name.add_theme_color_override("font_color", Color.CYAN)
@@ -63,17 +64,17 @@ static func ask_for_promotion_choice(field, options: Array) -> Resource:
 		vbox.add_child(sep)
 
 		var stats = Label.new()
-		var m_range = str(class_res.get("move_range")) if class_res.get("move_range") != null else "N/A"
+		var m_range = str(option_res.get("move_range")) if option_res.get("move_range") != null else "N/A"
 		stats.text = "\n[ MOVE: " + m_range + " ]\n\n"
 
 		# Safely extract stats
-		var p_hp = class_res.get("promo_hp_bonus") if class_res.get("promo_hp_bonus") != null else 0
-		var p_str = class_res.get("promo_str_bonus") if class_res.get("promo_str_bonus") != null else 0
-		var p_mag = class_res.get("promo_mag_bonus") if class_res.get("promo_mag_bonus") != null else 0
-		var p_def = class_res.get("promo_def_bonus") if class_res.get("promo_def_bonus") != null else 0
-		var p_res = class_res.get("promo_res_bonus") if class_res.get("promo_res_bonus") != null else 0
-		var p_spd = class_res.get("promo_spd_bonus") if class_res.get("promo_spd_bonus") != null else 0
-		var p_agi = class_res.get("promo_agi_bonus") if class_res.get("promo_agi_bonus") != null else 0
+		var p_hp = option_res.get("promo_hp_bonus") if option_res.get("promo_hp_bonus") != null else 0
+		var p_str = option_res.get("promo_str_bonus") if option_res.get("promo_str_bonus") != null else 0
+		var p_mag = option_res.get("promo_mag_bonus") if option_res.get("promo_mag_bonus") != null else 0
+		var p_def = option_res.get("promo_def_bonus") if option_res.get("promo_def_bonus") != null else 0
+		var p_res = option_res.get("promo_res_bonus") if option_res.get("promo_res_bonus") != null else 0
+		var p_spd = option_res.get("promo_spd_bonus") if option_res.get("promo_spd_bonus") != null else 0
+		var p_agi = option_res.get("promo_agi_bonus") if option_res.get("promo_agi_bonus") != null else 0
 
 		# Format stat bonuses dynamically
 		stats.text += "HP:  +" + str(p_hp) + "    STR: +" + str(p_str) + "\n"
@@ -91,10 +92,10 @@ static func ask_for_promotion_choice(field, options: Array) -> Resource:
 		weapons_label.scroll_active = false
 		weapons_label.custom_minimum_size = Vector2(0, 120)
 		weapons_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		weapons_label.bbcode_text = "[center][color=gold]" + field._format_class_weapon_permissions(class_res) + "[/color][/center]"
+		weapons_label.bbcode_text = "[center][color=gold]" + field._format_class_weapon_permissions(option_res) + "[/color][/center]"
 		vbox.add_child(weapons_label)
 
-		var new_sprite_tex = class_res.get("promoted_battle_sprite")
+		var new_sprite_tex = option_res.get("promoted_battle_sprite")
 		if new_sprite_tex != null:
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(0, 20)
@@ -128,7 +129,7 @@ static func ask_for_promotion_choice(field, options: Array) -> Resource:
 		btn.pressed.connect(func():
 			if field.select_sound and field.select_sound.stream:
 				field.select_sound.play()
-			field.emit_signal("promotion_chosen", class_res)
+			field.emit_signal("promotion_chosen", option_res)
 		)
 		hbox.add_child(btn)
 
@@ -166,4 +167,3 @@ static func ask_for_promotion_choice(field, options: Array) -> Resource:
 	promo_layer.queue_free()
 
 	return final_choice
-

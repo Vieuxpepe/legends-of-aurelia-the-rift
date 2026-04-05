@@ -49,6 +49,7 @@ enum WeaponType {
 @export var is_instant_cast: bool = false
 
 @export_category("Restrictions")
+## Marks draconic armaments: claw hit VFX + claw/dedicated hit audio rules on [BattleField]. Also used for trade locks.
 @export var dragon_only: bool = false
 @export var non_tradeable: bool = false
 @export var non_convoy: bool = false

@@ -44,18 +44,47 @@ static func build_promotion_gains(advanced_class: Resource) -> Dictionary:
 static func resolve_current_class_from_unit_node(unit: Node2D) -> Resource:
 	if unit == null:
 		return null
-	var cls: Variant = unit.get("active_class_data")
-	return cls if cls is Resource else null
+	var cls: Resource = _resolve_resource_ref(unit.get("active_class_data"))
+	if cls != null:
+		return cls
+	var unit_data: Resource = _resolve_resource_ref(unit.get("data"))
+	if unit_data != null:
+		var from_base: Resource = _resolve_resource_ref(unit_data.get("character_class"))
+		if from_base != null:
+			return from_base
+	return null
 
 
 static func resolve_current_class_from_roster_unit(unit_data: Dictionary) -> Resource:
-	var cls: Variant = unit_data.get("class_data")
-	if cls is Resource:
+	var cls: Resource = _resolve_resource_ref(unit_data.get("class_data"))
+	if cls != null:
+		unit_data["class_data"] = cls
 		return cls
-	if cls is String and ResourceLoader.exists(cls):
-		var loaded: Resource = load(cls)
-		unit_data["class_data"] = loaded
-		return loaded
+	var unit_class_raw: Variant = unit_data.get("unit_class", null)
+	if unit_class_raw is String and ResourceLoader.exists(str(unit_class_raw)):
+		var from_unit_class: Resource = _resolve_resource_ref(str(unit_class_raw))
+		if from_unit_class != null:
+			unit_data["class_data"] = from_unit_class
+			return from_unit_class
+	var base_data: Resource = _resolve_resource_ref(unit_data.get("data"))
+	if base_data != null:
+		var from_base: Resource = _resolve_resource_ref(base_data.get("character_class"))
+		if from_base != null:
+			unit_data["class_data"] = from_base
+			return from_base
+	return null
+
+
+static func _resolve_resource_ref(raw: Variant) -> Resource:
+	if raw is Resource:
+		return raw
+	if raw is String:
+		var path: String = str(raw)
+		if not ResourceLoader.exists(path):
+			return null
+		var loaded: Variant = load(path)
+		if loaded is Resource:
+			return loaded
 	return null
 
 

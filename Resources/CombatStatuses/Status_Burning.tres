@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CombatStatusData" format=3 uid="uid://bstatusburning01"]
+
+[ext_resource type="Script" path="res://Resources/CombatStatuses/CombatStatusData.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bvwr07ngcvo4r" path="res://Assets/Icons/Debuffs/BurningIcon.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+status_id = "burning"
+display_name = "Burning"
+description = "Takes fire damage after each enemy phase. Removed when cleansed or battle logic clears it."
+stack_cap = 1
+expires_next_activation = false
+hud_tag = "BURNING"
+hud_bbcode_color = "orangered"
+tactical_icon = ExtResource("2_icon")

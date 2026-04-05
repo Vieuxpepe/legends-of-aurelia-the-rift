@@ -44,6 +44,7 @@
 [ext_resource type="Resource" uid="uid://cj7t2jer3od7o" path="res://Resources/Music Discs/Disc_SergeantKilroTheme.tres" id="26_sx0kx"]
 [ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="26_y7lbt"]
 [ext_resource type="AudioStream" uid="uid://7tprk5jnxe44" path="res://SoundEffects/Epic_Level_up_sound.wav" id="27_eqf7l"]
+[ext_resource type="Resource" path="res://Resources/FateCardLoot/iron_route.tres" id="27_nk08u"]
 [ext_resource type="Texture2D" uid="uid://dc5tksv7qa76g" path="res://Assets/Backgrounds/Default Background.png" id="28_fpeun"]
 [ext_resource type="PackedScene" uid="uid://cw1hvhq0anox3" path="res://Scenes/SpawnEffect.tscn" id="28_tgpwj"]
 [ext_resource type="AudioStream" uid="uid://c2fbvfyob1vnu" path="res://SoundEffects/16-bit Retro Video Game Sound Effect, Dimensional Portal Opening, Dark Magic ....mp3" id="29_314h1"]
@@ -107,6 +108,7 @@
 [ext_resource type="AudioStream" uid="uid://rrvy3o3cnmej" path="res://SoundEffects/CriticalHit.wav" id="70_314h1"]
 [ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="75_q63fc"]
 [ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="76_lfvqy"]
+[ext_resource type="AudioStream" uid="uid://c66lrsir7rgtu" path="res://SoundEffects/ClawHitSound.mp3" id="77_qmkwy"]
 [ext_resource type="PackedScene" uid="uid://dl0ahk8so1jdh" path="res://Scenes/HouseFireVFX.tscn" id="82_lkv2p"]
 [ext_resource type="PackedScene" uid="uid://c80ef0dbdtjjb" path="res://Scenes/fire_glow.tscn" id="83_8a6bc"]
 [ext_resource type="Texture2D" uid="uid://cx81cte88pqya" path="res://Assets/Backgrounds/BackgroundParallax.jpeg" id="85_0blb5"]
@@ -172,6 +174,11 @@ metadata/_custom_type_script = "uid://qmryjywc3ivm"
 [sub_resource type="Resource" id="Resource_kr0j2"]
 script = ExtResource("14_yppqf")
 item = ExtResource("26_sx0kx")
+metadata/_custom_type_script = "uid://qmryjywc3ivm"
+
+[sub_resource type="Resource" id="Resource_8b03j"]
+script = ExtResource("14_yppqf")
+item = ExtResource("27_nk08u")
 metadata/_custom_type_script = "uid://qmryjywc3ivm"
 
 [sub_resource type="Resource" id="Resource_qmkwy"]
@@ -789,7 +796,7 @@ drop_loot = Array[Resource]([SubResource("Resource_a308f"), SubResource("Resourc
 position = Vector2(384, 192)
 min_gold_drop = 5
 max_gold_drop = 25
-drop_loot = Array[Resource]([SubResource("Resource_15pab"), SubResource("Resource_7ddr4"), SubResource("Resource_kgw6u"), SubResource("Resource_lfvqy"), SubResource("Resource_kr0j2")])
+drop_loot = Array[Resource]([SubResource("Resource_15pab"), SubResource("Resource_7ddr4"), SubResource("Resource_kgw6u"), SubResource("Resource_lfvqy"), SubResource("Resource_kr0j2"), SubResource("Resource_8b03j")])
 
 [node name="DestructibleCrate5" parent="Destructibles" unique_id=1176764654 instance=ExtResource("9_u5p01")]
 position = Vector2(320, 256)
@@ -2203,6 +2210,9 @@ pitch_scale = 0.88
 stream = ExtResource("76_lfvqy")
 volume_db = -1.5
 pitch_scale = 1.06
+
+[node name="ClawHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563387]
+stream = ExtResource("77_qmkwy")
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("26_y7lbt")

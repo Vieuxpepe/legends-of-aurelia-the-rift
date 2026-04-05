@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CombatStatusData" format=3 uid="uid://wo3ienugby4k"]
+
+[ext_resource type="Script" path="res://Resources/CombatStatuses/CombatStatusData.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bqyblo57vrvbm" path="res://Assets/Icons/Debuffs/PoisonedIcon.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+status_id = "bone_toxin"
+display_name = "Bone Toxin"
+description = "Skeleton venom: 1 damage at the end of each enemy phase. Remaining turns are shown as stacks (max 3)."
+stack_cap = 3
+expires_next_activation = false
+hud_tag = "TOXIN"
+hud_bbcode_color = "limegreen"
+tactical_icon = ExtResource("2_icon")

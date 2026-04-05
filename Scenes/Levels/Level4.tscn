@@ -2723,6 +2723,8 @@ stream = ExtResource("38b_piercing_hit")
 volume_db = -1.5
 pitch_scale = 1.06
 
+[node name="ClawHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563387]
+
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("27_x1hmy")
 

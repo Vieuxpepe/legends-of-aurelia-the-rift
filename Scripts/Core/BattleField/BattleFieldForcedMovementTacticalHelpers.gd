@@ -99,7 +99,8 @@ static func process_phase_g_forced_movement_and_fire_trap(
 			if crashed:
 				field.spawn_loot_text("CRASH!", Color.RED, defender.global_position + Vector2(32, -16))
 				field.screen_shake(18.0 if is_perfect else 12.0, 0.25)
-				if attack_sound.stream != null: attack_sound.play()
+				if attack_sound != null and attack_sound.stream != null:
+					field.play_attack_hit_sound(attack_sound)
 				var crash_dmg: int = 10 if is_perfect else 5
 				field._apply_hit_with_support_reactions(defender, crash_dmg, attacker, attacker, false)
 				field.add_combat_log(defender.unit_name + " crashed into an obstacle for " + str(crash_dmg) + " damage!", "tomato")

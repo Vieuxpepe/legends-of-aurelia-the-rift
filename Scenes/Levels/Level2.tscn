@@ -76,6 +76,7 @@
 [ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="64_d7ssd"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="64_tr5do"]
 [ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="65_0tovn"]
+[ext_resource type="AudioStream" uid="uid://c66lrsir7rgtu" path="res://SoundEffects/ClawHitSound.mp3" id="66_0tovn"]
 [ext_resource type="Texture2D" uid="uid://dpnnbrrx57boa" path="res://Assets/Tilesets/Autumn/Autumn_Forest_Tiles.png" id="71_3ngww"]
 [ext_resource type="Texture2D" uid="uid://brfxs1cn0nwuh" path="res://Assets/Tilesets/Autumn/TX Tileset Grass.png" id="72_d7ssd"]
 [ext_resource type="Texture2D" uid="uid://d1frbaikpxan5" path="res://Assets/Tilesets/Autumn/unnamed__25_-removebg-preview.png" id="75_fnm5q"]
@@ -2162,6 +2163,9 @@ pitch_scale = 0.88
 stream = ExtResource("65_0tovn")
 volume_db = -1.5
 pitch_scale = 1.06
+
+[node name="ClawHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563387]
+stream = ExtResource("66_0tovn")
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("26_yf0ma")

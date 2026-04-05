@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FateCardLootData" format=3]
+
+[ext_resource type="Script" uid="uid://dwunqturrt86j" path="res://Resources/FateCardLootData.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Assets/Portraits/Portrait Hero 1.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+card_id = "ash_watch"
+card_name = "Ash Watch"
+card_rarity = "common"
+item_name = "Fate Card: Ash Watch"
+description = "Permanent Fate Deck unlock. Reveal 1 extra enemy at battle start."
+rarity = "Mythic"
+icon = ExtResource("2_icon")
+metadata/_custom_type_script = "uid://dwunqturrt86j"

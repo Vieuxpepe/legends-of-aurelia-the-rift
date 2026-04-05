@@ -41,7 +41,8 @@ enum UISfx { MOVE_OK, TARGET_OK, INVALID, INVENTORY_EQUIP, INVENTORY_USE }
 
 const CELL_SIZE = Vector2i(64, 64)
 ## Co-op: wire schema for [method coop_net_build_authoritative_combat_snapshot] / peer apply (no second combat sim).
-const COOP_AUTH_BATTLE_SNAPSHOT_VER: int = 1
+## v2: per-unit [code]cstat[/code] combat statuses ([UnitCombatStatusHelpers]). v3: optional [code]acd[/code] active ability CDs ([ActiveCombatAbilityHelpers]).
+const COOP_AUTH_BATTLE_SNAPSHOT_VER: int = 3
 const COOP_ENEMY_PHASE_SETUP_SNAPSHOT_VER: int = 1
 
 const LEVELUP_HOLD_TIME_NORMAL := 4.2
@@ -75,6 +76,7 @@ const DEBUG_SUPPORT_COMBAT := false
 
 ## Static helpers + legacy ids (preload so BattleField does not depend on global class registration order).
 const UnitTraitsLib = preload("res://Scripts/Core/UnitTraitsDisplay.gd")
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
 const CoopHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopHelpers.gd")
 const CoopReplayHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopReplayHelpers.gd")
 const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
@@ -109,7 +111,7 @@ const DetailedUnitInfoContentHelpers = preload("res://Scripts/Core/BattleField/B
 const DialogueInteractionHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDialogueInteractionHelpers.gd")
 const LevelUpPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldLevelUpPresentationHelpers.gd")
 const BattleEndFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleEndFlowHelpers.gd")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
 const CampaignSetupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCampaignSetupHelpers.gd")
 const BattleFieldStartupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldStartupHelpers.gd")
@@ -248,6 +250,11 @@ const UNIT_INFO_STAT_TIER_CYAN := Color(0.28, 0.88, 1.0, 1.0)
 const UNIT_INFO_STAT_TIER_PURPLE := Color(0.76, 0.48, 1.0, 1.0)
 const UNIT_INFO_STAT_TIER_ORANGE := Color(1.0, 0.64, 0.22, 1.0)
 const UNIT_INFO_STAT_TIER_WHITE := Color(0.96, 0.96, 0.98, 1.0)
+const STATUS_HOVER_HIDE_DELAY_MS: int = 180
+const STATUS_HOVER_CURSOR_OFFSET: Vector2 = Vector2(18.0, 20.0)
+const STATUS_HOVER_PANEL_WIDTH: float = 420.0
+const STATUS_HOVER_BUFF_COLOR := Color(0.58, 0.94, 0.70, 1.0)
+const STATUS_HOVER_DEBUFF_COLOR := Color(1.00, 0.58, 0.48, 1.0)
 
 # Boss Personal Dialogue (V1): trigger logic and tracking in BattleField; content in BossPersonalDialogueDB.
 const BossDialogueDB = preload("res://Scripts/Narrative/BossPersonalDialogueDB.gd")
@@ -300,6 +307,8 @@ var deploy_roster_toggle_tween: Tween
 @export var piercing_fx_scene: PackedScene = preload("res://Scenes/PiercingEffect.tscn")
 ## Default prevents silent slash fallback when a level scene forgets to assign this export.
 @export var bludgeon_fx_scene: PackedScene = preload("res://Scenes/BludgeoningEffect.tscn")
+## Used for [method WeaponData.is_dragon_weapon] melee hits (replaces slash / pierce / bludgeon FX).
+@export var claw_fx_scene: PackedScene = preload("res://Scenes/ClawEffect.tscn")
 @export var level_up_fx_scene: PackedScene
 
 @export_category("Hazards â€” Fire tiles")
@@ -386,6 +395,14 @@ var deploy_roster_toggle_tween: Tween
 @onready var open_inv_button = $UI/UnitInfoPanel/OpenInvButton
 @onready var unit_details_button: Button = get_node_or_null("UI/UnitDetailsButton") as Button
 var inspected_unit: Node2D = null
+var unit_status_hover_popup: Panel
+var unit_status_hover_title: Label
+var unit_status_hover_hint: Label
+var unit_status_hover_buffs_text: RichTextLabel
+var unit_status_hover_debuffs_text: RichTextLabel
+var _status_hover_unit_id: int = -1
+var _status_hover_signature: String = ""
+var _status_hover_hide_deadline_ms: int = -1
 
 var gold_label: Label:
 	get:
@@ -554,6 +571,7 @@ var loot_item_info_panel: Panel
 @onready var attack_sound = $AttackSound
 @onready var bludgeon_hit_sound: AudioStreamPlayer = $BludgeonHitSound
 @onready var piercing_hit_sound: AudioStreamPlayer = $PiercingHitSound
+@onready var claw_hit_sound: AudioStreamPlayer = get_node_or_null("ClawHitSound") as AudioStreamPlayer
 @onready var crit_sound = $CritSound
 @onready var defend_sound = $DefendSound
 @onready var invalid_sound = $InvalidSound
@@ -563,6 +581,25 @@ var loot_item_info_panel: Panel
 
 @onready var level_up_sound = $LevelUpSound
 @onready var epic_level_up_sound = $EpicLevelUpSound
+
+const ATTACK_HIT_PITCH_JITTER_MIN := 0.96
+const ATTACK_HIT_PITCH_JITTER_MAX := 1.04
+
+func _ensure_attack_hit_base_pitch(player: AudioStreamPlayer) -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	if not player.has_meta("_attack_hit_base_pitch"):
+		player.set_meta("_attack_hit_base_pitch", player.pitch_scale)
+
+
+## Hit / swing SFX: small random pitch around the node's scene default (stored on first play).
+func play_attack_hit_sound(player: AudioStreamPlayer, relative_pitch_mult: float = 1.0) -> void:
+	if player == null or not is_instance_valid(player) or player.stream == null:
+		return
+	_ensure_attack_hit_base_pitch(player)
+	var base_pitch: float = float(player.get_meta("_attack_hit_base_pitch"))
+	player.pitch_scale = base_pitch * relative_pitch_mult * randf_range(ATTACK_HIT_PITCH_JITTER_MIN, ATTACK_HIT_PITCH_JITTER_MAX)
+	player.play()
 
 # =============================================================================
 # PATHFINDING / GRID STATE
@@ -672,7 +709,7 @@ const MENTORSHIP_LEVEL_GAP_MIN: int = 3
 # Rivalry: enemy instance id -> list of relationship ids that damaged it this battle.
 var _enemy_damagers: Dictionary = {} # int (instance_id) -> Array[String]
 
-## Skeleton undead ([member UnitData.bone_pile_reform_rounds]): non-bludgeoning deaths leave a bone pile and reform after N battle turn increments.
+## Skeleton undead ([enum PassiveCombatAbilityData.EffectKind.BONE_PILE_REFORM_ON_DEATH] or legacy [member UnitData.bone_pile_reform_rounds]): non-bludgeoning deaths leave a bone pile and reform after N battle turn increments.
 var _skeleton_bone_pile_death_payloads: Dictionary = {}
 var _skeleton_bone_pile_entries: Array = []
 var _skeleton_bone_piles_root: Node2D = null
@@ -709,6 +746,8 @@ var player_inventory: Array[Resource] = []
 # =============================================================================
 
 var ability_triggers_count: int = 0
+## Set during combat forecast when the player chooses a data-driven [ActiveCombatAbilityData] (not legacy tactical).
+var _forecast_pending_active_ability_id: String = ""
 var enemy_kills_count: int = 0
 var player_deaths_count: int = 0
 var ally_deaths_count: int = 0
@@ -1737,6 +1776,369 @@ func _ensure_tactical_backdrop(name: String) -> Panel:
 	ui_root.move_child(panel, 0)
 	return panel
 
+func _ensure_unit_status_hover_popup() -> void:
+	if (
+		unit_status_hover_popup != null
+		and is_instance_valid(unit_status_hover_popup)
+		and unit_status_hover_title != null
+		and is_instance_valid(unit_status_hover_title)
+		and unit_status_hover_hint != null
+		and is_instance_valid(unit_status_hover_hint)
+		and unit_status_hover_buffs_text != null
+		and is_instance_valid(unit_status_hover_buffs_text)
+		and unit_status_hover_debuffs_text != null
+		and is_instance_valid(unit_status_hover_debuffs_text)
+	):
+		return
+	var ui_root: Node = get_node_or_null("UI")
+	if ui_root == null:
+		return
+
+	var panel := ui_root.get_node_or_null("UnitStatusHoverPopup") as Panel
+	if panel == null:
+		panel = Panel.new()
+		panel.name = "UnitStatusHoverPopup"
+		panel.visible = false
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ui_root.add_child(panel)
+	unit_status_hover_popup = panel
+	unit_status_hover_popup.z_index = 240
+	unit_status_hover_popup.clip_contents = true
+	unit_status_hover_popup.custom_minimum_size = Vector2(STATUS_HOVER_PANEL_WIDTH, 56.0)
+	unit_status_hover_popup.size = unit_status_hover_popup.custom_minimum_size
+	_style_tactical_panel(unit_status_hover_popup, Color(0.10, 0.09, 0.07, 0.96), TACTICAL_UI_BORDER, 2, 8)
+
+	var legacy := unit_status_hover_popup.get_node_or_null("StatusText")
+	if legacy != null:
+		legacy.queue_free()
+
+	var root := unit_status_hover_popup.get_node_or_null("StatusRoot") as VBoxContainer
+	if root == null:
+		root = VBoxContainer.new()
+		root.name = "StatusRoot"
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+		root.add_theme_constant_override("separation", 6)
+		unit_status_hover_popup.add_child(root)
+	root.clip_contents = true
+
+	var title := root.get_node_or_null("Title") as Label
+	if title == null:
+		title = Label.new()
+		title.name = "Title"
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		title.text = "Status Effects"
+		root.add_child(title)
+	unit_status_hover_title = title
+	_style_tactical_label(unit_status_hover_title, TACTICAL_UI_TEXT, 15, 3)
+
+	var hint := root.get_node_or_null("Hint") as Label
+	if hint == null:
+		hint = Label.new()
+		hint.name = "Hint"
+		hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hint.text = "Hold Alt for details"
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		root.add_child(hint)
+	unit_status_hover_hint = hint
+	_style_tactical_label(unit_status_hover_hint, TACTICAL_UI_TEXT_MUTED, 12, 2)
+
+	var columns := root.get_node_or_null("Columns") as HBoxContainer
+	if columns == null:
+		columns = HBoxContainer.new()
+		columns.name = "Columns"
+		columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		columns.add_theme_constant_override("separation", 12)
+		columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		root.add_child(columns)
+	columns.clip_contents = true
+
+	var buffs_col := columns.get_node_or_null("BuffsColumn") as VBoxContainer
+	if buffs_col == null:
+		buffs_col = VBoxContainer.new()
+		buffs_col.name = "BuffsColumn"
+		buffs_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		buffs_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		columns.add_child(buffs_col)
+
+	var buffs_header := buffs_col.get_node_or_null("Header") as Label
+	if buffs_header == null:
+		buffs_header = Label.new()
+		buffs_header.name = "Header"
+		buffs_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		buffs_header.text = "Buffs"
+		buffs_col.add_child(buffs_header)
+	_style_tactical_label(buffs_header, STATUS_HOVER_BUFF_COLOR, 14, 2)
+
+	var buffs_text := buffs_col.get_node_or_null("Lines") as RichTextLabel
+	if buffs_text == null:
+		buffs_text = RichTextLabel.new()
+		buffs_text.name = "Lines"
+		buffs_text.bbcode_enabled = false
+		buffs_text.fit_content = false
+		buffs_text.scroll_active = false
+		buffs_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		buffs_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		buffs_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		buffs_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		buffs_text.clip_contents = true
+		buffs_col.add_child(buffs_text)
+	unit_status_hover_buffs_text = buffs_text
+	_style_tactical_richtext(unit_status_hover_buffs_text, 14, 14)
+	unit_status_hover_buffs_text.add_theme_color_override("default_color", STATUS_HOVER_BUFF_COLOR)
+
+	var debuffs_col := columns.get_node_or_null("DebuffsColumn") as VBoxContainer
+	if debuffs_col == null:
+		debuffs_col = VBoxContainer.new()
+		debuffs_col.name = "DebuffsColumn"
+		debuffs_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		debuffs_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		columns.add_child(debuffs_col)
+
+	var debuffs_header := debuffs_col.get_node_or_null("Header") as Label
+	if debuffs_header == null:
+		debuffs_header = Label.new()
+		debuffs_header.name = "Header"
+		debuffs_header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		debuffs_header.text = "Debuffs"
+		debuffs_col.add_child(debuffs_header)
+	_style_tactical_label(debuffs_header, STATUS_HOVER_DEBUFF_COLOR, 14, 2)
+
+	var debuffs_text := debuffs_col.get_node_or_null("Lines") as RichTextLabel
+	if debuffs_text == null:
+		debuffs_text = RichTextLabel.new()
+		debuffs_text.name = "Lines"
+		debuffs_text.bbcode_enabled = false
+		debuffs_text.fit_content = false
+		debuffs_text.scroll_active = false
+		debuffs_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		debuffs_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		debuffs_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		debuffs_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		debuffs_text.clip_contents = true
+		debuffs_col.add_child(debuffs_text)
+	unit_status_hover_debuffs_text = debuffs_text
+	_style_tactical_richtext(unit_status_hover_debuffs_text, 14, 14)
+	unit_status_hover_debuffs_text.add_theme_color_override("default_color", STATUS_HOVER_DEBUFF_COLOR)
+
+	ui_root.move_child(unit_status_hover_popup, ui_root.get_child_count() - 1)
+
+func _is_hover_status_target_unit(candidate: Node2D) -> bool:
+	if candidate == null or not is_instance_valid(candidate) or candidate.is_queued_for_deletion():
+		return false
+	var parent_node: Node = candidate.get_parent()
+	if parent_node != player_container and parent_node != ally_container and parent_node != enemy_container:
+		return false
+	# Match fog-of-war targeting rules for hostiles.
+	if parent_node == enemy_container and get_enemy_at(cursor_grid_pos) != candidate:
+		return false
+	return candidate.has_method("get_active_combat_status_plain_lines")
+
+func _get_hover_status_target_unit() -> Node2D:
+	var hovered: Node2D = get_occupant_at(cursor_grid_pos)
+	if _is_hover_status_target_unit(hovered):
+		return hovered
+	return null
+
+func _hide_unit_status_hover_popup(reset_cache: bool = false) -> void:
+	if unit_status_hover_popup != null and is_instance_valid(unit_status_hover_popup):
+		unit_status_hover_popup.visible = false
+	if reset_cache:
+		_status_hover_unit_id = -1
+		_status_hover_signature = ""
+
+func _position_unit_status_hover_popup(mouse_pos: Vector2) -> void:
+	if unit_status_hover_popup == null or not is_instance_valid(unit_status_hover_popup):
+		return
+	var vp_size: Vector2 = get_viewport_rect().size
+	var panel_size: Vector2 = unit_status_hover_popup.size
+	if panel_size.x <= 1.0 or panel_size.y <= 1.0:
+		panel_size = unit_status_hover_popup.custom_minimum_size
+	var target_pos: Vector2 = mouse_pos + STATUS_HOVER_CURSOR_OFFSET
+	if target_pos.x + panel_size.x > vp_size.x - 8.0:
+		target_pos.x = maxf(8.0, vp_size.x - panel_size.x - 8.0)
+	if target_pos.y + panel_size.y > vp_size.y - 8.0:
+		target_pos.y = maxf(8.0, mouse_pos.y - panel_size.y - 12.0)
+	unit_status_hover_popup.position = target_pos
+
+func _to_packed_status_lines(raw: Variant) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if raw is PackedStringArray:
+		for line in raw:
+			out.append(str(line))
+	elif raw is Array:
+		for line in raw:
+			out.append(str(line))
+	return out
+
+func _extract_hover_status_groups(unit: Node2D, include_details: bool = false) -> Dictionary:
+	var grouped: Dictionary = {
+		"buffs": PackedStringArray(),
+		"debuffs": PackedStringArray(),
+	}
+	if unit == null or not is_instance_valid(unit):
+		return grouped
+	if unit.has_method("get_active_combat_status_grouped_lines"):
+		var raw: Variant = unit.get_active_combat_status_grouped_lines(include_details)
+		if raw is Dictionary:
+			var dict_raw: Dictionary = raw as Dictionary
+			grouped["buffs"] = _to_packed_status_lines(dict_raw.get("buffs", PackedStringArray()))
+			grouped["debuffs"] = _to_packed_status_lines(dict_raw.get("debuffs", PackedStringArray()))
+			return grouped
+	if unit.has_method("get_active_combat_status_plain_lines"):
+		grouped["debuffs"] = unit.get_active_combat_status_plain_lines()
+	return grouped
+
+func _format_status_column_lines(lines: PackedStringArray, empty_line: String) -> String:
+	if lines.is_empty():
+		return empty_line
+	var out: Array[String] = []
+	for raw_line in lines:
+		var line: String = str(raw_line)
+		if line.strip_edges() == "":
+			continue
+		if line.begins_with("  "):
+			out.append("   " + line.strip_edges())
+		else:
+			out.append("- " + line.strip_edges())
+	if out.is_empty():
+		return empty_line
+	return "\n".join(out)
+
+func _count_status_rows(lines: PackedStringArray) -> int:
+	var count: int = 0
+	for raw_line in lines:
+		var raw_text: String = str(raw_line)
+		if raw_text.strip_edges() == "":
+			continue
+		if raw_text.begins_with("  "):
+			continue
+		count += 1
+	return count
+
+func _status_hover_details_requested() -> bool:
+	return Input.is_key_pressed(KEY_ALT)
+
+func _refresh_hover_status_popup() -> void:
+	_ensure_unit_status_hover_popup()
+	if (
+		unit_status_hover_popup == null
+		or not is_instance_valid(unit_status_hover_popup)
+		or unit_status_hover_buffs_text == null
+		or unit_status_hover_debuffs_text == null
+	):
+		return
+
+	var now_ms: int = Time.get_ticks_msec()
+	if CampaignManager == null or not CampaignManager.interface_show_status_effects:
+		if unit_status_hover_popup.visible and _status_hover_hide_deadline_ms < 0:
+			_status_hover_hide_deadline_ms = now_ms + STATUS_HOVER_HIDE_DELAY_MS
+		if _status_hover_hide_deadline_ms >= 0 and now_ms >= _status_hover_hide_deadline_ms:
+			_hide_unit_status_hover_popup()
+		return
+
+	var hovered_unit: Node2D = _get_hover_status_target_unit()
+	if hovered_unit == null:
+		if unit_status_hover_popup.visible and _status_hover_hide_deadline_ms < 0:
+			_status_hover_hide_deadline_ms = now_ms + STATUS_HOVER_HIDE_DELAY_MS
+		if _status_hover_hide_deadline_ms >= 0 and now_ms >= _status_hover_hide_deadline_ms:
+			_hide_unit_status_hover_popup()
+		return
+
+	var show_details: bool = _status_hover_details_requested()
+	var grouped: Dictionary = _extract_hover_status_groups(hovered_unit, show_details)
+	var buff_lines: PackedStringArray = _to_packed_status_lines(grouped.get("buffs", PackedStringArray()))
+	var debuff_lines: PackedStringArray = _to_packed_status_lines(grouped.get("debuffs", PackedStringArray()))
+	if buff_lines.is_empty() and debuff_lines.is_empty():
+		if unit_status_hover_popup.visible and _status_hover_hide_deadline_ms < 0:
+			_status_hover_hide_deadline_ms = now_ms + STATUS_HOVER_HIDE_DELAY_MS
+		if _status_hover_hide_deadline_ms >= 0 and now_ms >= _status_hover_hide_deadline_ms:
+			_hide_unit_status_hover_popup()
+		return
+
+	_status_hover_hide_deadline_ms = -1
+	var unit_id: int = hovered_unit.get_instance_id()
+	var status_sig: String = ""
+	if hovered_unit.has_method("get_combat_status_signature"):
+		status_sig = str(hovered_unit.get_combat_status_signature())
+		status_sig += "|details:" + ("1" if show_details else "0")
+	else:
+		var all_lines: PackedStringArray = PackedStringArray()
+		all_lines.append_array(buff_lines)
+		all_lines.append_array(debuff_lines)
+		for i in range(all_lines.size()):
+			if i > 0:
+				status_sig += "|"
+			status_sig += str(all_lines[i])
+
+	if unit_id != _status_hover_unit_id or status_sig != _status_hover_signature or not unit_status_hover_popup.visible:
+		_status_hover_unit_id = unit_id
+		_status_hover_signature = status_sig
+		unit_status_hover_title.text = "Status Effects"
+		if unit_status_hover_hint != null:
+			unit_status_hover_hint.text = "Release Alt for compact view" if show_details else "Hold Alt for details"
+
+		var buff_count: int = _count_status_rows(buff_lines)
+		var debuff_count: int = _count_status_rows(debuff_lines)
+		var root := unit_status_hover_popup.get_node_or_null("StatusRoot") as VBoxContainer
+		if root != null:
+			var columns := root.get_node_or_null("Columns") as HBoxContainer
+			if columns != null:
+				var buffs_col := columns.get_node_or_null("BuffsColumn") as VBoxContainer
+				if buffs_col != null:
+					var buffs_header := buffs_col.get_node_or_null("Header") as Label
+					if buffs_header != null:
+						buffs_header.text = "Buffs (%d)" % buff_count
+				var debuffs_col := columns.get_node_or_null("DebuffsColumn") as VBoxContainer
+				if debuffs_col != null:
+					var debuffs_header := debuffs_col.get_node_or_null("Header") as Label
+					if debuffs_header != null:
+						debuffs_header.text = "Debuffs (%d)" % debuff_count
+		unit_status_hover_buffs_text.text = _format_status_column_lines(buff_lines, "No buffs")
+		unit_status_hover_debuffs_text.text = _format_status_column_lines(debuff_lines, "No debuffs")
+
+		var panel_w: float = STATUS_HOVER_PANEL_WIDTH + (120.0 if show_details else 0.0)
+		var inner_padding: float = 20.0
+		var column_gap: float = 12.0
+		var column_w: float = floorf((panel_w - inner_padding - column_gap) * 0.5)
+
+		# First pass width assignment so content-height query includes wrapping.
+		unit_status_hover_buffs_text.custom_minimum_size = Vector2(column_w, 22.0)
+		unit_status_hover_debuffs_text.custom_minimum_size = Vector2(column_w, 22.0)
+		unit_status_hover_buffs_text.scroll_active = false
+		unit_status_hover_debuffs_text.scroll_active = false
+		unit_status_hover_buffs_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		unit_status_hover_debuffs_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		var buffs_content_h: float = float(unit_status_hover_buffs_text.get_content_height())
+		var debuffs_content_h: float = float(unit_status_hover_debuffs_text.get_content_height())
+		var columns_content_h: float = maxf(buffs_content_h, debuffs_content_h)
+		var panel_h: float = 0.0
+		if show_details:
+			panel_h = clampf(98.0 + columns_content_h, 152.0, 430.0)
+		else:
+			panel_h = clampf(92.0 + columns_content_h, 112.0, 280.0)
+
+		var column_h: float = maxf(panel_h - 66.0, 28.0)
+		unit_status_hover_buffs_text.custom_minimum_size = Vector2(column_w, column_h)
+		unit_status_hover_debuffs_text.custom_minimum_size = Vector2(column_w, column_h)
+
+		# Detailed mode: allow scroll when text is still taller than available column height.
+		if show_details:
+			var buffs_overflow: bool = buffs_content_h > column_h + 2.0
+			var debuffs_overflow: bool = debuffs_content_h > column_h + 2.0
+			unit_status_hover_buffs_text.scroll_active = buffs_overflow
+			unit_status_hover_debuffs_text.scroll_active = debuffs_overflow
+			unit_status_hover_buffs_text.mouse_filter = Control.MOUSE_FILTER_PASS if buffs_overflow else Control.MOUSE_FILTER_IGNORE
+			unit_status_hover_debuffs_text.mouse_filter = Control.MOUSE_FILTER_PASS if debuffs_overflow else Control.MOUSE_FILTER_IGNORE
+
+		unit_status_hover_popup.custom_minimum_size = Vector2(panel_w, panel_h)
+		unit_status_hover_popup.size = unit_status_hover_popup.custom_minimum_size
+		_style_tactical_panel(unit_status_hover_popup, Color(0.10, 0.09, 0.07, 0.96), TACTICAL_UI_BORDER, 2, 8)
+
+	unit_status_hover_popup.visible = true
+	_position_unit_status_hover_popup(get_viewport().get_mouse_position())
+
 func _ensure_unit_details_button() -> Button:
 	var ui_root := get_node_or_null("UI")
 	if ui_root == null:
@@ -2117,7 +2519,7 @@ func _compute_burn_tick_damage(unit: Node2D) -> int:
 	return clampi(maxi(raw, BURN_TICK_DAMAGE_MIN), BURN_TICK_DAMAGE_MIN, BURN_TICK_DAMAGE_MAX)
 
 
-## End-of-round burn for units with meta is_burning (Hellfire ignite). Uses RESISTANCE only â€” no attacker for EXP.
+## End-of-round burn for units with burning combat status (Hellfire ignite). Uses RESISTANCE only â€” no attacker for EXP.
 func _tick_burn_status_effects() -> void:
 	var burn_units: Array[Node2D] = []
 	for cont in [player_container, ally_container, enemy_container]:
@@ -2129,7 +2531,7 @@ func _tick_burn_status_effects() -> void:
 				continue
 			if u.get("current_hp") == null or int(u.current_hp) <= 0:
 				continue
-			if not u.has_meta("is_burning") or u.get_meta("is_burning") != true:
+			if not UnitCombatStatusHelpers.unit_is_burning(u):
 				continue
 			burn_units.append(u)
 
@@ -2141,7 +2543,7 @@ func _tick_burn_status_effects() -> void:
 			continue
 		if unit.get("current_hp") == null or int(unit.current_hp) <= 0:
 			continue
-		if not unit.has_meta("is_burning") or unit.get_meta("is_burning") != true:
+		if not UnitCombatStatusHelpers.unit_is_burning(unit):
 			continue
 
 		var base_dmg: int = _compute_burn_tick_damage(unit)
@@ -2160,6 +2562,51 @@ func _tick_burn_status_effects() -> void:
 
 		if unit.has_method("take_damage"):
 			await unit.take_damage(dmg, null)
+		await get_tree().create_timer(0.07, true, false, true).timeout
+
+	update_unit_info_panel()
+
+
+## End-of-enemy-phase tick for bone toxin ([code]bone_toxin[/code] status, skeleton passive): 1 flat damage, then stack decrements.
+func _tick_bone_toxin_status_effects() -> void:
+	var toxin_units: Array[Node2D] = []
+	for cont in [player_container, ally_container, enemy_container]:
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			var u: Node2D = c as Node2D
+			if u == null or not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			if u.get("current_hp") == null or int(u.current_hp) <= 0:
+				continue
+			if not UnitCombatStatusHelpers.has_status(u, UnitCombatStatusHelpers.ID_BONE_TOXIN):
+				continue
+			toxin_units.append(u)
+
+	if toxin_units.is_empty():
+		return
+
+	for unit in toxin_units:
+		if not is_instance_valid(unit) or unit.is_queued_for_deletion():
+			continue
+		if unit.get("current_hp") == null or int(unit.current_hp) <= 0:
+			continue
+		if not UnitCombatStatusHelpers.has_status(unit, UnitCombatStatusHelpers.ID_BONE_TOXIN):
+			continue
+
+		var nm: String = str(unit.unit_name) if unit.get("unit_name") != null else "Unit"
+		add_combat_log(nm + " suffers bone toxin for 1 damage.", "limegreen")
+		spawn_loot_text("-1 TOXIN", Color(0.45, 0.95, 0.55), unit.global_position + Vector2(30, -28))
+
+		if int(unit.current_hp) - 1 <= 0 and unit.has_meta("last_damage_subtype"):
+			unit.remove_meta("last_damage_subtype")
+
+		if unit.has_method("take_damage"):
+			await unit.take_damage(1, null)
+		if is_instance_valid(unit) and unit.get("current_hp") != null and int(unit.current_hp) > 0:
+			UnitCombatStatusHelpers.decrement_bone_toxin_stack(unit)
+		if is_instance_valid(unit) and unit.has_method("refresh_combat_status_sprite_tint"):
+			unit.refresh_combat_status_sprite_tint()
 		await get_tree().create_timer(0.07, true, false, true).timeout
 
 	update_unit_info_panel()
@@ -2310,7 +2757,7 @@ func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
 
 
 func _map01_on_unit_finished_turn(unit: Node2D) -> void:
-	Map01EnemyPassivesHelpers.on_unit_finished_turn_scorched_tick(self, unit)
+	CombatPassiveAbilityHelpers.on_unit_finished_turn_scorched_tick(self, unit)
 
 
 func trigger_game_over(result: String) -> void:
@@ -2754,9 +3201,9 @@ func update_unit_info_panel() -> void:
 			meta_lines.append(coop_own_line)
 		meta_lines.append("[color=gray]CLASS:[/color] %s" % [String(u_class).to_upper()])
 		var detail_parts: PackedStringArray = PackedStringArray()
-		if target_unit.has_meta("is_burning") and target_unit.get_meta("is_burning") == true:
-			detail_parts.append("[color=orangered][b]BURNING[/b][/color]")
-		elif target_unit.equipped_weapon != null:
+		if target_unit.has_method("get_active_combat_status_bbcode_badges"):
+			detail_parts.append_array(target_unit.get_active_combat_status_bbcode_badges())
+		if target_unit.equipped_weapon != null:
 			detail_parts.append("[color=yellow]%s[/color]" % _truncate_forecast_text(String(target_unit.equipped_weapon.weapon_name).to_upper(), 12))
 		if detail_parts.size() > 0:
 			meta_lines.append(" [color=gray]|[/color] ".join(detail_parts))
@@ -3028,7 +3475,10 @@ func _on_forecast_talk() -> void:
 	emit_signal("forecast_resolved", "talk", false)
 	
 func _on_forecast_ability_pressed() -> void:
-	emit_signal("forecast_resolved", "confirm", true) # Returns confirm, but flags the ability!
+	if str(_forecast_pending_active_ability_id).strip_edges() != "":
+		emit_signal("forecast_resolved", "active_ability", false)
+	else:
+		emit_signal("forecast_resolved", "confirm", true)
 	
 func execute_combat(attacker: Node2D, defender: Node2D, trigger_active_ability: bool = false) -> void:
 	await CombatOrchestrationHelpers.execute_combat(self, attacker, defender, trigger_active_ability)
@@ -4195,6 +4645,9 @@ func spawn_piercing_strike_effect(target_pos: Vector2, attacker_pos: Vector2, is
 func spawn_bludgeon_impact_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false, weapon_family: int = -1) -> void:
 	CombatVfxHelpers.spawn_bludgeon_impact_effect(self, target_pos, attacker_pos, is_crit, weapon_family)
 
+func spawn_claw_strike_effect(target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false) -> void:
+	CombatVfxHelpers.spawn_claw_strike_effect(self, target_pos, attacker_pos, is_crit)
+
 func spawn_level_up_effect(target_pos: Vector2) -> void:
 	CombatVfxHelpers.spawn_level_up_effect(self, target_pos)
 
@@ -5060,7 +5513,7 @@ func _run_melee_crit_lunge(attacker: Node2D, _defender: Node2D, orig_pos: Vector
 
 	# Brief hold; crit sound on impact
 	if crit_sound != null and crit_sound.stream != null:
-		crit_sound.play()
+		play_attack_hit_sound(crit_sound)
 	await get_tree().create_timer(0.10).timeout
 	_melee_reset_melee_sprite_visual(attacker)
 	# Attacker remains at strike_pos; PHASE F returns to orig_pos later
@@ -5150,7 +5603,7 @@ func _run_melee_crit_lunge_piercing(attacker: Node2D, _defender: Node2D, orig_po
 		return
 
 	if crit_sound != null and crit_sound.stream != null:
-		crit_sound.play()
+		play_attack_hit_sound(crit_sound)
 	await get_tree().create_timer(0.10).timeout
 	_melee_reset_melee_sprite_visual(attacker)
 
@@ -5235,7 +5688,7 @@ func _run_melee_crit_lunge_bludgeoning(attacker: Node2D, _defender: Node2D, orig
 		return
 
 	if crit_sound != null and crit_sound.stream != null:
-		crit_sound.play()
+		play_attack_hit_sound(crit_sound)
 	await get_tree().create_timer(0.10).timeout
 	_melee_reset_melee_sprite_visual(attacker)
 

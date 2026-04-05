@@ -45,6 +45,7 @@
 [ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="56_upgy4"]
 [ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="57_mdwgp"]
 [ext_resource type="Texture2D" uid="uid://ce3ywlhyshjsr" path="res://animations/Phase Banner Animation/16.png" id="57_u144a"]
+[ext_resource type="AudioStream" uid="uid://c66lrsir7rgtu" path="res://SoundEffects/ClawHitSound.mp3" id="58_mdwgp"]
 [ext_resource type="Texture2D" uid="uid://bryrtp00m1p0i" path="res://animations/Phase Banner Animation/17.png" id="58_sd6xa"]
 [ext_resource type="Texture2D" uid="uid://dxeyiq806ag5y" path="res://animations/Phase Banner Animation/18.png" id="59_413cc"]
 [ext_resource type="Texture2D" uid="uid://cwtepxw00gyt1" path="res://animations/Phase Banner Animation/19.png" id="60_lnykv"]
@@ -1886,6 +1887,9 @@ pitch_scale = 0.88
 stream = ExtResource("57_mdwgp")
 volume_db = -1.5
 pitch_scale = 1.06
+
+[node name="ClawHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563387]
+stream = ExtResource("58_mdwgp")
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("72_ohgdx")

@@ -1,5 +1,28 @@
 # Generic enemy packs by map
 
+## Unit types (`UnitData.unit_type`)
+
+Authoring on each **UnitData** (`.tres`): narrative/species tag used for UI, future “bane vs type” rules, and **blood splatter** suppression (`Undead`, `Construct`, `Spirit`, `Aberration`, `Elemental` → no red spray; `Dragon` uses normal bleed VFX).
+
+| Value | Enum | Use for |
+|-------|------|--------|
+| 0 | Unspecified | Legacy or generic; treat like human for VFX until set |
+| 1 | Human | Most League, dock, temple line humans |
+| 2 | Elf | Elven/fair-folk (future) |
+| 3 | Dwarf | Dwarven units |
+| 4 | Halfling | Halfling units |
+| 5 | Goblin | Goblinoids |
+| 6 | Orc | Orcs / big greenskin brutes |
+| 7 | Undead | Skeleton line, revenants, husks, crypt packs |
+| 8 | Beast | Hounds, mounts-as-unit, pure animals |
+| 9 | Construct | Golems, animated objects |
+| 10 | Spirit | Echoes, shades, oathshades |
+| 11 | Aberration | Rift/void masses, “wrong” biology |
+| 12 | Elemental | Fire/water/air/earth incarnations, salamanders, etc. |
+| 13 | Dragon | Drakes, wyrms, true dragons |
+
+Code: `UnitData.UnitType`, `unit.get_unit_type()`, `UnitData.unit_type_display_name(t)`, `UnitData.unit_type_suppresses_blood(t)`.
+
 ## Map01\_RazedVillage
 
 * `ash\_cultist\_t1` — Ash Cultist (Novice, Rusty Sword)

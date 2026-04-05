@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CombatStatusData" format=3 uid="uid://bstatusscorch01"]
+
+[ext_resource type="Script" path="res://Resources/CombatStatuses/CombatStatusData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+status_id = "map01_scorched"
+display_name = "Scorched"
+description = "If you end a turn orthogonally adjacent to a fire tile, you take a small extra burn tick. Clears when your next turn begins."
+stack_cap = 1
+expires_next_activation = true
+hud_tag = "SCORCHED"
+hud_bbcode_color = "#ee5522"

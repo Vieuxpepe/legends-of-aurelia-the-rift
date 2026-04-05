@@ -37,6 +37,7 @@ extends Node
 
 const SETTINGS_FILE_PATH: String = "user://settings.cfg"
 const CAMP_PAIR_SCENE_DB = preload("res://Scripts/Narrative/CampPairSceneDB.gd")
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
 const BATTLE_PATH_STYLE_MINIMAL := 0
 const BATTLE_PATH_STYLE_OUTLINED := 1
 const BATTLE_PATH_STYLE_DASHED := 2
@@ -1991,6 +1992,11 @@ func save_party(battlefield: Node2D) -> void:
 				"promoted_class_legacies": (unit.get("promoted_class_legacies") as Array).duplicate() if unit.get("promoted_class_legacies") is Array else []
 			}
 
+			if unit.get("active_ability_cooldowns") is Dictionary:
+				var acd_wire: Array = ActiveCombatAbilityHelpers.export_wire(unit)
+				if not acd_wire.is_empty():
+					unit_dict["active_ability_cd"] = acd_wire
+
 			player_roster.append(unit_dict)
 
 	if active_save_slot != -1:
@@ -3698,6 +3704,8 @@ func _serialize_mock_coop_battle_roster_unit(unit: Dictionary) -> Dictionary:
 	u_copy["rookie_legacies"] = unit.get("rookie_legacies", []).duplicate() if unit.get("rookie_legacies") is Array else []
 	u_copy["base_class_legacies"] = unit.get("base_class_legacies", []).duplicate() if unit.get("base_class_legacies") is Array else []
 	u_copy["promoted_class_legacies"] = unit.get("promoted_class_legacies", []).duplicate() if unit.get("promoted_class_legacies") is Array else []
+	if unit.get("active_ability_cd") is Array:
+		u_copy["active_ability_cd"] = (unit["active_ability_cd"] as Array).duplicate(true)
 	return u_copy
 
 

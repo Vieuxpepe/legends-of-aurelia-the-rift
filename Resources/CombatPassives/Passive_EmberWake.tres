@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PassiveCombatAbilityData" format=3 uid="uid://cpassemberwake01"]
+
+[ext_resource type="Script" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+ability_id = "ember_wake"
+display_name = "Ember Wake"
+description = "After a successful magic tome attack, leaves a short-lived fire tile near the target."
+effect_kind = 3
+fire_tile_damage = 1
+fire_tile_duration_turns = 2
+require_magic_weapon = true
+require_tome_weapon_family = true

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CombatStatusData" format=3 uid="uid://dfgtx2b38slpk"]
+
+[ext_resource type="Script" path="res://Resources/CombatStatuses/CombatStatusData.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Assets/Icons/Buffs/ResolveTacticalIcon.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+status_id = "resolve"
+display_name = "Resolve"
+description = "After a successful universal parry, custom avatar Last Stand, or Defy Death (A-rank bond) saving your avatar: +8 Hit, +5 Avo, +2 Might until this unit begins their next turn."
+stack_cap = 1
+expires_next_activation = true
+hud_tag = "RESOLVE"
+hud_bbcode_color = "cornflowerblue"
+hover_group = "buff"
+tactical_icon = ExtResource("2_icon")

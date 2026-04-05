@@ -1,5 +1,8 @@
 extends RefCounted
 
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
+
 # Helper functions for the co-op / authoritative-combat snapshot bridge.
 # These are extracted from `Scripts/Core/BattleField.gd` to reduce monolith risk.
 
@@ -122,6 +125,8 @@ static func coop_net_build_authoritative_combat_snapshot(field, pre_alive_ids: D
 			if u.get("is_defending") != null:
 				e["defending"] = bool(u.is_defending)
 
+			e["cstat"] = UnitCombatStatusHelpers.export_wire(u)
+
 			units_arr.append(e)
 
 	var removed: Array = []
@@ -142,7 +147,8 @@ static func coop_net_build_authoritative_combat_snapshot(field, pre_alive_ids: D
 
 
 static func coop_apply_authoritative_combat_snapshot(field, snap: Dictionary) -> void:
-	if int(snap.get("v", 0)) != field.COOP_AUTH_BATTLE_SNAPSHOT_VER:
+	var snap_ver: int = int(snap.get("v", 0))
+	if snap_ver != 1 and snap_ver != 2 and snap_ver != 3:
 		if OS.is_debug_build():
 			push_warning("Coop: reject authoritative combat snapshot (bad v).")
 		return
@@ -214,6 +220,14 @@ static func coop_apply_authoritative_combat_snapshot(field, snap: Dictionary) ->
 
 		if entry.has("defending") and u2.get("is_defending") != null:
 			u2.is_defending = bool(entry["defending"])
+
+		if snap_ver >= 2:
+			UnitCombatStatusHelpers.import_wire(u2, entry.get("cstat", []))
+
+		if entry.has("acd"):
+			ActiveCombatAbilityHelpers.import_wire(u2, entry["acd"])
+		elif snap_ver >= 3:
+			ActiveCombatAbilityHelpers.bootstrap_unit(u2)
 
 		if u2.has_method("clear_remote_coop_pending_death_visual") and int(entry.get("hp", u2.current_hp)) > 0:
 			u2.clear_remote_coop_pending_death_visual()

@@ -3,6 +3,8 @@ extends RefCounted
 # Trade / inventory / loot logic beyond the thin UI helpers.
 # This extraction focuses on grid rebuild mechanics + trade swapping.
 
+const FateCardLootHelpers = preload("res://Scripts/Core/FateCardLootHelpers.gd")
+
 
 static func _find_player_dragon_with_space(field) -> Node2D:
 	if field.player_container == null:
@@ -226,7 +228,21 @@ static func build_grid_items(
 
 static func distribute_pending_loot_to_inventory(field) -> void:
 	var recipient = field.loot_recipient if is_instance_valid(field.loot_recipient) else field.player_state.active_unit
+	var should_save_fate_unlocks: bool = false
 	for item in field.pending_loot:
+		if item == null:
+			continue
+		if FateCardLootHelpers.is_fate_card_loot(item):
+			var unlock_result: Dictionary = FateCardLootHelpers.apply_fate_card_unlock(item, false)
+			var card_name: String = str(unlock_result.get("card_name", "Unknown Card"))
+			if bool(unlock_result.get("unlocked", false)):
+				field.add_combat_log("Fate Card unlocked permanently: " + card_name + ".", "gold")
+				should_save_fate_unlocks = true
+			elif bool(unlock_result.get("duplicate", false)):
+				field.add_combat_log("Fate Card already owned: " + card_name + ".", "lightgray")
+			else:
+				field.add_combat_log("Failed to unlock Fate Card: " + card_name + ".", "orange")
+			continue
 		var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
 		if item is WeaponData and field._is_weapon_convoy_locked(item as WeaponData):
 			var dragon_target: Node2D = null
@@ -256,6 +272,8 @@ static func distribute_pending_loot_to_inventory(field) -> void:
 			else:
 				field.player_inventory.append(item)
 				field.add_combat_log(str(i_name) + " sent to Convoy.", "gray")
+	if should_save_fate_unlocks and CampaignManager != null and CampaignManager.has_method("save_current_progress"):
+		CampaignManager.save_current_progress()
 
 
 ## Skip reveal UI: same distribution and completion signals as closing the loot window, without popup or fly-in animations.
@@ -342,6 +360,27 @@ static func on_close_loot_pressed(field) -> void:
 	distribute_pending_loot_to_inventory(field)
 
 	await close_tween.finished
+	# Fate cards are permanent unlocks, not inventory items; skip fly-to-slot visuals for them.
+	var fly_loot_items: Array = []
+	for item in looted_items_refs:
+		if item != null and not FateCardLootHelpers.is_fate_card_loot(item):
+			fly_loot_items.append(item)
+	looted_items_refs = fly_loot_items
+	if looted_items_refs.is_empty():
+		field.inventory_panel.visible = false
+		field.pending_loot.clear()
+		field.loot_recipient = null
+		field.close_loot_button.disabled = false
+		if field.player_state:
+			field.player_state.is_forecasting = false
+		field.get_tree().paused = false
+		var deferred_result_now: String = field._deferred_battle_result_after_loot
+		field._deferred_battle_result_after_loot = ""
+		field.loot_window_closed.emit()
+		if deferred_result_now != "":
+			field.call_deferred("_apply_deferred_battle_result_after_loot", deferred_result_now)
+		field.update_unit_info_panel()
+		return
 
 	# 3. Open the Convoy view so we can see all grids
 	field.unit_managing_inventory = null
@@ -430,15 +469,17 @@ static func on_close_loot_pressed(field) -> void:
 		var impact_func = func(cb_item: Resource, cb_btn: Button, cb_icon: TextureRect):
 			cb_icon.queue_free()
 
-			var rarity = cb_item.get("rarity") if cb_item.get("rarity") != null else "Common"
-			var is_high_tier = (rarity == "Epic" or rarity == "Legendary")
+			var rarity: String = cb_item.get("rarity") if cb_item.get("rarity") != null else "Common"
+			var rarity_lc: String = rarity.to_lower()
+			var is_mythic: bool = rarity_lc == "mythic"
+			var is_high_tier: bool = is_mythic or rarity_lc == "epic" or rarity_lc == "legendary"
 
 			if is_high_tier:
 				if field.crit_sound and field.crit_sound.stream != null:
 					var p = AudioStreamPlayer.new()
 					p.stream = field.crit_sound.stream
-					p.pitch_scale = randf_range(1.2, 1.4)
-					p.volume_db = -2.0
+					p.pitch_scale = randf_range(1.45, 1.6) if is_mythic else randf_range(1.2, 1.4)
+					p.volume_db = 1.5 if is_mythic else -2.0
 					field.add_child(p)
 					p.play()
 					p.finished.connect(p.queue_free)
@@ -450,7 +491,7 @@ static func on_close_loot_pressed(field) -> void:
 				var angles = [0.5, 2.1, 3.8, 5.0, 1.2]
 				for a in angles:
 					var line = Line2D.new()
-					line.width = 3.0
+					line.width = 4.0 if is_mythic else 3.0
 					line.default_color = Color(0.05, 0.05, 0.05, 0.9)
 					line.add_point(Vector2.ZERO)
 					line.add_point(Vector2(cos(a) * 15, sin(a) * 15))
@@ -459,25 +500,33 @@ static func on_close_loot_pressed(field) -> void:
 
 				var flash = ColorRect.new()
 				flash.set_anchors_preset(Control.PRESET_FULL_RECT)
-				flash.color = Color(0.8, 0.2, 1.0) if rarity == "Epic" else Color(1.0, 0.8, 0.2)
+				if is_mythic:
+					flash.color = Color(0.94, 0.58, 0.08)
+				elif rarity_lc == "epic":
+					flash.color = Color(0.8, 0.2, 1.0)
+				else:
+					flash.color = Color(1.0, 0.8, 0.2)
 				cb_btn.add_child(flash)
 
 				cb_btn.modulate.a = 1.0
-				cb_btn.scale = Vector2(1.5, 1.5)
+				cb_btn.scale = Vector2(1.65, 1.65) if is_mythic else Vector2(1.5, 1.5)
 				cb_btn.pivot_offset = cb_btn.size / 2.0
 
 				var bounce = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-				bounce.tween_property(cb_btn, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BOUNCE)
-				bounce.tween_property(flash, "modulate:a", 0.0, 0.4)
+				bounce.tween_property(cb_btn, "scale", Vector2.ONE, 0.36 if is_mythic else 0.3).set_trans(Tween.TRANS_BOUNCE)
+				bounce.tween_property(flash, "modulate:a", 0.0, 0.5 if is_mythic else 0.4)
 
 				var crack_fade = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-				crack_fade.tween_interval(1.0)
+				crack_fade.tween_interval(1.2 if is_mythic else 1.0)
 				crack_fade.tween_property(crack_node, "modulate:a", 0.0, 0.3)
 				crack_fade.chain().tween_callback(func():
 					if is_instance_valid(crack_node): crack_node.queue_free()
 					if is_instance_valid(flash): flash.queue_free()
 				)
-				field.screen_shake(12.0, 0.25)
+				if is_mythic:
+					field.screen_shake(18.0, 0.4)
+				else:
+					field.screen_shake(12.0, 0.25)
 			else:
 				if field.select_sound and field.select_sound.stream != null:
 					var p = AudioStreamPlayer.new()

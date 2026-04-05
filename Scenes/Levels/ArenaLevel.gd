@@ -11,7 +11,7 @@
 extends Node2D
 
 const UNIT_SCENE: PackedScene = preload("res://Resources/Unit.tscn")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 const DEFAULT_CELL_SIZE: Vector2i = Vector2i(64, 64)
 
 # Predefined grid coordinates for enemy spawns when no BattleField is found.
@@ -206,7 +206,7 @@ func _connect_ghost_signals(ghost: Node2D) -> void:
 	if ghost.has_signal("leveled_up") and _battlefield.has_method("_on_unit_leveled_up"):
 		ghost.leveled_up.connect(_battlefield._on_unit_leveled_up)
 	if _battlefield is BattleField:
-		Map01EnemyPassivesHelpers.ensure_finished_turn_hook(_battlefield as BattleField, ghost)
+		CombatPassiveAbilityHelpers.ensure_finished_turn_hook(_battlefield as BattleField, ghost)
 
 
 func _apply_ghost_visuals(ghost: Node2D, unit_dict: Dictionary) -> void:

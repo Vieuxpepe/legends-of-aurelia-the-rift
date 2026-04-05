@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PassiveCombatAbilityData" format=3 uid="uid://cpassashsight01"]
+
+[ext_resource type="Script" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+ability_id = "ash_sight"
+display_name = "Ash Sight"
+description = "Bonus HIT when attacking through or across burning tiles (ranged)."
+effect_kind = 2
+hit_bonus = 12

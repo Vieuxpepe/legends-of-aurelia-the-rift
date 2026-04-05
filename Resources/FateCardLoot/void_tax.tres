@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FateCardLootData" format=3]
+
+[ext_resource type="Script" uid="uid://dwunqturrt86j" path="res://Resources/FateCardLootData.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Assets/Portraits/Portrait Malakor.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+card_id = "void_tax"
+card_name = "Void Tax"
+card_rarity = "epic"
+item_name = "Fate Card: Void Tax"
+description = "Permanent Fate Deck unlock. Elite enemies drop +1 void shard."
+rarity = "Mythic"
+icon = ExtResource("2_icon")
+metadata/_custom_type_script = "uid://dwunqturrt86j"

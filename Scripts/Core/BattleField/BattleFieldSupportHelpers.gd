@@ -1,5 +1,7 @@
 extends RefCounted
 
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
+
 # Phase 2 support / relationship combat helpers extracted from `BattleField.gd`.
 
 static func normalize_support_rank(field, bond: Variant) -> int:
@@ -133,6 +135,8 @@ static func apply_hit_with_support_reactions(field, victim: Node2D, damage: int,
 			await field._show_defy_death_savior_portrait(partner, savior_name, rescue_line)
 			field.add_combat_log(savior_name + ": " + rescue_line, "gold")
 			field.spawn_loot_text("Defied Death!", Color(1.0, 0.84, 0.0), victim.global_position + Vector2(32, -32))
+			if victim.get("is_custom_avatar") == true and victim.get("combat_statuses") != null:
+				UnitCombatStatusHelpers.add_status(victim, UnitCombatStatusHelpers.ID_RESOLVE, {})
 			victim.take_damage(capped, source)
 			return
 

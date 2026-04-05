@@ -456,7 +456,8 @@ static func run_bloodthirster_minigame(field, attacker: Node2D) -> int:
 		help_text.text = "MAXIMUM BLOODSHED!"
 		help_text.add_theme_color_override("font_color", Color(1.0, 0.1, 0.1))
 		field.screen_shake(20.0, 0.4)
-		if field.crit_sound.stream != null: field.crit_sound.play()
+		if field.crit_sound.stream != null:
+			field.play_attack_hit_sound(field.crit_sound)
 		
 	await field.get_tree().create_timer(0.45, true, false, true).timeout 
 	

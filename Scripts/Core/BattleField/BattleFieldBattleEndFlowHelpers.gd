@@ -1,7 +1,8 @@
 extends RefCounted
 
 const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
+const FateCardLootHelpers = preload("res://Scripts/Core/FateCardLootHelpers.gd")
 
 
 static func remove_dead_player_dragon(field, unit: Node2D) -> void:
@@ -76,7 +77,7 @@ static func on_unit_died(field, unit: Node2D, killer: Node2D) -> void:
 		field.astar.set_point_solid(grid_pos, false)
 
 	if bone_payload == null:
-		Map01EnemyPassivesHelpers.try_ashburst_on_enemy_death(field, unit, grid_pos)
+		CombatPassiveAbilityHelpers.try_ashburst_on_enemy_death(field, unit, grid_pos)
 
 	if unit.get_parent() == field.player_container and unit.get_meta("is_dragon", false):
 		remove_dead_player_dragon(field, unit)
@@ -196,6 +197,11 @@ static func on_unit_died(field, unit: Node2D, killer: Node2D) -> void:
 			for s_loot in unit.stolen_loot:
 				if s_loot != null:
 					field.pending_loot.append(CampaignManager.duplicate_item(s_loot))
+		var fate_card_drop: Resource = FateCardLootHelpers.roll_enemy_fate_card_drop(unit)
+		if fate_card_drop != null:
+			field.pending_loot.append(fate_card_drop)
+			var fate_name: String = FateCardLootHelpers.get_fate_card_loot_label(fate_card_drop)
+			field.add_combat_log("A Fate Card drops: " + fate_name + "!", "gold")
 		var local_loot_recipient: Node2D = null
 		if killer != null and is_instance_valid(killer):
 			var killer_parent: Node = killer.get_parent()

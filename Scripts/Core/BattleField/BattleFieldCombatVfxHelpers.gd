@@ -1,5 +1,92 @@
 extends RefCounted
 
+const BONE_CHIP_TEXTURE_PATH: String = "res://Resources/Materials/Icons/Bone.png"
+
+
+static func _target_should_spawn_bone_chips(target_unit: Node2D) -> bool:
+	if target_unit == null or not is_instance_valid(target_unit):
+		return false
+	var ud: Variant = target_unit.get("data")
+	if ud != null and ud is UnitData and UnitData.unit_type_uses_bone_hit_debris((ud as UnitData).unit_type):
+		return true
+	var nv: Variant = target_unit.get("unit_name")
+	if nv == null:
+		return false
+	var s: String = str(nv)
+	return s == "Skeleton" or s == "Risen Dead"
+
+
+## Undead struck: small bone chips using [member BONE_CHIP_TEXTURE_PATH] instead of blood.
+static func spawn_bone_chip_burst(
+	field,
+	target_unit: Node2D,
+	attacker_pos: Vector2,
+	is_crit: bool = false,
+	damage_kind: int = 0
+) -> void:
+	if field == null or target_unit == null or not is_instance_valid(target_unit):
+		return
+	var tex: Texture2D = load(BONE_CHIP_TEXTURE_PATH) as Texture2D
+	if tex == null:
+		push_warning("Bone chip VFX: texture missing at %s" % BONE_CHIP_TEXTURE_PATH)
+		return
+
+	var chips: CPUParticles2D = CPUParticles2D.new()
+	field.add_child(chips)
+	chips.z_index = 105
+	chips.global_position = target_unit.global_position + Vector2(32, 32)
+	chips.emitting = false
+	chips.one_shot = true
+	chips.explosiveness = 1.0
+	chips.local_coords = false
+	chips.texture = tex
+	chips.lifetime = 0.38
+
+	var dir: Vector2 = target_unit.global_position - attacker_pos
+	if dir.length_squared() < 1.0:
+		dir = Vector2.RIGHT
+	else:
+		dir = dir.normalized()
+	chips.direction = dir
+	chips.spread = 38.0
+	chips.gravity = Vector2(0, 980)
+
+	if damage_kind == 1:
+		chips.amount = 7 if is_crit else 5
+		chips.initial_velocity_min = 190.0
+		chips.initial_velocity_max = 260.0 if is_crit else 230.0
+		chips.color = Color(0.78, 0.90, 1.0, 1.0)
+	else:
+		chips.amount = 9 if is_crit else 6
+		chips.initial_velocity_min = 240.0
+		chips.initial_velocity_max = 340.0 if is_crit else 300.0
+		chips.color = Color(0.97, 0.94, 0.88, 1.0)
+
+	var tex_max: float = maxf(float(tex.get_width()), float(tex.get_height()))
+	var s_min: float = 0.14
+	var s_max: float = 0.36
+	if tex_max > 0.0:
+		var norm: float = clampf(22.0 / tex_max, 0.08, 0.55)
+		s_min = 0.45 * norm
+		s_max = (1.35 if is_crit else 1.05) * norm
+	chips.scale_amount_min = s_min
+	chips.scale_amount_max = s_max
+
+	chips.angular_velocity_min = -420.0
+	chips.angular_velocity_max = 420.0
+	chips.angle_min = -35.0
+	chips.angle_max = 35.0
+
+	var curve: Curve = Curve.new()
+	curve.add_point(Vector2(0, 1))
+	curve.add_point(Vector2(0.22, 0.5))
+	curve.add_point(Vector2(0.55, 0.12))
+	curve.add_point(Vector2(1, 0))
+	chips.scale_amount_curve = curve
+
+	chips.restart()
+	field.get_tree().create_timer(1.05, true, false, true).timeout.connect(chips.queue_free)
+
 
 static func spawn_dash_effect(field, start_pos: Vector2, target_pos: Vector2) -> void:
 	if field.dash_fx_scene == null:
@@ -212,6 +299,64 @@ static func spawn_bludgeon_impact_effect(field, target_pos: Vector2, attacker_po
 		fx.modulate = mod
 
 
+## Melee impacts for [method WeaponData.is_dragon_weapon]. Uses [member BattleField.claw_fx_scene] (default claw scene on the field).
+static func spawn_claw_strike_effect(field, target_pos: Vector2, attacker_pos: Vector2, is_crit: bool = false) -> void:
+	var scene: PackedScene = field.claw_fx_scene
+	if scene == null:
+		return
+	var fx: Node = scene.instantiate()
+	field.add_child(fx)
+	fx.z_index = 110
+	fx.global_position = target_pos + Vector2(32, 32)
+
+	var dir: Vector2 = target_pos - attacker_pos
+	if dir.length_squared() < 4.0:
+		dir = Vector2.RIGHT
+	else:
+		dir = dir.normalized()
+
+	var asp: AnimatedSprite2D = fx as AnimatedSprite2D
+	if asp == null:
+		asp = _find_first_animated_sprite_under(fx)
+	if asp == null:
+		fx.queue_free()
+		return
+
+	var sc_mul: float = 1.32 if is_crit else 1.06
+	asp.scale = asp.scale * sc_mul
+	if is_crit:
+		asp.modulate = asp.modulate * Color(1.22, 1.12, 0.95, 1.0)
+
+	asp.rotation = dir.angle()
+	asp.flip_h = false
+
+	if asp.sprite_frames != null:
+		var names: PackedStringArray = asp.sprite_frames.get_animation_names()
+		var play_name: String = "default"
+		if not asp.sprite_frames.has_animation(play_name) and names.size() > 0:
+			play_name = names[0]
+		if asp.sprite_frames.has_animation(play_name):
+			asp.sprite_frames.set_animation_loop(play_name, false)
+			asp.play(play_name)
+
+	var cleanup: Callable = func():
+		if is_instance_valid(fx):
+			fx.queue_free()
+	field.get_tree().create_timer(1.15, true, false, true).timeout.connect(cleanup)
+
+
+static func _find_first_animated_sprite_under(n: Node) -> AnimatedSprite2D:
+	if n == null:
+		return null
+	if n is AnimatedSprite2D:
+		return n as AnimatedSprite2D
+	for c in n.get_children():
+		var found: AnimatedSprite2D = _find_first_animated_sprite_under(c)
+		if found != null:
+			return found
+	return null
+
+
 static func spawn_level_up_effect(field, target_pos: Vector2) -> void:
 	if field.level_up_fx_scene == null:
 		print("WARNING: Level Up FX Scene is missing! Assign it in the Battlefield Inspector!")
@@ -235,13 +380,23 @@ static func spawn_level_up_effect(field, target_pos: Vector2) -> void:
 
 ## damage_kind: 0 physical (red spray), 1 magic (cool spark-burst read)
 static func spawn_blood_splatter(field, target_unit: Node2D, attacker_pos: Vector2, is_crit: bool = false, damage_kind: int = 0) -> void:
+	if target_unit == null or not is_instance_valid(target_unit):
+		return
+
+	if _target_should_spawn_bone_chips(target_unit):
+		spawn_bone_chip_burst(field, target_unit, attacker_pos, is_crit, damage_kind)
+		return
+
 	var target_name = target_unit.get("unit_name")
 	if target_name == null:
 		return
 
-	# 1. THE LOGIC CHECK: Remove "Skeleton" from this list if you want them to bleed!
-	var no_blood_types = ["Wooden Crate", "Spawner Tent", "Portable Fort", "Skeleton", "Risen Dead"]
+	# 1. THE LOGIC CHECK: props / [enum UnitData.UnitType] (constructs, spirits, etc.). Undead use bone burst above.
+	var no_blood_types = ["Wooden Crate", "Spawner Tent", "Portable Fort"]
 	if no_blood_types.has(target_name):
+		return
+	var ud: Variant = target_unit.get("data")
+	if ud != null and ud is UnitData and UnitData.unit_type_suppresses_blood((ud as UnitData).unit_type):
 		return
 
 	var blood = CPUParticles2D.new()

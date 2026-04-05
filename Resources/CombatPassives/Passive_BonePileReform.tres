@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PassiveCombatAbilityData" format=3 uid="uid://beyy2ges7yhts"]
+
+[ext_resource type="Script" uid="uid://c4kao7pckv6d1" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+ability_id = "bone_pile_reform"
+display_name = "Rattle and Rise"
+description = "When slain by a non-bludgeoning blow, collapses into a bone pile and reforms on this tile after a few battle turns."
+effect_kind = 6

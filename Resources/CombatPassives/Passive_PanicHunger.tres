@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PassiveCombatAbilityData" format=3 uid="uid://cpasspanichunger"]
+
+[ext_resource type="Script" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+ability_id = "panic_hunger"
+display_name = "Panic Hunger"
+description = "Bonus accuracy vs civilians and isolated targets (no adjacent ally)."
+effect_kind = 5
+panic_civilian_hit_bonus = 15
+panic_isolated_hit_bonus = 10

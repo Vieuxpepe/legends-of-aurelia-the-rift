@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PassiveCombatAbilityData" format=3 uid="uid://cpasskindle01"]
+
+[ext_resource type="Script" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+ability_id = "kindle_slash"
+display_name = "Kindle Slash"
+description = "On hit, applies Scorched (Map 01)."
+effect_kind = 4
+status_id_to_apply = "map01_scorched"

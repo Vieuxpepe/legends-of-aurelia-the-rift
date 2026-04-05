@@ -21,6 +21,10 @@ static func hide_legacy_levelup_nodes(field) -> void:
 		field.level_up_title.visible = false
 	if field.level_up_stats != null:
 		field.level_up_stats.visible = false
+	if field.level_up_panel != null:
+		var quote_node: CanvasItem = field.level_up_panel.get_node_or_null("UnitQuoteLabel") as CanvasItem
+		if quote_node != null:
+			quote_node.visible = false
 
 
 static func get_levelup_dynamic_root(field) -> VBoxContainer:
@@ -191,6 +195,30 @@ static func get_levelup_stat_visual(stat_key: String) -> Dictionary:
 	return {"name": stat_key.to_upper(), "icon": "\u2022", "color": Color.WHITE}
 
 
+## Resolves a single human-readable level-up quote from UnitData.
+static func resolve_levelup_quote(unit: Node2D) -> String:
+	if unit == null or not is_instance_valid(unit):
+		return ""
+	var unit_data: Variant = unit.get("data")
+	if unit_data == null:
+		return ""
+	if unit_data.has_method("get_random_level_up_quote"):
+		var q: String = str(unit_data.get_random_level_up_quote()).strip_edges()
+		if q != "" and q != "...":
+			return q
+	var raw_quotes: Variant = unit_data.get("level_up_quotes")
+	if raw_quotes is Array:
+		var quotes: Array = raw_quotes
+		var lines: Array[String] = []
+		for v in quotes:
+			var line: String = str(v).strip_edges()
+			if line != "":
+				lines.append(line)
+		if not lines.is_empty():
+			return lines[randi() % lines.size()]
+	return ""
+
+
 static func create_levelup_icon_badge(icon_text: String, icon_color: Color) -> PanelContainer:
 	var badge: PanelContainer = PanelContainer.new()
 	badge.custom_minimum_size = Vector2(34, 34)
@@ -243,16 +271,22 @@ static func create_levelup_title_banner(root: VBoxContainer, title_text: String,
 	}
 
 
-static func create_levelup_header(field, unit: Node2D, old_level: int, new_level: int, theme: Dictionary) -> Dictionary:
+static func create_levelup_header(field, unit: Node2D, old_level: int, new_level: int, theme: Dictionary, levelup_quote: String = "") -> Dictionary:
 	var root: VBoxContainer = get_levelup_dynamic_root(field)
 
 	var panel_bg: Color = theme["panel_bg"]
 	var panel_border: Color = theme["panel_border"]
 	var accent_color: Color = theme["accent"]
 	var accent_soft: Color = theme["accent_soft"]
+	var clean_quote: String = levelup_quote.strip_edges()
+	var has_quote: bool = clean_quote != ""
+	var quote_min_h: float = 0.0
+	if has_quote:
+		var estimated_lines: int = clampi(1 + int(clean_quote.length() / 56), 1, 4)
+		quote_min_h = float(estimated_lines * 18 + 8)
 
 	var header_panel: PanelContainer = PanelContainer.new()
-	header_panel.custom_minimum_size = Vector2(0, 108)
+	header_panel.custom_minimum_size = Vector2(0, 108.0 + quote_min_h)
 	header_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_panel.modulate.a = 0.0
 	header_panel.scale = Vector2(0.96, 0.96)
@@ -363,12 +397,24 @@ static func create_levelup_header(field, unit: Node2D, old_level: int, new_level
 	exp_label.add_theme_font_size_override("font_size", 16)
 	exp_label.add_theme_color_override("font_color", accent_soft)
 	info_box.add_child(exp_label)
+	
+	var quote_label: Label = Label.new()
+	quote_label.visible = has_quote
+	quote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	quote_label.clip_text = false
+	quote_label.custom_minimum_size = Vector2(0, quote_min_h)
+	quote_label.text = "\"%s\"" % clean_quote
+	quote_label.add_theme_font_size_override("font_size", 15)
+	quote_label.add_theme_color_override("font_color", Color(0.93, 0.93, 0.93, 0.96))
+	quote_label.add_theme_constant_override("line_spacing", 1)
+	info_box.add_child(quote_label)
 
 	return {
 		"panel": header_panel,
 		"portrait_holder": portrait_holder,
 		"exp_bar": exp_bar,
-		"exp_label": exp_label
+		"exp_label": exp_label,
+		"quote_label": quote_label
 	}
 
 
@@ -694,7 +740,23 @@ static func spawn_levelup_halo(unit: Node2D, accent_color: Color) -> Node2D:
 
 
 static func run_theatrical_stat_reveal(field, unit: Node2D, title_text: String, gains: Dictionary) -> void:
-	field.get_tree().paused = true
+	if field == null or not is_instance_valid(field):
+		return
+	var tree: SceneTree = field.get_tree()
+	if tree == null:
+		return
+	if unit == null or not is_instance_valid(unit):
+		return
+	if field.level_up_panel == null or not is_instance_valid(field.level_up_panel):
+		return
+	if field.level_up_title == null or not is_instance_valid(field.level_up_title):
+		return
+	var ui_root: Node = field.get_node_or_null("UI")
+	if ui_root == null:
+		return
+	var was_paused: bool = tree.paused
+	var previous_panel_process_mode: int = field.level_up_panel.process_mode
+	tree.paused = true
 	field.level_up_panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	hide_legacy_levelup_nodes(field)
 
@@ -725,7 +787,7 @@ static func run_theatrical_stat_reveal(field, unit: Node2D, title_text: String, 
 	flash_rect.modulate.a = 0.0
 	flash_rect.process_mode = Node.PROCESS_MODE_ALWAYS
 	flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	field.get_node("UI").add_child(flash_rect)
+	ui_root.add_child(flash_rect)
 
 	field.level_up_panel.scale = Vector2(0.84, 0.84)
 	field.level_up_panel.modulate.a = 0.0
@@ -764,11 +826,13 @@ static func run_theatrical_stat_reveal(field, unit: Node2D, title_text: String, 
 	var displayed_old_level: int = unit.level
 	if is_real_level_up:
 		displayed_old_level = max(1, unit.level - 1)
+	var levelup_quote: String = resolve_levelup_quote(unit) if is_real_level_up else ""
 
-	var header_data: Dictionary = create_levelup_header(field, unit, displayed_old_level, unit.level, theme)
+	var header_data: Dictionary = create_levelup_header(field, unit, displayed_old_level, unit.level, theme, levelup_quote)
 	var header_panel: PanelContainer = header_data["panel"]
 	var portrait_holder: Control = header_data["portrait_holder"]
 	var exp_bar: ProgressBar = header_data["exp_bar"]
+	var quote_label: Label = header_data.get("quote_label") as Label
 
 	var header_tw = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	header_tw.tween_property(header_panel, "modulate:a", 1.0, 0.20)
@@ -776,6 +840,9 @@ static func run_theatrical_stat_reveal(field, unit: Node2D, title_text: String, 
 	header_tw.tween_property(portrait_holder, "position:x", 0.0, 0.30).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	header_tw.tween_property(portrait_holder, "modulate:a", 1.0, 0.20)
 	header_tw.tween_property(exp_bar, "value", exp_bar.max_value, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if quote_label != null and quote_label.visible:
+		quote_label.modulate.a = 0.0
+		header_tw.tween_property(quote_label, "modulate:a", 1.0, 0.26).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await header_tw.finished
 
 	await field.get_tree().create_timer(0.18, true, false, true).timeout
@@ -888,4 +955,5 @@ static func run_theatrical_stat_reveal(field, unit: Node2D, title_text: String, 
 		flash_rect.queue_free()
 
 	field.level_up_panel.visible = false
-	field.get_tree().paused = false
+	field.level_up_panel.process_mode = previous_panel_process_mode
+	tree.paused = was_paused

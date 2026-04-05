@@ -3,6 +3,18 @@ extends RefCounted
 # Inventory / loot UI helpers extracted from `BattleField.gd`.
 
 const TradeInventoryHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTradeInventoryHelpers.gd")
+const FateCardCatalog = preload("res://Scripts/FateCardCatalog.gd")
+const FateCardLootData = preload("res://Resources/FateCardLootData.gd")
+const FateCardLootHelpers = preload("res://Scripts/Core/FateCardLootHelpers.gd")
+
+const FATE_CARD_PANEL_BG: Color = Color(0.11, 0.08, 0.05, 0.985)
+const FATE_CARD_BORDER_SOFT: Color = Color(0.46, 0.36, 0.15, 0.96)
+const FATE_CARD_TEXT: Color = Color(0.95, 0.92, 0.86, 1.0)
+const FATE_CARD_TEXT_MUTED: Color = Color(0.76, 0.72, 0.66, 1.0)
+const FATE_CARD_BUTTON_BG: Color = Color(0.28, 0.21, 0.13, 0.94)
+const FATE_CARD_WIDTH: float = 282.0
+const FATE_CARD_HEIGHT: float = 320.0
+const FATE_CARD_FALLBACK_PORTRAIT_PATH: String = "res://Assets/Portraits/Portrait Hero 1.png"
 
 static func apply_inventory_panel_spacing(field) -> void:
 	if field.inventory_panel == null:
@@ -116,6 +128,9 @@ static func show_loot_window(field) -> void:
 
 	for d in display_items:
 		var item = d.item
+		var is_fate_card_drop: bool = FateCardLootHelpers.is_fate_card_loot(item)
+		if is_fate_card_drop:
+			await _loot_show_fate_card_front_reveal(field, item)
 		var display_text = field._get_item_display_text(item)
 
 		# Add the (x3) multiplier text if there is more than 1
@@ -124,19 +139,27 @@ static func show_loot_window(field) -> void:
 
 		var img = item.icon if "icon" in item else null
 
-		var rarity = item.get("rarity") if item.get("rarity") != null else "Common"
+		var rarity: String = item.get("rarity") if item.get("rarity") != null else "Common"
+		var rarity_lc: String = rarity.to_lower()
 		var item_color = Color.WHITE
-		var is_legendary_or_epic = false
+		var is_high_tier: bool = false
+		var is_mythic: bool = false
 
-		match rarity:
-			"Uncommon": item_color = Color(0.2, 1.0, 0.2) # Green
-			"Rare": item_color = Color(0.2, 0.5, 1.0) # Blue
-			"Epic":
+		match rarity_lc:
+			"uncommon":
+				item_color = Color(0.2, 1.0, 0.2) # Green
+			"rare":
+				item_color = Color(0.2, 0.5, 1.0) # Blue
+			"epic":
 				item_color = Color(0.8, 0.2, 1.0) # Purple
-				is_legendary_or_epic = true
-			"Legendary":
+				is_high_tier = true
+			"legendary":
 				item_color = Color(1.0, 0.8, 0.2) # Gold
-				is_legendary_or_epic = true
+				is_high_tier = true
+			"mythic":
+				item_color = Color(1.0, 0.56, 0.06) # High-impact amber
+				is_high_tier = true
+				is_mythic = true
 
 		# Add the item to the UI list and paint it the rarity color
 		var idx = field.loot_item_list.add_item(display_text, img)
@@ -146,35 +169,41 @@ static func show_loot_window(field) -> void:
 		field.loot_item_list.set_item_metadata(idx, {"item": item, "count": d.count})
 
 		# Per-row slide-in spotlight + list pop (all rarities)
-		await _loot_reveal_row_spotlight_and_pop(field, idx, item_color, is_legendary_or_epic)
+		await _loot_reveal_row_spotlight_and_pop(field, idx, item_color, is_high_tier)
 
 		# --- THE REVEAL JUICE ---
-		if is_legendary_or_epic:
+		if is_high_tier:
 			if field.epic_level_up_sound != null and field.epic_level_up_sound.stream != null:
 				field.epic_level_up_sound.play()
 
-			field.screen_shake(17.5, 0.45)
+			if is_mythic:
+				field.screen_shake(24.0, 0.62)
+			else:
+				field.screen_shake(17.5, 0.45)
 
-			_loot_loot_window_rarity_punch(field)
+			_loot_loot_window_rarity_punch(field, 1.3 if is_mythic else 1.0)
 
 			var flash_rect = ColorRect.new()
 			flash_rect.size = field.get_viewport_rect().size
 			flash_rect.color = item_color
-			flash_rect.modulate.a = 0.62
+			flash_rect.modulate.a = 0.78 if is_mythic else 0.62
 			flash_rect.process_mode = Node.PROCESS_MODE_ALWAYS
 			field.get_node("UI").add_child(flash_rect)
 
 			var hit_flash: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-			hit_flash.tween_property(flash_rect, "modulate:a", 0.0, 0.34)
+			hit_flash.tween_property(flash_rect, "modulate:a", 0.0, 0.42 if is_mythic else 0.34)
 			hit_flash.tween_callback(flash_rect.queue_free)
 
-			await field.get_tree().create_timer(0.22, true, false, true).timeout
-			field.screen_shake(10.0, 0.17)
-			if rarity == "Legendary" and field.crit_sound != null and field.crit_sound.stream != null:
-				field.crit_sound.pitch_scale = 1.35
+			await field.get_tree().create_timer(0.26 if is_mythic else 0.22, true, false, true).timeout
+			if is_mythic:
+				field.screen_shake(14.0, 0.24)
+			else:
+				field.screen_shake(10.0, 0.17)
+			if (rarity_lc == "legendary" or is_mythic) and field.crit_sound != null and field.crit_sound.stream != null:
+				field.crit_sound.pitch_scale = 1.5 if is_mythic else 1.35
 				field.crit_sound.play()
 				field.crit_sound.pitch_scale = 1.0
-			await field.get_tree().create_timer(0.2, true, false, true).timeout
+			await field.get_tree().create_timer(0.28 if is_mythic else 0.2, true, false, true).timeout
 		else:
 			if field.select_sound != null and field.select_sound.stream != null:
 				field.select_sound.pitch_scale = current_pitch
@@ -205,6 +234,382 @@ static func show_loot_window(field) -> void:
 		field._on_loot_item_selected(0)
 	else:
 		field._queue_refit_item_description_panels()
+
+
+static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
+	if not FateCardLootHelpers.is_fate_card_loot(item):
+		return
+	var loot_card: FateCardLootData = item as FateCardLootData
+	if loot_card == null:
+		return
+
+	var card_id: String = str(loot_card.card_id).strip_edges()
+	var card: Dictionary = FateCardCatalog.get_card(card_id)
+	if card.is_empty():
+		card = {
+			"id": card_id,
+			"name": str(loot_card.card_name).strip_edges(),
+			"rarity": str(loot_card.card_rarity).strip_edges().to_lower(),
+			"summary": "Permanent unlock",
+			"description": str(loot_card.description).strip_edges()
+		}
+	if str(card.get("name", "")).strip_edges() == "":
+		card["name"] = FateCardLootHelpers.get_fate_card_loot_label(loot_card)
+	if str(card.get("rarity", "")).strip_edges() == "":
+		card["rarity"] = "common"
+
+	var layer := CanvasLayer.new()
+	layer.layer = 260
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	field.add_child(layer)
+
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.offset_left = 0.0
+	root.offset_top = 0.0
+	root.offset_right = 0.0
+	root.offset_bottom = 0.0
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.process_mode = Node.PROCESS_MODE_ALWAYS
+	layer.add_child(root)
+
+	var veil := ColorRect.new()
+	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	veil.offset_left = 0.0
+	veil.offset_top = 0.0
+	veil.offset_right = 0.0
+	veil.offset_bottom = 0.0
+	veil.color = Color(0.0, 0.0, 0.0, 0.0)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(veil)
+
+	var flash := ColorRect.new()
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash.offset_left = 0.0
+	flash.offset_top = 0.0
+	flash.offset_right = 0.0
+	flash.offset_bottom = 0.0
+	flash.color = Color(1.0, 0.96, 0.82, 0.0)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(flash)
+
+	var title := Label.new()
+	title.text = "FATE CARD UNLOCKED"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.anchor_left = 0.0
+	title.anchor_top = 0.0
+	title.anchor_right = 1.0
+	title.anchor_bottom = 0.0
+	title.offset_left = 0.0
+	title.offset_top = 58.0
+	title.offset_right = 0.0
+	title.offset_bottom = 110.0
+	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.48, 1.0))
+	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(title)
+
+	var card_panel: Control = _build_fate_drop_card_widget(card, loot_card.icon)
+	card_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_panel.z_index = 3
+	root.add_child(card_panel)
+	var vp_size: Vector2 = field.get_viewport_rect().size
+	var card_size: Vector2 = card_panel.custom_minimum_size
+	if card_size == Vector2.ZERO:
+		card_size = Vector2(FATE_CARD_WIDTH, FATE_CARD_HEIGHT)
+	card_panel.pivot_offset = card_size * 0.5
+	card_panel.position = vp_size * 0.5 - card_size * 0.5 + Vector2(0.0, 18.0)
+	card_panel.scale = Vector2(0.72, 0.72)
+	card_panel.rotation_degrees = -8.0
+	card_panel.modulate.a = 0.0
+
+	if field.epic_level_up_sound != null and field.epic_level_up_sound.stream != null:
+		field.epic_level_up_sound.play()
+	if field.crit_sound != null and field.crit_sound.stream != null:
+		field.crit_sound.pitch_scale = 1.58
+		field.crit_sound.play()
+		field.crit_sound.pitch_scale = 1.0
+	field.screen_shake(22.0, 0.48)
+
+	var intro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	intro.tween_property(veil, "color:a", 0.76, 0.16)
+	intro.tween_property(card_panel, "modulate:a", 1.0, 0.12)
+	intro.tween_property(card_panel, "scale", Vector2(1.06, 1.06), 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	intro.tween_property(card_panel, "rotation_degrees", 0.0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var flash_tw: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	flash_tw.tween_property(flash, "color:a", 0.92, 0.06)
+	flash_tw.tween_property(flash, "color:a", 0.0, 0.24)
+	await intro.finished
+
+	var settle: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	settle.tween_property(card_panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	await settle.finished
+	await field.get_tree().create_timer(0.74, true, false, true).timeout
+
+	var outro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	outro.tween_property(root, "modulate:a", 0.0, 0.18)
+	outro.tween_property(card_panel, "scale", Vector2(0.95, 0.95), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await outro.finished
+	if is_instance_valid(layer):
+		layer.queue_free()
+
+
+static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Texture2D) -> Control:
+	var rarity: String = str(card.get("rarity", "common")).to_lower()
+	var rarity_color: Color = FateCardCatalog.get_rarity_color(rarity)
+	var rarity_rank: int = FateCardCatalog.get_rarity_rank(rarity)
+
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 0.0
+	panel.offset_left = 0.0
+	panel.offset_top = 0.0
+	panel.offset_right = FATE_CARD_WIDTH
+	panel.offset_bottom = FATE_CARD_HEIGHT
+	panel.custom_minimum_size = Vector2(FATE_CARD_WIDTH, FATE_CARD_HEIGHT)
+	panel.size = panel.custom_minimum_size
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	panel.clip_contents = true
+	panel.add_theme_stylebox_override(
+		"panel",
+		_fate_make_panel_style(FATE_CARD_PANEL_BG, rarity_color, 14, 3, 8, 8)
+	)
+
+	var body := VBoxContainer.new()
+	body.anchor_left = 0.0
+	body.anchor_top = 0.0
+	body.anchor_right = 1.0
+	body.anchor_bottom = 1.0
+	body.offset_left = 0.0
+	body.offset_top = 0.0
+	body.offset_right = 0.0
+	body.offset_bottom = 0.0
+	body.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	body.add_theme_constant_override("separation", 6)
+	panel.add_child(body)
+
+	var portrait_frame := PanelContainer.new()
+	portrait_frame.custom_minimum_size = Vector2(0.0, 174.0)
+	portrait_frame.clip_contents = true
+	portrait_frame.add_theme_stylebox_override(
+		"panel",
+		_fate_make_panel_style(
+			Color(0.06, 0.06, 0.06, 1.0),
+			Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.75),
+			10,
+			1,
+			0,
+			0
+		)
+	)
+	body.add_child(portrait_frame)
+
+	var portrait := TextureRect.new()
+	portrait.anchor_left = 0.0
+	portrait.anchor_top = 0.0
+	portrait.anchor_right = 1.0
+	portrait.anchor_bottom = 1.0
+	portrait.offset_left = 2.0
+	portrait.offset_top = 2.0
+	portrait.offset_right = -2.0
+	portrait.offset_bottom = -2.0
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.texture = _fate_load_card_portrait(card, fallback_icon)
+	portrait_frame.add_child(portrait)
+
+	var shade := ColorRect.new()
+	shade.anchor_left = 0.0
+	shade.anchor_top = 0.62
+	shade.anchor_right = 1.0
+	shade.anchor_bottom = 1.0
+	shade.offset_left = 0.0
+	shade.offset_top = 0.0
+	shade.offset_right = 0.0
+	shade.offset_bottom = 0.0
+	shade.color = Color(0.0, 0.0, 0.0, 0.25)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(shade)
+
+	var rarity_accent := ColorRect.new()
+	rarity_accent.anchor_left = 0.0
+	rarity_accent.anchor_top = 1.0
+	rarity_accent.anchor_right = 1.0
+	rarity_accent.anchor_bottom = 1.0
+	rarity_accent.offset_left = 0.0
+	rarity_accent.offset_top = -4.0
+	rarity_accent.offset_right = 0.0
+	rarity_accent.offset_bottom = 0.0
+	rarity_accent.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.95)
+	rarity_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(rarity_accent)
+
+	if rarity_rank >= 2:
+		var particles: CPUParticles2D = _fate_build_rarity_particles_node(rarity)
+		if particles != null:
+			portrait_frame.add_child(particles)
+		var glow: ColorRect = _fate_build_rarity_glow_overlay(rarity_color, rarity_rank)
+		if glow != null:
+			portrait_frame.add_child(glow)
+	_fate_add_rarity_sheen_animation(portrait_frame, rarity_rank)
+
+	var chip_row := HBoxContainer.new()
+	chip_row.add_theme_constant_override("separation", 6)
+	body.add_child(chip_row)
+	chip_row.add_child(_fate_build_card_chip(rarity.to_upper(), rarity_color, Color(0.10, 0.10, 0.10, 0.95), 11))
+	chip_row.add_child(
+		_fate_build_card_chip(
+			"UNLOCK",
+			Color(0.38, 0.98, 0.67, 1.0),
+			Color(0.06, 0.18, 0.11, 0.96),
+			11
+		)
+	)
+
+	var name_label := Label.new()
+	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_color_override("font_color", FATE_CARD_TEXT)
+	name_label.text = str(card.get("name", "Unknown Card")).to_upper()
+	body.add_child(name_label)
+
+	var summary_label := Label.new()
+	summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	summary_label.add_theme_font_size_override("font_size", 13)
+	summary_label.add_theme_color_override("font_color", FATE_CARD_TEXT_MUTED)
+	summary_label.text = str(card.get("summary", "Permanent card unlock."))
+	body.add_child(summary_label)
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0.0, 2.0)
+	spacer.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	body.add_child(spacer)
+
+	var unlock_band := PanelContainer.new()
+	unlock_band.custom_minimum_size = Vector2(0.0, 34.0)
+	unlock_band.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	unlock_band.add_theme_stylebox_override("panel", _fate_make_panel_style(FATE_CARD_BUTTON_BG, FATE_CARD_BORDER_SOFT, 10, 2, 10, 7))
+	var unlock_label := Label.new()
+	unlock_label.text = "PERMANENT UNLOCK"
+	unlock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	unlock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	unlock_label.add_theme_font_size_override("font_size", 17)
+	unlock_label.add_theme_color_override("font_color", FATE_CARD_TEXT)
+	unlock_band.add_child(unlock_label)
+	body.add_child(unlock_band)
+
+	return panel
+
+
+static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D) -> Texture2D:
+	var path: String = str(card.get("portrait_path", "")).strip_edges()
+	if path != "" and ResourceLoader.exists(path):
+		var tex: Resource = load(path)
+		if tex is Texture2D:
+			return tex as Texture2D
+	if fallback_icon != null:
+		return fallback_icon
+	if ResourceLoader.exists(FATE_CARD_FALLBACK_PORTRAIT_PATH):
+		var backup: Resource = load(FATE_CARD_FALLBACK_PORTRAIT_PATH)
+		if backup is Texture2D:
+			return backup as Texture2D
+	return null
+
+
+static func _fate_make_panel_style(
+	bg: Color,
+	border: Color,
+	radius: int = 12,
+	border_px: int = 2,
+	pad_h: int = 8,
+	pad_v: int = 8
+) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = border
+	sb.set_border_width_all(border_px)
+	sb.set_corner_radius_all(radius)
+	sb.content_margin_left = pad_h
+	sb.content_margin_right = pad_h
+	sb.content_margin_top = pad_v
+	sb.content_margin_bottom = pad_v
+	return sb
+
+
+static func _fate_build_card_chip(text: String, border: Color, bg: Color, font_size: int = 11) -> Control:
+	var chip_panel := PanelContainer.new()
+	chip_panel.add_theme_stylebox_override("panel", _fate_make_panel_style(bg, border, 8, 1, 6, 2))
+	var chip_label := Label.new()
+	chip_label.text = text
+	chip_label.add_theme_font_size_override("font_size", font_size)
+	chip_label.add_theme_color_override("font_color", border)
+	chip_panel.add_child(chip_label)
+	return chip_panel
+
+
+static func _fate_build_rarity_particles_node(rarity: String) -> CPUParticles2D:
+	var rank: int = FateCardCatalog.get_rarity_rank(rarity)
+	if rank < 2:
+		return null
+	var p := CPUParticles2D.new()
+	p.position = Vector2(142.0, 86.0)
+	p.amount = 6 + (rank * 4)
+	p.lifetime = 1.15
+	p.one_shot = false
+	p.explosiveness = 0.08
+	p.randomness = 0.55
+	p.emitting = true
+	p.modulate = FateCardCatalog.get_rarity_color(rarity)
+	p.z_index = 5
+	p.z_as_relative = false
+	return p
+
+
+static func _fate_build_rarity_glow_overlay(rarity_color: Color, rarity_rank: int) -> ColorRect:
+	var glow := ColorRect.new()
+	glow.anchor_left = 0.0
+	glow.anchor_top = 0.0
+	glow.anchor_right = 1.0
+	glow.anchor_bottom = 1.0
+	glow.offset_left = 1.0
+	glow.offset_top = 1.0
+	glow.offset_right = -1.0
+	glow.offset_bottom = -1.0
+	var alpha: float = clampf(0.05 + (0.02 * float(rarity_rank)), 0.04, 0.16)
+	glow.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, alpha)
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return glow
+
+
+static func _fate_add_rarity_sheen_animation(portrait_frame: Control, rarity_rank: int) -> void:
+	if portrait_frame == null or rarity_rank < 1:
+		return
+	var stripe := ColorRect.new()
+	var stripe_alpha: float = clampf(0.05 + (0.015 * float(rarity_rank)), 0.05, 0.12)
+	stripe.color = Color(1.0, 1.0, 1.0, stripe_alpha)
+	stripe.custom_minimum_size = Vector2(44.0, 360.0)
+	stripe.size = stripe.custom_minimum_size
+	stripe.position = Vector2(-88.0, -64.0)
+	stripe.rotation_degrees = 18.0
+	stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	stripe.material = mat
+	portrait_frame.add_child(stripe)
+
+	var travel_width: float = 420.0
+	var sweep_time: float = clampf(0.78 - (0.06 * float(rarity_rank)), 0.5, 0.78)
+	var pause_time: float = clampf(3.3 - (0.35 * float(rarity_rank)), 1.7, 3.3)
+	var tw: Tween = stripe.create_tween()
+	tw.set_loops()
+	tw.tween_property(stripe, "position:x", travel_width, sweep_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(pause_time)
+	tw.tween_property(stripe, "position:x", -88.0, 0.01)
 
 
 static func _loot_reveal_row_spotlight_and_pop(field, idx: int, item_color: Color, is_high_rarity: bool) -> void:
@@ -240,12 +645,14 @@ static func _loot_reveal_row_spotlight_and_pop(field, idx: int, item_color: Colo
 	await list_pop.finished
 
 
-static func _loot_loot_window_rarity_punch(field) -> void:
+static func _loot_loot_window_rarity_punch(field, intensity: float = 1.0) -> void:
 	if field.loot_window == null or not field.is_inside_tree():
 		return
+	var pulse_scale: float = lerpf(1.072, 1.11, clampf(intensity - 1.0, 0.0, 0.6) / 0.6)
+	var settle_time: float = lerpf(0.22, 0.32, clampf(intensity - 1.0, 0.0, 0.6) / 0.6)
 	var tw: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.tween_property(field.loot_window, "scale", Vector2(1.072, 1.072), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(field.loot_window, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(field.loot_window, "scale", Vector2(pulse_scale, pulse_scale), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(field.loot_window, "scale", Vector2.ONE, settle_time).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
 
 static func _loot_finalize_reveal_payoff(field) -> void:

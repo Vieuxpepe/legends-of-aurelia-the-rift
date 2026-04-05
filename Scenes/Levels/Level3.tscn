@@ -63,6 +63,7 @@
 [ext_resource type="AudioStream" uid="uid://cjgenr7f7eiqd" path="res://SoundEffects/BludgeonHitSound.mp3" id="57_vc4f1"]
 [ext_resource type="AudioStream" uid="uid://bmbewbexq08y0" path="res://SoundEffects/Spear_ThrustHit.mp3" id="58_68ms7"]
 [ext_resource type="Script" uid="uid://gj7oesxuqkix" path="res://Scenes/Levels/MiniMapDrawer.gd" id="58_n2ebu"]
+[ext_resource type="AudioStream" uid="uid://c66lrsir7rgtu" path="res://SoundEffects/ClawHitSound.mp3" id="59_68ms7"]
 [ext_resource type="AudioStream" uid="uid://dj3mwc6tapmbn" path="res://SoundEffects/NoDamageSound.mp3" id="61_l82fr"]
 [ext_resource type="AudioStream" uid="uid://dvj8na3bctl7y" path="res://SoundEffects/Music/Emberwood BGM (1).mp3" id="61_nktan"]
 [ext_resource type="AudioStream" uid="uid://culcdsqmruen7" path="res://SoundEffects/DefenseMode.mp3" id="62_bex5q"]
@@ -1980,6 +1981,9 @@ pitch_scale = 0.88
 stream = ExtResource("58_68ms7")
 volume_db = -1.5
 pitch_scale = 1.06
+
+[node name="ClawHitSound" type="AudioStreamPlayer" parent="." unique_id=1761563387]
+stream = ExtResource("59_68ms7")
 
 [node name="MissSound" type="AudioStreamPlayer" parent="." unique_id=226804270]
 stream = ExtResource("27_2iqmx")

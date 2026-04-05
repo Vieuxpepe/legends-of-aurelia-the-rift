@@ -1,7 +1,28 @@
 extends Resource
 class_name UnitData
 
+## Broad species / creature category for narrative, UI, and lightweight combat rules (e.g. bleed VFX). Assign per [UnitData] asset; [member Unit.data] is the runtime source.
+enum UnitType {
+	UNSPECIFIED = 0,
+	HUMAN = 1,
+	ELF = 2,
+	DWARF = 3,
+	HALFLING = 4,
+	GOBLIN = 5,
+	ORC = 6,
+	UNDEAD = 7,
+	BEAST = 8,
+	CONSTRUCT = 9,
+	SPIRIT = 10,
+	ABERRATION = 11,
+	ELEMENTAL = 12,
+	DRAGON = 13,
+}
+
 @export var display_name: String = "Unit"
+
+@export_category("Species / unit type")
+@export var unit_type: UnitType = UnitType.UNSPECIFIED
 @export var is_recruitable: bool = false
 @export_multiline var recruit_dialogue: Array[String] = [
 	"Wait! Lay down your weapons. There is no need for us to be enemies.",
@@ -45,7 +66,7 @@ class_name UnitData
 @export var phys_mult_bludgeoning: float = 1.0
 
 @export_category("Undead / Bone pile reform")
-## Enemies only. If > 0, kills not dealt as bludgeoning collapse into a bone pile and reform after this many battle turn increments (end of enemy phase).
+## Legacy fallback when no [member passive_combat_abilities] entry uses [enum PassiveCombatAbilityData.EffectKind.BONE_PILE_REFORM_ON_DEATH]. Prefer that passive on [PassiveCombatAbilityData].
 @export var bone_pile_reform_rounds: int = 0
 
 @export_category("Map 01 (tutorial fire map)")
@@ -53,6 +74,14 @@ class_name UnitData
 @export_enum("None", "SoulReaver", "CinderArcher", "PyreDisciple", "AshCultist") var map01_enemy_kit: int = 0
 ## Used by Panic Hunger (HIT): treat as civilian / escort-style target.
 @export var counts_as_civilian_escort_target: bool = false
+
+@export_category("Passive combat abilities")
+## Data-driven passives evaluated in combat ([CombatPassiveAbilityHelpers]). Merged with [member map01_enemy_kit] presets; same [enum PassiveCombatAbilityData.EffectKind] only once (array order wins over kit).
+@export var passive_combat_abilities: Array[PassiveCombatAbilityData] = []
+
+@export_category("Active combat abilities (cooldown)")
+## Cooldown-gated actives (enemy AI / future player). State: [member Unit.active_ability_cooldowns]; helpers: [ActiveCombatAbilityHelpers].
+@export var active_combat_abilities: Array[ActiveCombatAbilityData] = []
 
 @export_category("Character Growth Rates (%)")
 @export var hp_growth: int = 40
@@ -69,6 +98,53 @@ class_name UnitData
 @export var drops_equipped_weapon: bool = false
 @export var equipped_weapon_chance: int = 100
 @export var extra_loot: Array[LootDrop] = []
+
+static func unit_type_display_name(t: UnitType) -> String:
+	match t:
+		UnitType.UNSPECIFIED:
+			return ""
+		UnitType.HUMAN:
+			return "Human"
+		UnitType.ELF:
+			return "Elf"
+		UnitType.DWARF:
+			return "Dwarf"
+		UnitType.HALFLING:
+			return "Halfling"
+		UnitType.GOBLIN:
+			return "Goblin"
+		UnitType.ORC:
+			return "Orc"
+		UnitType.UNDEAD:
+			return "Undead"
+		UnitType.BEAST:
+			return "Beast"
+		UnitType.CONSTRUCT:
+			return "Construct"
+		UnitType.SPIRIT:
+			return "Spirit"
+		UnitType.ABERRATION:
+			return "Aberration"
+		UnitType.ELEMENTAL:
+			return "Elemental"
+		UnitType.DRAGON:
+			return "Dragon"
+	return ""
+
+
+static func unit_type_suppresses_blood(t: UnitType) -> bool:
+	return (
+		t == UnitType.UNDEAD
+		or t == UnitType.CONSTRUCT
+		or t == UnitType.SPIRIT
+		or t == UnitType.ABERRATION
+		or t == UnitType.ELEMENTAL
+	)
+
+
+static func unit_type_uses_bone_hit_debris(t: UnitType) -> bool:
+	return t == UnitType.UNDEAD
+
 
 # Add this helper function at the bottom of the script
 func get_random_death_quote() -> String:

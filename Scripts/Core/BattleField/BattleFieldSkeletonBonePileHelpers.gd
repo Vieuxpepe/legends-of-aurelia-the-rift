@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 const UNIT_SCENE: PackedScene = preload("res://Resources/Unit.tscn")
 const BONE_PILE_TEXTURE: Texture2D = preload("res://Assets/Sprites/Pile Of Bones.png")
 
@@ -55,13 +55,12 @@ static func register_pending_death_if_applicable(field, unit: Node2D, _killer: N
 		return
 	if u.data == null:
 		return
-	if int(u.data.bone_pile_reform_rounds) <= 0:
+	var rounds: int = CombatPassiveAbilityHelpers.bone_pile_reform_turn_count(u)
+	if rounds <= 0:
 		return
 	var last_st: int = int(u.get_meta("last_damage_subtype", -999))
-	if last_st == int(WeaponData.PhysicalSubtype.BLUDGEONING):
+	if last_st == int(WeaponData.PhysicalSubtype.BLUDGEONING) and CombatPassiveAbilityHelpers.bone_pile_reform_suppresses_on_bludgeon_kill(u):
 		return
-
-	var rounds: int = maxi(1, int(u.data.bone_pile_reform_rounds))
 	var snap: Dictionary = build_revive_snapshot(u)
 	var grid: Vector2i = field.get_grid_pos(u)
 	var reform_at: int = int(field.current_turn) + rounds
@@ -237,7 +236,7 @@ static func _reform_one_animated(field, entry: Dictionary) -> void:
 	if nu.has_signal("leveled_up") and not nu.leveled_up.is_connected(field._on_unit_leveled_up):
 		nu.leveled_up.connect(field._on_unit_leveled_up)
 
-	Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, nu)
+	CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, nu)
 
 	var u_spr: Sprite2D = nu.sprite
 	var s0: Vector2 = u_spr.scale if u_spr != null else Vector2.ONE

@@ -1,7 +1,7 @@
 extends RefCounted
 
 const BattleFieldSpecialModeSetupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSpecialModeSetupHelpers.gd")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 
 # `_ready()` orchestration, shared bootstrap, mock co-op charter UX, fog init, and post-setup grid/UI/intro wiring.
 # Special skirmish / expedition / arena / VIP / base-defense branches live in `BattleFieldSpecialModeSetupHelpers.gd`.
@@ -58,19 +58,19 @@ static func on_ready(field) -> void:
 		for u in field.player_container.get_children():
 			u.died.connect(field._on_unit_died)
 			u.leveled_up.connect(field._on_unit_leveled_up)
-			Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, u)
+			CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, u)
 
 	if field.ally_container:
 		for a in field.ally_container.get_children():
 			a.died.connect(field._on_unit_died)
 			a.leveled_up.connect(field._on_unit_leveled_up)
-			Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, a)
+			CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, a)
 
 	if field.enemy_container:
 		for e in field.enemy_container.get_children():
 			e.died.connect(field._on_unit_died)
 			e.leveled_up.connect(field._on_unit_leveled_up)
-			Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, e)
+			CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, e)
 
 	field.trade_popup_btn.pressed.connect(field._on_trade_popup_confirm)
 	field.trade_close_btn.pressed.connect(field._on_trade_window_close)

@@ -7,7 +7,8 @@ const AttackResolutionHelpers = preload("res://Scripts/Core/BattleField/BattleFi
 const PostStrikeCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPostStrikeCleanupHelpers.gd")
 const ForcedMovementTacticalHelpers = preload("res://Scripts/Core/BattleField/BattleFieldForcedMovementTacticalHelpers.gd")
 const CombatCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatCleanupHelpers.gd")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
 
 static func _compute_projectile_target_point(defender: Node2D, lunge_dir: Vector2, attack_hits: bool) -> Vector2:
 	var defender_center: Vector2 = defender.global_position + Vector2(32, 32)
@@ -1407,7 +1408,21 @@ static func run_strike_sequence(
 	
 			# --- FINAL HIT CHANCE MATH (support-combat: atk_sup hit, def_sup avo; relationship: atk_rel hit, def_rel avo) ---
 			var hit_chance: int = int(clamp(80 + (wpn.hit_bonus if wpn else 0) + tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100))
-			hit_chance = int(clamp(hit_chance + battle_cry_bonus_hit + chakra_bonus_hit + frenzy_bonus_hit + rookie_hit + Map01EnemyPassivesHelpers.map01_striker_hit_bonus(field, attacker, defender, wpn) - int(defender.get_meta("inner_peace_avo_bonus_temp", 0)), 0, 100))
+			hit_chance = int(
+				clamp(
+					hit_chance
+					+ battle_cry_bonus_hit
+					+ chakra_bonus_hit
+					+ frenzy_bonus_hit
+					+ rookie_hit
+					+ CombatPassiveAbilityHelpers.passive_combat_hit_bonus(field, attacker, defender, wpn)
+					- int(defender.get_meta("inner_peace_avo_bonus_temp", 0))
+					+ UnitCombatStatusHelpers.resolve_combat_hit_bonus(attacker)
+					- UnitCombatStatusHelpers.resolve_combat_avo_bonus(defender),
+					0,
+					100
+				)
+			)
 			if focused_failed: hit_chance = 0 
 			
 			# --- ARMOR PIERCING CALCULATION ---
@@ -1465,6 +1480,7 @@ static func run_strike_sequence(
 			var crit_chance: int = int(clamp((attacker.agility / 2) + assassinate_crit_bonus + atk_rel["crit_bonus"] - def_sup["crit_avo"] + rookie_crit, 0, 100))
 			damage += hellfire_bonus_damage + ballista_shot_bonus_damage + aegis_strike_bonus_damage
 			damage += rookie_dmg
+			damage += UnitCombatStatusHelpers.resolve_combat_might_bonus(attacker)
 
 			# Physical subtype multiplier (slashing/piercing/bludgeoning). Magic stays untouched.
 			if not is_magic and wpn != null:
@@ -1522,12 +1538,9 @@ static func run_strike_sequence(
 				field.add_child(proj)
 				proj.z_index = 110
 				if field.attack_sound != null and field.attack_sound.stream != null:
-					var old_launch_pitch: float = field.attack_sound.pitch_scale
 					var old_launch_volume: float = field.attack_sound.volume_db
-					field.attack_sound.pitch_scale = 1.16
 					field.attack_sound.volume_db = -5.0
-					field.attack_sound.play()
-					field.attack_sound.pitch_scale = old_launch_pitch
+					field.play_attack_hit_sound(field.attack_sound, 1.16)
 					field.attack_sound.volume_db = old_launch_volume
 				
 				var p_scale: float = float(wpn.get("projectile_scale")) if wpn.get("projectile_scale") != null else 2.0

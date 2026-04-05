@@ -2,7 +2,7 @@
 extends Node2D
 class_name TelegraphedSpawner
 
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 
 @export_category("Reinforcement Settings")
 @export var base_unit_scene: PackedScene
@@ -209,7 +209,7 @@ func _spawn_single_unit(bf: Node2D, spawn_tile: Vector2i, index: int) -> Node2D:
 	if enemy.has_signal("leveled_up") and not enemy.leveled_up.is_connected(bf._on_unit_leveled_up):
 		enemy.leveled_up.connect(bf._on_unit_leveled_up)
 
-	Map01EnemyPassivesHelpers.ensure_finished_turn_hook(bf, enemy)
+	CombatPassiveAbilityHelpers.ensure_finished_turn_hook(bf, enemy)
 
 	if spawn_sound != null:
 		var custom_audio = AudioStreamPlayer.new()

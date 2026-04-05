@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 
 # Skirmish / expedition / arena / VIP escort / base-defense siege branches invoked during battle bootstrap
 # (after fog init). Includes full arena opponent spawn setup.
@@ -112,7 +112,7 @@ static func apply_special_modes_after_fog(field) -> void:
 				if not enemy.leveled_up.is_connected(field._on_unit_leveled_up):
 					enemy.leveled_up.connect(field._on_unit_leveled_up)
 
-				Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, enemy)
+				CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, enemy)
 
 				enemy.data = loaded_unit_data.duplicate(true)
 				enemy.level = max_roster_level
@@ -194,7 +194,7 @@ static func setup_arena_battle(field) -> void:
 
 		ghost.died.connect(field._on_unit_died)
 		ghost.leveled_up.connect(field._on_unit_leveled_up)
-		Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, ghost)
+		CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, ghost)
 
 		if "team" in ghost:
 			ghost.team = 1
@@ -260,7 +260,7 @@ static func setup_arena_battle(field) -> void:
 
 		ghost_dragon.died.connect(field._on_unit_died)
 		ghost_dragon.leveled_up.connect(field._on_unit_leveled_up)
-		Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, ghost_dragon)
+		CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, ghost_dragon)
 
 		if "team" in ghost_dragon:
 			ghost_dragon.team = 1

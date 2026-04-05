@@ -1,6 +1,7 @@
 extends RefCounted
 
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
 
 static func _mark_dragon_weapon_flags(wpn: WeaponData) -> void:
 	if wpn == null:
@@ -166,7 +167,7 @@ static func load_campaign_data(field) -> void:
 
 		new_unit.died.connect(field._on_unit_died)
 		new_unit.leveled_up.connect(field._on_unit_leveled_up)
-		Map01EnemyPassivesHelpers.ensure_finished_turn_hook(field, new_unit)
+		CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, new_unit)
 
 		if i < max_to_deploy and i < deployment_slots.size():
 			var slot_pos = deployment_slots[i]
@@ -268,6 +269,11 @@ static func load_campaign_data(field) -> void:
 		if new_unit.get("health_bar") != null:
 			new_unit.health_bar.max_value = new_unit.max_hp
 			new_unit.health_bar.value = new_unit.current_hp
+
+		if saved.has("active_ability_cd"):
+			ActiveCombatAbilityHelpers.import_wire(new_unit, saved["active_ability_cd"])
+		else:
+			ActiveCombatAbilityHelpers.bootstrap_unit(new_unit)
 
 
 static func setup_skirmish_battle(field) -> void:

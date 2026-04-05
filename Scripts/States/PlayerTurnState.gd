@@ -353,6 +353,20 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 
 	if action == "cancel":
 		return true
+	if action == "active_ability":
+		if battlefield.has_method("coop_enet_should_delegate_player_combat_to_host") and battlefield.coop_enet_should_delegate_player_combat_to_host():
+			if battlefield.battle_log and battlefield.battle_log.visible:
+				battlefield.add_combat_log("Data-driven actives are not replicated in guest combat-delegation mode yet — use a normal attack.", "gray")
+			return true
+		var pending_aid: String = str(battlefield._forecast_pending_active_ability_id).strip_edges()
+		battlefield._forecast_pending_active_ability_id = ""
+		return await CombatTurnHelpers.resolve_player_active_ability_after_forecast(
+			battlefield,
+			self,
+			active_unit,
+			target_node,
+			pending_aid
+		)
 	if action == "talk":
 		battlefield.execute_talk(active_unit, target_node)
 		if is_instance_valid(battlefield) and battlefield.is_inside_tree() and battlefield.get_tree().paused:

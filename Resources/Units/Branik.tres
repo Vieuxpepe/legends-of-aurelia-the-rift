@@ -1,10 +1,12 @@
 [gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://bkt2omwfcsl28"]
 
 [ext_resource type="Resource" uid="uid://dw6xbp4oqav3p" path="res://Resources/Classes/Warrior.tres" id="1_6enbf"]
+[ext_resource type="Script" uid="uid://tpkerhjt8thg" path="res://Resources/CombatActives/ActiveCombatAbilityData.gd" id="1_tjl0j"]
 [ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_tjl0j"]
 [ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_46k0m"]
 [ext_resource type="Texture2D" uid="uid://m1cm4vm6hrlg" path="res://Assets/Portraits/Branik Portrait.png" id="5_5kgcg"]
 [ext_resource type="Resource" uid="uid://dm5s65gledy77" path="res://Resources/Materials/Wooden Plank.tres" id="5_w3fkm"]
+[ext_resource type="Script" uid="uid://c4kao7pckv6d1" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="6_46k0m"]
 [ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="7_nkht4"]
 [ext_resource type="Resource" uid="uid://cklgmau71r55h" path="res://Resources/Weapons/SteelAxe.tres" id="7_tjl0j"]
 [ext_resource type="Texture2D" uid="uid://ws8gi2njly6c" path="res://Assets/Sprites/Branik Sprite.png" id="9_46k0m"]

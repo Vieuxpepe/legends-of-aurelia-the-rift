@@ -9,6 +9,8 @@ const TYPE_ALLY_FOLLOW: String = "ally_follow"
 
 const AI_FIRE_TILE_STEP_PENALTY_INT: int = 18
 
+const ActiveCombatAbilityExecutionHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityExecutionHelpers.gd")
+
 @export var faction: String = "enemy" # "enemy" or "ally"
 var _focus_target: Node2D = null
 
@@ -308,6 +310,22 @@ func _ai_execute_combat(bf: Node2D, attacker: Node2D, defender: Node2D, used_abi
 
 
 func _execute_plan_action(unit: Node2D, battlefield: Node2D, target: Node2D, target_type: String) -> void:
+	if target_type == TYPE_HOSTILE or target_type == TYPE_ALLY_HEAL or target_type == TYPE_ALLY_BUFF:
+		var self_def = ActiveCombatAbilityExecutionHelpers.ai_choose_self_centered_active(battlefield, unit)
+		if self_def != null:
+			if await ActiveCombatAbilityExecutionHelpers.execute_async(battlefield, unit, null, self_def):
+				if target_type == TYPE_HOSTILE:
+					_focus_target = target
+				return
+
+	if target_type == TYPE_HOSTILE or target_type == TYPE_ALLY_HEAL:
+		var pick = ActiveCombatAbilityExecutionHelpers.ai_choose_targeted_active(battlefield, unit, target, target_type)
+		if pick != null:
+			if await ActiveCombatAbilityExecutionHelpers.execute_async(battlefield, unit, target, pick):
+				if target_type == TYPE_HOSTILE:
+					_focus_target = target
+				return
+
 	match target_type:
 		TYPE_HOSTILE:
 			unit.look_at_pos(battlefield.get_grid_pos(target))

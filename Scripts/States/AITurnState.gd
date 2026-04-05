@@ -19,6 +19,8 @@ const TYPE_ALLY_FOLLOW: String = "ally_follow"
 const TYPE_CHEST: String = "chest"
 const TYPE_ESCAPE: String = "escape"
 
+const ActiveCombatAbilityExecutionHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityExecutionHelpers.gd")
+
 const AI_CAMERA_OFFSET_Y: float = 250.0
 const AI_CAMERA_TWEEN_TIME_PREMOVE: float = 0.55
 const AI_CAMERA_TWEEN_TIME_POSTMOVE: float = 0.40
@@ -79,6 +81,21 @@ func _i(u: Object, key: String, default_val: int = 0) -> int:
 func _b(u: Object, key: String, default_val: bool = false) -> bool:
 	var v = u.get(key)
 	return default_val if v == null else bool(v)
+
+func _resolve_timer_tree() -> SceneTree:
+	# GameState nodes may be detached from SceneTree, so use battlefield first.
+	if battlefield != null and is_instance_valid(battlefield) and battlefield.is_inside_tree():
+		return battlefield.get_tree()
+	var main_loop: MainLoop = Engine.get_main_loop()
+	if main_loop is SceneTree:
+		return main_loop as SceneTree
+	return null
+
+func _await_ai_delay(seconds: float) -> void:
+	var tree: SceneTree = _resolve_timer_tree()
+	if tree == null:
+		return
+	await tree.create_timer(seconds).timeout
 
 
 func _ai_execute_combat(bf: Node2D, attacker: Node2D, defender: Node2D, used_ability: bool = false) -> void:
@@ -1601,12 +1618,33 @@ func _execute_unit_post_move_action(p: Dictionary) -> void:
 
 	var performed_attack_action: bool = false
 
-	if targeted_crate != null:
+	var used_data_active: bool = false
+	if targeted_crate == null and target != null and is_instance_valid(target):
+		if target_type == TYPE_HOSTILE or target_type == TYPE_ALLY_HEAL or target_type == TYPE_ALLY_BUFF:
+			var self_def = ActiveCombatAbilityExecutionHelpers.ai_choose_self_centered_active(battlefield, unit)
+			if self_def != null:
+				used_data_active = await ActiveCombatAbilityExecutionHelpers.execute_async(battlefield, unit, null, self_def)
+				if used_data_active:
+					performed_attack_action = true
+					if target_type == TYPE_HOSTILE:
+						_focus_target = target
+
+	if not used_data_active and targeted_crate == null and target != null and is_instance_valid(target):
+		if target_type == TYPE_HOSTILE or target_type == TYPE_ALLY_HEAL:
+			var pick = ActiveCombatAbilityExecutionHelpers.ai_choose_targeted_active(battlefield, unit, target, target_type)
+			if pick != null:
+				used_data_active = await ActiveCombatAbilityExecutionHelpers.execute_async(battlefield, unit, target, pick)
+				if used_data_active:
+					performed_attack_action = true
+					if target_type == TYPE_HOSTILE:
+						_focus_target = target
+
+	if not used_data_active and targeted_crate != null:
 		if is_instance_valid(targeted_crate) and battlefield.is_in_range(unit, targeted_crate):
 			unit.look_at_pos(battlefield.get_grid_pos(targeted_crate))
 			await _ai_execute_combat(battlefield, unit, targeted_crate, false)
 			performed_attack_action = true
-	else:
+	elif not used_data_active:
 		if target_type == TYPE_ESCAPE and is_instance_valid(target) and battlefield.get_distance(unit, target) <= 1:
 			battlefield.add_combat_log(unit.unit_name + " escaped the map with the loot!", "tomato")
 			var tween = create_tween()
@@ -1668,7 +1706,7 @@ func _execute_unit_post_move_action(p: Dictionary) -> void:
 			_sync_host_authority_enemy_finish_turn(unit)
 
 	battlefield.rebuild_grid()
-	await battlefield.get_tree().create_timer(0.2).timeout
+	await _await_ai_delay(0.2)
 
 
 func _do_batch_unit_move(unit: Node2D, path: Array, on_done: Callable) -> void:
@@ -1742,7 +1780,7 @@ func _batch_move_units(plans: Array) -> void:
 			pending_left[0] = int(pending_left[0]) - 1
 			continue
 		if _launch_idx > 0 and is_instance_valid(battlefield):
-			await battlefield.get_tree().create_timer(0.06).timeout
+			await _await_ai_delay(0.06)
 		_do_batch_unit_move(u, path, func(): pending_left[0] = int(pending_left[0]) - 1)
 		_launch_idx += 1
 
@@ -1825,12 +1863,24 @@ func _execute_ai_turn_batched(my_container: Node) -> void:
 # Original sequential loop (unchanged when batched mode is off)
 # =============================================================================
 func execute_ai_turn(my_container: Node) -> void:
-	await battlefield.get_tree().create_timer(0.5).timeout
+	if battlefield == null or not is_instance_valid(battlefield):
+		turn_finished.emit()
+		return
+	await _await_ai_delay(0.5)
+	if battlefield == null or not is_instance_valid(battlefield):
+		turn_finished.emit()
+		return
 
 	if _use_batched_ai_turns():
 		await _execute_ai_turn_batched(my_container)
 		active_unit = null
-		await battlefield.get_tree().create_timer(0.35).timeout
+		if battlefield == null or not is_instance_valid(battlefield):
+			turn_finished.emit()
+			return
+		await _await_ai_delay(0.35)
+		if battlefield == null or not is_instance_valid(battlefield):
+			turn_finished.emit()
+			return
 		if _is_host_authority_enemy_turn_host() and battlefield.has_method("coop_enet_sync_after_host_authority_enemy_turn_end"):
 			battlefield.coop_enet_sync_after_host_authority_enemy_turn_end()
 		turn_finished.emit()
@@ -1859,7 +1909,7 @@ func execute_ai_turn(my_container: Node) -> void:
 				unit.finish_turn()
 				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
-			await battlefield.get_tree().create_timer(0.2).timeout
+			await _await_ai_delay(0.2)
 			continue
 
 		var target := plan.get("node") as Node2D
@@ -1870,7 +1920,7 @@ func execute_ai_turn(my_container: Node) -> void:
 				unit.finish_turn()
 				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
-			await battlefield.get_tree().create_timer(0.2).timeout
+			await _await_ai_delay(0.2)
 			continue
 
 		if not _is_valid_ai_target(target):
@@ -1878,7 +1928,7 @@ func execute_ai_turn(my_container: Node) -> void:
 				unit.finish_turn()
 				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
-			await battlefield.get_tree().create_timer(0.2).timeout
+			await _await_ai_delay(0.2)
 			continue
 
 		var start_pos: Vector2i = battlefield.get_grid_pos(unit)
@@ -2426,7 +2476,7 @@ func execute_ai_turn(my_container: Node) -> void:
 				unit.finish_turn()
 				_sync_host_authority_enemy_finish_turn(unit)
 			battlefield.rebuild_grid()
-			await battlefield.get_tree().create_timer(0.2).timeout
+			await _await_ai_delay(0.2)
 			continue
 
 		# Pre-move camera focus
@@ -2566,10 +2616,16 @@ func execute_ai_turn(my_container: Node) -> void:
 				_sync_host_authority_enemy_finish_turn(unit)
 
 		battlefield.rebuild_grid()
-		await battlefield.get_tree().create_timer(0.2).timeout
+		await _await_ai_delay(0.2)
 
 	active_unit = null
-	await battlefield.get_tree().create_timer(0.35).timeout
+	if battlefield == null or not is_instance_valid(battlefield):
+		turn_finished.emit()
+		return
+	await _await_ai_delay(0.35)
+	if battlefield == null or not is_instance_valid(battlefield):
+		turn_finished.emit()
+		return
 	if _is_host_authority_enemy_turn_host() and battlefield.has_method("coop_enet_sync_after_host_authority_enemy_turn_end"):
 		battlefield.coop_enet_sync_after_host_authority_enemy_turn_end()
 	turn_finished.emit()

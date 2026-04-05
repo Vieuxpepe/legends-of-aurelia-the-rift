@@ -1,11 +1,13 @@
 [gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://b5h6wydjfhdy8"]
 
+[ext_resource type="Script" uid="uid://tpkerhjt8thg" path="res://Resources/CombatActives/ActiveCombatAbilityData.gd" id="1_08eyg"]
 [ext_resource type="Resource" uid="uid://fxvmgcknu8xh" path="res://Resources/Classes/Monster.tres" id="1_fflsa"]
 [ext_resource type="AudioStream" uid="uid://ckhhhnf0jc8y4" path="res://SoundEffects/SkeletonDying.mp3" id="2_08eyg"]
 [ext_resource type="Script" uid="uid://qmryjywc3ivm" path="res://Resources/LootDrop.gd" id="3_0wv4x"]
 [ext_resource type="Resource" uid="uid://ckitvh4grj5oh" path="res://Resources/Chests/Keys/Iron Key.tres" id="4_gukrx"]
 [ext_resource type="Texture2D" uid="uid://bgwrhbndk35qp" path="res://Assets/Portraits/Portrait Malakor.png" id="6_g8qon"]
 [ext_resource type="Resource" uid="uid://c88l0i4cfojj" path="res://Resources/Materials/Scrap Iron.tres" id="6_lmmra"]
+[ext_resource type="Script" uid="uid://c4kao7pckv6d1" path="res://Resources/CombatPassives/PassiveCombatAbilityData.gd" id="7_0wv4x"]
 [ext_resource type="Resource" uid="uid://bmge3tdi8ymys" path="res://Resources/GeneratedItems/Weapon_Steel_Sword.tres" id="8_fflsa"]
 [ext_resource type="Script" uid="uid://3jului3v2v6" path="res://Scripts/Core/UnitData.gd" id="8_j1s6b"]
 [ext_resource type="Texture2D" uid="uid://didwxhrlvx0u0" path="res://Assets/Sprites/Sprite Malakor.png" id="10_08eyg"]

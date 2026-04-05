@@ -4,6 +4,8 @@ extends RefCounted
 # and inventory description-panel refit helpers extracted from `BattleField.gd`.
 
 const BattleResultPresentationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldBattleResultPresentationHelpers.gd")
+const FateCardLootData = preload("res://Resources/FateCardLootData.gd")
+const FateCardLootHelpers = preload("res://Scripts/Core/FateCardLootHelpers.gd")
 
 
 static func resolve_inventory_ui_nodes(field) -> void:
@@ -163,6 +165,8 @@ static func on_grid_item_clicked(field, btn: Button, meta: Dictionary) -> void:
 
 
 static func get_item_display_text(item: Resource) -> String:
+	if FateCardLootHelpers.is_fate_card_loot(item):
+		return "FATE CARD: " + FateCardLootHelpers.get_fate_card_loot_label(item)
 	var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
 	var dur_str = ""
 	var broken_tag = ""
@@ -302,6 +306,8 @@ static func get_item_detailed_info(field, item: Resource, stack_count: int = 1, 
 			rarity_hex = "#d4a8ff"
 		"Legendary":
 			rarity_hex = "#ffe090"
+		"Mythic":
+			rarity_hex = "#ffb060"
 
 	lines.append("[font_size=28][b][color=%s]%s[/color][/b][/font_size]" % [rarity_hex, str(rarity).to_upper()])
 	var meta: String = (
@@ -434,6 +440,18 @@ static func get_item_detailed_info(field, item: Resource, stack_count: int = 1, 
 	elif item is MaterialData:
 		lines.append(item_detail_section_heading("Overview"))
 		lines.append(item_detail_line("Kind", "[color=%s]Crafting material[/color]" % C_BODY))
+	elif item is FateCardLootData:
+		var loot_card: FateCardLootData = item as FateCardLootData
+		var card_name: String = FateCardLootHelpers.get_fate_card_loot_label(loot_card)
+		var card_rarity: String = str(loot_card.card_rarity).strip_edges()
+		if card_rarity == "":
+			card_rarity = "Unknown"
+		lines.append(item_detail_section_heading("Fate Unlock"))
+		lines.append(item_detail_line("Kind", "[color=%s]Permanent card unlock[/color]" % C_BODY))
+		lines.append(item_detail_line("Card", "[color=%s]%s[/color]" % [C_VALUE, bbcode_escape_user_text(card_name)]))
+		lines.append(item_detail_line("Card Rarity", "[color=%s]%s[/color]" % [C_BODY, bbcode_escape_user_text(card_rarity.capitalize())]))
+		lines.append("")
+		lines.append(item_detail_callout("#ffb060", "#f5ead8", "Unlock applies globally to this campaign profile and is not sent to inventory or convoy."))
 	else:
 		lines.append(item_detail_section_heading("Overview"))
 		lines.append(

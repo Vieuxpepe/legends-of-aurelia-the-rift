@@ -5,7 +5,8 @@ const CombatVfxHelpersRef = preload("res://Scripts/Core/BattleField/BattleFieldC
 const DefensiveReactionFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDefensiveReactionFlowHelpers.gd")
 
 const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
 
 static func _resolve_weapon_impact_family(wpn) -> int:
 	if wpn == null:
@@ -22,10 +23,19 @@ static func _spawn_melee_hit_impact_vfx(
 	is_crit: bool,
 	weapon_impact_fam: int,
 	phys_subtype: int,
-	used_ranged_projectile: bool
+	used_ranged_projectile: bool,
+	wpn = null
 ) -> void:
 	var dpos: Vector2 = defender.global_position
 	var apos: Vector2 = attacker.global_position
+	if (
+		not used_ranged_projectile
+		and wpn != null
+		and wpn is WeaponData
+		and WeaponData.is_dragon_weapon(wpn as WeaponData)
+	):
+		field.spawn_claw_strike_effect(dpos, apos, is_crit)
+		return
 	# Projectile already sells thrust/impact; a second pierce strip on contact feels like double motion.
 	if used_ranged_projectile:
 		if phys_subtype == int(WeaponData.PhysicalSubtype.PIERCING):
@@ -44,24 +54,40 @@ static func _spawn_melee_hit_impact_vfx(
 
 
 static func _play_weapon_hit_sound(field, wpn, phys_subtype: int) -> void:
+	if wpn != null and wpn is WeaponData and WeaponData.is_dragon_weapon(wpn as WeaponData):
+		var wd: WeaponData = wpn as WeaponData
+		if wd.get("custom_hit_sound") != null:
+			var custom_audio := AudioStreamPlayer.new()
+			custom_audio.stream = wd.custom_hit_sound
+			field.add_child(custom_audio)
+			field.play_attack_hit_sound(custom_audio)
+			custom_audio.finished.connect(custom_audio.queue_free)
+			return
+		var chs: AudioStreamPlayer = field.get("claw_hit_sound") as AudioStreamPlayer
+		if chs != null and chs.stream != null:
+			field.play_attack_hit_sound(chs)
+			return
+		if field.attack_sound != null and field.attack_sound.stream != null:
+			field.play_attack_hit_sound(field.attack_sound)
+			return
 	if phys_subtype == int(WeaponData.PhysicalSubtype.PIERCING):
 		var phs: AudioStreamPlayer = field.get("piercing_hit_sound") as AudioStreamPlayer
 		if phs != null and phs.stream != null:
-			phs.play()
+			field.play_attack_hit_sound(phs)
 			return
 	if phys_subtype == int(WeaponData.PhysicalSubtype.BLUDGEONING):
 		var bhs: AudioStreamPlayer = field.get("bludgeon_hit_sound") as AudioStreamPlayer
 		if bhs != null and bhs.stream != null:
-			bhs.play()
+			field.play_attack_hit_sound(bhs)
 			return
 	if wpn != null and wpn.get("custom_hit_sound") != null:
 		var custom_audio := AudioStreamPlayer.new()
 		custom_audio.stream = wpn.custom_hit_sound
 		field.add_child(custom_audio)
-		custom_audio.play()
+		field.play_attack_hit_sound(custom_audio)
 		custom_audio.finished.connect(custom_audio.queue_free)
 	elif field.attack_sound != null and field.attack_sound.stream != null:
-		field.attack_sound.play()
+		field.play_attack_hit_sound(field.attack_sound)
 
 
 # Phase E: normal attack resolution (post Phase D defensive abilities).
@@ -205,7 +231,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 				field.screen_shake(3.0, 0.15)
 
 				if combo_hits == 0:
-					Map01EnemyPassivesHelpers.apply_kindle_slash_on_hit(field, attacker, defender)
+					CombatPassiveAbilityHelpers.apply_status_on_weapon_hit_passives(field, attacker, defender, wpn_fx, is_magic)
 
 				if will_stagger:
 					field.spawn_loot_text("GUARD BREAK!", Color(1.0, 0.62, 0.18), defender.global_position + Vector2(28, -46), {
@@ -314,7 +340,8 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 							field._apply_hit_with_support_reactions(defender, current_hit_dmg, attacker, exp_tgt, false)
 
 						if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
-							defender.set_meta("is_burning", true)
+							if defender.get("combat_statuses") != null:
+								UnitCombatStatusHelpers.add_status(defender, UnitCombatStatusHelpers.ID_BURNING, {})
 							field.add_combat_log(attacker.unit_name + " ignited " + defender.unit_name + "!", "orange")
 							field.spawn_loot_text("IGNITED!", Color(1.0, 0.4, 0.1), defender.global_position + Vector2(32, -40))
 							await field.get_tree().create_timer(0.1).timeout
@@ -322,7 +349,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 						# STANDARD ATTACK
 						if attack_hits and is_crit:
 							if not did_melee_crit_animation and field.crit_sound.stream != null:
-								field.crit_sound.play()
+								field.play_attack_hit_sound(field.crit_sound)
 							if is_bludgeon:
 								field.screen_shake(19.0, 0.48)
 							else:
@@ -350,7 +377,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 							"rise_px": 48.0 if is_crit else 42.0,
 							"scatter_amount": 14.0 if is_crit else 16.0,
 						})
-						_spawn_melee_hit_impact_vfx(field, defender, attacker, is_crit, weapon_impact_fam, phys_subtype, used_ranged_projectile)
+						_spawn_melee_hit_impact_vfx(field, defender, attacker, is_crit, weapon_impact_fam, phys_subtype, used_ranged_projectile, wpn_fx)
 						field.spawn_blood_splatter(defender, attacker.global_position, is_crit, impact_damage_kind)
 
 						# Earn support points (copied as-is: uses field funcs/containers)
@@ -378,11 +405,12 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 						field._apply_hit_with_support_reactions(defender, final_dmg, attacker, attacker, false)
 
 						if combo_hits == 0:
-							Map01EnemyPassivesHelpers.apply_kindle_slash_on_hit(field, attacker, defender)
-							Map01EnemyPassivesHelpers.try_ember_wake(field, attacker, defender, wpn_fx, is_magic)
+							CombatPassiveAbilityHelpers.apply_status_on_weapon_hit_passives(field, attacker, defender, wpn_fx, is_magic)
+							CombatPassiveAbilityHelpers.try_ember_wake_passives(field, attacker, defender, wpn_fx, is_magic)
 
 						if hellfire_result == 2 and is_instance_valid(defender) and defender.current_hp > 0:
-							defender.set_meta("is_burning", true)
+							if defender.get("combat_statuses") != null:
+								UnitCombatStatusHelpers.add_status(defender, UnitCombatStatusHelpers.ID_BURNING, {})
 							field.add_combat_log(attacker.unit_name + " ignited " + defender.unit_name + "!", "orange")
 							field.spawn_loot_text("IGNITED!", Color(1.0, 0.4, 0.1), defender.global_position + Vector2(32, -40))
 
@@ -403,7 +431,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 									"scatter_amount": 11.0,
 									"rise_px": 38.0,
 								})
-								_spawn_melee_hit_impact_vfx(field, defender, attacker, force_crit, weapon_impact_fam, phys_subtype, used_ranged_projectile)
+								_spawn_melee_hit_impact_vfx(field, defender, attacker, force_crit, weapon_impact_fam, phys_subtype, used_ranged_projectile, wpn_fx)
 								if phys_subtype >= 0:
 									defender.set_meta("last_damage_subtype", phys_subtype)
 								field._apply_hit_with_support_reactions(defender, slash_dmg, attacker, attacker, false)
@@ -475,7 +503,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 
 								var volley_dmg: int = int(round(max(1.0, float(damage)) * volley_damage_multiplier))
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(volley_dmg), Color(0.70, 0.90, 1.00), vol_tgt.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
 								field.add_combat_log(attacker.unit_name + "'s Volley arrow hits " + str(vol_tgt.unit_name) + " for " + str(volley_dmg) + ".", "cyan")
 								field._apply_hit_with_support_reactions(vol_tgt, volley_dmg, attacker, attacker, false)
@@ -488,7 +516,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								var rain_d: int = rain_splash_damage
 								if rain_tail_unit != null and splash_target == rain_tail_unit and rain_rear_extra_damage > 0:
 									rain_d += rain_rear_extra_damage
@@ -504,7 +532,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								var fb_splash: int = fireball_splash_damage
 								if fireball_tail_unit != null and splash_target == fireball_tail_unit:
 									fb_splash += fireball_tail_extra_damage
@@ -520,7 +548,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								var met_splash: int = meteor_storm_splash_damage
 								if meteor_tail_unit != null and splash_target == meteor_tail_unit:
 									met_splash += meteor_tail_extra_damage
@@ -535,7 +563,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 									break
 								var flurry_dmg: int = int(round(max(1.0, float(damage)) * flurry_strike_damage_multiplier))
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(flurry_dmg), Color(0.90, 0.95, 1.00), defender.global_position + Vector2(32, -16) + Vector2(randf_range(-18, 18), randf_range(-12, 12)))
 								field.add_combat_log(attacker.unit_name + "'s Flurry Strike follow-up hits for " + str(flurry_dmg) + ".", "white")
 								field._apply_hit_with_support_reactions(defender, flurry_dmg, attacker, attacker, false)
@@ -548,7 +576,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(blade_tempest_splash_damage) + " TEMPEST", Color(0.75, 0.90, 1.00), splash_target.global_position + Vector2(32, -16))
 								field.add_combat_log(splash_target.unit_name + " is slashed by Blade Tempest for " + str(blade_tempest_splash_damage) + ".", "cyan")
 								splash_target.take_damage(blade_tempest_splash_damage, attacker)
@@ -561,7 +589,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(chi_burst_splash_damage) + " CHI", Color(0.75, 0.55, 1.0), splash_target.global_position + Vector2(32, -16))
 								field.add_combat_log(splash_target.unit_name + " is struck by the Chi Burst for " + str(chi_burst_splash_damage) + ".", "violet")
 								splash_target.take_damage(chi_burst_splash_damage, attacker)
@@ -574,7 +602,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if sm_sp.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(smite_splash_damage) + " HOLY", Color(1.0, 0.95, 0.55), sm_sp.global_position + Vector2(32, -16))
 								field.add_combat_log(sm_sp.unit_name + " is scorched by Smite's holy spill for " + str(smite_splash_damage) + ".", "yellow")
 								sm_sp.take_damage(smite_splash_damage, attacker)
@@ -587,7 +615,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(sacred_judgment_splash_damage) + " HOLY", Color(1.0, 0.9, 0.4), splash_target.global_position + Vector2(32, -16))
 								field.add_combat_log(splash_target.unit_name + " is scorched by Sacred Judgment for " + str(sacred_judgment_splash_damage) + ".", "yellow")
 								splash_target.take_damage(sacred_judgment_splash_damage, attacker)
@@ -600,7 +628,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(elemental_convergence_splash_damage) + " MAGIC", Color(0.4, 0.8, 1.0), splash_target.global_position + Vector2(32, -16))
 								field.add_combat_log(splash_target.unit_name + " is hit by the Elemental Convergence blast for " + str(elemental_convergence_splash_damage) + ".", "cyan")
 								splash_target.take_damage(elemental_convergence_splash_damage, attacker)
@@ -610,7 +638,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 							var cc: Node2D = charge_collision_target
 							if is_instance_valid(cc) and not cc.is_queued_for_deletion() and cc.current_hp > 0 and cc.get_parent() == field.enemy_container:
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(charge_collision_damage) + " PIN", Color(1.0, 0.55, 0.35), cc.global_position + Vector2(32, -16))
 								field.add_combat_log(cc.unit_name + " is slammed by the pinned charge for " + str(charge_collision_damage) + ".", "coral")
 								cc.take_damage(charge_collision_damage, attacker)
@@ -623,7 +651,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if pierce_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(ballista_shot_pierce_damage) + " PIERCE", Color(0.55, 0.85, 1.0), pierce_target.global_position + Vector2(32, -16))
 								field.add_combat_log(pierce_target.unit_name + " is struck by the overpenetrating bolt for " + str(ballista_shot_pierce_damage) + ".", "lightskyblue")
 								pierce_target.take_damage(ballista_shot_pierce_damage, attacker)
@@ -636,7 +664,7 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 								if splash_target.current_hp <= 0:
 									continue
 								if field.attack_sound and field.attack_sound.stream != null:
-									field.attack_sound.play()
+									field.play_attack_hit_sound(field.attack_sound)
 								field.spawn_loot_text(str(earthshatter_splash_damage) + " SHOCK", Color(1.0, 0.6, 0.2), splash_target.global_position + Vector2(32, -16))
 								field.add_combat_log(splash_target.unit_name + " is caught in the Earthshatter shockwave for " + str(earthshatter_splash_damage) + ".", "orange")
 								splash_target.take_damage(earthshatter_splash_damage, attacker)

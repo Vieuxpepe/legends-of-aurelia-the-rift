@@ -4,7 +4,10 @@ extends RefCounted
 # Panel micro-widgets / bar styling live in `BattleFieldCombatForecastHelpers.gd`.
 
 const ForecastUI = preload("res://Scripts/Core/BattleField/BattleFieldCombatForecastHelpers.gd")
-const Map01EnemyPassivesHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMap01EnemyPassivesHelpers.gd")
+const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
+const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
+const ActiveCombatAbilityExecutionHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityExecutionHelpers.gd")
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
 
 
 ## Matches `BattleFieldCombatOrchestrationHelpers.execute_combat` / strike staff gate (heal, buff, debuff).
@@ -76,7 +79,7 @@ static func build_forecast_reaction_summary(field, attacker: Node2D, defender: N
 			else:
 				lines.append("Defy Death: if a hit here would kill, survive at 1 HP once (A-rank bond).")
 
-	if defender.has_meta("is_burning") and defender.get_meta("is_burning") == true:
+	if UnitCombatStatusHelpers.unit_is_burning(defender):
 		lines.append("Target is burning (fire damage after each enemy phase).")
 
 	if field._attacker_has_attack_skill(attacker, "Hellfire"):
@@ -106,7 +109,7 @@ static func build_forecast_reaction_summary(field, attacker: Node2D, defender: N
 	if field._attacker_has_attack_skill(attacker, "Rain of Arrows"):
 		lines.append("Rain of Arrows: rear-rank pressure â€” extra damage to a foe in the tile behind the target (same line); non-perfect splash favors that foe when you must pick one.")
 
-	for map01_line: String in Map01EnemyPassivesHelpers.forecast_extra_lines(field, attacker, defender, atk_wpn):
+	for map01_line: String in CombatPassiveAbilityHelpers.forecast_extra_lines(field, attacker, defender, atk_wpn):
 		lines.append(map01_line)
 
 	if lines.is_empty():
@@ -257,7 +260,23 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		atk_hit = clampi(atk_hit + int(fr_rookie.get("hit", 0)), 0, 100)
 		atk_dmg = max(0, atk_dmg + int(fr_rookie.get("dmg", 0)))
 		atk_crit = clampi(atk_crit + int(fr_rookie.get("crit", 0)), 0, 100)
-		atk_hit = clampi(atk_hit + Map01EnemyPassivesHelpers.map01_striker_hit_bonus(field, attacker, defender, atk_wpn), 0, 100)
+		atk_hit = clampi(atk_hit + CombatPassiveAbilityHelpers.passive_combat_hit_bonus(field, attacker, defender, atk_wpn), 0, 100)
+		atk_hit = clampi(
+			atk_hit
+			+ UnitCombatStatusHelpers.resolve_combat_hit_bonus(attacker)
+			- UnitCombatStatusHelpers.resolve_combat_avo_bonus(defender),
+			0,
+			100
+		)
+		atk_dmg = max(0, atk_dmg + UnitCombatStatusHelpers.resolve_combat_might_bonus(attacker))
+		def_hit = clampi(
+			def_hit
+			+ UnitCombatStatusHelpers.resolve_combat_hit_bonus(defender)
+			- UnitCombatStatusHelpers.resolve_combat_avo_bonus(attacker),
+			0,
+			100
+		)
+		def_dmg = max(0, def_dmg + UnitCombatStatusHelpers.resolve_combat_might_bonus(defender))
 
 	# Physical subtype multipliers (forecast must match resolution)
 	var atk_dmg_base: int = int(atk_dmg)
@@ -438,6 +457,21 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 			else:
 				field.forecast_ability_btn.text = "USE " + abil.to_upper()
 				field.forecast_ability_btn.disabled = false
+		else:
+			var data_def: ActiveCombatAbilityData = ActiveCombatAbilityExecutionHelpers.find_best_forecast_targeted_active(field, attacker, defender)
+			if data_def != null:
+				field.forecast_ability_btn.visible = true
+				field._forecast_pending_active_ability_id = str(data_def.ability_id).strip_edges()
+				var cd_left: int = ActiveCombatAbilityHelpers.get_turns_remaining(attacker, field._forecast_pending_active_ability_id)
+				var dname: String = str(data_def.display_name).strip_edges()
+				var label_ab: String = dname if dname != "" else field._forecast_pending_active_ability_id
+				if cd_left > 0:
+					field.forecast_ability_btn.text = label_ab + " (CD: " + str(cd_left) + ")"
+					field.forecast_ability_btn.disabled = true
+					field._forecast_pending_active_ability_id = ""
+				else:
+					field.forecast_ability_btn.text = "USE " + label_ab.to_upper()
+					field.forecast_ability_btn.disabled = false
 
 	if field.forecast_atk_support_label:
 		field.forecast_atk_support_label.visible = true
@@ -494,6 +528,9 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 	var result_array = await field.forecast_resolved
 	var action = result_array[0]
 	var used_ability = result_array[1]
+
+	if str(action) != "active_ability":
+		field._forecast_pending_active_ability_id = ""
 
 	# --- CLEANUP AND RESET ---
 	if field.figure_8_tween:

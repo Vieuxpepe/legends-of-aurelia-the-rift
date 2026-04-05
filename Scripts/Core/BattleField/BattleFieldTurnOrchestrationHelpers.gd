@@ -1,11 +1,14 @@
 extends RefCounted
 
+const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
+
 
 static func process(field, delta: float) -> void:
 	field.update_cursor_pos()
 	field.update_cursor_color()
 	field._refresh_overhead_unit_bars()
 	field.update_unit_info_panel()
+	field._refresh_hover_status_popup()
 	field._refresh_unit_hotkey_hud()
 	if field.current_state == field.pre_battle_state:
 		field._update_mock_coop_start_battle_button_state()
@@ -163,6 +166,7 @@ static func on_ally_turn_finished(field) -> void:
 
 static func on_enemy_turn_finished(field) -> void:
 	await field._tick_burn_status_effects()
+	await field._tick_bone_toxin_status_effects()
 
 	# Tick the turn counter
 	field.current_turn += 1
@@ -189,6 +193,7 @@ static func on_enemy_turn_finished(field) -> void:
 			if cd > 0:
 				u.set_meta("ability_cooldown", cd - 1)
 
+	ActiveCombatAbilityHelpers.tick_all_units_phase(field)
 	field.change_state(field.player_state)
 
 
