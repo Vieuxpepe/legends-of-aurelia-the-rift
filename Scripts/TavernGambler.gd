@@ -1410,7 +1410,6 @@ func _build_fate_card_widget(
 	var summary_font: int
 	var portrait_edge: float
 	var chip_row_separation: int = 6
-	var rarity_accent_offset: float = 4.0
 
 	if is_active_strip_mini:
 		# Lay out at full hand size (282×320), then uniform-scale inside SubViewport so proportions match the hand exactly.
@@ -1427,7 +1426,6 @@ func _build_fate_card_widget(
 		name_font = 18
 		summary_font = 13
 		portrait_edge = 2.0
-		rarity_accent_offset = 4.0
 	elif preview_mode:
 		panel_w = 320.0
 		panel_h = 560.0
@@ -1443,7 +1441,6 @@ func _build_fate_card_widget(
 		summary_font = 16
 		portrait_edge = 2.0
 		chip_row_separation = 6
-		rarity_accent_offset = 4.0
 	else:
 		panel_w = FATE_HAND_CARD_WIDTH
 		panel_h = FATE_HAND_CARD_HEIGHT
@@ -1459,7 +1456,6 @@ func _build_fate_card_widget(
 		summary_font = 13
 		portrait_edge = 2.0
 		chip_row_separation = 6
-		rarity_accent_offset = 4.0
 
 	var panel: PanelContainer = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(panel_w, panel_h)
@@ -1539,6 +1535,18 @@ func _build_fate_card_widget(
 		empty_mark.add_theme_color_override("font_color", Color(0.45, 0.45, 0.45, 0.9))
 		portrait_frame.add_child(empty_mark)
 	else:
+		var portrait_underlay: ColorRect = ColorRect.new()
+		portrait_underlay.anchor_left = 0.0
+		portrait_underlay.anchor_top = 0.0
+		portrait_underlay.anchor_right = 1.0
+		portrait_underlay.anchor_bottom = 1.0
+		portrait_underlay.offset_left = portrait_edge
+		portrait_underlay.offset_top = portrait_edge
+		portrait_underlay.offset_right = -portrait_edge
+		portrait_underlay.offset_bottom = -portrait_edge
+		portrait_underlay.color = Color(0.03, 0.03, 0.03, 1.0)
+		portrait_underlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_frame.add_child(portrait_underlay)
 		var portrait: TextureRect = TextureRect.new()
 		portrait.anchor_left = 0.0
 		portrait.anchor_top = 0.0
@@ -1553,51 +1561,9 @@ func _build_fate_card_widget(
 		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		portrait.texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
 		portrait.texture = _load_card_portrait(card)
+		portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+		portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		portrait_frame.add_child(portrait)
-		var shade: ColorRect = ColorRect.new()
-		shade.anchor_left = 0.0
-		shade.anchor_top = 0.62
-		shade.anchor_right = 1.0
-		shade.anchor_bottom = 1.0
-		shade.offset_left = 0.0
-		shade.offset_top = 0.0
-		shade.offset_right = 0.0
-		shade.offset_bottom = 0.0
-		shade.color = Color(0.0, 0.0, 0.0, 0.25)
-		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		portrait_frame.add_child(shade)
-		var rarity_accent: ColorRect = ColorRect.new()
-		rarity_accent.anchor_left = 0.0
-		rarity_accent.anchor_top = 1.0
-		rarity_accent.anchor_right = 1.0
-		rarity_accent.anchor_bottom = 1.0
-		rarity_accent.offset_left = 0.0
-		rarity_accent.offset_top = -rarity_accent_offset
-		rarity_accent.offset_right = 0.0
-		rarity_accent.offset_bottom = 0.0
-		rarity_accent.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.95)
-		rarity_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		portrait_frame.add_child(rarity_accent)
-		var rarity_rank: int = FateCardCatalog.get_rarity_rank(rarity)
-		if not is_active_strip_mini:
-			if rarity_rank >= 2:
-				var particles: CPUParticles2D = _build_rarity_particles_node(rarity, preview_mode)
-				if particles != null:
-					portrait_frame.add_child(particles)
-			_add_rarity_sheen_animation(portrait_frame, rarity_rank, preview_mode)
-		if not is_active_strip_mini and not owned:
-			var lock_veil: ColorRect = ColorRect.new()
-			lock_veil.anchor_left = 0.0
-			lock_veil.anchor_top = 0.0
-			lock_veil.anchor_right = 1.0
-			lock_veil.anchor_bottom = 1.0
-			lock_veil.offset_left = 0.0
-			lock_veil.offset_top = 0.0
-			lock_veil.offset_right = 0.0
-			lock_veil.offset_bottom = 0.0
-			lock_veil.color = Color(0.0, 0.0, 0.0, 0.34)
-			lock_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			portrait_frame.add_child(lock_veil)
 
 	var chip_row: HBoxContainer = HBoxContainer.new()
 	chip_row.add_theme_constant_override("separation", chip_row_separation)
@@ -1779,10 +1745,6 @@ func _load_texture_safe(path: String) -> Texture2D:
 	var clean_path: String = path.strip_edges()
 	if clean_path == "":
 		return null
-	if ResourceLoader.exists(clean_path):
-		var res: Resource = load(clean_path)
-		if res is Texture2D:
-			return res as Texture2D
 	var from_source: Texture2D = _load_texture_from_source_image(clean_path)
 	if from_source != null:
 		return from_source
@@ -2074,7 +2036,7 @@ func _show_fate_preview(card: Dictionary, owned: bool, active: bool) -> void:
 	_fate_preview_panel.show()
 
 
-func _build_fate_drag_visual(card: Dictionary, owned: bool, active: bool) -> Control:
+func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Control:
 	var rank: int = FateCardCatalog.get_rarity_rank(str(card.get("rarity", "common")))
 	var rarity_color: Color = FateCardCatalog.get_rarity_color(str(card.get("rarity", "common")))
 
@@ -2093,6 +2055,19 @@ func _build_fate_drag_visual(card: Dictionary, owned: bool, active: bool) -> Con
 		)
 	)
 
+	var portrait_underlay: ColorRect = ColorRect.new()
+	portrait_underlay.anchor_left = 0.0
+	portrait_underlay.anchor_top = 0.0
+	portrait_underlay.anchor_right = 1.0
+	portrait_underlay.anchor_bottom = 1.0
+	portrait_underlay.offset_left = 2.0
+	portrait_underlay.offset_top = 2.0
+	portrait_underlay.offset_right = -2.0
+	portrait_underlay.offset_bottom = -50.0
+	portrait_underlay.color = Color(0.03, 0.03, 0.03, 1.0)
+	portrait_underlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(portrait_underlay)
+
 	var portrait: TextureRect = TextureRect.new()
 	portrait.anchor_left = 0.0
 	portrait.anchor_top = 0.0
@@ -2107,33 +2082,9 @@ func _build_fate_drag_visual(card: Dictionary, owned: bool, active: bool) -> Con
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	portrait.texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
 	portrait.texture = _load_card_portrait(card)
+	portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	panel.add_child(portrait)
-	var portrait_shade: ColorRect = ColorRect.new()
-	portrait_shade.anchor_left = 0.0
-	portrait_shade.anchor_top = 0.68
-	portrait_shade.anchor_right = 1.0
-	portrait_shade.anchor_bottom = 1.0
-	portrait_shade.offset_left = 0.0
-	portrait_shade.offset_top = 0.0
-	portrait_shade.offset_right = 0.0
-	portrait_shade.offset_bottom = 0.0
-	portrait_shade.color = Color(0.0, 0.0, 0.0, 0.18)
-	portrait_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(portrait_shade)
-
-	if not owned:
-		var lock_veil: ColorRect = ColorRect.new()
-		lock_veil.anchor_left = 0.0
-		lock_veil.anchor_top = 0.0
-		lock_veil.anchor_right = 1.0
-		lock_veil.anchor_bottom = 1.0
-		lock_veil.offset_left = 2.0
-		lock_veil.offset_top = 2.0
-		lock_veil.offset_right = -2.0
-		lock_veil.offset_bottom = -50.0
-		lock_veil.color = Color(0.0, 0.0, 0.0, 0.38)
-		lock_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		panel.add_child(lock_veil)
 
 	var name_label: Label = Label.new()
 	name_label.anchor_left = 0.0

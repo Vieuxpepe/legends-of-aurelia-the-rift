@@ -449,19 +449,6 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	portrait.z_index = 1
 	portrait_frame.add_child(portrait)
 
-	var rarity_accent := ColorRect.new()
-	rarity_accent.anchor_left = 0.0
-	rarity_accent.anchor_top = 1.0
-	rarity_accent.anchor_right = 1.0
-	rarity_accent.anchor_bottom = 1.0
-	rarity_accent.offset_left = 0.0
-	rarity_accent.offset_top = -4.0
-	rarity_accent.offset_right = 0.0
-	rarity_accent.offset_bottom = 0.0
-	rarity_accent.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.95)
-	rarity_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rarity_accent.z_index = 2
-	portrait_frame.add_child(rarity_accent)
 
 	# Keep the reveal portrait clean/readable; avoid extra overlays that can wash it out.
 
@@ -528,10 +515,6 @@ static func _fate_lookup_card_by_id_or_name(card_id: String, card_name: String) 
 
 static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D) -> Texture2D:
 	var path: String = str(card.get("portrait_path", "")).strip_edges()
-	if path != "" and ResourceLoader.exists(path):
-		var tex: Resource = load(path)
-		if tex is Texture2D:
-			return tex as Texture2D
 	if path != "":
 		var source_tex: Texture2D = _fate_load_portrait_texture_from_source(path)
 		if source_tex != null:
@@ -750,3 +733,4 @@ static func _loot_finalize_reveal_payoff(field) -> void:
 		field.select_sound.pitch_scale = 1.14
 		field.select_sound.play()
 		field.select_sound.pitch_scale = 1.0
+
