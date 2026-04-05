@@ -290,16 +290,6 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(veil)
 
-	var flash := ColorRect.new()
-	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
-	flash.offset_left = 0.0
-	flash.offset_top = 0.0
-	flash.offset_right = 0.0
-	flash.offset_bottom = 0.0
-	flash.color = Color(1.0, 0.68, 0.18, 0.0)
-	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(flash)
-
 	var title := Label.new()
 	title.text = "FATE CARD UNLOCKED"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -329,7 +319,7 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	if card_size == Vector2.ZERO:
 		card_size = Vector2(FATE_CARD_WIDTH, FATE_CARD_HEIGHT)
 	card_panel.pivot_offset = card_size * 0.5
-	card_panel.position = vp_size * 0.5 - card_size * 0.5 + Vector2(0.0, 18.0)
+	card_panel.position = vp_size * 0.5 - card_size * 0.5
 	card_panel.scale = Vector2(0.02, FATE_REVEAL_TARGET_SCALE_Y)
 	card_panel.rotation_degrees = -14.0
 	card_panel.modulate = Color(1.0, 1.0, 1.0, 1.0)
@@ -344,9 +334,6 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 
 	var intro: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	intro.tween_property(veil, "color:a", 0.76, 0.16)
-	var flash_tw: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	flash_tw.tween_property(flash, "color:a", 0.08, 0.035)
-	flash_tw.tween_property(flash, "color:a", 0.0, 0.10)
 	await intro.finished
 
 	# Two-step self-turn: first swing through the back face, then settle front-facing.
@@ -429,6 +416,20 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	)
 	body.add_child(portrait_frame)
 
+	var portrait_underlay := ColorRect.new()
+	portrait_underlay.anchor_left = 0.0
+	portrait_underlay.anchor_top = 0.0
+	portrait_underlay.anchor_right = 1.0
+	portrait_underlay.anchor_bottom = 1.0
+	portrait_underlay.offset_left = 2.0
+	portrait_underlay.offset_top = 2.0
+	portrait_underlay.offset_right = -2.0
+	portrait_underlay.offset_bottom = -2.0
+	portrait_underlay.color = Color(0.03, 0.03, 0.03, 1.0)
+	portrait_underlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_underlay.z_index = 0
+	portrait_frame.add_child(portrait_underlay)
+
 	var portrait := TextureRect.new()
 	portrait.anchor_left = 0.0
 	portrait.anchor_top = 0.0
@@ -443,6 +444,7 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	portrait.texture = _fate_load_card_portrait(card, fallback_icon)
 	portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	portrait.z_index = 1
 	portrait_frame.add_child(portrait)
 
 	var rarity_accent := ColorRect.new()
@@ -456,6 +458,7 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	rarity_accent.offset_bottom = 0.0
 	rarity_accent.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.95)
 	rarity_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rarity_accent.z_index = 2
 	portrait_frame.add_child(rarity_accent)
 
 	# Keep the reveal portrait clean/readable; avoid extra overlays that can wash it out.

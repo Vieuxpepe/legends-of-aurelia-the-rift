@@ -297,8 +297,12 @@ func _process(_delta: float) -> void:
 		_move_velocity = Vector2.ZERO
 		_walk_cycle = 0.0
 		if sprite != null:
-			sprite.position = _base_sprite_offset
-			sprite.rotation = 0.0
+			# Allow pair-overhear / dialogue reaction tweens to play while paused; freeze pose otherwise.
+			var reaction_running: bool = _reaction_tween != null and is_instance_valid(_reaction_tween)
+			var turn_running: bool = _turn_tween != null and is_instance_valid(_turn_tween)
+			if not reaction_running and not turn_running:
+				sprite.position = _base_sprite_offset
+				sprite.rotation = 0.0
 		return
 	# Socially settled walkers hold their meetup position until CampExplore releases them.
 	if _social_state == SOCIAL_STATE_SETTLED or _social_state == SOCIAL_STATE_SPEAKING:
@@ -1044,6 +1048,10 @@ func _clear_social_animation_tweens() -> void:
 	if sprite != null:
 		sprite.position = _base_sprite_offset
 		sprite.rotation = 0.0
+
+
+func clear_pair_listen_reaction_tweens() -> void:
+	_clear_social_animation_tweens()
 
 func _play_arrival_settle() -> void:
 	if sprite == null:

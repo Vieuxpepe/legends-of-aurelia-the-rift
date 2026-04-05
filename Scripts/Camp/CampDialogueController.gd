@@ -43,6 +43,8 @@ var pair_scenes_shown_this_visit: Dictionary = {}
 
 var _dialogue_panel_tween: Tween = null
 var _action_emphasis_tween: Tween = null
+var _pair_scene_name_tween: Tween = null
+var _pair_scene_prev_emphasis_speaker: String = ""
 
 var direct_conversation_active: bool = false
 var direct_conversations_shown_this_visit: Dictionary = {}
@@ -302,11 +304,69 @@ func get_eligible_pair_scene() -> Dictionary:
 	return best
 
 
+func _kill_pair_scene_name_tween() -> void:
+	if _pair_scene_name_tween != null and is_instance_valid(_pair_scene_name_tween):
+		_pair_scene_name_tween.kill()
+	_pair_scene_name_tween = null
+
+
+func _reset_pair_overhear_walker_presentations() -> void:
+	for n in [pair_scene_walker_a, pair_scene_walker_b]:
+		if n != null and n is CampRosterWalker:
+			var w: CampRosterWalker = n as CampRosterWalker
+			w.end_social_move()
+	if dialogue_name:
+		dialogue_name.modulate = Color(1, 1, 1, 1)
+	_kill_pair_scene_name_tween()
+	_pair_scene_prev_emphasis_speaker = ""
+
+
+func _apply_pair_overhear_line_choreography(speaker_name: String) -> void:
+	var wa: Node = pair_scene_walker_a
+	var wb: Node = pair_scene_walker_b
+	if wa == null or wb == null:
+		return
+	if not (wa is CampRosterWalker) or not (wb is CampRosterWalker):
+		return
+	var a: CampRosterWalker = wa as CampRosterWalker
+	var b: CampRosterWalker = wb as CampRosterWalker
+	a.face_toward(b.global_position)
+	b.face_toward(a.global_position)
+	var sp: String = str(speaker_name).strip_edges()
+	var speaker_w: CampRosterWalker = null
+	var listener_w: CampRosterWalker = null
+	if a.unit_name == sp:
+		speaker_w = a
+		listener_w = b
+	elif b.unit_name == sp:
+		speaker_w = b
+		listener_w = a
+	if speaker_w == null or listener_w == null:
+		return
+	speaker_w.begin_speaking()
+	listener_w.begin_listening()
+
+
+func _apply_pair_overhear_name_emphasis(speaker_name: String) -> void:
+	if dialogue_name == null:
+		return
+	var sp: String = str(speaker_name).strip_edges()
+	if sp == _pair_scene_prev_emphasis_speaker:
+		return
+	_pair_scene_prev_emphasis_speaker = sp
+	_kill_pair_scene_name_tween()
+	dialogue_name.modulate = Color(1.08, 1.04, 0.96, 1.0)
+	_pair_scene_name_tween = _explore.create_tween()
+	_pair_scene_name_tween.tween_property(dialogue_name, "modulate", Color(1, 1, 1, 1), 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
 func start_pair_scene(data: Dictionary) -> void:
 	var scene: Dictionary = data.get("scene", {})
 	var lines: Array = scene.get("lines", [])
 	if lines.is_empty():
 		return
+	_pair_scene_prev_emphasis_speaker = ""
+	_kill_pair_scene_name_tween()
 	pair_scene_active = true
 	dialogue_active = true
 	pair_scene_lines = lines
@@ -346,6 +406,8 @@ func show_pair_scene_line() -> void:
 	else:
 		if dialogue_portrait:
 			dialogue_portrait.visible = false
+	_apply_pair_overhear_line_choreography(speaker)
+	_apply_pair_overhear_name_emphasis(speaker)
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
@@ -362,6 +424,7 @@ func advance_pair_scene() -> void:
 
 
 func end_pair_scene() -> void:
+	_reset_pair_overhear_walker_presentations()
 	var scene: Dictionary = pair_scene_data
 	if scene.get("once_per_visit", false):
 		var sid: String = str(scene.get("id", "")).strip_edges()
