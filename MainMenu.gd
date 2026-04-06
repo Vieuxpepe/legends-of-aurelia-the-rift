@@ -193,7 +193,9 @@ func _make_panel_style(fill: Color, border: Color, border_width: int = 2, radius
 func _style_panel(panel: Control, fill: Color, border: Color, border_width: int = 2, radius: int = 16, shadow_alpha: float = 0.36) -> void:
 	if panel == null:
 		return
-	var style := _make_panel_style(fill, border, border_width, radius, shadow_alpha, 10, 4)
+	# Dramatically lower fill opacity for ALL right-side panels
+	fill.a = minf(fill.a, 0.45) 
+	var style := _make_panel_style(fill, border, border_width, radius, 0.15, 10, 4)
 	if panel is PanelContainer:
 		(panel as PanelContainer).add_theme_stylebox_override("panel", style)
 	elif panel is Panel:
@@ -203,9 +205,9 @@ func _style_panel(panel: Control, fill: Color, border: Color, border_width: int 
 func _style_main_command_panel(panel: Control) -> void:
 	if panel == null or not (panel is PanelContainer):
 		return
-	var fill := Color(0.23, 0.19, 0.13, 0.99).lerp(MENU_BG_ALT, 0.45)
-	var border := Color(0.98, 0.86, 0.42, 1.0).lerp(MENU_BORDER, 0.42)
-	var box := _make_panel_style(fill, border, 3, 26, 0.52, 17, 7)
+	var fill := Color(0.10, 0.05, 0.02, 0.35) # Very translucent glass
+	var border := Color(1.0, 0.90, 0.55, 1.0) # Brighter illuminated border
+	var box := _make_panel_style(fill, border, 3, 26, 0.0, 0, 0) # No shadow to ruin glass
 	(panel as PanelContainer).add_theme_stylebox_override("panel", box)
 
 
@@ -1202,14 +1204,20 @@ func _button_hover_entered(control: Control) -> void:
 	if control == null:
 		return
 	var t := create_tween()
-	t.tween_property(control, "scale", Vector2(1.02, 1.02), 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.set_parallel(true)
+	t.tween_property(control, "scale", Vector2(1.03, 1.03), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if control is Button:
+		t.tween_property(control, "modulate", Color(1.2, 1.15, 1.0, 1.0), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func _button_hover_exited(control: Control) -> void:
 	if control == null:
 		return
 	var t := create_tween()
-	t.tween_property(control, "scale", Vector2.ONE, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.set_parallel(true)
+	t.tween_property(control, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if control is Button:
+		t.tween_property(control, "modulate", Color.WHITE, 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func _wire_button_feedback(buttons: Array) -> void:
@@ -1353,25 +1361,27 @@ func _prepare_intro_state() -> void:
 	campaign_vbox.visible = false
 	slots_container.visible = false
 	main_vbox.modulate.a = 0.0
-	main_vbox.scale = Vector2(0.97, 0.97)
+	main_vbox.position.x -= 80.0
 	campaign_vbox.modulate.a = 0.0
-	campaign_vbox.scale = Vector2(0.97, 0.97)
+	
 	if intel_panel != null:
 		intel_panel.modulate.a = 0.0
-		intel_panel.position.y += 18.0
+		intel_panel.position.x += 80.0
 	if dispatch_panel != null:
 		dispatch_panel.modulate.a = 0.0
-		dispatch_panel.position.y += 18.0
+		dispatch_panel.position.x += 80.0
+		
 	var intro := create_tween()
 	intro.set_parallel(true)
-	intro.tween_property(main_vbox, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	intro.tween_property(main_vbox, "scale", Vector2.ONE, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	intro.tween_property(main_vbox, "modulate:a", 1.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	intro.tween_property(main_vbox, "position:x", main_vbox.position.x + 80.0, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	
 	if intel_panel != null:
-		intro.tween_property(intel_panel, "modulate:a", 1.0, 0.34).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		intro.tween_property(intel_panel, "position:y", intel_panel.position.y - 18.0, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		intro.tween_property(intel_panel, "modulate:a", 1.0, 0.40).set_delay(0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		intro.tween_property(intel_panel, "position:x", intel_panel.position.x - 80.0, 0.50).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if dispatch_panel != null:
-		intro.tween_property(dispatch_panel, "modulate:a", 1.0, 0.38).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		intro.tween_property(dispatch_panel, "position:y", dispatch_panel.position.y - 18.0, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		intro.tween_property(dispatch_panel, "modulate:a", 1.0, 0.40).set_delay(0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		intro.tween_property(dispatch_panel, "position:x", dispatch_panel.position.x - 80.0, 0.50).set_delay(0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _enter_tree() -> void:
 	_ensure_startup_black_overlay()
@@ -1627,6 +1637,57 @@ func _start_atmosphere_pass() -> void:
 		shade.set_loops()
 		shade.tween_property(backdrop_shade, "modulate:a", 0.96, 7.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		shade.tween_property(backdrop_shade, "modulate:a", 1.0, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	var vp_size = get_viewport_rect().size
+	
+	# Vignette Overlay
+	var vignette = ColorRect.new()
+	vignette.color = Color(0.01, 0.005, 0.0, 0.65)
+	vignette.size = vp_size
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(vignette)
+	move_child(vignette, 3) # Move behind UI panels but above background
+	
+	var vig_t = create_tween().set_loops()
+	vig_t.tween_property(vignette, "color:a", 0.85, 4.0).set_trans(Tween.TRANS_SINE)
+	vig_t.tween_property(vignette, "color:a", 0.65, 4.0).set_trans(Tween.TRANS_SINE)
+
+	# Particles
+	var particles = CPUParticles2D.new()
+	particles.amount = 120
+	particles.lifetime = 10.0
+	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	particles.emission_rect_extents = Vector2(vp_size.x, vp_size.y)
+	particles.position = vp_size * 0.5
+	particles.gravity = Vector2(10.0, -25.0)
+	particles.initial_velocity_min = 10.0
+	particles.initial_velocity_max = 35.0
+	particles.scale_amount_min = 2.0
+	particles.scale_amount_max = 6.0
+	particles.color = Color(1.0, 0.6, 0.15, 0.9)
+	
+	# Generate a soft circular texture procedurally
+	var circle_tex = GradientTexture2D.new()
+	circle_tex.width = 16
+	circle_tex.height = 16
+	circle_tex.fill = GradientTexture2D.FILL_RADIAL
+	circle_tex.fill_from = Vector2(0.5, 0.5)
+	circle_tex.fill_to = Vector2(0.5, 0.0)
+	var circle_grad = Gradient.new()
+	circle_grad.add_point(0.0, Color(1, 1, 1, 1))
+	circle_grad.add_point(0.6, Color(1, 1, 1, 1))
+	circle_grad.add_point(1.0, Color(1, 1, 1, 0))
+	circle_tex.gradient = circle_grad
+	particles.texture = circle_tex
+	
+	var grad = Gradient.new()
+	grad.add_point(0.0, Color(1,1,1,0))
+	grad.add_point(0.3, Color(1,1,1,1))
+	grad.add_point(0.7, Color(1,1,1,1))
+	grad.add_point(1.0, Color(1,1,1,0))
+	particles.color_ramp = grad
+	add_child(particles)
+	move_child(particles, 4) # Move above vignette but below UI
 
 
 func _animate_archive_rows() -> void:

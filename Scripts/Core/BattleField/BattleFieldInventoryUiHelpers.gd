@@ -391,7 +391,6 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 		"panel",
 		_fate_make_panel_style(FATE_CARD_PANEL_BG, rarity_color, 14, 3, 8, 8)
 	)
-	panel.add_child(_fate_build_card_chrome_layer(rarity_color, false, false))
 
 	var body := VBoxContainer.new()
 	body.anchor_left = 0.0
@@ -554,27 +553,13 @@ static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D)
 		if ResourceLoader.exists(path):
 			var tex: Resource = load(path)
 			if tex is Texture2D:
-				var rebuilt_from_res: Texture2D = _fate_texture_with_dark_matte(tex as Texture2D)
-				return rebuilt_from_res if rebuilt_from_res != null else (tex as Texture2D)
-		var source_tex: Texture2D = _fate_load_portrait_texture_from_source(path)
-		if source_tex != null:
-			return source_tex
-		var res_tex: Texture2D = _fate_load_portrait_texture_from_resource(path)
-		if res_tex != null:
-			return res_tex
+				return tex as Texture2D
 	if fallback_icon != null:
-		var fallback_from_tex: Texture2D = _fate_texture_with_dark_matte(fallback_icon)
-		return fallback_from_tex if fallback_from_tex != null else fallback_icon
+		return fallback_icon
 	if ResourceLoader.exists(FATE_CARD_FALLBACK_PORTRAIT_PATH):
 		var backup_tex: Resource = load(FATE_CARD_FALLBACK_PORTRAIT_PATH)
 		if backup_tex is Texture2D:
 			return backup_tex as Texture2D
-		var source_backup: Texture2D = _fate_load_portrait_texture_from_source(FATE_CARD_FALLBACK_PORTRAIT_PATH)
-		if source_backup != null:
-			return source_backup
-		var backup_from_res: Texture2D = _fate_load_portrait_texture_from_resource(FATE_CARD_FALLBACK_PORTRAIT_PATH)
-		if backup_from_res != null:
-			return backup_from_res
 	return null
 
 

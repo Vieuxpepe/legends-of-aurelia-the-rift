@@ -1481,8 +1481,6 @@ func _build_fate_card_widget(
 		"panel",
 		_make_panel_style(bg, rarity_color, panel_style_radius, border_px, panel_pad_h, panel_pad_v)
 	)
-	if strip_has_card or not is_active_strip_mini:
-		panel.add_child(_build_fate_card_chrome_layer(rarity_color, active, preview_mode, not owned))
 
 	var body: VBoxContainer = VBoxContainer.new()
 	body.anchor_left = 0.0
@@ -1786,16 +1784,8 @@ func _load_texture_safe(path: String) -> Texture2D:
 	if ResourceLoader.exists(clean_path):
 		var res: Resource = load(clean_path)
 		if res is Texture2D:
-			var rebuilt_from_res: Texture2D = _texture_to_dark_matte_texture(res as Texture2D)
-			return rebuilt_from_res if rebuilt_from_res != null else (res as Texture2D)
-	var from_source: Texture2D = _load_texture_from_source_image(clean_path)
-	if from_source != null:
-		return from_source
-	var from_resource: Texture2D = _load_texture_from_resource_image(clean_path)
-	if from_resource != null:
-		return from_resource
-	var res_fallback: Resource = load(clean_path)
-	return res_fallback as Texture2D
+			return res as Texture2D
+	return null
 
 
 func _load_card_portrait(card: Dictionary) -> Texture2D:
@@ -2116,7 +2106,6 @@ func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Co
 			6
 		)
 	)
-	panel.add_child(_build_fate_card_chrome_layer(rarity_color, active, false, false))
 
 	var portrait_underlay: ColorRect = ColorRect.new()
 	portrait_underlay.anchor_left = 0.0
