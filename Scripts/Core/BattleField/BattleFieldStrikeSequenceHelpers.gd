@@ -9,6 +9,7 @@ const ForcedMovementTacticalHelpers = preload("res://Scripts/Core/BattleField/Ba
 const CombatCleanupHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatCleanupHelpers.gd")
 const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/CombatPassiveAbilityHelpers.gd")
 const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
+const WeaponRuneAppliedEffectsResolver = preload("res://Scripts/Core/WeaponRuneAppliedEffectsResolver.gd")
 
 static func _compute_projectile_target_point(defender: Node2D, lunge_dir: Vector2, attack_hits: bool) -> Vector2:
 	var defender_center: Vector2 = defender.global_position + Vector2(32, 32)
@@ -281,6 +282,14 @@ static func run_strike_sequence(
 			var is_magic: bool = wpn.damage_type == WeaponData.DamageType.MAGIC if wpn else false
 			var offense_stat: int = int(attacker.magic) if is_magic else int(attacker.strength)
 			var defense_stat: int = int(defender.resistance) if is_magic else int(defender.defense)
+
+			var atk_wpn_rune_might: int = 0
+			var atk_wpn_rune_hit: int = 0
+			if WeaponRuneAppliedEffectsResolver.is_apply_enabled() and wpn:
+				var _atk_rune_strike: Dictionary = WeaponRuneAppliedEffectsResolver.resolve_from_weapon(wpn)
+				var _atk_rune_fm_strike: Dictionary = _atk_rune_strike.get("flat_modifiers", {}) as Dictionary
+				atk_wpn_rune_might = int(_atk_rune_fm_strike.get("might", 0))
+				atk_wpn_rune_hit = int(_atk_rune_fm_strike.get("hit", 0))
 	
 			if defender.get("is_defending") == true:
 				defense_stat += int(defender.defense_bonus)
@@ -295,6 +304,16 @@ static func run_strike_sequence(
 			else:
 				defense_stat += int(defender.get_meta("inner_peace_def_bonus_temp", 0))
 				defense_stat -= int(defender.get_meta("frenzy_def_penalty_temp", 0))
+
+			if WeaponRuneAppliedEffectsResolver.is_apply_enabled():
+				var def_eq = defender.equipped_weapon
+				if def_eq:
+					var _def_rune_strike: Dictionary = WeaponRuneAppliedEffectsResolver.resolve_from_weapon(def_eq)
+					var _def_rune_fm_strike: Dictionary = _def_rune_strike.get("flat_modifiers", {}) as Dictionary
+					if is_magic:
+						defense_stat += int(_def_rune_fm_strike.get("resistance", 0))
+					else:
+						defense_stat += int(_def_rune_fm_strike.get("defense", 0))
 	
 			defense_stat = int(max(0, defense_stat))
 			
@@ -1407,7 +1426,7 @@ static func run_strike_sequence(
 			var rookie_log: String = str(rookie_mods.get("log", ""))
 	
 			# --- FINAL HIT CHANCE MATH (support-combat: atk_sup hit, def_sup avo; relationship: atk_rel hit, def_rel avo) ---
-			var hit_chance: int = int(clamp(80 + (wpn.hit_bonus if wpn else 0) + tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100))
+			var hit_chance: int = int(clamp(80 + (wpn.hit_bonus if wpn else 0) + atk_wpn_rune_hit + tri_hit + atk_adj["hit"] + atk_sup["hit"] - def_sup["avo"] + atk_rel["hit"] - def_rel["avo"] + (attacker.agility * 2) - (defender.speed * 2) - def_terrain["avo"], 0, 100))
 			hit_chance = int(
 				clamp(
 					hit_chance
@@ -1441,7 +1460,7 @@ static func run_strike_sequence(
 			# --- Are they already broken from a previous attack? ---
 			var already_staggered: bool = (def_current_poise <= 0) 
 			
-			var raw_power: int = offense_stat + (wpn.might if wpn else 0)
+			var raw_power: int = offense_stat + (wpn.might if wpn else 0) + atk_wpn_rune_might
 			var poise_dmg: int = raw_power
 			
 			# Axes deal massive poise damage to crack shields
@@ -1458,7 +1477,7 @@ static func run_strike_sequence(
 				actual_defense = int(float(actual_defense) * 0.5) # Armor is cracked!
 				
 			# Calculate Base Damage
-			var damage: int = int(max(0, (offense_stat + (wpn.might if wpn else 0) + tri_dmg) - actual_defense))
+			var damage: int = int(max(0, (offense_stat + (wpn.might if wpn else 0) + atk_wpn_rune_might + tri_dmg) - actual_defense))
 			
 			# If staggering/staggered, guarantee at least 20% chip damage bypassing remaining armor
 			if will_stagger or already_staggered:

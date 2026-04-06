@@ -1546,6 +1546,7 @@ func _build_fate_card_widget(
 		portrait_underlay.offset_bottom = -portrait_edge
 		portrait_underlay.color = Color(0.03, 0.03, 0.03, 1.0)
 		portrait_underlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_underlay.z_index = 0
 		portrait_frame.add_child(portrait_underlay)
 		var portrait: TextureRect = TextureRect.new()
 		portrait.anchor_left = 0.0
@@ -1563,34 +1564,10 @@ func _build_fate_card_widget(
 		portrait.texture = _load_card_portrait(card)
 		portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 		portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		portrait.z_index = 1
 		portrait_frame.add_child(portrait)
-		var portrait_gloss: TextureRect = TextureRect.new()
-		portrait_gloss.anchor_left = 0.0
-		portrait_gloss.anchor_top = 0.0
-		portrait_gloss.anchor_right = 1.0
-		portrait_gloss.anchor_bottom = 0.0
-		portrait_gloss.offset_left = portrait_edge
-		portrait_gloss.offset_top = portrait_edge
-		portrait_gloss.offset_right = -portrait_edge
-		portrait_gloss.offset_bottom = 44.0 if not preview_mode else 58.0
-		portrait_gloss.texture = _make_fate_vertical_gradient_texture(
-			Color(1.0, 1.0, 1.0, 0.09 if active or preview_mode else 0.06),
-			Color(1.0, 1.0, 1.0, 0.02),
-			Color(1.0, 1.0, 1.0, 0.0),
-			8,
-			84
-		)
-		portrait_gloss.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		portrait_frame.add_child(portrait_gloss)
-		_add_fate_corner_trim(
-			portrait_frame,
-			rarity_color,
-			portrait_edge + 4.0,
-			18.0 if preview_mode else 14.0,
-			2.0,
-			0.72 if active else 0.56
-		)
-		portrait_frame.add_child(_build_fate_rarity_sigil(rarity, rarity_color, preview_mode))
+		# Keep the portrait stack minimal and opaque; decorative overlays can mask the art if
+		# they inherit an unexpected size during hand/drag layout changes.
 
 	var chip_row: HBoxContainer = HBoxContainer.new()
 	chip_row.add_theme_constant_override("separation", chip_row_separation)
@@ -2118,6 +2095,7 @@ func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Co
 	portrait_underlay.offset_bottom = -50.0
 	portrait_underlay.color = Color(0.03, 0.03, 0.03, 1.0)
 	portrait_underlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_underlay.z_index = 0
 	panel.add_child(portrait_underlay)
 
 	var portrait: TextureRect = TextureRect.new()
@@ -2136,26 +2114,9 @@ func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Co
 	portrait.texture = _load_card_portrait(card)
 	portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	portrait.z_index = 1
 	panel.add_child(portrait)
-	var portrait_gloss: TextureRect = TextureRect.new()
-	portrait_gloss.anchor_left = 0.0
-	portrait_gloss.anchor_top = 0.0
-	portrait_gloss.anchor_right = 1.0
-	portrait_gloss.anchor_bottom = 0.0
-	portrait_gloss.offset_left = 2.0
-	portrait_gloss.offset_top = 2.0
-	portrait_gloss.offset_right = -2.0
-	portrait_gloss.offset_bottom = 44.0
-	portrait_gloss.texture = _make_fate_vertical_gradient_texture(
-		Color(1.0, 1.0, 1.0, 0.07),
-		Color(1.0, 1.0, 1.0, 0.02),
-		Color(1.0, 1.0, 1.0, 0.0),
-		8,
-		84
-	)
-	portrait_gloss.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(portrait_gloss)
-	_add_fate_corner_trim(panel, rarity_color, 7.0, 18.0, 2.0, 0.52)
+	# Drag visuals also keep a plain portrait stack so the ghost matches the hand card art.
 
 	var name_label: Label = Label.new()
 	name_label.anchor_left = 0.0

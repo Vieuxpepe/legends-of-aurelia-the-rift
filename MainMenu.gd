@@ -1208,6 +1208,20 @@ func _button_hover_entered(control: Control) -> void:
 	t.tween_property(control, "scale", Vector2(1.03, 1.03), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if control is Button:
 		t.tween_property(control, "modulate", Color(1.2, 1.15, 1.0, 1.0), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		
+		# Generate the Glint
+		control.clip_contents = true
+		var glint = ColorRect.new()
+		glint.color = Color(1.0, 0.9, 0.4, 0.45)
+		glint.size = Vector2(45, control.size.y * 2.5)
+		glint.rotation = deg_to_rad(30)
+		glint.position = Vector2(-80, -control.size.y * 0.5)
+		glint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		control.add_child(glint)
+		
+		var gt = create_tween()
+		gt.tween_property(glint, "position:x", control.size.x + 80.0, 0.38).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		gt.tween_callback(func(): glint.queue_free())
 
 
 func _button_hover_exited(control: Control) -> void:
@@ -1433,6 +1447,7 @@ func _layout_menu() -> void:
 		var right_gap := 24.0
 		var intel_size := Vector2(right_width, clampf(vp_size.y * 0.305, 300.0, 360.0))
 		_set_control_rect(intel_panel, Vector2(right_x, right_top), intel_size)
+		intel_panel.pivot_offset = intel_size * 0.5
 		if intel_card != null:
 			_set_control_rect(intel_card, Vector2.ZERO, intel_size)
 		if dispatch_panel != null:
@@ -1440,11 +1455,13 @@ func _layout_menu() -> void:
 			var dispatch_size := Vector2(right_width, clampf(minf(available_dispatch_height, vp_size.y * 0.29), 250.0, 330.0))
 			var dispatch_pos := Vector2(right_x, right_top + intel_size.y + right_gap)
 			_set_control_rect(dispatch_panel, dispatch_pos, dispatch_size)
+			dispatch_panel.pivot_offset = dispatch_size * 0.5
 			if dispatch_card != null:
 				_set_control_rect(dispatch_card, Vector2.ZERO, dispatch_size)
 	if main_vbox != null:
 		var main_size := Vector2(clampf(vp_size.x * 0.41, 740.0, 900.0), clampf(vp_size.y * 0.30, 340.0, 430.0))
 		_set_control_rect(main_vbox, Vector2((vp_size.x - main_size.x) * 0.5, clampf(vp_size.y * 0.21, 175.0, 255.0)), main_size)
+		main_vbox.pivot_offset = main_size * 0.5
 	if campaign_vbox != null:
 		var campaign_size := Vector2(clampf(vp_size.x * 0.66, 1120.0, 1320.0), clampf(vp_size.y * 0.56, 520.0, 640.0))
 		_set_control_rect(campaign_vbox, Vector2((vp_size.x - campaign_size.x) * 0.5, clampf(vp_size.y * 0.22, 196.0, 252.0)), campaign_size)
@@ -1652,40 +1669,9 @@ func _start_atmosphere_pass() -> void:
 	vig_t.tween_property(vignette, "color:a", 0.85, 4.0).set_trans(Tween.TRANS_SINE)
 	vig_t.tween_property(vignette, "color:a", 0.65, 4.0).set_trans(Tween.TRANS_SINE)
 
-	# Particles
-	var particles = CPUParticles2D.new()
-	particles.amount = 120
-	particles.lifetime = 10.0
-	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	particles.emission_rect_extents = Vector2(vp_size.x, vp_size.y)
-	particles.position = vp_size * 0.5
-	particles.gravity = Vector2(10.0, -25.0)
-	particles.initial_velocity_min = 10.0
-	particles.initial_velocity_max = 35.0
-	particles.scale_amount_min = 2.0
-	particles.scale_amount_max = 6.0
-	particles.color = Color(1.0, 0.6, 0.15, 0.9)
-	
-	# Generate a soft circular texture procedurally
-	var circle_tex = GradientTexture2D.new()
-	circle_tex.width = 16
-	circle_tex.height = 16
-	circle_tex.fill = GradientTexture2D.FILL_RADIAL
-	circle_tex.fill_from = Vector2(0.5, 0.5)
-	circle_tex.fill_to = Vector2(0.5, 0.0)
-	var circle_grad = Gradient.new()
-	circle_grad.add_point(0.0, Color(1, 1, 1, 1))
-	circle_grad.add_point(0.6, Color(1, 1, 1, 1))
-	circle_grad.add_point(1.0, Color(1, 1, 1, 0))
-	circle_tex.gradient = circle_grad
-	particles.texture = circle_tex
-	
-	var grad = Gradient.new()
-	grad.add_point(0.0, Color(1,1,1,0))
-	grad.add_point(0.3, Color(1,1,1,1))
-	grad.add_point(0.7, Color(1,1,1,1))
-	grad.add_point(1.0, Color(1,1,1,0))
-	particles.color_ramp = grad
+	# Interactive Particles that repel from mouse cursor
+	var ParticleSys = load("res://Scripts/UI/MenuParticleSystem.gd")
+	var particles = ParticleSys.new()
 	add_child(particles)
 	move_child(particles, 4) # Move above vignette but below UI
 
@@ -2064,3 +2050,19 @@ func _on_delete_confirmed() -> void:
 	if not continue_button.visible:
 		new_game_button.grab_focus()
 		slots_container.visible = false
+
+
+func _process(delta: float) -> void:
+	var vp_size = get_viewport_rect().size
+	var mouse_pos = get_global_mouse_position()
+	var center = vp_size * 0.5
+	
+	var offset_ratio_x = clampf((mouse_pos.x - center.x) / center.x, -1.0, 1.0)
+	var offset_ratio_y = clampf((mouse_pos.y - center.y) / center.y, -1.0, 1.0)
+	
+	# 3D Tilt Parameters
+	var target_rot = (offset_ratio_x * 0.02) + (offset_ratio_y * 0.01)
+	
+	for panel in [main_vbox, intel_panel, dispatch_panel]:
+		if panel == null: continue
+		panel.rotation = lerp(panel.rotation, target_rot, 4.0 * delta)

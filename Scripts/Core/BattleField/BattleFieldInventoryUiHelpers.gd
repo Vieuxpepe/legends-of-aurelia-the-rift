@@ -454,26 +454,8 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait.z_index = 1
 	portrait_frame.add_child(portrait)
-	var portrait_gloss := TextureRect.new()
-	portrait_gloss.anchor_left = 0.0
-	portrait_gloss.anchor_top = 0.0
-	portrait_gloss.anchor_right = 1.0
-	portrait_gloss.anchor_bottom = 0.0
-	portrait_gloss.offset_left = 2.0
-	portrait_gloss.offset_top = 2.0
-	portrait_gloss.offset_right = -2.0
-	portrait_gloss.offset_bottom = 46.0
-	portrait_gloss.texture = _fate_make_vertical_gradient_texture(
-		Color(1.0, 1.0, 1.0, 0.08),
-		Color(1.0, 1.0, 1.0, 0.02),
-		Color(1.0, 1.0, 1.0, 0.0),
-		8,
-		84
-	)
-	portrait_gloss.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait_frame.add_child(portrait_gloss)
-	_fate_add_corner_trim(portrait_frame, rarity_color, 6.0, 14.0, 2.0, 0.62)
-	portrait_frame.add_child(_fate_build_rarity_sigil(rarity, rarity_color))
+	# Keep the reveal portrait stack minimal to mirror the tavern hand card and avoid
+	# decorative overlays obscuring the actual portrait art.
 
 
 	# Keep the reveal portrait clean/readable; avoid extra overlays that can wash it out.

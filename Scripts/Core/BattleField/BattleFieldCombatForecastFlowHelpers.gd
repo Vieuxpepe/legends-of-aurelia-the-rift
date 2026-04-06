@@ -8,6 +8,7 @@ const CombatPassiveAbilityHelpers = preload("res://Scripts/Core/BattleField/Comb
 const UnitCombatStatusHelpers = preload("res://Scripts/Core/UnitCombatStatusHelpers.gd")
 const ActiveCombatAbilityExecutionHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityExecutionHelpers.gd")
 const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/ActiveCombatAbilityHelpers.gd")
+const WeaponRuneAppliedEffectsResolver = preload("res://Scripts/Core/WeaponRuneAppliedEffectsResolver.gd")
 
 
 ## Matches `BattleFieldCombatOrchestrationHelpers.execute_combat` / strike staff gate (heal, buff, debuff).
@@ -219,6 +220,13 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		def_hit_bonus /= 2
 	# -------------------------------
 
+	# Pass 6: weapon rune flat modifiers (ember → atk might/hit; ward handled on defense line).
+	if WeaponRuneAppliedEffectsResolver.is_apply_enabled() and atk_wpn:
+		var _atk_rune_applied: Dictionary = WeaponRuneAppliedEffectsResolver.resolve_from_weapon(atk_wpn)
+		var _atk_rune_fm: Dictionary = _atk_rune_applied.get("flat_modifiers", {}) as Dictionary
+		atk_might += int(_atk_rune_fm.get("might", 0))
+		atk_hit_bonus += int(_atk_rune_fm.get("hit", 0))
+
 	var atk_is_magic = atk_wpn.damage_type == WeaponData.DamageType.MAGIC if atk_wpn else false
 	var def_is_magic = def_wpn.damage_type == WeaponData.DamageType.MAGIC if def_wpn else false
 
@@ -231,6 +239,14 @@ static func show_combat_forecast(field, attacker: Node2D, defender: Node2D) -> A
 		atk_defense_target += defender.defense_bonus
 	atk_defense_target += def_adj["def"]
 	atk_defense_target += def_terrain["def"]
+
+	if WeaponRuneAppliedEffectsResolver.is_apply_enabled() and def_wpn:
+		var _def_rune_applied: Dictionary = WeaponRuneAppliedEffectsResolver.resolve_from_weapon(def_wpn)
+		var _def_rune_fm: Dictionary = _def_rune_applied.get("flat_modifiers", {}) as Dictionary
+		if atk_is_magic:
+			atk_defense_target += int(_def_rune_fm.get("resistance", 0))
+		else:
+			atk_defense_target += int(_def_rune_fm.get("defense", 0))
 
 	# Apply Attacker's Adjacency to their Defense
 	var def_defense_target = attacker.resistance if def_is_magic else attacker.defense
