@@ -5,10 +5,10 @@ extends RefCounted
 
 ## Display-only: stored primitive ids are unchanged; keys are normalized lowercase for lookup.
 const _RUNE_ID_DISPLAY_LABELS: Dictionary = {
-	"ember": "Ember",
-	"ember_rune": "Ember",
-	"ward": "Ward",
-	"ward_rune": "Ward",
+	"ember": "Ember Rune",
+	"ember_rune": "Ember Rune",
+	"ward": "Ward Rune",
+	"ward_rune": "Ward Rune",
 }
 
 
@@ -55,11 +55,11 @@ static func format_runes_bbcode_for_item_variant(item: Variant) -> String:
 			var seg: String = _display_label_for_stored_rune_id(rid)
 			var rk: int = int(e.get("rank", 0))
 			if rk != 0:
-				seg += " r%d" % clampi(rk, 0, 999)
+				seg += " · r%d" % clampi(rk, 0, 999)
 			if e.has("charges"):
 				var ch: int = int(e.get("charges", 0))
 				if ch != 0:
-					seg += " ×%d" % clampi(ch, 0, 999999)
+					seg += " · ×%d" % clampi(ch, 0, 999999)
 			id_parts.append(seg)
 
 	if slot_count <= 0 and id_parts.is_empty():
@@ -69,7 +69,14 @@ static func format_runes_bbcode_for_item_variant(item: Variant) -> String:
 	if slot_count > 0:
 		lines.append("[color=#c4a8f0]Rune slots:[/color] %d" % slot_count)
 	if not id_parts.is_empty():
-		lines.append("[color=#c4a8f0]Socketed:[/color] %s" % ", ".join(id_parts))
+		if id_parts.size() == 1:
+			lines.append("[color=#c4a8f0]Socketed:[/color] %s" % id_parts[0])
+		else:
+			lines.append("[color=#c4a8f0]Socketed[/color]")
+			var idx: int = 0
+			for part in id_parts:
+				idx += 1
+				lines.append("  [color=#a090c0]%d.[/color] %s" % [idx, part])
 	elif slot_count > 0:
 		lines.append("[color=#888888](none socketed)[/color]")
 

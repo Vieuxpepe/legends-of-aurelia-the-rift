@@ -1794,11 +1794,30 @@ func _load_texture_safe(path: String) -> Texture2D:
 
 
 func _load_card_portrait(card: Dictionary) -> Texture2D:
-	var path: String = str(card.get("portrait_path", "")).strip_edges()
+	var resolved_card: Dictionary = _resolve_fate_card_portrait_card(card)
+	var path: String = str(resolved_card.get("portrait_path", "")).strip_edges()
 	var loaded: Texture2D = _load_texture_safe(path)
 	if loaded != null:
 		return loaded
 	return _fate_card_fallback_portrait
+
+
+func _resolve_fate_card_portrait_card(card: Dictionary) -> Dictionary:
+	var direct_path: String = str(card.get("portrait_path", "")).strip_edges()
+	if direct_path != "":
+		return card
+	var wanted_id: String = str(card.get("id", "")).strip_edges().to_lower()
+	if wanted_id != "":
+		var by_id: Dictionary = FateCardCatalog.get_card(wanted_id)
+		if not by_id.is_empty():
+			return by_id
+	var wanted_name: String = str(card.get("name", "")).strip_edges().to_lower()
+	if wanted_name != "":
+		for card_any in FateCardCatalog.get_all_cards():
+			var catalog_card: Dictionary = card_any
+			if str(catalog_card.get("name", "")).strip_edges().to_lower() == wanted_name:
+				return catalog_card.duplicate(true)
+	return card
 
 
 func _load_texture_from_source_image(path: String) -> Texture2D:
