@@ -1783,6 +1783,11 @@ func _load_texture_safe(path: String) -> Texture2D:
 	var clean_path: String = path.strip_edges()
 	if clean_path == "":
 		return null
+	if ResourceLoader.exists(clean_path):
+		var res: Resource = load(clean_path)
+		if res is Texture2D:
+			var rebuilt_from_res: Texture2D = _texture_to_dark_matte_texture(res as Texture2D)
+			return rebuilt_from_res if rebuilt_from_res != null else (res as Texture2D)
 	var from_source: Texture2D = _load_texture_from_source_image(clean_path)
 	if from_source != null:
 		return from_source
@@ -2381,6 +2386,14 @@ func _build_fate_card_chrome_layer(rarity_color: Color, active: bool, preview_mo
 
 
 func _build_fate_rarity_sigil(rarity: String, rarity_color: Color, preview_mode: bool) -> Control:
+	var sigil_root: Control = Control.new()
+	sigil_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sigil_root.offset_left = 0.0
+	sigil_root.offset_top = 0.0
+	sigil_root.offset_right = 0.0
+	sigil_root.offset_bottom = 0.0
+	sigil_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	var sigil: PanelContainer = PanelContainer.new()
 	var sigil_w: float = 38.0 if preview_mode else 34.0
 	var sigil_h: float = 28.0 if preview_mode else 24.0
@@ -2407,7 +2420,8 @@ func _build_fate_rarity_sigil(rarity: String, rarity_color: Color, preview_mode:
 	sigil_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
 	sigil_label.add_theme_color_override("font_color", rarity_color)
 	sigil.add_child(sigil_label)
-	return sigil
+	sigil_root.add_child(sigil)
+	return sigil_root
 
 
 func _add_fate_corner_trim(target: Control, rarity_color: Color, inset: float, segment_length: float, thickness: float, alpha: float) -> void:

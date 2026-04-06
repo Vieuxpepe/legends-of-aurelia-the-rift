@@ -189,6 +189,10 @@ var agility: int
 var magic: int
 var resistance: int
 var equipped_weapon: WeaponData
+## Pass 4: read-only rune socket summary; no stat/combat effects (see [WeaponRuneRuntimeRead]).
+func get_equipped_weapon_rune_runtime_summary() -> Dictionary:
+	return WeaponRuneRuntimeRead.build_summary(equipped_weapon)
+
 var inventory: Array[Resource] = []
 var inventory_mapping: Array[Dictionary] = []
 var move_range: int

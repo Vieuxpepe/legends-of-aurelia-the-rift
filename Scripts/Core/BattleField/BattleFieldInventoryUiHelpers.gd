@@ -551,6 +551,11 @@ static func _fate_lookup_card_by_id_or_name(card_id: String, card_name: String) 
 static func _fate_load_card_portrait(card: Dictionary, fallback_icon: Texture2D) -> Texture2D:
 	var path: String = str(card.get("portrait_path", "")).strip_edges()
 	if path != "":
+		if ResourceLoader.exists(path):
+			var tex: Resource = load(path)
+			if tex is Texture2D:
+				var rebuilt_from_res: Texture2D = _fate_texture_with_dark_matte(tex as Texture2D)
+				return rebuilt_from_res if rebuilt_from_res != null else (tex as Texture2D)
 		var source_tex: Texture2D = _fate_load_portrait_texture_from_source(path)
 		if source_tex != null:
 			return source_tex
@@ -762,6 +767,14 @@ static func _fate_build_card_chrome_layer(rarity_color: Color, active: bool, dim
 
 
 static func _fate_build_rarity_sigil(rarity: String, rarity_color: Color) -> Control:
+	var sigil_root := Control.new()
+	sigil_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sigil_root.offset_left = 0.0
+	sigil_root.offset_top = 0.0
+	sigil_root.offset_right = 0.0
+	sigil_root.offset_bottom = 0.0
+	sigil_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	var sigil := PanelContainer.new()
 	sigil.anchor_left = 1.0
 	sigil.anchor_top = 0.0
@@ -786,7 +799,8 @@ static func _fate_build_rarity_sigil(rarity: String, rarity_color: Color) -> Con
 	sigil_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
 	sigil_label.add_theme_color_override("font_color", rarity_color)
 	sigil.add_child(sigil_label)
-	return sigil
+	sigil_root.add_child(sigil)
+	return sigil_root
 
 
 static func _fate_rarity_letter(rarity: String) -> String:
