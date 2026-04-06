@@ -71,14 +71,14 @@ const ATMOSPHERE_SHADER_PATH := "res://Scripts/UI/studio_intro_atmosphere.gdshad
 
 @export_group("Atmosphere")
 @export var sparkles_enabled: bool = true
-@export var sparkles_count: int = 16
+@export var sparkles_count: int = 45 # Increased from 16
 @export var sparkles_min_speed: float = 2.0
 @export var sparkles_max_speed: float = 8.0
-@export var sparkles_min_size: int = 1
-@export var sparkles_max_size: int = 3
-@export var sparkles_alpha_min: float = 0.08
-@export var sparkles_alpha_max: float = 0.38
-@export var sparkles_tint: Color = Color(0.32, 0.48, 0.62, 1.0)
+@export var sparkles_min_size: int = 12 # Massively increased to account for soft texture falloff
+@export var sparkles_max_size: int = 36 # Massively increased
+@export var sparkles_alpha_min: float = 0.45 # Huge boost from 0.08
+@export var sparkles_alpha_max: float = 0.95 # Huge boost from 0.38
+@export var sparkles_tint: Color = Color(0.98, 0.88, 0.55, 1.0) # Switched from dark blue to bright warm gold
 
 @export_group("Eerie atmosphere")
 @export var eerie_atmosphere_enabled: bool = true
@@ -146,7 +146,7 @@ var _sequence_running: bool = false
 var _active_beat_tween: Tween = null
 var _active_beat_root: Control = null
 var _sparkle_layer: Control = null
-var _sparkles: Array[ColorRect] = []
+var _sparkles: Array[Sprite2D] = []
 var _sparkle_velocity: Array[Vector2] = []
 var _sparkle_base_alpha: Array[float] = []
 var _sparkle_phase: Array[float] = []
@@ -616,8 +616,11 @@ func _play_beat_async(b: Dictionary) -> void:
 	if logo is Control and logo != null:
 		(logo as Control).scale = Vector2(0.96, 0.96)
 
-	if b.get("id") == "studio" and play_sting_on_studio_beat:
-		_begin_studio_sting_sequence()
+	if b.get("id") == "studio":
+		if play_sting_on_studio_beat:
+			_begin_studio_sting_sequence()
+		# Trigger the burst immediately when the tween/sting starts, instead of waiting for the slide to finish!
+		_burst_sparkles_outward()
 
 	if skip_hint != null:
 		skip_hint.visible = allow_skip and show_skip_hint
@@ -627,12 +630,23 @@ func _play_beat_async(b: Dictionary) -> void:
 	var fade_out: float = b["fade_out"]
 
 	# Fade in (separate tween so completion is reliable across Godot versions).
+	var start_y = root.position.y
+	root.position.y += 40.0
+	root.modulate.a = 1.0 # Root stays solid, children stagger
 	var tw_in := create_tween()
 	tw_in.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw_in.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw_in.tween_property(root, "modulate:a", 1.0, fade_in)
+	tw_in.set_parallel(true)
+	tw_in.tween_property(root, "position:y", start_y, fade_in + 0.3).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	
+	var stagger_delay: float = 0.0
+	for child in root.get_children():
+		if child is Control and child.visible:
+			child.modulate.a = 0.0
+			tw_in.tween_property(child, "modulate:a", 1.0, fade_in).set_delay(stagger_delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			stagger_delay += 0.15
+			
 	if logo is Control and logo != null:
-		tw_in.parallel().tween_property(logo as Control, "scale", Vector2.ONE, fade_in).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw_in.tween_property(logo as Control, "scale", Vector2.ONE, fade_in).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 	var code := await _await_tween_with_skip(tw_in, root, true)
 	if code != 0 or _is_leaving:
@@ -889,8 +903,12 @@ func _fade_to_black_before_handoff() -> void:
 
 	var fade_duration: float = maxf(0.05, handoff_fade_out_seconds)
 	var tw: Tween = create_tween()
-	tw.tween_property(_handoff_black_rect, "modulate:a", 1.0, fade_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_callback(func() -> void:
+	tw.set_parallel(true)
+	tw.tween_property(_handoff_black_rect, "modulate:a", 1.0, fade_duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	if beats_root != null:
+		beats_root.pivot_offset = beats_root.size * 0.5
+		tw.tween_property(beats_root, "scale", Vector2(1.8, 1.8), fade_duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(func() -> void:
 		Engine.set_meta("studio_intro_black_handoff", true)
 		Engine.set_meta("studio_intro_black_handoff_fade", handoff_fade_in_seconds)
 		if Engine.has_singleton("SceneTransition") and SceneTransition.has_method("change_scene_from_black"):
@@ -929,14 +947,27 @@ func _spawn_sparkles() -> void:
 	_sparkle_phase.clear()
 	_sparkle_twinkle_speed.clear()
 	var viewport_size: Vector2 = get_viewport_rect().size
+	
+	var img = Image.create_empty(16, 16, false, Image.FORMAT_RGBA8)
+	var center = Vector2(8, 8)
+	var radius = 7.0
+	for x in range(16):
+		for y in range(16):
+			var dist = Vector2(x, y).distance_to(center)
+			if dist <= radius:
+				var alpha = clampf(1.0 - (dist / radius), 0.0, 1.0)
+				img.set_pixel(x, y, Color(1, 1, 1, alpha * alpha))
+			else:
+				img.set_pixel(x, y, Color(1, 1, 1, 0))
+	var tex = ImageTexture.create_from_image(img)
+	
 	for i in count:
-		var dot := ColorRect.new()
-		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var px_size: int = _sparkle_rng.randi_range(maxi(1, sparkles_min_size), maxi(maxi(1, sparkles_min_size), sparkles_max_size))
-		dot.custom_minimum_size = Vector2(px_size, px_size)
-		dot.size = Vector2(px_size, px_size)
+		var dot := Sprite2D.new()
+		dot.texture = tex
+		var px_size: float = float(_sparkle_rng.randi_range(maxi(1, sparkles_min_size), maxi(maxi(1, sparkles_min_size), sparkles_max_size)))
+		dot.scale = Vector2(px_size / 16.0, px_size / 16.0)
 		var base_alpha: float = _sparkle_rng.randf_range(clampf(sparkles_alpha_min, 0.02, 1.0), clampf(maxf(sparkles_alpha_min, sparkles_alpha_max), 0.02, 1.0))
-		dot.color = Color(sparkles_tint.r, sparkles_tint.g, sparkles_tint.b, base_alpha)
+		dot.modulate = Color(sparkles_tint.r, sparkles_tint.g, sparkles_tint.b, base_alpha)
 		dot.position = Vector2(
 			_sparkle_rng.randf_range(0.0, maxf(viewport_size.x, 1.0)),
 			_sparkle_rng.randf_range(0.0, maxf(viewport_size.y, 1.0))
@@ -959,10 +990,16 @@ func _update_sparkles(delta: float) -> void:
 	var viewport_size: Vector2 = get_viewport_rect().size
 	var twinkle_time: float = Time.get_ticks_msec() / 1000.0
 	for i in _sparkles.size():
-		var dot: ColorRect = _sparkles[i]
+		var dot: Sprite2D = _sparkles[i]
 		if dot == null:
 			continue
 		var vel: Vector2 = _sparkle_velocity[i]
+		var base_vy = sparkles_min_speed
+		if eerie_atmosphere_enabled:
+			base_vy += sparkle_sink_bias * 8.0
+		# Apply drag to simulate magical explosion braking
+		vel = vel.lerp(Vector2(_sparkle_rng.randf_range(-5.0, 5.0), base_vy), 1.8 * delta)
+		_sparkle_velocity[i] = vel
 		dot.position += vel * delta
 		if eerie_atmosphere_enabled:
 			var wisp: float = sin(twinkle_time * 0.62 + float(i) * 1.17) * 18.0
@@ -981,9 +1018,20 @@ func _update_sparkles(delta: float) -> void:
 		var phase: float = _sparkle_phase[i]
 		var speed: float = _sparkle_twinkle_speed[i]
 		var twinkle: float = 0.78 + 0.22 * sin((twinkle_time * speed) + phase)
-		dot.color = Color(
+		dot.modulate = Color(
 			sparkles_tint.r,
 			sparkles_tint.g,
 			sparkles_tint.b,
 			clampf(base_alpha * twinkle, 0.0, 1.0)
 		)
+
+func _burst_sparkles_outward() -> void:
+	if not sparkles_enabled or _sparkles.is_empty():
+		return
+	var center = get_viewport_rect().size * 0.5
+	for i in _sparkles.size():
+		var dot = _sparkles[i]
+		if dot == null: continue
+		var dir = (dot.position - center).normalized()
+		var p_force = _sparkle_rng.randf_range(150.0, 550.0)
+		_sparkle_velocity[i] += dir * p_force

@@ -29,11 +29,16 @@
 # RESPONSIBILITY CLUSTERS (for audit): player settings | campaign progression |
 # roster/inventory | world map & base | encounter flags | jukebox/playlists |
 # NPC relationships (Seraphina + legacy) | merchant/crafting | arena state |
-# structures/deployment | dragons (Morgra). Save/load/reset symmetry: see save_data
+# structures/deployment | dragons (Morgra) | runesmithing unlock tier. Save/load/reset symmetry: see save_data
 # in save_game(), load_game(), and reset_campaign_data().
 # ============================================================================
 
 extends Node
+
+## Persisted runesmithing gate (independent of [member blacksmith_unlocked] / general forge access).
+const RUNESMITHING_TIER_LOCKED: int = 0
+const RUNESMITHING_TIER_BASIC: int = 1
+const RUNESMITHING_TIER_ADVANCED: int = 2
 
 const SETTINGS_FILE_PATH: String = "user://settings.cfg"
 const CAMP_PAIR_SCENE_DB = preload("res://Scripts/Narrative/CampPairSceneDB.gd")
@@ -243,6 +248,8 @@ var camp_haggle_extra_off: float = 0.0
 var camp_second_discount_item: Resource = null
 var camp_has_haggled: bool = false
 var blacksmith_unlocked: bool = false
+## Weapon rune socket services (Haldor / runesmith); not forge UI. Set from hub/story hooks — see [method get_runesmithing_unlock_tier].
+var runesmithing_unlock_tier: int = RUNESMITHING_TIER_LOCKED
 var owned_expedition_maps: Array[String] = []
 ## Expedition map ids cleared at least once via expedition victory (load_next_level expedition branch). Persisted; see save_game/load_game/reset.
 var completed_expedition_map_ids: Array[String] = []
@@ -646,6 +653,7 @@ func reset_campaign_data() -> void:
 	relationship_web.clear()
 	claimed_rank_rewards.clear()
 	blacksmith_unlocked = false
+	runesmithing_unlock_tier = RUNESMITHING_TIER_LOCKED
 	owned_expedition_maps.clear()
 	completed_expedition_map_ids.clear()
 	expedition_outcome_notes.clear()
@@ -1106,6 +1114,7 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"camp_haggle_extra_off": camp_haggle_extra_off,
 		"camp_has_haggled": camp_has_haggled,
 		"blacksmith_unlocked": blacksmith_unlocked,
+		"runesmithing_unlock_tier": clampi(runesmithing_unlock_tier, RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED),
 		"owned_expedition_maps": owned_expedition_maps.duplicate(),
 		"completed_expedition_map_ids": completed_expedition_map_ids.duplicate(),
 		"expedition_outcome_notes": expedition_outcome_notes.duplicate(),
@@ -1381,6 +1390,7 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	for r in save_data.get("unlocked_recipes", []): unlocked_recipes.append(str(r))
 		
 	blacksmith_unlocked = save_data.get("blacksmith_unlocked", false)
+	runesmithing_unlock_tier = clampi(int(save_data.get("runesmithing_unlock_tier", RUNESMITHING_TIER_LOCKED)), RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED)
 	owned_expedition_maps = _sanitize_owned_expedition_maps(save_data.get("owned_expedition_maps", []))
 	completed_expedition_map_ids = _sanitize_owned_expedition_maps(save_data.get("completed_expedition_map_ids", []))
 	expedition_outcome_notes = _sanitize_expedition_outcome_notes(save_data.get("expedition_outcome_notes", {}))
@@ -1549,6 +1559,23 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	active_save_slot = slot
 	ArenaManager.restore_local_arena_team_from_saved_identity()
 	return true
+
+
+func get_runesmithing_unlock_tier() -> int:
+	return clampi(runesmithing_unlock_tier, RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED)
+
+
+func set_runesmithing_unlock_tier(tier: int) -> void:
+	runesmithing_unlock_tier = clampi(tier, RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED)
+
+
+func is_runesmithing_unlocked() -> bool:
+	return get_runesmithing_unlock_tier() >= RUNESMITHING_TIER_BASIC
+
+
+func has_advanced_runesmithing() -> bool:
+	return get_runesmithing_unlock_tier() >= RUNESMITHING_TIER_ADVANCED
+
 
 func has_seen_camp_lore(lore_id: String) -> bool:
 	var key: String = str(lore_id).strip_edges()
