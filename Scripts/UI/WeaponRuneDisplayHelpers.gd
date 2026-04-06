@@ -3,9 +3,27 @@
 class_name WeaponRuneDisplayHelpers
 extends RefCounted
 
+## Display-only: stored primitive ids are unchanged; keys are normalized lowercase for lookup.
+const _RUNE_ID_DISPLAY_LABELS: Dictionary = {
+	"ember": "Ember",
+	"ember_rune": "Ember",
+	"ward": "Ward",
+	"ward_rune": "Ward",
+}
+
 
 static func _sanitize_token(s: String) -> String:
 	return str(s).strip_edges().replace("[", "(").replace("]", ")").substr(0, 64)
+
+
+static func _display_label_for_stored_rune_id(stored_id: String) -> String:
+	var raw: String = str(stored_id).strip_edges()
+	if raw == "":
+		return ""
+	var key: String = raw.to_lower().replace(" ", "_")
+	if _RUNE_ID_DISPLAY_LABELS.has(key):
+		return str(_RUNE_ID_DISPLAY_LABELS[key])
+	return _sanitize_token(raw)
 
 
 static func format_runes_bbcode_for_item_variant(item: Variant) -> String:
@@ -34,7 +52,7 @@ static func format_runes_bbcode_for_item_variant(item: Variant) -> String:
 			var rid: String = str(e.get("id", "")).strip_edges()
 			if rid == "":
 				continue
-			var seg: String = _sanitize_token(rid)
+			var seg: String = _display_label_for_stored_rune_id(rid)
 			var rk: int = int(e.get("rank", 0))
 			if rk != 0:
 				seg += " r%d" % clampi(rk, 0, 999)

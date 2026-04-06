@@ -1481,6 +1481,8 @@ func _build_fate_card_widget(
 		"panel",
 		_make_panel_style(bg, rarity_color, panel_style_radius, border_px, panel_pad_h, panel_pad_v)
 	)
+	if strip_has_card or not is_active_strip_mini:
+		panel.add_child(_build_fate_card_chrome_layer(rarity_color, active, preview_mode, not owned))
 
 	var body: VBoxContainer = VBoxContainer.new()
 	body.anchor_left = 0.0
@@ -1564,6 +1566,33 @@ func _build_fate_card_widget(
 		portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 		portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		portrait_frame.add_child(portrait)
+		var portrait_gloss: TextureRect = TextureRect.new()
+		portrait_gloss.anchor_left = 0.0
+		portrait_gloss.anchor_top = 0.0
+		portrait_gloss.anchor_right = 1.0
+		portrait_gloss.anchor_bottom = 0.0
+		portrait_gloss.offset_left = portrait_edge
+		portrait_gloss.offset_top = portrait_edge
+		portrait_gloss.offset_right = -portrait_edge
+		portrait_gloss.offset_bottom = 44.0 if not preview_mode else 58.0
+		portrait_gloss.texture = _make_fate_vertical_gradient_texture(
+			Color(1.0, 1.0, 1.0, 0.09 if active or preview_mode else 0.06),
+			Color(1.0, 1.0, 1.0, 0.02),
+			Color(1.0, 1.0, 1.0, 0.0),
+			8,
+			84
+		)
+		portrait_gloss.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_frame.add_child(portrait_gloss)
+		_add_fate_corner_trim(
+			portrait_frame,
+			rarity_color,
+			portrait_edge + 4.0,
+			18.0 if preview_mode else 14.0,
+			2.0,
+			0.72 if active else 0.56
+		)
+		portrait_frame.add_child(_build_fate_rarity_sigil(rarity, rarity_color, preview_mode))
 
 	var chip_row: HBoxContainer = HBoxContainer.new()
 	chip_row.add_theme_constant_override("separation", chip_row_separation)
@@ -1631,6 +1660,8 @@ func _build_fate_card_widget(
 		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", name_font)
 	name_label.add_theme_color_override("font_color", CARD_TEXT)
+	name_label.add_theme_constant_override("outline_size", 4 if preview_mode else 3)
+	name_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
 	if is_active_strip_mini and not strip_has_card:
 		name_label.text = "EMPTY SLOT"
 	else:
@@ -1638,6 +1669,13 @@ func _build_fate_card_widget(
 	if is_active_strip_mini:
 		name_label.max_lines_visible = 2
 	body.add_child(name_label)
+	if strip_has_card or not is_active_strip_mini:
+		var accent_rule: ColorRect = ColorRect.new()
+		accent_rule.custom_minimum_size = Vector2(0.0, 2.0 if not preview_mode else 3.0)
+		accent_rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		accent_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		accent_rule.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.32 if owned or active else 0.20)
+		body.add_child(accent_rule)
 
 	var summary_label: Label = Label.new()
 	summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2054,6 +2092,7 @@ func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Co
 			6
 		)
 	)
+	panel.add_child(_build_fate_card_chrome_layer(rarity_color, active, false, false))
 
 	var portrait_underlay: ColorRect = ColorRect.new()
 	portrait_underlay.anchor_left = 0.0
@@ -2085,6 +2124,25 @@ func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Co
 	portrait.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	panel.add_child(portrait)
+	var portrait_gloss: TextureRect = TextureRect.new()
+	portrait_gloss.anchor_left = 0.0
+	portrait_gloss.anchor_top = 0.0
+	portrait_gloss.anchor_right = 1.0
+	portrait_gloss.anchor_bottom = 0.0
+	portrait_gloss.offset_left = 2.0
+	portrait_gloss.offset_top = 2.0
+	portrait_gloss.offset_right = -2.0
+	portrait_gloss.offset_bottom = 44.0
+	portrait_gloss.texture = _make_fate_vertical_gradient_texture(
+		Color(1.0, 1.0, 1.0, 0.07),
+		Color(1.0, 1.0, 1.0, 0.02),
+		Color(1.0, 1.0, 1.0, 0.0),
+		8,
+		84
+	)
+	portrait_gloss.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(portrait_gloss)
+	_add_fate_corner_trim(panel, rarity_color, 7.0, 18.0, 2.0, 0.52)
 
 	var name_label: Label = Label.new()
 	name_label.anchor_left = 0.0
@@ -2097,6 +2155,8 @@ func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Co
 	name_label.offset_bottom = -20.0
 	name_label.add_theme_font_size_override("font_size", 13)
 	name_label.add_theme_color_override("font_color", CARD_TEXT)
+	name_label.add_theme_constant_override("outline_size", 3)
+	name_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
 	name_label.text = str(card.get("name", "Card")).to_upper()
 	name_label.clip_text = true
 	panel.add_child(name_label)
@@ -2238,6 +2298,221 @@ func _add_rarity_sheen_animation(portrait_frame: Control, rarity_rank: int, prev
 	tw.tween_property(stripe, "position:x", travel_width, sweep_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(pause_time)
 	tw.tween_property(stripe, "position:x", -88.0, 0.01)
+
+
+func _build_fate_card_chrome_layer(rarity_color: Color, active: bool, preview_mode: bool, dimmed: bool) -> Control:
+	var chrome: Control = Control.new()
+	chrome.set_anchors_preset(Control.PRESET_FULL_RECT)
+	chrome.offset_left = 0.0
+	chrome.offset_top = 0.0
+	chrome.offset_right = 0.0
+	chrome.offset_bottom = 0.0
+	chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var top_alpha: float = 0.20 if active else 0.14
+	if preview_mode:
+		top_alpha += 0.04
+	if dimmed:
+		top_alpha *= 0.45
+
+	var backdrop: TextureRect = TextureRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_left = 1.0
+	backdrop.offset_top = 1.0
+	backdrop.offset_right = -1.0
+	backdrop.offset_bottom = -1.0
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.texture = _make_fate_vertical_gradient_texture(
+		Color(rarity_color.r, rarity_color.g, rarity_color.b, top_alpha),
+		Color(0.0, 0.0, 0.0, 0.03),
+		Color(0.0, 0.0, 0.0, 0.18),
+		8,
+		256
+	)
+	chrome.add_child(backdrop)
+
+	var crown: TextureRect = TextureRect.new()
+	crown.anchor_left = 0.0
+	crown.anchor_top = 0.0
+	crown.anchor_right = 1.0
+	crown.anchor_bottom = 0.0
+	crown.offset_left = 12.0
+	crown.offset_top = 8.0
+	crown.offset_right = -12.0
+	crown.offset_bottom = 52.0 if not preview_mode else 68.0
+	crown.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	crown.texture = _make_fate_vertical_gradient_texture(
+		Color(1.0, 1.0, 1.0, 0.08 if not dimmed else 0.04),
+		Color(1.0, 1.0, 1.0, 0.02),
+		Color(1.0, 1.0, 1.0, 0.0),
+		8,
+		88
+	)
+	chrome.add_child(crown)
+
+	_add_fate_corner_trim(
+		chrome,
+		rarity_color,
+		9.0 if preview_mode else 7.0,
+		24.0 if preview_mode else 18.0,
+		2.0,
+		0.48 if dimmed else 0.64
+	)
+	return chrome
+
+
+func _build_fate_rarity_sigil(rarity: String, rarity_color: Color, preview_mode: bool) -> Control:
+	var sigil: PanelContainer = PanelContainer.new()
+	var sigil_w: float = 38.0 if preview_mode else 34.0
+	var sigil_h: float = 28.0 if preview_mode else 24.0
+	sigil.anchor_left = 1.0
+	sigil.anchor_top = 0.0
+	sigil.anchor_right = 1.0
+	sigil.anchor_bottom = 0.0
+	sigil.offset_left = -sigil_w - 10.0
+	sigil.offset_top = 10.0
+	sigil.offset_right = -10.0
+	sigil.offset_bottom = 10.0 + sigil_h
+	sigil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sigil.add_theme_stylebox_override(
+		"panel",
+		_make_panel_style(Color(0.09, 0.07, 0.05, 0.94), Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.92), 8, 2, 5, 3)
+	)
+
+	var sigil_label: Label = Label.new()
+	sigil_label.text = _fate_active_strip_rarity_letter(rarity)
+	sigil_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sigil_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	sigil_label.add_theme_font_size_override("font_size", 14 if preview_mode else 12)
+	sigil_label.add_theme_constant_override("outline_size", 2)
+	sigil_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	sigil_label.add_theme_color_override("font_color", rarity_color)
+	sigil.add_child(sigil_label)
+	return sigil
+
+
+func _add_fate_corner_trim(target: Control, rarity_color: Color, inset: float, segment_length: float, thickness: float, alpha: float) -> void:
+	if target == null:
+		return
+	var trim_color: Color = Color(rarity_color.r, rarity_color.g, rarity_color.b, alpha)
+	var top_left_h: ColorRect = ColorRect.new()
+	top_left_h.anchor_left = 0.0
+	top_left_h.anchor_right = 0.0
+	top_left_h.anchor_top = 0.0
+	top_left_h.anchor_bottom = 0.0
+	top_left_h.offset_left = inset
+	top_left_h.offset_top = inset
+	top_left_h.offset_right = inset + segment_length
+	top_left_h.offset_bottom = inset + thickness
+	top_left_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_left_h.color = trim_color
+	target.add_child(top_left_h)
+
+	var top_left_v: ColorRect = ColorRect.new()
+	top_left_v.anchor_left = 0.0
+	top_left_v.anchor_right = 0.0
+	top_left_v.anchor_top = 0.0
+	top_left_v.anchor_bottom = 0.0
+	top_left_v.offset_left = inset
+	top_left_v.offset_top = inset
+	top_left_v.offset_right = inset + thickness
+	top_left_v.offset_bottom = inset + segment_length
+	top_left_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_left_v.color = trim_color
+	target.add_child(top_left_v)
+
+	var top_right_h: ColorRect = ColorRect.new()
+	top_right_h.anchor_left = 1.0
+	top_right_h.anchor_right = 1.0
+	top_right_h.anchor_top = 0.0
+	top_right_h.anchor_bottom = 0.0
+	top_right_h.offset_left = -inset - segment_length
+	top_right_h.offset_top = inset
+	top_right_h.offset_right = -inset
+	top_right_h.offset_bottom = inset + thickness
+	top_right_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right_h.color = trim_color
+	target.add_child(top_right_h)
+
+	var top_right_v: ColorRect = ColorRect.new()
+	top_right_v.anchor_left = 1.0
+	top_right_v.anchor_right = 1.0
+	top_right_v.anchor_top = 0.0
+	top_right_v.anchor_bottom = 0.0
+	top_right_v.offset_left = -inset - thickness
+	top_right_v.offset_top = inset
+	top_right_v.offset_right = -inset
+	top_right_v.offset_bottom = inset + segment_length
+	top_right_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right_v.color = trim_color
+	target.add_child(top_right_v)
+
+	var bottom_left_h: ColorRect = ColorRect.new()
+	bottom_left_h.anchor_left = 0.0
+	bottom_left_h.anchor_right = 0.0
+	bottom_left_h.anchor_top = 1.0
+	bottom_left_h.anchor_bottom = 1.0
+	bottom_left_h.offset_left = inset
+	bottom_left_h.offset_top = -inset - thickness
+	bottom_left_h.offset_right = inset + segment_length
+	bottom_left_h.offset_bottom = -inset
+	bottom_left_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_left_h.color = trim_color
+	target.add_child(bottom_left_h)
+
+	var bottom_left_v: ColorRect = ColorRect.new()
+	bottom_left_v.anchor_left = 0.0
+	bottom_left_v.anchor_right = 0.0
+	bottom_left_v.anchor_top = 1.0
+	bottom_left_v.anchor_bottom = 1.0
+	bottom_left_v.offset_left = inset
+	bottom_left_v.offset_top = -inset - segment_length
+	bottom_left_v.offset_right = inset + thickness
+	bottom_left_v.offset_bottom = -inset
+	bottom_left_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_left_v.color = trim_color
+	target.add_child(bottom_left_v)
+
+	var bottom_right_h: ColorRect = ColorRect.new()
+	bottom_right_h.anchor_left = 1.0
+	bottom_right_h.anchor_right = 1.0
+	bottom_right_h.anchor_top = 1.0
+	bottom_right_h.anchor_bottom = 1.0
+	bottom_right_h.offset_left = -inset - segment_length
+	bottom_right_h.offset_top = -inset - thickness
+	bottom_right_h.offset_right = -inset
+	bottom_right_h.offset_bottom = -inset
+	bottom_right_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_right_h.color = trim_color
+	target.add_child(bottom_right_h)
+
+	var bottom_right_v: ColorRect = ColorRect.new()
+	bottom_right_v.anchor_left = 1.0
+	bottom_right_v.anchor_right = 1.0
+	bottom_right_v.anchor_top = 1.0
+	bottom_right_v.anchor_bottom = 1.0
+	bottom_right_v.offset_left = -inset - thickness
+	bottom_right_v.offset_top = -inset - segment_length
+	bottom_right_v.offset_right = -inset
+	bottom_right_v.offset_bottom = -inset
+	bottom_right_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_right_v.color = trim_color
+	target.add_child(bottom_right_v)
+
+
+func _make_fate_vertical_gradient_texture(top: Color, middle: Color, bottom: Color, width: int = 8, height: int = 256) -> GradientTexture2D:
+	var gradient: Gradient = Gradient.new()
+	gradient.add_point(0.0, top)
+	gradient.add_point(0.42, middle)
+	gradient.add_point(1.0, bottom)
+	var texture: GradientTexture2D = GradientTexture2D.new()
+	texture.width = width
+	texture.height = height
+	texture.fill = GradientTexture2D.FILL_LINEAR
+	texture.fill_from = Vector2(0.5, 0.0)
+	texture.fill_to = Vector2(0.5, 1.0)
+	texture.gradient = gradient
+	return texture
 
 
 func _make_panel_style(

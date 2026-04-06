@@ -323,6 +323,9 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	card_panel.scale = Vector2(0.02, FATE_REVEAL_TARGET_SCALE_Y)
 	card_panel.rotation_degrees = -14.0
 	card_panel.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	var reveal_burst: GPUParticles2D = _fate_build_reveal_gpu_burst(card, vp_size * 0.5)
+	if reveal_burst != null:
+		root.add_child(reveal_burst)
 
 	if field.epic_level_up_sound != null and field.epic_level_up_sound.stream != null:
 		field.epic_level_up_sound.play()
@@ -342,6 +345,9 @@ static func _loot_show_fate_card_front_reveal(field, item: Resource) -> void:
 	flip_in.tween_property(card_panel, "scale:y", FATE_REVEAL_POP_SCALE_Y, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	flip_in.tween_property(card_panel, "rotation_degrees", 7.0, 0.15).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	await flip_in.finished
+	if reveal_burst != null:
+		reveal_burst.restart()
+		reveal_burst.emitting = true
 
 	var flip_out: Tween = field.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
 	flip_out.tween_property(card_panel, "scale:x", FATE_REVEAL_POP_SCALE_X, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -385,6 +391,7 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 		"panel",
 		_fate_make_panel_style(FATE_CARD_PANEL_BG, rarity_color, 14, 3, 8, 8)
 	)
+	panel.add_child(_fate_build_card_chrome_layer(rarity_color, false, false))
 
 	var body := VBoxContainer.new()
 	body.anchor_left = 0.0
@@ -448,6 +455,26 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	portrait.z_index = 1
 	portrait_frame.add_child(portrait)
+	var portrait_gloss := TextureRect.new()
+	portrait_gloss.anchor_left = 0.0
+	portrait_gloss.anchor_top = 0.0
+	portrait_gloss.anchor_right = 1.0
+	portrait_gloss.anchor_bottom = 0.0
+	portrait_gloss.offset_left = 2.0
+	portrait_gloss.offset_top = 2.0
+	portrait_gloss.offset_right = -2.0
+	portrait_gloss.offset_bottom = 46.0
+	portrait_gloss.texture = _fate_make_vertical_gradient_texture(
+		Color(1.0, 1.0, 1.0, 0.08),
+		Color(1.0, 1.0, 1.0, 0.02),
+		Color(1.0, 1.0, 1.0, 0.0),
+		8,
+		84
+	)
+	portrait_gloss.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(portrait_gloss)
+	_fate_add_corner_trim(portrait_frame, rarity_color, 6.0, 14.0, 2.0, 0.62)
+	portrait_frame.add_child(_fate_build_rarity_sigil(rarity, rarity_color))
 
 
 	# Keep the reveal portrait clean/readable; avoid extra overlays that can wash it out.
@@ -468,8 +495,16 @@ static func _build_fate_drop_card_widget(card: Dictionary, fallback_icon: Textur
 	var name_label := Label.new()
 	name_label.add_theme_font_size_override("font_size", 18)
 	name_label.add_theme_color_override("font_color", FATE_CARD_TEXT)
+	name_label.add_theme_constant_override("outline_size", 3)
+	name_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
 	name_label.text = str(card.get("name", "Unknown Card")).to_upper()
 	body.add_child(name_label)
+	var accent_rule := ColorRect.new()
+	accent_rule.custom_minimum_size = Vector2(0.0, 2.0)
+	accent_rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	accent_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	accent_rule.color = Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.28)
+	body.add_child(accent_rule)
 
 	var summary_label := Label.new()
 	summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -672,6 +707,285 @@ static func _fate_add_rarity_sheen_animation(portrait_frame: Control, rarity_ran
 	tw.tween_property(stripe, "position:x", travel_width, sweep_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(pause_time)
 	tw.tween_property(stripe, "position:x", -88.0, 0.01)
+
+
+static func _fate_build_card_chrome_layer(rarity_color: Color, active: bool, dimmed: bool) -> Control:
+	var chrome := Control.new()
+	chrome.set_anchors_preset(Control.PRESET_FULL_RECT)
+	chrome.offset_left = 0.0
+	chrome.offset_top = 0.0
+	chrome.offset_right = 0.0
+	chrome.offset_bottom = 0.0
+	chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var top_alpha: float = 0.20 if active else 0.15
+	if dimmed:
+		top_alpha *= 0.45
+
+	var backdrop := TextureRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_left = 1.0
+	backdrop.offset_top = 1.0
+	backdrop.offset_right = -1.0
+	backdrop.offset_bottom = -1.0
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.texture = _fate_make_vertical_gradient_texture(
+		Color(rarity_color.r, rarity_color.g, rarity_color.b, top_alpha),
+		Color(0.0, 0.0, 0.0, 0.03),
+		Color(0.0, 0.0, 0.0, 0.18),
+		8,
+		256
+	)
+	chrome.add_child(backdrop)
+
+	var crown := TextureRect.new()
+	crown.anchor_left = 0.0
+	crown.anchor_top = 0.0
+	crown.anchor_right = 1.0
+	crown.anchor_bottom = 0.0
+	crown.offset_left = 12.0
+	crown.offset_top = 8.0
+	crown.offset_right = -12.0
+	crown.offset_bottom = 52.0
+	crown.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	crown.texture = _fate_make_vertical_gradient_texture(
+		Color(1.0, 1.0, 1.0, 0.07 if not dimmed else 0.04),
+		Color(1.0, 1.0, 1.0, 0.02),
+		Color(1.0, 1.0, 1.0, 0.0),
+		8,
+		88
+	)
+	chrome.add_child(crown)
+
+	_fate_add_corner_trim(chrome, rarity_color, 7.0, 18.0, 2.0, 0.60 if not dimmed else 0.42)
+	return chrome
+
+
+static func _fate_build_rarity_sigil(rarity: String, rarity_color: Color) -> Control:
+	var sigil := PanelContainer.new()
+	sigil.anchor_left = 1.0
+	sigil.anchor_top = 0.0
+	sigil.anchor_right = 1.0
+	sigil.anchor_bottom = 0.0
+	sigil.offset_left = -44.0
+	sigil.offset_top = 10.0
+	sigil.offset_right = -10.0
+	sigil.offset_bottom = 34.0
+	sigil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sigil.add_theme_stylebox_override(
+		"panel",
+		_fate_make_panel_style(Color(0.09, 0.07, 0.05, 0.94), Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.92), 8, 2, 5, 3)
+	)
+
+	var sigil_label := Label.new()
+	sigil_label.text = _fate_rarity_letter(rarity)
+	sigil_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sigil_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	sigil_label.add_theme_font_size_override("font_size", 12)
+	sigil_label.add_theme_constant_override("outline_size", 2)
+	sigil_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	sigil_label.add_theme_color_override("font_color", rarity_color)
+	sigil.add_child(sigil_label)
+	return sigil
+
+
+static func _fate_rarity_letter(rarity: String) -> String:
+	match FateCardCatalog.get_rarity_rank(rarity):
+		4:
+			return "L"
+		3:
+			return "E"
+		2:
+			return "R"
+		1:
+			return "C"
+		_:
+			return "?"
+
+
+static func _fate_add_corner_trim(target: Control, rarity_color: Color, inset: float, segment_length: float, thickness: float, alpha: float) -> void:
+	if target == null:
+		return
+	var trim_color: Color = Color(rarity_color.r, rarity_color.g, rarity_color.b, alpha)
+	var top_left_h := ColorRect.new()
+	top_left_h.anchor_left = 0.0
+	top_left_h.anchor_right = 0.0
+	top_left_h.anchor_top = 0.0
+	top_left_h.anchor_bottom = 0.0
+	top_left_h.offset_left = inset
+	top_left_h.offset_top = inset
+	top_left_h.offset_right = inset + segment_length
+	top_left_h.offset_bottom = inset + thickness
+	top_left_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_left_h.color = trim_color
+	target.add_child(top_left_h)
+
+	var top_left_v := ColorRect.new()
+	top_left_v.anchor_left = 0.0
+	top_left_v.anchor_right = 0.0
+	top_left_v.anchor_top = 0.0
+	top_left_v.anchor_bottom = 0.0
+	top_left_v.offset_left = inset
+	top_left_v.offset_top = inset
+	top_left_v.offset_right = inset + thickness
+	top_left_v.offset_bottom = inset + segment_length
+	top_left_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_left_v.color = trim_color
+	target.add_child(top_left_v)
+
+	var top_right_h := ColorRect.new()
+	top_right_h.anchor_left = 1.0
+	top_right_h.anchor_right = 1.0
+	top_right_h.anchor_top = 0.0
+	top_right_h.anchor_bottom = 0.0
+	top_right_h.offset_left = -inset - segment_length
+	top_right_h.offset_top = inset
+	top_right_h.offset_right = -inset
+	top_right_h.offset_bottom = inset + thickness
+	top_right_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right_h.color = trim_color
+	target.add_child(top_right_h)
+
+	var top_right_v := ColorRect.new()
+	top_right_v.anchor_left = 1.0
+	top_right_v.anchor_right = 1.0
+	top_right_v.anchor_top = 0.0
+	top_right_v.anchor_bottom = 0.0
+	top_right_v.offset_left = -inset - thickness
+	top_right_v.offset_top = inset
+	top_right_v.offset_right = -inset
+	top_right_v.offset_bottom = inset + segment_length
+	top_right_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right_v.color = trim_color
+	target.add_child(top_right_v)
+
+	var bottom_left_h := ColorRect.new()
+	bottom_left_h.anchor_left = 0.0
+	bottom_left_h.anchor_right = 0.0
+	bottom_left_h.anchor_top = 1.0
+	bottom_left_h.anchor_bottom = 1.0
+	bottom_left_h.offset_left = inset
+	bottom_left_h.offset_top = -inset - thickness
+	bottom_left_h.offset_right = inset + segment_length
+	bottom_left_h.offset_bottom = -inset
+	bottom_left_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_left_h.color = trim_color
+	target.add_child(bottom_left_h)
+
+	var bottom_left_v := ColorRect.new()
+	bottom_left_v.anchor_left = 0.0
+	bottom_left_v.anchor_right = 0.0
+	bottom_left_v.anchor_top = 1.0
+	bottom_left_v.anchor_bottom = 1.0
+	bottom_left_v.offset_left = inset
+	bottom_left_v.offset_top = -inset - segment_length
+	bottom_left_v.offset_right = inset + thickness
+	bottom_left_v.offset_bottom = -inset
+	bottom_left_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_left_v.color = trim_color
+	target.add_child(bottom_left_v)
+
+	var bottom_right_h := ColorRect.new()
+	bottom_right_h.anchor_left = 1.0
+	bottom_right_h.anchor_right = 1.0
+	bottom_right_h.anchor_top = 1.0
+	bottom_right_h.anchor_bottom = 1.0
+	bottom_right_h.offset_left = -inset - segment_length
+	bottom_right_h.offset_top = -inset - thickness
+	bottom_right_h.offset_right = -inset
+	bottom_right_h.offset_bottom = -inset
+	bottom_right_h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_right_h.color = trim_color
+	target.add_child(bottom_right_h)
+
+	var bottom_right_v := ColorRect.new()
+	bottom_right_v.anchor_left = 1.0
+	bottom_right_v.anchor_right = 1.0
+	bottom_right_v.anchor_top = 1.0
+	bottom_right_v.anchor_bottom = 1.0
+	bottom_right_v.offset_left = -inset - thickness
+	bottom_right_v.offset_top = -inset - segment_length
+	bottom_right_v.offset_right = -inset
+	bottom_right_v.offset_bottom = -inset
+	bottom_right_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_right_v.color = trim_color
+	target.add_child(bottom_right_v)
+
+
+static func _fate_make_vertical_gradient_texture(top: Color, middle: Color, bottom: Color, width: int = 8, height: int = 256) -> GradientTexture2D:
+	var gradient: Gradient = Gradient.new()
+	gradient.add_point(0.0, top)
+	gradient.add_point(0.42, middle)
+	gradient.add_point(1.0, bottom)
+	var texture: GradientTexture2D = GradientTexture2D.new()
+	texture.width = width
+	texture.height = height
+	texture.fill = GradientTexture2D.FILL_LINEAR
+	texture.fill_from = Vector2(0.5, 0.0)
+	texture.fill_to = Vector2(0.5, 1.0)
+	texture.gradient = gradient
+	return texture
+
+
+static func _fate_make_particle_texture() -> Texture2D:
+	var size: int = 28
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.0, 0.0, 0.0, 0.0))
+	var center: Vector2 = Vector2((float(size) - 1.0) * 0.5, (float(size) - 1.0) * 0.5)
+	var max_radius: float = float(size) * 0.5
+	for y in range(size):
+		for x in range(size):
+			var pixel_pos: Vector2 = Vector2(float(x), float(y))
+			var dist: float = pixel_pos.distance_to(center) / max_radius
+			if dist >= 1.0:
+				continue
+			var alpha: float = pow(1.0 - dist, 2.8)
+			if absf(pixel_pos.x - center.x) <= 1.2 or absf(pixel_pos.y - center.y) <= 1.2:
+				alpha = max(alpha, pow(maxf(0.0, 1.0 - dist), 1.35) * 0.55)
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0)))
+	return ImageTexture.create_from_image(image)
+
+
+static func _fate_build_reveal_gpu_burst(card: Dictionary, at_pos: Vector2) -> GPUParticles2D:
+	var rarity: String = str(card.get("rarity", "common")).strip_edges().to_lower()
+	var rank: int = FateCardCatalog.get_rarity_rank(rarity)
+	var rarity_color: Color = FateCardCatalog.get_rarity_color(rarity)
+	var particles := GPUParticles2D.new()
+	particles.position = at_pos
+	particles.one_shot = true
+	particles.emitting = false
+	particles.local_coords = false
+	particles.process_mode = Node.PROCESS_MODE_ALWAYS
+	particles.amount = 40 + (rank * 16)
+	particles.lifetime = 1.05 + (0.08 * float(rank))
+	particles.explosiveness = 1.0
+	particles.randomness = 0.28
+	particles.visibility_rect = Rect2(-560.0, -560.0, 1120.0, 1120.0)
+	particles.texture = _fate_make_particle_texture()
+	particles.z_index = 2
+	var canvas_mat := CanvasItemMaterial.new()
+	canvas_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	particles.material = canvas_mat
+
+	var process_mat := ParticleProcessMaterial.new()
+	process_mat.set("emission_shape", ParticleProcessMaterial.EMISSION_SHAPE_SPHERE)
+	process_mat.set("emission_sphere_radius", 18.0 + (float(rank) * 5.0))
+	process_mat.set("direction", Vector3(0.0, -1.0, 0.0))
+	process_mat.set("spread", 180.0)
+	process_mat.set("gravity", Vector3(0.0, 165.0, 0.0))
+	process_mat.set("initial_velocity_min", 240.0 + (float(rank) * 34.0))
+	process_mat.set("initial_velocity_max", 430.0 + (float(rank) * 68.0))
+	process_mat.set("radial_accel_min", -32.0)
+	process_mat.set("radial_accel_max", 64.0 + (float(rank) * 10.0))
+	process_mat.set("damping_min", 10.0)
+	process_mat.set("damping_max", 24.0)
+	process_mat.set("scale_min", 0.65)
+	process_mat.set("scale_max", 1.5 + (float(rank) * 0.18))
+	process_mat.set("hue_variation_min", -0.03)
+	process_mat.set("hue_variation_max", 0.03)
+	process_mat.set("color", Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.96))
+	particles.process_material = process_mat
+	return particles
 
 
 static func _loot_reveal_row_spotlight_and_pop(field, idx: int, item_color: Color, is_high_rarity: bool) -> void:
