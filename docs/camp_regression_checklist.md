@@ -56,7 +56,7 @@ Run in a **debug** build when you need F9 diagnostics or `CampExplore` debug pri
 - [ ] After completing **once_ever** direct conv or pair overhear, **save** and **load**: content stays consumed.
 - [ ] `seen_camp_lore`, `seen_camp_pair_scenes`, `camp_memory`, `camp_unit_condition`, `camp_request_progress_level`, and request fields restore; explore session visit-only flags reset (new visit can use `once_per_visit` again).
 - [ ] Load older save: `load_game` infers some story flags from `camp_request_progress_level` (see `CampaignManager` load path) — spot-check conversations that depend on those flags.
-- [ ] **Runesmithing unlock tier (save/load only):** `CampaignManager.get_runesmithing_unlock_tier()` round-trips through save/load (0=locked, 1=basic, 2=advanced). Separate from `blacksmith_unlocked`; no merged UI wiring yet — set tier only via code/debug when testing.
+- [ ] **Runesmithing unlock tier (persistence + camp catch-up):** `get_runesmithing_unlock_tier()` survives save/load (0/1/2). After `load_game`, tier is **at least** the level implied by `camp_request_progress_level` (basic ≥6, advanced ≥11). Clearing a story level bumps `camp_request_progress_level` in `load_next_level` and re-syncs tier (monotonic, never downgrades). Separate from `blacksmith_unlocked`; no merged UI wiring yet.
 
 ## Rune-capable weapon persistence (Pass 1 scaffolding)
 
