@@ -44,7 +44,7 @@
 [ext_resource type="Resource" uid="uid://cj7t2jer3od7o" path="res://Resources/Music Discs/Disc_SergeantKilroTheme.tres" id="26_sx0kx"]
 [ext_resource type="AudioStream" uid="uid://dwkte17ankayc" path="res://SoundEffects/MissAttack.wav" id="26_y7lbt"]
 [ext_resource type="AudioStream" uid="uid://7tprk5jnxe44" path="res://SoundEffects/Epic_Level_up_sound.wav" id="27_eqf7l"]
-[ext_resource type="Resource" path="res://Resources/FateCardLoot/iron_route.tres" id="27_nk08u"]
+[ext_resource type="Resource" uid="uid://bewgcyddfs3yi" path="res://Resources/FateCardLoot/iron_route.tres" id="27_nk08u"]
 [ext_resource type="Texture2D" uid="uid://dc5tksv7qa76g" path="res://Assets/Backgrounds/Default Background.png" id="28_fpeun"]
 [ext_resource type="PackedScene" uid="uid://cw1hvhq0anox3" path="res://Scenes/SpawnEffect.tscn" id="28_tgpwj"]
 [ext_resource type="AudioStream" uid="uid://c2fbvfyob1vnu" path="res://SoundEffects/16-bit Retro Video Game Sound Effect, Dimensional Portal Opening, Dark Magic ....mp3" id="29_314h1"]

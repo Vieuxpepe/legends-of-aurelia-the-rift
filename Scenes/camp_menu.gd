@@ -251,6 +251,7 @@ var _blacksmith_anvil_hint_strip: Panel = null
 var _blacksmith_workbench_divider: Panel = null
 var _blacksmith_socket_labels: Array[Label] = []
 var _blacksmith_runesmith_status_lbl: Label = null
+var _blacksmith_runesmith_status_tween: Tween = null
 var _blacksmith_craft_ready_tween: Tween = null
 var _blacksmith_was_craft_ready: bool = false
 
@@ -3487,7 +3488,46 @@ func _runesmithing_forge_status_text() -> String:
 func _update_blacksmith_runesmith_status_label() -> void:
 	if _blacksmith_runesmith_status_lbl == null or not is_instance_valid(_blacksmith_runesmith_status_lbl):
 		return
-	_blacksmith_runesmith_status_lbl.text = _runesmithing_forge_status_text()
+	var new_text: String = _runesmithing_forge_status_text()
+	var old_text: String = _blacksmith_runesmith_status_lbl.text
+	_blacksmith_runesmith_status_lbl.text = new_text
+	var forge_visible: bool = (
+		blacksmith_panel != null
+		and is_instance_valid(blacksmith_panel)
+		and blacksmith_panel.visible
+	)
+	if not forge_visible or new_text == old_text:
+		return
+	_play_blacksmith_runesmith_status_emphasis()
+
+
+func _play_blacksmith_runesmith_status_emphasis() -> void:
+	if _blacksmith_runesmith_status_lbl == null or not is_instance_valid(_blacksmith_runesmith_status_lbl):
+		return
+	if _blacksmith_runesmith_status_tween != null and _blacksmith_runesmith_status_tween.is_valid():
+		_blacksmith_runesmith_status_tween.kill()
+	_blacksmith_runesmith_status_tween = null
+	_blacksmith_runesmith_status_lbl.modulate = Color.WHITE
+	var tw: Tween = create_tween()
+	_blacksmith_runesmith_status_tween = tw
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(
+		_blacksmith_runesmith_status_lbl,
+		"modulate",
+		Color(1.11, 1.06, 0.95, 1.0),
+		0.1
+	)
+	tw.tween_property(
+		_blacksmith_runesmith_status_lbl,
+		"modulate",
+		Color.WHITE,
+		0.3
+	)
+	var tw_done: Tween = tw
+	tw.tween_callback(func():
+		if _blacksmith_runesmith_status_tween == tw_done:
+			_blacksmith_runesmith_status_tween = null
+	)
 
 
 func _ensure_blacksmith_anvil_plate() -> void:
@@ -6897,6 +6937,8 @@ func _sync_merchant_talk_button_state() -> void:
 		_close_merchant_talk_panel(true)
 	else:
 		_sync_merchant_talk_button_caption()
+	if blacksmith_panel != null and is_instance_valid(blacksmith_panel) and blacksmith_panel.visible:
+		_update_blacksmith_runesmith_status_label()
 
 
 func _close_merchant_talk_panel(instant: bool = false) -> void:
