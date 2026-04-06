@@ -1044,6 +1044,28 @@ func _assign_card_to_active_slot(card_id: String, slot_index: int) -> String:
 	return "Placed %s in Slot %d." % [card_name, slot_index + 1]
 
 
+func _clear_active_slot(slot_index: int) -> String:
+	if slot_index < 0 or slot_index >= FateCardCatalog.MAX_ACTIVE_CARDS:
+		return ""
+	var state: Dictionary = _read_state()
+	var owned_ids: Array[String] = _normalize_owned_card_ids(state.get("cards_owned_ids", []))
+	var slots: Array[String] = _normalize_active_slots(
+		state.get("cards_active_slots", []),
+		owned_ids,
+		state.get("cards_active_ids", [])
+	)
+	var wanted_id: String = str(slots[slot_index]).strip_edges()
+	if wanted_id == "":
+		return ""
+	slots[slot_index] = ""
+	state["cards_active_slots"] = slots
+	state["cards_active_ids"] = _compact_active_slots(slots)
+	_write_state(state, true)
+	var card: Dictionary = FateCardCatalog.get_card(wanted_id)
+	var card_name: String = str(card.get("name", wanted_id)).strip_edges()
+	return "Removed from active deck: %s." % card_name
+
+
 func _slot_from_global_position(global_pos: Vector2) -> int:
 	for node in _fate_active_slot_nodes:
 		if node == null or not is_instance_valid(node):
@@ -1723,17 +1745,22 @@ func _build_fate_card_widget(
 		shell.custom_minimum_size = Vector2(float(w_i), float(h_i))
 		shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		shell.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		shell.mouse_filter = Control.MOUSE_FILTER_PASS
+		shell.mouse_filter = Control.MOUSE_FILTER_STOP
 		shell.set_meta("_slot_index", active_strip_slot)
 		shell.set_meta("_slot_border", rarity_color if strip_has_card else CARD_BORDER_SOFT)
+		shell.set_meta("_slot_card_id", str(card.get("id", "")).strip_edges() if strip_has_card else "")
+		shell.gui_input.connect(_on_fate_active_slot_gui_input.bind(shell))
+		if strip_has_card:
+			shell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		if panel.tooltip_text.strip_edges() != "":
-			shell.tooltip_text = panel.tooltip_text
+			shell.tooltip_text = "%s\nClick to remove from active deck." % panel.tooltip_text if strip_has_card else panel.tooltip_text
 		panel.position = Vector2.ZERO
 		panel.pivot_offset = Vector2.ZERO
 		panel.custom_minimum_size = Vector2(FATE_HAND_CARD_WIDTH, FATE_HAND_CARD_HEIGHT)
 		panel.size = panel.custom_minimum_size
 		panel.scale = Vector2(strip_scale, strip_scale)
 		vp.add_child(panel)
+		vp_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vp_host.add_child(vp)
 		shell.add_child(vp_host)
 		var rescale_strip_card := func () -> void:
@@ -2063,6 +2090,24 @@ func _show_fate_preview(card: Dictionary, owned: bool, active: bool) -> void:
 	_fate_preview_host.add_child(preview_card)
 	_fate_preview_backdrop.show()
 	_fate_preview_panel.show()
+
+
+func _on_fate_active_slot_gui_input(event: InputEvent, slot_root: Control) -> void:
+	if slot_root == null or _fate_dragging or _fate_slot_placement_animating:
+		return
+	if event is not InputEventMouseButton:
+		return
+	var mb: InputEventMouseButton = event as InputEventMouseButton
+	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT or mb.is_echo():
+		return
+	var slot_card_id: String = str(slot_root.get_meta("_slot_card_id", "")).strip_edges()
+	if slot_card_id == "":
+		return
+	var slot_index: int = int(slot_root.get_meta("_slot_index", -1))
+	var result_line: String = _clear_active_slot(slot_index)
+	if result_line != "":
+		slot_root.accept_event()
+		_refresh_fate_deck_ui(result_line)
 
 
 func _build_fate_drag_visual(card: Dictionary, _owned: bool, active: bool) -> Control:
