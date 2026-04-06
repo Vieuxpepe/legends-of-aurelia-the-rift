@@ -250,6 +250,7 @@ var _blacksmith_anvil_hint_lbl: Label = null
 var _blacksmith_anvil_hint_strip: Panel = null
 var _blacksmith_workbench_divider: Panel = null
 var _blacksmith_socket_labels: Array[Label] = []
+var _blacksmith_runesmith_status_lbl: Label = null
 var _blacksmith_craft_ready_tween: Tween = null
 var _blacksmith_was_craft_ready: bool = false
 
@@ -3456,13 +3457,37 @@ func _ensure_blacksmith_chrome_labels() -> void:
 		_blacksmith_hdr_preview.text = "OUTCOME"
 		_blacksmith_hdr_preview.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		blacksmith_panel.add_child(_blacksmith_hdr_preview)
+	if _blacksmith_runesmith_status_lbl == null:
+		_blacksmith_runesmith_status_lbl = Label.new()
+		_blacksmith_runesmith_status_lbl.name = "BlacksmithRunesmithStatus"
+		_blacksmith_runesmith_status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_blacksmith_runesmith_status_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_blacksmith_runesmith_status_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		blacksmith_panel.add_child(_blacksmith_runesmith_status_lbl)
 	_camp_style_label(_blacksmith_title_lbl, CAMP_BORDER, 28, 2)
 	_camp_style_label(_blacksmith_hdr_materials, CAMP_MUTED, 18, 1)
 	_camp_style_label(_blacksmith_hdr_deployment, CAMP_MUTED, 18, 1)
 	_camp_style_label(_blacksmith_hdr_preview, CAMP_MUTED, 18, 1)
-	for lbl in [_blacksmith_title_lbl, _blacksmith_hdr_materials, _blacksmith_hdr_deployment, _blacksmith_hdr_preview]:
+	_camp_style_label(_blacksmith_runesmith_status_lbl, CAMP_MUTED, 16, 1)
+	for lbl in [_blacksmith_title_lbl, _blacksmith_hdr_materials, _blacksmith_hdr_deployment, _blacksmith_hdr_preview, _blacksmith_runesmith_status_lbl]:
 		if lbl != null:
 			lbl.z_index = 24
+	_update_blacksmith_runesmith_status_label()
+
+
+func _runesmithing_forge_status_text() -> String:
+	var t: int = CampaignManager.get_runesmithing_unlock_tier()
+	if t >= CampaignManager.RUNESMITHING_TIER_ADVANCED:
+		return "Runesmithing: advanced tier available."
+	if t >= CampaignManager.RUNESMITHING_TIER_BASIC:
+		return "Runesmithing: basic tier available."
+	return "Runesmithing: locked (unlocks via campaign progression)."
+
+
+func _update_blacksmith_runesmith_status_label() -> void:
+	if _blacksmith_runesmith_status_lbl == null or not is_instance_valid(_blacksmith_runesmith_status_lbl):
+		return
+	_blacksmith_runesmith_status_lbl.text = _runesmithing_forge_status_text()
 
 
 func _ensure_blacksmith_anvil_plate() -> void:
@@ -3506,7 +3531,9 @@ func _camp_layout_blacksmith_panel() -> void:
 
 	var title_y: float = 10.0
 	var title_h: float = 40.0
-	var row_top: float = title_y + title_h + 10.0
+	var rune_line_gap: float = 4.0
+	var rune_status_h: float = 30.0
+	var row_top: float = title_y + title_h + rune_line_gap + rune_status_h + 8.0
 	var sec_h: float = 26.0
 	var list_top: float = row_top + sec_h + 6.0
 	var bottom_reserve: float = 58.0
@@ -3514,6 +3541,13 @@ func _camp_layout_blacksmith_panel() -> void:
 
 	if _blacksmith_title_lbl != null:
 		_camp_set_rect(_blacksmith_title_lbl, Vector2(pad, title_y), Vector2(pw - pad * 2.0, title_h))
+	if _blacksmith_runesmith_status_lbl != null:
+		_camp_set_rect(
+			_blacksmith_runesmith_status_lbl,
+			Vector2(pad, title_y + title_h + rune_line_gap),
+			Vector2(pw - pad * 2.0, rune_status_h)
+		)
+		_update_blacksmith_runesmith_status_label()
 	if _blacksmith_hdr_materials != null:
 		_camp_set_rect(_blacksmith_hdr_materials, Vector2(pad, row_top), Vector2(left_col_w, sec_h))
 	if _blacksmith_hdr_deployment != null:
