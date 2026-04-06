@@ -6965,6 +6965,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		_end_haggle_concede()
 		get_viewport().set_input_as_handled()
 		return
+	# --- TEMP (remove before merge): debug-only forge runesmith label / pulse check. Ctrl+Shift+1/2/3 → locked/basic/advanced tier in RAM only until save. ---
+	if OS.is_debug_build() and event is InputEventKey:
+		var ek: InputEventKey = event as InputEventKey
+		if ek.pressed and not ek.echo and ek.ctrl_pressed and ek.shift_pressed:
+			match ek.keycode:
+				KEY_1:
+					CampaignManager.set_runesmithing_unlock_tier(CampaignManager.RUNESMITHING_TIER_LOCKED)
+					_update_blacksmith_runesmith_status_label()
+					get_viewport().set_input_as_handled()
+					return
+				KEY_2:
+					CampaignManager.set_runesmithing_unlock_tier(CampaignManager.RUNESMITHING_TIER_BASIC)
+					_update_blacksmith_runesmith_status_label()
+					get_viewport().set_input_as_handled()
+					return
+				KEY_3:
+					CampaignManager.set_runesmithing_unlock_tier(CampaignManager.RUNESMITHING_TIER_ADVANCED)
+					_update_blacksmith_runesmith_status_label()
+					get_viewport().set_input_as_handled()
+					return
 	if _merchant_talk_modal == null or not _merchant_talk_modal.visible:
 		return
 	if event.is_action_pressed("ui_cancel"):
