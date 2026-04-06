@@ -424,7 +424,7 @@ func run_rain_of_arrows_minigame(bf: Node2D, attacker: Node2D) -> int:
 # =========================================================
 func run_divine_protection_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEShrinkingRing.gd\")
+	var qte_script = load("res://Scripts/Core/QTEShrinkingRing.gd")
 	var qte = qte_script.run(bf, "DIVINE PROTECTION", "PRESS SPACE WHEN THE RINGS ALIGN", 1100)
 	var res = await qte.qte_finished
 	return res
@@ -432,7 +432,7 @@ func run_divine_protection_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_healing_light_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEMashMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEMashMeter.gd")
 	var qte = qte_script.run(bf, "HEALING LIGHT", "MASH SPACE TO AMPLIFY THE HEAL", 2200, 24.0)
 	var res = await qte.qte_finished
 	return res
@@ -440,7 +440,7 @@ func run_healing_light_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_miracle_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEOscillationStop.gd\")
+	var qte_script = load("res://Scripts/Core/QTEOscillationStop.gd")
 	var qte = qte_script.run(bf, "MIRACLE", "STOP THE PENDULUM IN THE GOLD", 1500)
 	var res = await qte.qte_finished
 	return res
@@ -448,7 +448,7 @@ func run_miracle_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_charge_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEHoldReleaseBar.gd\")
+	var qte_script = load("res://Scripts/Core/QTEHoldReleaseBar.gd")
 	var qte = qte_script.run(bf, "CHARGE", "HOLD SPACE, RELEASE IN GREEN", 1400)
 	qte.green_zone.position.x = 365.0; qte.green_zone.size.x = 70.0
 	qte.perfect_zone.size.x = 22.0
@@ -458,7 +458,7 @@ func run_charge_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_shield_bash_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTESequenceMemory.gd\")
+	var qte_script = load("res://Scripts/Core/QTESequenceMemory.gd")
 	var qte = qte_script.run(bf, "SHIELD BASH", "MEMORIZE THE 3 ARROWS, THEN INPUT FAST", 3)
 	var res = await qte.qte_finished
 	return res
@@ -466,7 +466,7 @@ func run_shield_bash_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_unbreakable_bastion_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEAlternatingMashMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEAlternatingMashMeter.gd")
 	var qte = qte_script.run(bf, "UNBREAKABLE BASTION", "ALTERNATE LEFT / RIGHT TO BRACE", 2500)
 	var res = await qte.qte_finished
 	return res
@@ -482,7 +482,7 @@ func run_fireball_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_arcane_shift_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEAlternatingMashMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEAlternatingMashMeter.gd")
 	var qte = qte_script.run(bf, "ARCANE SHIFT", "ALTERNATE UP / DOWN TO PHASE OUT", 2200)
 	var res = await qte.qte_finished
 	return res
@@ -490,7 +490,7 @@ func run_arcane_shift_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_meteor_storm_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTESequenceMemory.gd\")
+	var qte_script = load("res://Scripts/Core/QTESequenceMemory.gd")
 	var qte = qte_script.run(bf, "METEOR STORM", "MEMORIZE THE 5 ARROWS", 5)
 	var res = await qte.qte_finished
 	return res
@@ -498,28 +498,28 @@ func run_meteor_storm_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_flurry_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEMashMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEMashMeter.gd")
 	var qte = qte_script.run(bf, "FLURRY STRIKE", "TAP SPACE AS FAST AS POSSIBLE", 1500, 14)
 	var res = await qte.qte_finished
 	return res
 
 func run_battle_cry_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEHoldReleaseBar.gd\")
+	var qte_script = load("res://Scripts/Core/QTEHoldReleaseBar.gd")
 	var qte = qte_script.run(bf, "BATTLE CRY", "HOLD SPACE — RELEASE IN THE TINY GREEN WINDOW", 1500)
 	var res = await qte.qte_finished
 	return res
 
 func run_blade_tempest_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEMultiTapDial.gd\")
+	var qte_script = load("res://Scripts/Core/QTEMultiTapDial.gd")
 	var qte = qte_script.run(bf, "BLADE TEMPEST", "TAP SPACE AS THE NEEDLE PASSES THE 3 GOLD ZONES", [20.0, 150.0, 285.0], 420.0, 2600)
 	var res = await qte.qte_finished
 	return res
 
 func run_chakra_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEBalanceMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEBalanceMeter.gd")
 	var qte = qte_script.run(bf, "CHAKRA", "USE LEFT / RIGHT TO KEEP THE MIND CENTERED", 2500)
 	var res = await qte.qte_finished
 	return res
@@ -527,7 +527,7 @@ func run_chakra_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_inner_peace_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEFastSequence.gd\")
+	var qte_script = load("res://Scripts/Core/QTEFastSequence.gd")
 	var qte = qte_script.run(bf, "INNER PEACE", "INPUT THE 4-ARROW MANTRA BEFORE TIME RUNS OUT", 4, 3350, 850) # 850ms reveal + 2500ms input = 3350
 	var res = await qte.qte_finished
 	return res
@@ -535,7 +535,7 @@ func run_inner_peace_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_chi_burst_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEBreathingCircle.gd\")
+	var qte_script = load("res://Scripts/Core/QTEBreathingCircle.gd")
 	var qte = qte_script.run(bf, "CHI BURST", "PRESS SPACE AT THE ABSOLUTE PEAK", 920, 460)
 	var res = await qte.qte_finished
 	return res
@@ -567,7 +567,7 @@ func run_rending_claw_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_smite_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEShrinkingRing.gd\")
+	var qte_script = load("res://Scripts/Core/QTEShrinkingRing.gd")
 	var qte = qte_script.run(bf, "SMITE", "PRESS SPACE WHEN THE RING ALIGNS", 750)
 	var res = await qte.qte_finished
 	return res
@@ -575,7 +575,7 @@ func run_smite_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_holy_ward_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEFastSequence.gd\")
+	var qte_script = load("res://Scripts/Core/QTEFastSequence.gd")
 	var qte = qte_script.run(bf, "HOLY WARD", "INPUT THE 4 ARROWS FAST TO BLOCK MAGIC", 4, 2400, 1000)
 	var res = await qte.qte_finished
 	return res
@@ -583,7 +583,7 @@ func run_holy_ward_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_sacred_judgment_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEPingPongBar.gd\")
+	var qte_script = load("res://Scripts/Core/QTEPingPongBar.gd")
 	var qte = qte_script.run(bf, "SACRED JUDGMENT", "RELEASE NEAR MAX", 2.4)
 	var res = await qte.qte_finished
 	return res
@@ -607,7 +607,7 @@ func run_blink_step_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_elemental_convergence_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEReactionStrike.gd\")
+	var qte_script = load("res://Scripts/Core/QTEReactionStrike.gd")
 	var qte = qte_script.run(bf, "ELEMENTAL CONVERGENCE", "PRESS THE ARROW AS SOON AS IT APPEARS!", 4, 550)
 	var res = await qte.qte_finished
 	return res
@@ -615,7 +615,7 @@ func run_elemental_convergence_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_shadow_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEStealthBar.gd\")
+	var qte_script = load("res://Scripts/Core/QTEStealthBar.gd")
 	var qte = qte_script.run(bf, "SHADOW STRIKE", "PRESS SPACE INSIDE THE SHADOW BAND", 700)
 	var res = await qte.qte_finished
 	return res
@@ -623,7 +623,7 @@ func run_shadow_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_assassinate_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEMultiTargetBar.gd\")
+	var qte_script = load("res://Scripts/Core/QTEMultiTargetBar.gd")
 	var qte = qte_script.run(bf, "ASSASSINATE", "TAP SPACE ON THE 3 VITAL POINTS!", 1500)
 	var res = await qte.qte_finished
 	return res
@@ -631,7 +631,7 @@ func run_assassinate_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_ultimate_shadow_step_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEReactionStrike.gd\")
+	var qte_script = load("res://Scripts/Core/QTEReactionStrike.gd")
 	var qte = qte_script.run(bf, "ULTIMATE SHADOW STEP", "PRESS THE ARROW AS SOON AS IT APPEARS!", 4, 550)
 	var res = await qte.qte_finished
 	return res
@@ -639,7 +639,7 @@ func run_ultimate_shadow_step_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_power_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTETimingBar.gd\")
+	var qte_script = load("res://Scripts/Core/QTETimingBar.gd")
 	var qte = qte_script.run(bf, "POWER STRIKE", "PRESS SPACE AT MAX POWER", 1300)
 	
 	# Override position
@@ -653,7 +653,7 @@ func run_power_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_adrenaline_rush_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEAlternatingMashMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEAlternatingMashMeter.gd")
 	var qte = qte_script.run(bf, "ADRENALINE RUSH", "ALTERNATE LEFT / RIGHT FAST TO PUMP BLOOD", 2000)
 	var res = await qte.qte_finished
 	return res
@@ -661,7 +661,7 @@ func run_adrenaline_rush_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_earthshatter_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEExpandingRing.gd\")
+	var qte_script = load("res://Scripts/Core/QTEExpandingRing.gd")
 	var qte = qte_script.run(bf, "EARTHSHATTER", "HOLD SPACE TO CHARGE, RELEASE IN THE RING", 1600)
 	var res = await qte.qte_finished
 	return res
@@ -669,7 +669,7 @@ func run_earthshatter_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_shadow_pin_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTECrosshairPin.gd\")
+	var qte_script = load("res://Scripts/Core/QTECrosshairPin.gd")
 	var qte = qte_script.run(bf, "SHADOW PIN", "TRACK THE DOT WITH ARROWS — PRESS SPACE ON TARGET", 2600)
 	var res = await qte.qte_finished
 	return res
@@ -677,7 +677,7 @@ func run_shadow_pin_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_weapon_shatter_minigame(bf: Node2D, defender: Node2D) -> int:
 	if defender == null or not is_instance_valid(defender): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEClashTiming.gd\")
+	var qte_script = load("res://Scripts/Core/QTEClashTiming.gd")
 	var qte = qte_script.run(bf, "WEAPON SHATTER", "PRESS SPACE EXACTLY ON IMPACT", 900)
 	var res = await qte.qte_finished
 	return res
@@ -685,7 +685,7 @@ func run_weapon_shatter_minigame(bf: Node2D, defender: Node2D) -> int:
 
 func run_savage_toss_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEOscillationStop.gd\")
+	var qte_script = load("res://Scripts/Core/QTEOscillationStop.gd")
 	var qte = qte_script.run(bf, "SAVAGE TOSS", "STOP THE NEEDLE IN THE TINY TOP SWEET SPOT", 1800)
 	var res = await qte.qte_finished
 	return res
@@ -693,7 +693,7 @@ func run_savage_toss_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_vanguards_rally_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEComboRush.gd\")
+	var qte_script = load("res://Scripts/Core/QTEComboRush.gd")
 	var qte = qte_script.run(bf, "VANGUARD'S RALLY", "COMPLETE AS MANY 4-BUTTON COMBOS AS POSSIBLE", 3500)
 	var res = await qte.qte_finished
 	return res
@@ -709,7 +709,7 @@ func run_severing_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_aether_bind_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTECatcherPaddle.gd\")
+	var qte_script = load("res://Scripts/Core/QTECatcherPaddle.gd")
 	var qte = qte_script.run(bf, "AETHER BIND", "MOVE LEFT / RIGHT TO CATCH THE FALLING SPARKS")
 	var res = await qte.qte_finished
 	return res
@@ -717,7 +717,7 @@ func run_aether_bind_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_parting_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEPartingShot.gd\")
+	var qte_script = load("res://Scripts/Core/QTEPartingShot.gd")
 	var qte = qte_script.run(bf, "PARTING SHOT", "PRESS SPACE WHEN THE RINGS ALIGN")
 	var res = await qte.qte_finished
 	return res
@@ -725,7 +725,7 @@ func run_parting_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_soul_harvest_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEMashMeter.gd\")
+	var qte_script = load("res://Scripts/Core/QTEMashMeter.gd")
 	var qte = qte_script.run(bf, "SOUL HARVEST", "MASH SPACE TO HOLD THE BAR ABOVE THE DARK PULL", 2500, 55.0)
 	var res = await qte.qte_finished
 	return res
@@ -733,7 +733,7 @@ func run_soul_harvest_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_celestial_choir_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTERhythmLanes.gd\")
+	var qte_script = load("res://Scripts/Core/QTERhythmLanes.gd")
 	var qte = qte_script.run(bf, "CELESTIAL CHOIR", "LEFT / DOWN / RIGHT — HIT WHEN NOTES REACH THE LINE")
 	var res = await qte.qte_finished
 	return res
@@ -741,7 +741,7 @@ func run_celestial_choir_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_hellfire_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTEHeatBalance.gd\")
+	var qte_script = load("res://Scripts/Core/QTEHeatBalance.gd")
 	var qte = qte_script.run(bf, "HELLFIRE", "KEEP HEAT INSIDE THE TOP 15% RED ZONE")
 	var res = await qte.qte_finished
 	return res
@@ -749,7 +749,7 @@ func run_hellfire_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_phalanx_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTESniperZoom.gd\")
+	var qte_script = load("res://Scripts/Core/QTESniperZoom.gd")
 	var qte = qte_script.run(bf, "PHALANX", "HOLD SPACE TO ZOOM AND AIM", 4200)
 	var res = await qte.qte_finished
 	return res
@@ -757,7 +757,7 @@ func run_phalanx_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_ballista_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTESniperZoom.gd\")
+	var qte_script = load("res://Scripts/Core/QTESniperZoom.gd")
 	var qte = qte_script.run(bf, "BALLISTA SHOT", "MOVE WITH ARROWS • HOLD SPACE TO ZOOM • RELEASE TO FIRE", 4200)
 	var res = await qte.qte_finished
 	return res
@@ -765,7 +765,7 @@ func run_ballista_shot_minigame(bf: Node2D, attacker: Node2D) -> int:
 
 func run_aegis_strike_minigame(bf: Node2D, attacker: Node2D) -> int:
 	if attacker == null or not is_instance_valid(attacker): return 0
-	var qte_script = load(\"res://Scripts/Core/QTECrossAlignment.gd\")
+	var qte_script = load("res://Scripts/Core/QTECrossAlignment.gd")
 	var qte = qte_script.run(bf, "AEGIS STRIKE", "SPACE TO LOCK HORIZONTAL, SPACE AGAIN TO LOCK VERTICAL")
 	var res = await qte.qte_finished
 	return res

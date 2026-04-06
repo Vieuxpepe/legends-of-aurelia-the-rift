@@ -3479,10 +3479,25 @@ func _ensure_blacksmith_chrome_labels() -> void:
 func _runesmithing_forge_status_text() -> String:
 	var t: int = CampaignManager.get_runesmithing_unlock_tier()
 	if t >= CampaignManager.RUNESMITHING_TIER_ADVANCED:
-		return "Runesmithing: advanced tier available."
+		return _RUNESMITH_STATUS_ADVANCED
 	if t >= CampaignManager.RUNESMITHING_TIER_BASIC:
-		return "Runesmithing: basic tier available."
-	return "Runesmithing: locked (unlocks via campaign progression)."
+		return _RUNESMITH_STATUS_BASIC
+	return _RUNESMITH_STATUS_LOCKED
+
+
+const _RUNESMITH_STATUS_LOCKED: String = "Runesmithing: locked (unlocks via campaign progression)."
+const _RUNESMITH_STATUS_BASIC: String = "Runesmithing: basic tier available."
+const _RUNESMITH_STATUS_ADVANCED: String = "Runesmithing: advanced tier available."
+
+
+func _runesmithing_status_tier_from_text(status_text: String) -> int:
+	match status_text:
+		_RUNESMITH_STATUS_BASIC:
+			return 1
+		_RUNESMITH_STATUS_ADVANCED:
+			return 2
+		_:
+			return 0
 
 
 func _refresh_blacksmith_runesmith_status_label() -> void:
@@ -3502,10 +3517,13 @@ func _update_blacksmith_runesmith_status_label() -> void:
 	)
 	if not forge_visible or new_text == old_text:
 		return
-	_play_blacksmith_runesmith_status_emphasis()
+	var old_tier: int = _runesmithing_status_tier_from_text(old_text)
+	var new_tier: int = _runesmithing_status_tier_from_text(new_text)
+	var is_first_unlock: bool = (old_tier == 0 and new_tier == 1)
+	_play_blacksmith_runesmith_status_emphasis(is_first_unlock)
 
 
-func _play_blacksmith_runesmith_status_emphasis() -> void:
+func _play_blacksmith_runesmith_status_emphasis(is_first_unlock: bool = false) -> void:
 	if _blacksmith_runesmith_status_lbl == null or not is_instance_valid(_blacksmith_runesmith_status_lbl):
 		return
 	if _blacksmith_runesmith_status_tween != null and _blacksmith_runesmith_status_tween.is_valid():
@@ -3515,17 +3533,20 @@ func _play_blacksmith_runesmith_status_emphasis() -> void:
 	var tw: Tween = create_tween()
 	_blacksmith_runesmith_status_tween = tw
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var hi: Color = Color(1.18, 1.10, 0.94, 1.0) if is_first_unlock else Color(1.11, 1.06, 0.95, 1.0)
+	var in_t: float = 0.12 if is_first_unlock else 0.10
+	var out_t: float = 0.42 if is_first_unlock else 0.30
 	tw.tween_property(
 		_blacksmith_runesmith_status_lbl,
 		"modulate",
-		Color(1.11, 1.06, 0.95, 1.0),
-		0.1
+		hi,
+		in_t
 	)
 	tw.tween_property(
 		_blacksmith_runesmith_status_lbl,
 		"modulate",
 		Color.WHITE,
-		0.3
+		out_t
 	)
 	var tw_done: Tween = tw
 	tw.tween_callback(func():

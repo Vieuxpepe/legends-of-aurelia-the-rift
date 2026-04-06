@@ -19,8 +19,8 @@ var cursor_y: float = 280.0
 var gravity: float = 220.0
 var fly_power: float = -280.0
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> QTEGlideBox:
-	var qte = QTEGlideBox.new()
+static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
+	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
 	qte.bf = parent_bf; qte.layer = 220; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
 	var vp := parent_bf.get_viewport_rect().size
 	var dimmer := ColorRect.new(); dimmer.size = vp; dimmer.color = Color(0.12, 0.03, 0.03, 0.7); qte.add_child(dimmer)

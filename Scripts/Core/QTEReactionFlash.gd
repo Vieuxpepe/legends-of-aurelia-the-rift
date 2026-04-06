@@ -15,8 +15,8 @@ var help_lbl: Label
 var dimmer: ColorRect
 var flash_time: float = 0.0
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> QTEReactionFlash:
-	var qte = QTEReactionFlash.new()
+static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
+	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
 	qte.bf = parent_bf; qte.layer = 220; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
 	var vp := parent_bf.get_viewport_rect().size
 	qte.dimmer = ColorRect.new(); qte.dimmer.size = vp; qte.dimmer.color = Color(0, 0, 0, 0.95); qte.add_child(qte.dimmer)

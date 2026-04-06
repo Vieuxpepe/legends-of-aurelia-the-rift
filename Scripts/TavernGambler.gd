@@ -733,6 +733,13 @@ func _ensure_fate_deck_ui() -> void:
 	active_title.add_theme_color_override("font_color", CARD_TEXT_MUTED)
 	active_bar_root.add_child(active_title)
 
+	var active_hint: Label = Label.new()
+	active_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	active_hint.add_theme_font_size_override("font_size", 12)
+	active_hint.add_theme_color_override("font_color", CARD_TEXT_MUTED)
+	active_hint.text = "Drag cards into slots. Right-click an active card to remove it."
+	active_bar_root.add_child(active_hint)
+
 	_fate_active_strip = HBoxContainer.new()
 	_fate_active_strip.add_theme_constant_override("separation", 8)
 	_fate_active_strip.layout_direction = Control.LAYOUT_DIRECTION_LTR
@@ -1753,7 +1760,7 @@ func _build_fate_card_widget(
 		if strip_has_card:
 			shell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		if panel.tooltip_text.strip_edges() != "":
-			shell.tooltip_text = "%s\nClick to remove from active deck." % panel.tooltip_text if strip_has_card else panel.tooltip_text
+			shell.tooltip_text = "%s\nRight-click to remove from active deck." % panel.tooltip_text if strip_has_card else panel.tooltip_text
 		panel.position = Vector2.ZERO
 		panel.pivot_offset = Vector2.ZERO
 		panel.custom_minimum_size = Vector2(FATE_HAND_CARD_WIDTH, FATE_HAND_CARD_HEIGHT)
@@ -2098,7 +2105,7 @@ func _on_fate_active_slot_gui_input(event: InputEvent, slot_root: Control) -> vo
 	if event is not InputEventMouseButton:
 		return
 	var mb: InputEventMouseButton = event as InputEventMouseButton
-	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT or mb.is_echo():
+	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_RIGHT or mb.is_echo():
 		return
 	var slot_card_id: String = str(slot_root.get_meta("_slot_card_id", "")).strip_edges()
 	if slot_card_id == "":

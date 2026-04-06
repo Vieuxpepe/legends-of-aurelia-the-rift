@@ -16,8 +16,8 @@ var start_pos: Vector2
 var end_pos: Vector2
 var sweet_t: float
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> QTEScratchLine:
-	var qte = QTEScratchLine.new()
+static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
+	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
 	qte.bf = parent_bf; qte.layer = 220; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
 	var vp := parent_bf.get_viewport_rect().size
 	var dimmer := ColorRect.new(); dimmer.size = vp; dimmer.color = Color(0.1, 0.02, 0.02, 0.78); qte.add_child(dimmer)
