@@ -252,6 +252,7 @@ var _blacksmith_workbench_divider: Panel = null
 var _blacksmith_socket_labels: Array[Label] = []
 var _blacksmith_runesmith_status_lbl: Label = null
 var _blacksmith_runesmith_status_tween: Tween = null
+var _blacksmith_runesmith_last_tier: int = -1
 var _blacksmith_craft_ready_tween: Tween = null
 var _blacksmith_was_craft_ready: bool = false
 
@@ -3490,16 +3491,6 @@ const _RUNESMITH_STATUS_BASIC: String = "Runesmithing: basic tier available."
 const _RUNESMITH_STATUS_ADVANCED: String = "Runesmithing: advanced tier available."
 
 
-func _runesmithing_status_tier_from_text(status_text: String) -> int:
-	match status_text:
-		_RUNESMITH_STATUS_BASIC:
-			return 1
-		_RUNESMITH_STATUS_ADVANCED:
-			return 2
-		_:
-			return 0
-
-
 func _refresh_blacksmith_runesmith_status_label() -> void:
 	_update_blacksmith_runesmith_status_label()
 
@@ -3507,6 +3498,9 @@ func _refresh_blacksmith_runesmith_status_label() -> void:
 func _update_blacksmith_runesmith_status_label() -> void:
 	if _blacksmith_runesmith_status_lbl == null or not is_instance_valid(_blacksmith_runesmith_status_lbl):
 		return
+	var new_tier: int = CampaignManager.get_runesmithing_unlock_tier()
+	var old_tier: int = _blacksmith_runesmith_last_tier
+	_blacksmith_runesmith_last_tier = new_tier
 	var new_text: String = _runesmithing_forge_status_text()
 	var old_text: String = _blacksmith_runesmith_status_lbl.text
 	_blacksmith_runesmith_status_lbl.text = new_text
@@ -3517,9 +3511,7 @@ func _update_blacksmith_runesmith_status_label() -> void:
 	)
 	if not forge_visible or new_text == old_text:
 		return
-	var old_tier: int = _runesmithing_status_tier_from_text(old_text)
-	var new_tier: int = _runesmithing_status_tier_from_text(new_text)
-	var is_first_unlock: bool = (old_tier == 0 and new_tier == 1)
+	var is_first_unlock: bool = (old_tier == CampaignManager.RUNESMITHING_TIER_LOCKED and new_tier == CampaignManager.RUNESMITHING_TIER_BASIC)
 	_play_blacksmith_runesmith_status_emphasis(is_first_unlock)
 
 
