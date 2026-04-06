@@ -4,7 +4,7 @@
 
 - **Explore Camp runtime:** `Scripts/CampExplore.gd`
 - **Camp controllers:** `Scripts/Camp/CampContext.gd`, `CampSpawnController.gd`, `CampRequestController.gd`, `CampDialogueController.gd`, `CampInteractionResolver.gd`, `CampAmbientDirector.gd`, `CampBubbleController.gd`
-- **Shared singleton:** `Scripts/Core/CampaignManager.gd` — camp request fields, `camp_memory`, `seen_camp_lore`, `seen_camp_pair_scenes`, `camp_unit_condition`, `get_camp_conversation_story_flags`, save/load for those keys, `apply_camp_direct_progression_effects`, pair/lore helpers used by camp UI
+- **Shared singleton:** `Scripts/Core/CampaignManager.gd` — camp request fields, `camp_memory`, `seen_camp_lore`, `seen_camp_pair_scenes`, `camp_unit_condition`, `get_camp_conversation_story_flags`, save/load for those keys, `apply_camp_direct_progression_effects`, pair/lore helpers used by camp UI; rune item serialization + persisted `runesmithing_unlock_tier` (separate from `blacksmith_unlocked`)
 
 ## Touched files (typical edits)
 
@@ -13,7 +13,7 @@
 
 ## Current task
 
-Post-merge: camp interaction / request regression covered via `docs/camp_regression_checklist.md` (including stale-offer gating when request status is active / ready_to_turn_in / failed).
+**Rune unlock-gating foundation merged** (`3585e5a`): save/load + API for `runesmithing_unlock_tier` only; no forge/UI unlock wiring yet. Next: wire story/hub callers to `set_runesmithing_unlock_tier` when ready (keep distinct from `blacksmith_unlocked`).
 
 ## Blockers
 
@@ -22,6 +22,7 @@ Post-merge: camp interaction / request regression covered via `docs/camp_regress
 ## Touched this sprint
 
 - `Scripts/Camp/CampInteractionResolver.gd` — blocked stale `offer_giver_name` / `pending_offer` from surfacing during `active` / `ready_to_turn_in` / `failed`; aligned peek, `would_single_walker_priority`, and `open_dialogue` so prompt priority and dialogue open match.
+- `Scripts/Core/CampaignManager.gd` — `runesmithing_unlock_tier` persisted; `get_runesmithing_unlock_tier` / `set_runesmithing_unlock_tier` / `is_runesmithing_unlocked` / `has_advanced_runesmithing` (`3585e5a`; independent of `blacksmith_unlocked`).
 
 ## Merge risks
 

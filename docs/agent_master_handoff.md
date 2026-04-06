@@ -39,6 +39,6 @@
 
 | Agent | Last completed (describe + PR/branch if any) |
 |-------|-----------------------------------------------|
-| Agent 1 | **Pass 1 — weapon rune persistence scaffolding** (save/load `rune_slot_count` + `socketed_runes` via `CampaignManager` item serialization; `duplicate_item` / `make_unique_item`; equipped + camp shop stock restore; co-op item wire deserialize; mock co-op roster snapshot via `_serialize_mock_coop_battle_roster_unit` → `hydrate_mock_coop_battle_roster_snapshot`). Commits: `727d1e4`, `4fbcc04`. |
+| Agent 1 | **Pass 1 — weapon rune persistence** (`727d1e4`, `4fbcc04`): item serialization for `rune_slot_count` / `socketed_runes`, `duplicate_item` / `make_unique_item`, equipped + camp shop + co-op wire + mock co-op roster hydrate. **Rune unlock-gating foundation** (`3585e5a`): persists `runesmithing_unlock_tier` (0 locked, 1 basic, 2 advanced); `get_runesmithing_unlock_tier`, `set_runesmithing_unlock_tier`, `is_runesmithing_unlocked`, `has_advanced_runesmithing`. **Not** the same flag as `blacksmith_unlocked` (unchanged). No UI/gameplay unlock wiring merged yet. |
 | Agent 2 | *— update after merge —* |
 | Agent 3 | *— update after merge —* |
