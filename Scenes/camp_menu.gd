@@ -253,6 +253,7 @@ var _blacksmith_socket_labels: Array[Label] = []
 var _blacksmith_runesmith_status_lbl: Label = null
 var _blacksmith_runesmith_status_tween: Tween = null
 var _blacksmith_runesmith_last_tier: int = -1
+var _blacksmith_runesmith_base_modulate: Color = Color.WHITE
 var _blacksmith_craft_ready_tween: Tween = null
 var _blacksmith_was_craft_ready: bool = false
 
@@ -3495,12 +3496,26 @@ func _refresh_blacksmith_runesmith_status_label() -> void:
 	_update_blacksmith_runesmith_status_label()
 
 
+func _blacksmith_runesmith_status_base_color(tier: int) -> Color:
+	if tier >= CampaignManager.RUNESMITHING_TIER_ADVANCED:
+		# Cool-bright: reads as "upgraded" without shouting.
+		return Color(0.86, 0.93, 1.0, 1.0)
+	if tier >= CampaignManager.RUNESMITHING_TIER_BASIC:
+		# Warm-bright: reads as "now available".
+		return Color(1.0, 0.93, 0.82, 1.0)
+	# Muted: locked.
+	return Color(0.72, 0.72, 0.72, 1.0)
+
+
 func _update_blacksmith_runesmith_status_label() -> void:
 	if _blacksmith_runesmith_status_lbl == null or not is_instance_valid(_blacksmith_runesmith_status_lbl):
 		return
 	var new_tier: int = CampaignManager.get_runesmithing_unlock_tier()
 	var old_tier: int = _blacksmith_runesmith_last_tier
 	_blacksmith_runesmith_last_tier = new_tier
+	_blacksmith_runesmith_base_modulate = _blacksmith_runesmith_status_base_color(new_tier)
+	if _blacksmith_runesmith_status_tween == null or not _blacksmith_runesmith_status_tween.is_valid():
+		_blacksmith_runesmith_status_lbl.modulate = _blacksmith_runesmith_base_modulate
 	var new_text: String = _runesmithing_forge_status_text()
 	var old_text: String = _blacksmith_runesmith_status_lbl.text
 	_blacksmith_runesmith_status_lbl.text = new_text
@@ -3521,11 +3536,11 @@ func _play_blacksmith_runesmith_status_emphasis(is_first_unlock: bool = false) -
 	if _blacksmith_runesmith_status_tween != null and _blacksmith_runesmith_status_tween.is_valid():
 		_blacksmith_runesmith_status_tween.kill()
 	_blacksmith_runesmith_status_tween = null
-	_blacksmith_runesmith_status_lbl.modulate = Color.WHITE
+	_blacksmith_runesmith_status_lbl.modulate = _blacksmith_runesmith_base_modulate
 	var tw: Tween = create_tween()
 	_blacksmith_runesmith_status_tween = tw
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	var hi: Color = Color(1.18, 1.10, 0.94, 1.0) if is_first_unlock else Color(1.11, 1.06, 0.95, 1.0)
+	var hi: Color = (Color(1.18, 1.10, 0.94, 1.0) if is_first_unlock else Color(1.11, 1.06, 0.95, 1.0)) * _blacksmith_runesmith_base_modulate
 	var in_t: float = 0.12 if is_first_unlock else 0.10
 	var out_t: float = 0.42 if is_first_unlock else 0.30
 	tw.tween_property(
@@ -3537,7 +3552,7 @@ func _play_blacksmith_runesmith_status_emphasis(is_first_unlock: bool = false) -
 	tw.tween_property(
 		_blacksmith_runesmith_status_lbl,
 		"modulate",
-		Color.WHITE,
+		_blacksmith_runesmith_base_modulate,
 		out_t
 	)
 	var tw_done: Tween = tw
