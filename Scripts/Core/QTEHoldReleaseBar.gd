@@ -154,4 +154,4 @@ func _finish_qte(res: int) -> void:
 		help_lbl.add_theme_color_override("font_color", Color(1.0, 0.30, 0.30))
 		fill.color = Color(0.90, 0.20, 0.20)
 		if bf.get("miss_sound") and bf.miss_sound.stream != null:
-			bf.miss_sound.play()\n
+			bf.miss_sound.play()

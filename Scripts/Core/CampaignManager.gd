@@ -39,6 +39,9 @@ extends Node
 const RUNESMITHING_TIER_LOCKED: int = 0
 const RUNESMITHING_TIER_BASIC: int = 1
 const RUNESMITHING_TIER_ADVANCED: int = 2
+## Must stay aligned with [method _is_camp_lore_flag_satisfied] thresholds for greyspire / market beats.
+const _RUNESMITHING_PROGRESS_BASIC: int = 6
+const _RUNESMITHING_PROGRESS_ADVANCED: int = 11
 
 const SETTINGS_FILE_PATH: String = "user://settings.cfg"
 const CAMP_PAIR_SCENE_DB = preload("res://Scripts/Narrative/CampPairSceneDB.gd")
@@ -248,7 +251,7 @@ var camp_haggle_extra_off: float = 0.0
 var camp_second_discount_item: Resource = null
 var camp_has_haggled: bool = false
 var blacksmith_unlocked: bool = false
-## Weapon rune socket services (Haldor / runesmith); not forge UI. Set from hub/story hooks — see [method get_runesmithing_unlock_tier].
+## Weapon rune socket services (Haldor / runesmith); not forge UI. Raised monotonically from [member camp_request_progress_level] (see [method _sync_runesmithing_unlock_tier_from_camp_progress]).
 var runesmithing_unlock_tier: int = RUNESMITHING_TIER_LOCKED
 var owned_expedition_maps: Array[String] = []
 ## Expedition map ids cleared at least once via expedition victory (load_next_level expedition branch). Persisted; see save_game/load_game/reset.
@@ -1391,6 +1394,7 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		
 	blacksmith_unlocked = save_data.get("blacksmith_unlocked", false)
 	runesmithing_unlock_tier = clampi(int(save_data.get("runesmithing_unlock_tier", RUNESMITHING_TIER_LOCKED)), RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED)
+	_sync_runesmithing_unlock_tier_from_camp_progress()
 	owned_expedition_maps = _sanitize_owned_expedition_maps(save_data.get("owned_expedition_maps", []))
 	completed_expedition_map_ids = _sanitize_owned_expedition_maps(save_data.get("completed_expedition_map_ids", []))
 	expedition_outcome_notes = _sanitize_expedition_outcome_notes(save_data.get("expedition_outcome_notes", {}))
@@ -1567,6 +1571,22 @@ func get_runesmithing_unlock_tier() -> int:
 
 func set_runesmithing_unlock_tier(tier: int) -> void:
 	runesmithing_unlock_tier = clampi(tier, RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED)
+
+
+## Raises [member runesmithing_unlock_tier] only if [param tier] is higher (idempotent; never downgrades).
+func raise_runesmithing_unlock_tier_to_at_least(tier: int) -> void:
+	var want: int = clampi(tier, RUNESMITHING_TIER_LOCKED, RUNESMITHING_TIER_ADVANCED)
+	if want > get_runesmithing_unlock_tier():
+		runesmithing_unlock_tier = want
+
+
+## Basic at [code]camp_request_progress_level >= _RUNESMITHING_PROGRESS_BASIC[/code] (same beat as [code]greyspire_hub_established[/code]). Advanced at [code]>= _RUNESMITHING_PROGRESS_ADVANCED[/code] (same threshold as [code]market_of_masks_cleared[/code] lore gate).
+func _sync_runesmithing_unlock_tier_from_camp_progress() -> void:
+	var lvl: int = camp_request_progress_level
+	if lvl >= _RUNESMITHING_PROGRESS_ADVANCED:
+		raise_runesmithing_unlock_tier_to_at_least(RUNESMITHING_TIER_ADVANCED)
+	elif lvl >= _RUNESMITHING_PROGRESS_BASIC:
+		raise_runesmithing_unlock_tier_to_at_least(RUNESMITHING_TIER_BASIC)
 
 
 func is_runesmithing_unlocked() -> bool:
@@ -2137,6 +2157,7 @@ func load_next_level() -> void:
 		max_unlocked_index += 1
 		# Camp request pacing: advance only when a story level is actually cleared.
 		camp_request_progress_level += 1
+		_sync_runesmithing_unlock_tier_from_camp_progress()
 
 	current_level_index = max_unlocked_index
 	SceneTransition.change_scene_to_file(next_scene)

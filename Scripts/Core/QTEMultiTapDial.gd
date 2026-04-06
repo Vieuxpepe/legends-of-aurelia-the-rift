@@ -183,4 +183,4 @@ func _finish_qte() -> void:
 		help_lbl.text = "FAILED"
 		help_lbl.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 		if bf.get("miss_sound") and bf.miss_sound.stream != null:
-			bf.miss_sound.play()\n
+			bf.miss_sound.play()
