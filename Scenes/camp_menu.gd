@@ -254,6 +254,7 @@ var _blacksmith_runesmith_status_lbl: Label = null
 var _blacksmith_runesmith_status_tween: Tween = null
 var _blacksmith_runesmith_last_tier: int = -1
 var _blacksmith_runesmith_base_modulate: Color = Color.WHITE
+var _blacksmith_basic_runesmith_btn: Button = null
 var _blacksmith_craft_ready_tween: Tween = null
 var _blacksmith_was_craft_ready: bool = false
 
@@ -3487,9 +3488,9 @@ func _runesmithing_forge_status_text() -> String:
 	return _RUNESMITH_STATUS_LOCKED
 
 
-const _RUNESMITH_STATUS_LOCKED: String = "Runesmithing: locked (unlocks via campaign progression)."
-const _RUNESMITH_STATUS_BASIC: String = "Runesmithing: basic tier available."
-const _RUNESMITH_STATUS_ADVANCED: String = "Runesmithing: advanced tier available."
+const _RUNESMITH_STATUS_LOCKED: String = "Runesmithing — Locked"
+const _RUNESMITH_STATUS_BASIC: String = "Runesmithing — Basic available"
+const _RUNESMITH_STATUS_ADVANCED: String = "Runesmithing — Advanced available"
 
 
 func _refresh_blacksmith_runesmith_status_label() -> void:
@@ -3701,6 +3702,11 @@ func _camp_layout_blacksmith_panel() -> void:
 		craft_button.z_index = 12
 		_camp_style_button(craft_button, true, 20, craft_h)
 		_camp_set_rect(craft_button, Vector2(mid_x + (mid_w - 172.0) * 0.5, craft_y), Vector2(172.0, craft_h))
+	if _blacksmith_basic_runesmith_btn != null:
+		_blacksmith_basic_runesmith_btn.z_index = 12
+		_camp_style_button(_blacksmith_basic_runesmith_btn, false, 18, craft_h)
+		_camp_set_rect(_blacksmith_basic_runesmith_btn, Vector2(mid_x + (mid_w - 172.0) * 0.5 + 182.0, craft_y), Vector2(118.0, craft_h))
+		_sync_blacksmith_basic_runesmith_button()
 	var craft_bottom: float = craft_y + craft_h
 	var socket_lbl_gap_after_craft: float = 10.0
 	var socket_lbl_h: float = 24.0
@@ -3835,6 +3841,7 @@ func _camp_layout_blacksmith_panel() -> void:
 func _blacksmith_finish_recipe_check() -> void:
 	_sync_blacksmith_anvil_hint()
 	_blacksmith_update_craft_ready_affordance()
+	_sync_blacksmith_basic_runesmith_button()
 
 
 func _ensure_blacksmith_workbench_chrome() -> void:
@@ -3864,6 +3871,14 @@ func _ensure_blacksmith_workbench_chrome() -> void:
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		blacksmith_panel.add_child(sl)
 		_blacksmith_socket_labels.append(sl)
+	if _blacksmith_basic_runesmith_btn == null:
+		_blacksmith_basic_runesmith_btn = Button.new()
+		_blacksmith_basic_runesmith_btn.name = "BasicRunesmithButton"
+		_blacksmith_basic_runesmith_btn.text = "SOCKET"
+		_blacksmith_basic_runesmith_btn.visible = false
+		_blacksmith_basic_runesmith_btn.disabled = true
+		blacksmith_panel.add_child(_blacksmith_basic_runesmith_btn)
+		_blacksmith_basic_runesmith_btn.pressed.connect(_on_blacksmith_basic_runesmith_pressed)
 
 
 func _sync_blacksmith_anvil_hint() -> void:
@@ -3906,6 +3921,77 @@ func _blacksmith_play_craft_ready_tick_sound() -> void:
 	if select_sound != null and select_sound.stream != null:
 		select_sound.pitch_scale = 1.18
 		select_sound.play()
+
+
+func _blacksmith_get_first_anvil_weapon() -> WeaponData:
+	for it in anvil_items:
+		if it is WeaponData:
+			return it as WeaponData
+	return null
+
+
+func _sync_blacksmith_basic_runesmith_button() -> void:
+	if _blacksmith_basic_runesmith_btn == null or not is_instance_valid(_blacksmith_basic_runesmith_btn):
+		return
+	if blacksmith_panel == null or not is_instance_valid(blacksmith_panel) or not blacksmith_panel.visible:
+		_blacksmith_basic_runesmith_btn.visible = false
+		return
+
+	var unlocked: bool = CampaignManager.is_runesmithing_unlocked()
+	var wpn: WeaponData = _blacksmith_get_first_anvil_weapon()
+	var ok_weapon: bool = (wpn != null and is_instance_valid(wpn) and int(wpn.rune_slot_count) > 0)
+	var can_use: bool = unlocked and ok_weapon and bool(wpn.get_meta("is_locked", false)) == false
+
+	_blacksmith_basic_runesmith_btn.visible = unlocked
+	_blacksmith_basic_runesmith_btn.disabled = not can_use
+	_blacksmith_basic_runesmith_btn.text = "SOCKET"
+	if not unlocked:
+		_blacksmith_basic_runesmith_btn.tooltip_text = "Runesmithing is locked."
+	elif not ok_weapon:
+		_blacksmith_basic_runesmith_btn.tooltip_text = "Place a rune-capable weapon on the anvil to socket a basic rune."
+	elif bool(wpn.get_meta("is_locked", false)) == true:
+		_blacksmith_basic_runesmith_btn.tooltip_text = "Cannot modify a locked item."
+	else:
+		_blacksmith_basic_runesmith_btn.tooltip_text = "Socket an Ember rune into the first open slot."
+
+
+func _on_blacksmith_basic_runesmith_pressed() -> void:
+	if not CampaignManager.is_runesmithing_unlocked():
+		return
+	var wpn: WeaponData = _blacksmith_get_first_anvil_weapon()
+	if wpn == null or not is_instance_valid(wpn):
+		return
+	if bool(wpn.get_meta("is_locked", false)) == true:
+		return
+	var slot_count: int = clampi(int(wpn.rune_slot_count), 0, 8)
+	if slot_count <= 0:
+		return
+
+	var sockets_raw: Variant = wpn.socketed_runes
+	var sockets: Array[Dictionary] = sockets_raw as Array[Dictionary] if sockets_raw is Array else ([] as Array[Dictionary])
+	var filled: int = 0
+	for row in sockets:
+		var rid: String = str(row.get("id", "")).strip_edges()
+		if rid != "":
+			filled += 1
+	if filled >= slot_count:
+		recipe_result_label.text = "[center][color=gray]No empty rune slots on this weapon.[/color][/center]"
+		_sync_blacksmith_basic_runesmith_button()
+		return
+
+	# Basic tier: minimal vertical slice. Socket one known id (ember_rune) into the next open slot.
+	sockets.append({"id": "ember_rune", "rank": 0, "charges": 0})
+	wpn.socketed_runes = sockets
+
+	var rune_camp: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(wpn)
+	recipe_result_label.text = "[center][color=#ffe9d6]Runesmithing applied.[/color][/center]\n\n"
+	if rune_camp != "":
+		recipe_result_label.text += "[center]" + rune_camp.replace("\n", "\n") + "[/center]"
+	if select_sound and select_sound.stream:
+		select_sound.pitch_scale = 1.06
+		select_sound.play()
+
+	_sync_blacksmith_basic_runesmith_button()
 
 
 func _blacksmith_update_craft_ready_affordance() -> void:
@@ -6738,6 +6824,15 @@ func _camp_inv_kv(label: String, value_bb: String) -> String:
 	)
 
 
+func _camp_inv_runesmithing_status_bbcode() -> String:
+	var t: int = CampaignManager.get_runesmithing_unlock_tier()
+	if t >= CampaignManager.RUNESMITHING_TIER_ADVANCED:
+		return "[font_size=21][color=#8a7868]Runesmithing[/color][color=#4f4638] — [/color][color=#dbeeff]Advanced available[/color][/font_size]"
+	if t >= CampaignManager.RUNESMITHING_TIER_BASIC:
+		return "[font_size=21][color=#8a7868]Runesmithing[/color][color=#4f4638] — [/color][color=#ffe9d6]Basic available[/color][/font_size]"
+	return "[font_size=21][color=#8a7868]Runesmithing[/color][color=#4f4638] — [/color][color=#b0a090]Locked[/color][/font_size]"
+
+
 ## Tightens BBCode font_size tags for narrow forge OUTCOME readouts (lifts tiny rules, caps huge titles).
 func _camp_bbcode_clamp_font_sizes(text: String, min_size: int = 17, max_size: int = 22) -> String:
 	var re := RegEx.new()
@@ -6833,6 +6928,8 @@ func _get_item_detailed_info(
 		var rune_camp: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(item)
 		if rune_camp != "":
 			lines.append(_camp_inv_section_heading("Runes"))
+			if not forge_readout:
+				lines.append(_camp_inv_runesmithing_status_bbcode())
 			for rune_line in rune_camp.split("\n"):
 				var rl: String = rune_line.strip_edges()
 				if rl != "":

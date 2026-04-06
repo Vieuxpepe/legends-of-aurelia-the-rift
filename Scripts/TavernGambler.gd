@@ -737,7 +737,7 @@ func _ensure_fate_deck_ui() -> void:
 	active_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	active_hint.add_theme_font_size_override("font_size", 12)
 	active_hint.add_theme_color_override("font_color", CARD_TEXT_MUTED)
-	active_hint.text = "Drag cards into slots. Right-click an active card to remove it."
+	active_hint.text = "Drag cards into slots. Left-click an active card to preview it. Right-click to remove it."
 	active_bar_root.add_child(active_hint)
 
 	_fate_active_strip = HBoxContainer.new()
@@ -1071,6 +1071,63 @@ func _clear_active_slot(slot_index: int) -> String:
 	var card: Dictionary = FateCardCatalog.get_card(wanted_id)
 	var card_name: String = str(card.get("name", wanted_id)).strip_edges()
 	return "Removed from active deck: %s." % card_name
+
+
+func _set_fate_active_slot_hover(slot_root: Control, hovered: bool) -> void:
+	if slot_root == null or not is_instance_valid(slot_root):
+		return
+	if str(slot_root.get_meta("_slot_card_id", "")).strip_edges() == "":
+		return
+	var old_tween: Variant = slot_root.get_meta("_hover_tween", null)
+	if old_tween is Tween and is_instance_valid(old_tween):
+		(old_tween as Tween).kill()
+	slot_root.pivot_offset = slot_root.size * 0.5
+	slot_root.z_index = 18 if hovered else 0
+	var tw: Tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.set_parallel(true)
+	tw.tween_property(slot_root, "scale", Vector2(1.035, 1.035) if hovered else Vector2.ONE, 0.10 if hovered else 0.08)
+	tw.tween_property(slot_root, "rotation_degrees", 0.0, 0.10 if hovered else 0.08)
+	slot_root.set_meta("_hover_tween", tw)
+
+
+func _on_fate_active_slot_mouse_entered(slot_root: Control) -> void:
+	if _fate_dragging or _fate_slot_placement_animating:
+		return
+	_set_fate_active_slot_hover(slot_root, true)
+
+
+func _on_fate_active_slot_mouse_exited(slot_root: Control) -> void:
+	if _fate_slot_placement_animating:
+		return
+	_set_fate_active_slot_hover(slot_root, false)
+
+
+func _play_fate_active_slot_remove_feedback(slot_root: Control) -> void:
+	if slot_root == null or not is_instance_valid(slot_root):
+		return
+	var old_hover_tween: Variant = slot_root.get_meta("_hover_tween", null)
+	if old_hover_tween is Tween and is_instance_valid(old_hover_tween):
+		(old_hover_tween as Tween).kill()
+	slot_root.pivot_offset = slot_root.size * 0.5
+	slot_root.z_index = 24
+	var base_scale: Vector2 = slot_root.scale
+	var base_rotation: float = slot_root.rotation_degrees
+	var base_modulate: Color = slot_root.modulate
+	var tw: Tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.set_parallel(true)
+	tw.tween_property(slot_root, "scale", base_scale * 1.045, 0.05).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(slot_root, "modulate", Color(1.0, 0.86, 0.86, 1.0), 0.05)
+	tw.chain().tween_property(slot_root, "rotation_degrees", -2.2, 0.04)
+	tw.chain().tween_property(slot_root, "rotation_degrees", 2.8, 0.06)
+	tw.chain().tween_property(slot_root, "rotation_degrees", 0.0, 0.05)
+	tw.parallel().tween_property(slot_root, "scale", base_scale * 0.92, 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(slot_root, "modulate:a", 0.0, 0.11)
+	await tw.finished
+	if is_instance_valid(slot_root):
+		slot_root.scale = base_scale
+		slot_root.rotation_degrees = base_rotation
+		slot_root.modulate = base_modulate
+		slot_root.z_index = 0
 
 
 func _slot_from_global_position(global_pos: Vector2) -> int:
@@ -1759,8 +1816,10 @@ func _build_fate_card_widget(
 		shell.gui_input.connect(_on_fate_active_slot_gui_input.bind(shell))
 		if strip_has_card:
 			shell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			shell.mouse_entered.connect(_on_fate_active_slot_mouse_entered.bind(shell))
+			shell.mouse_exited.connect(_on_fate_active_slot_mouse_exited.bind(shell))
 		if panel.tooltip_text.strip_edges() != "":
-			shell.tooltip_text = "%s\nRight-click to remove from active deck." % panel.tooltip_text if strip_has_card else panel.tooltip_text
+			shell.tooltip_text = "%s\nLeft-click to preview. Right-click to remove from active deck." % panel.tooltip_text if strip_has_card else panel.tooltip_text
 		panel.position = Vector2.ZERO
 		panel.pivot_offset = Vector2.ZERO
 		panel.custom_minimum_size = Vector2(FATE_HAND_CARD_WIDTH, FATE_HAND_CARD_HEIGHT)
@@ -2105,13 +2164,24 @@ func _on_fate_active_slot_gui_input(event: InputEvent, slot_root: Control) -> vo
 	if event is not InputEventMouseButton:
 		return
 	var mb: InputEventMouseButton = event as InputEventMouseButton
-	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_RIGHT or mb.is_echo():
+	if mb == null or not mb.pressed or mb.is_echo():
 		return
 	var slot_card_id: String = str(slot_root.get_meta("_slot_card_id", "")).strip_edges()
 	if slot_card_id == "":
 		return
+	if mb.button_index == MOUSE_BUTTON_LEFT:
+		var card: Dictionary = FateCardCatalog.get_card(slot_card_id)
+		if not card.is_empty():
+			slot_root.accept_event()
+			_show_fate_preview(card, true, true)
+		return
+	if mb.button_index != MOUSE_BUTTON_RIGHT:
+		return
 	var slot_index: int = int(slot_root.get_meta("_slot_index", -1))
+	_fate_slot_placement_animating = true
+	await _play_fate_active_slot_remove_feedback(slot_root)
 	var result_line: String = _clear_active_slot(slot_index)
+	_fate_slot_placement_animating = false
 	if result_line != "":
 		slot_root.accept_event()
 		_refresh_fate_deck_ui(result_line)
