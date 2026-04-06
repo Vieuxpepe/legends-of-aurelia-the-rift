@@ -21,7 +21,8 @@ const APPLIED_VERSION: int = 1
 const RANK_SCALE_CAP: int = 10
 
 ## When false, forecast and strike resolution skip rune flat modifiers (this script still resolves for UI/tools).
-const WEAPON_RUNE_APPLY_IN_COMBAT: bool = true
+## Default off until runesmithing is unlocked in campaign progression; set true to roll combat runes on.
+const WEAPON_RUNE_APPLY_IN_COMBAT: bool = false
 
 const _FAMILY_EMBER: String = "ember"
 const _FAMILY_WARD: String = "ward"
