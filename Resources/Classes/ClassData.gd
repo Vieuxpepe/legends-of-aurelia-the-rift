@@ -61,3 +61,6 @@ enum MoveType { INFANTRY, ARMORED, FLYING, CAVALRY }
 @export var agi_growth_bonus: int = 0
 @export var mag_growth_bonus: int = 0
 @export var res_growth_bonus: int = 0
+
+@export_category("UI")
+@export_multiline var description: String = ""

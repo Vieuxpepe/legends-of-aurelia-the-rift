@@ -784,7 +784,7 @@ func format_opponents_refresh_cooldown() -> String:
 	if rem <= 0.01:
 		return "Ready"
 	var total: int = int(ceil(rem))
-	var m: int = total / 60
+	var m: int = int(total / 60.0)
 	var s: int = total % 60
 	if m <= 0:
 		return "%ds" % s

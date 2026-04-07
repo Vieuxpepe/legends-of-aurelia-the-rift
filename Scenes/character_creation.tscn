@@ -68,14 +68,6 @@ available_classes = Array[ExtResource("6_3kvu2")]([ExtResource("7_mrstd"), ExtRe
 available_starting_weapons = Array[ExtResource("2_7tq0x")]([ExtResource("3_xl8pn"), ExtResource("4_5dsw6"), ExtResource("5_lkas7"), ExtResource("6_6s5oo"), ExtResource("7_4aeq3"), ExtResource("23_bu5ra"), ExtResource("24_i78rj")])
 available_sprites = Array[Texture2D]([ExtResource("2_7mrxg"), ExtResource("3_j7ydm"), ExtResource("10_j3eh0"), ExtResource("11_d8n08"), ExtResource("12_gknpx"), ExtResource("13_qmjt2"), ExtResource("14_yrcbi"), ExtResource("15_2wq48"), ExtResource("16_li0qw"), ExtResource("21_ly0t1"), ExtResource("22_7ut5u"), ExtResource("23_4wb02"), ExtResource("24_3wyab")])
 available_battle_sprites = Array[Texture2D]([ExtResource("3_30vww"), ExtResource("5_6byny"), ExtResource("19_m2mew"), ExtResource("20_ly0t1"), ExtResource("21_7ut5u"), ExtResource("22_4wb02"), ExtResource("23_3wyab"), ExtResource("24_32liq"), ExtResource("25_4aoqo"), ExtResource("34_32liq"), ExtResource("35_4aoqo"), ExtResource("36_te75h"), ExtResource("37_x15tg")])
-starting_points = 9999
-cap_hp = 18
-cap_str = 999
-cap_mag = 10
-cap_def = 8
-cap_res = 8
-cap_spd = 10
-cap_agi = 10
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=1321493588]
 layout_mode = 1
@@ -84,7 +76,27 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.1728327, 0.17283267, 0.17283267, 1)
+color = Color(0.04, 0.035, 0.03, 1)
+
+[node name="BackdropShade" type="ColorRect" parent="." unique_id=900040001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.03, 0.03, 0.04, 0.72)
+
+[node name="BackdropWarmth" type="ColorRect" parent="." unique_id=900040002]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.18, 0.12, 0.04, 0.12)
 
 [node name="Panel" type="Panel" parent="." unique_id=1426279817]
 layout_mode = 1
@@ -93,14 +105,354 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -500.0
+offset_left = -650.0
 offset_top = -523.0
-offset_right = 500.0
+offset_right = 650.0
 offset_bottom = 477.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="MainMargin" type="MarginContainer" parent="Panel" unique_id=900050001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 28
+
+[node name="MainVBox" type="VBoxContainer" parent="Panel/MainMargin" unique_id=900050002]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="TopPad" type="Control" parent="Panel/MainMargin/MainVBox" unique_id=900060130]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+
+[node name="TopRow" type="HBoxContainer" parent="Panel/MainMargin/MainVBox" unique_id=900050003]
+layout_mode = 2
+theme_override_constants/separation = 34
+
+[node name="LeftCol" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/TopRow" unique_id=900050004]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Section_Appearance" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060080]
+layout_mode = 2
+text = "APPEARANCE"
+
+[node name="LeftColTopSpacer" type="Control" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060060]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+
+[node name="PortraitLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060140]
+layout_mode = 2
+text = "PORTRAIT"
+
+[node name="PortraitFrame" type="PanelContainer" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060150]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 220)
+size_flags_horizontal = 3
+size_flags_vertical = 0
+clip_contents = true
+
+[node name="SpriteDisplay" type="TextureRect" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol/PortraitFrame" unique_id=1518908740]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SpriteNavRow" type="HBoxContainer" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060010]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PrevSpriteButton" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol/SpriteNavRow" unique_id=1922269354]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 36
+text = "◀"
+alignment = 1
+
+[node name="NextSpriteButton" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol/SpriteNavRow" unique_id=132720416]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 36
+text = "▶"
+alignment = 1
+
+[node name="BattleSpriteLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060141]
+layout_mode = 2
+text = "BATTLE SPRITE"
+
+[node name="BattleSpriteFrame" type="PanelContainer" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol" unique_id=900060151]
+layout_mode = 2
+custom_minimum_size = Vector2(180, 180)
+size_flags_vertical = 0
+clip_contents = true
+
+[node name="BattleSpriteDisplay" type="TextureRect" parent="Panel/MainMargin/MainVBox/TopRow/LeftCol/BattleSpriteFrame" unique_id=1209881830]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ColumnRule_LM" type="ColorRect" parent="Panel/MainMargin/MainVBox/TopRow" unique_id=900060070]
+layout_mode = 2
+custom_minimum_size = Vector2(2, 0)
+size_flags_vertical = 3
+mouse_filter = 2
+color = Color(0.82, 0.67, 0.29, 0.10)
+
+[node name="MidCol" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/TopRow" unique_id=900050005]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Section_Training" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060081]
+layout_mode = 2
+text = "TRAINING"
+
+[node name="Header_Name" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060001]
+layout_mode = 2
+text = "Choose your Character's Name :"
+
+[node name="NameInput" type="LineEdit" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=788755401]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+max_length = 14
+
+[node name="Header_Class" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060002]
+layout_mode = 2
+text = "Choose your Class :"
+
+[node name="ClassDropdown" type="OptionButton" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=1926005163]
+layout_mode = 2
+item_count = 1
+popup/item_0/id = 0
+
+[node name="ClassDescLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060120]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 46)
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.78, 0.74, 0.64, 1)
+
+[node name="Header_Ability" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060003]
+layout_mode = 2
+text = "Choose your Ability :"
+
+[node name="AbilityDropdown" type="OptionButton" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=1765713247]
+layout_mode = 2
+
+[node name="AbilityDescLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=597489255]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 62)
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.40760005, 0.74125767, 0.9999996, 1)
+
+[node name="PointsLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=325790462]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.3254902, 1)
+theme_override_font_sizes/font_size = 26
+text = "POINTS LEFT"
+
+[node name="SoftHintsLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060175]
+layout_mode = 2
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="GridContainer" type="GridContainer" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=1361222130]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 15
+columns = 5
+
+[node name="ColumnRule_MR" type="ColorRect" parent="Panel/MainMargin/MainVBox/TopRow" unique_id=900060071]
+layout_mode = 2
+custom_minimum_size = Vector2(2, 0)
+size_flags_vertical = 3
+mouse_filter = 2
+color = Color(0.82, 0.67, 0.29, 0.10)
+
+[node name="RightCol" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/TopRow" unique_id=900050006]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Section_Loadout" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/RightCol" unique_id=900060082]
+layout_mode = 2
+text = "LOADOUT"
+
+[node name="WeaponCard" type="Panel" parent="Panel/MainMargin/MainVBox/TopRow/RightCol" unique_id=900020002]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 340)
+size_flags_horizontal = 3
+
+[node name="DifficultyCard" type="Panel" parent="Panel/MainMargin/MainVBox/TopRow/RightCol" unique_id=900020003]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 170)
+size_flags_horizontal = 3
+
+[node name="RightInfoCard" type="Panel" parent="Panel/MainMargin/MainVBox/TopRow/RightCol" unique_id=900060110]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 130)
+size_flags_horizontal = 3
+
+[node name="Margin" type="MarginContainer" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard" unique_id=900060111]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard/Margin" unique_id=900060112]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard/Margin/VBox" unique_id=900060113]
+layout_mode = 2
+text = "TACTICAL BRIEF"
+
+[node name="Body" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard/Margin/VBox" unique_id=900060114]
+layout_mode = 2
+autowrap_mode = 3
+text = ""
+
+[node name="BottomRow" type="HBoxContainer" parent="Panel/MainMargin/MainVBox" unique_id=900050007]
+layout_mode = 2
+theme_override_constants/separation = 34
+
+[node name="BottomLeft" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow" unique_id=900050008]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="BottomLeftTopRow" type="HBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft" unique_id=900060020]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="SummaryCard" type="Panel" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft" unique_id=900020001]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 240)
+size_flags_horizontal = 3
+
+[node name="SummaryMargin" type="MarginContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard" unique_id=900060030]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="SummaryVBox" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin" unique_id=900060031]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DossierTitle" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox" unique_id=900060090]
+layout_mode = 2
+text = "DOSSIER"
+
+[node name="DossierRule" type="ColorRect" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox" unique_id=900060091]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 2)
+mouse_filter = 2
+color = Color(0.82, 0.67, 0.29, 0.22)
+
+[node name="SummaryScroll" type="ScrollContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox" unique_id=900060050]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+
+[node name="PresetRow" type="HBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox" unique_id=900060032]
+visible = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PresetRow2" type="HBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox" unique_id=900060033]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BottomRight" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow" unique_id=900050009]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="BottomRightSpacer" type="Control" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=900060040]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HeroBriefCard" type="PanelContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=900060170]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 96)
+size_flags_horizontal = 3
+
+[node name="Margin" type="MarginContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard" unique_id=900060171]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin" unique_id=900060172]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox" unique_id=900060173]
+layout_mode = 2
+text = "HERO BRIEF"
+
+[node name="Body" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox" unique_id=900060174]
+layout_mode = 2
+autowrap_mode = 3
+text = ""
+
+[node name="InputHintsLabel" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=900060041]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+text = "Tab · next field    Enter · confirm    Esc · return"
+
 [node name="HBoxContainer" type="HBoxContainer" parent="Panel" unique_id=1709759225]
+visible = false
 layout_mode = 0
 offset_left = 270.0
 offset_top = 206.0
@@ -108,358 +460,63 @@ offset_right = 310.0
 offset_bottom = 246.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=182932209]
+visible = false
 layout_mode = 0
 offset_left = 613.0
 offset_top = 204.0
 offset_right = 653.0
 offset_bottom = 244.0
 
-[node name="NameInput" type="LineEdit" parent="Panel" unique_id=788755401]
-layout_mode = 0
-offset_left = 424.0
-offset_top = 19.0
-offset_right = 746.0
-offset_bottom = 94.0
-theme_override_font_sizes/font_size = 48
-max_length = 14
-
-[node name="ClassDropdown" type="OptionButton" parent="Panel" unique_id=1926005163]
-layout_mode = 0
-offset_left = 230.0
-offset_top = 114.0
-offset_right = 430.0
-offset_bottom = 164.0
-item_count = 1
-popup/item_0/id = 0
-
-[node name="AbilityDropdown" type="OptionButton" parent="Panel" unique_id=1765713247]
-layout_mode = 0
-offset_left = 227.0
-offset_top = 175.0
-offset_right = 427.0
-offset_bottom = 225.0
-
-[node name="PointsLabel" type="Label" parent="Panel" unique_id=325790462]
-layout_mode = 0
-offset_left = 449.0
-offset_top = 253.0
-offset_right = 607.0
-offset_bottom = 289.0
-theme_override_colors/font_color = Color(1, 1, 0.3254902, 1)
-theme_override_font_sizes/font_size = 26
-text = "POINTS LEFT"
-
-[node name="GridContainer" type="GridContainer" parent="Panel" unique_id=1361222130]
-layout_mode = 0
-offset_left = 340.0
-offset_top = 292.0
-offset_right = 671.0
-offset_bottom = 753.0
-theme_override_constants/h_separation = 20
-theme_override_constants/v_separation = 15
-columns = 4
-
-[node name="Label" type="Label" parent="Panel/GridContainer" unique_id=534159361]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "STRENGTH"
-
-[node name="StrValue" type="Label" parent="Panel/GridContainer" unique_id=418918931]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="StrMinus" type="Button" parent="Panel/GridContainer" unique_id=1120535943]
-custom_minimum_size = Vector2(30, 30)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="StrPlus" type="Button" parent="Panel/GridContainer" unique_id=210849168]
-custom_minimum_size = Vector2(30, 30)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
-[node name="Label2" type="Label" parent="Panel/GridContainer" unique_id=1042245871]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "MAGIC"
-
-[node name="MagValue" type="Label" parent="Panel/GridContainer" unique_id=416491050]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="MagMinus" type="Button" parent="Panel/GridContainer" unique_id=1866621512]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="MagPlus" type="Button" parent="Panel/GridContainer" unique_id=1747317049]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
-[node name="Label3" type="Label" parent="Panel/GridContainer" unique_id=1903232087]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "HEALTH"
-
-[node name="HpValue" type="Label" parent="Panel/GridContainer" unique_id=1872610538]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="HpMinus" type="Button" parent="Panel/GridContainer" unique_id=1454522099]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="HpPlus" type="Button" parent="Panel/GridContainer" unique_id=2077291264]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
-[node name="Label4" type="Label" parent="Panel/GridContainer" unique_id=982612776]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 32
-text = "DEFENSE"
-
-[node name="DefValue" type="Label" parent="Panel/GridContainer" unique_id=550294856]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="DefMinus" type="Button" parent="Panel/GridContainer" unique_id=1668856961]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="DefPlus" type="Button" parent="Panel/GridContainer" unique_id=1817294888]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
-[node name="Label5" type="Label" parent="Panel/GridContainer" unique_id=641598243]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "RESISTANCE"
-
-[node name="ResValue" type="Label" parent="Panel/GridContainer" unique_id=305866273]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="ResMinus" type="Button" parent="Panel/GridContainer" unique_id=1561915173]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="ResPlus" type="Button" parent="Panel/GridContainer" unique_id=1239493779]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
-[node name="Label6" type="Label" parent="Panel/GridContainer" unique_id=1467470170]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "SPEED"
-
-[node name="SpdValue" type="Label" parent="Panel/GridContainer" unique_id=699764939]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="SpdMinus" type="Button" parent="Panel/GridContainer" unique_id=710314001]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="SpdPlus" type="Button" parent="Panel/GridContainer" unique_id=1270109733]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
-[node name="Label7" type="Label" parent="Panel/GridContainer" unique_id=1733115632]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "AGILITY"
-
-[node name="AgiValue" type="Label" parent="Panel/GridContainer" unique_id=1380361333]
-custom_minimum_size = Vector2(25, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-
-[node name="AgiMinus" type="Button" parent="Panel/GridContainer" unique_id=1787229331]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "-"
-
-[node name="AgiPlus" type="Button" parent="Panel/GridContainer" unique_id=1255458121]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "+"
-
 [node name="5" type="Label" parent="Panel" unique_id=616813719]
+visible = false
 layout_mode = 0
 offset_left = 448.0
 offset_top = 152.0
 offset_right = 449.0
 offset_bottom = 175.0
 
-[node name="StartCampaignButton" type="Button" parent="Panel" unique_id=988009488]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = 151.0
-offset_top = -136.0
-offset_right = 473.0
-offset_bottom = -36.0
-grow_horizontal = 2
-grow_vertical = 0
+[node name="StartCampaignButton" type="Button" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=988009488]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 32
 text = "Start Campaign"
 
 [node name="Label" type="Label" parent="Panel" unique_id=2123922835]
-layout_mode = 0
-offset_left = 160.0
-offset_top = 41.0
-offset_right = 408.0
-offset_bottom = 64.0
+visible = false
+layout_mode = 2
 text = "Choose your Character's Name :"
 
 [node name="Label2" type="Label" parent="Panel" unique_id=1442526339]
-layout_mode = 0
-offset_left = 60.0
-offset_top = 131.0
-offset_right = 308.0
-offset_bottom = 154.0
+visible = false
+layout_mode = 2
 text = "Choose your Class :"
 
 [node name="Label3" type="Label" parent="Panel" unique_id=853501968]
-layout_mode = 0
-offset_left = 60.0
-offset_top = 189.0
-offset_right = 308.0
-offset_bottom = 212.0
+visible = false
+layout_mode = 2
 text = "Choose your Ability :"
 
-[node name="SpriteDisplay" type="TextureRect" parent="Panel" unique_id=1518908740]
-layout_mode = 0
-offset_left = 61.0
-offset_top = 337.0
-offset_right = 301.0
-offset_bottom = 609.0
-expand_mode = 1
-stretch_mode = 5
-
-[node name="ColorRect" type="ColorRect" parent="Panel/SpriteDisplay" unique_id=1678257983]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.19793725, 0.19793722, 0.19793722, 1)
-
-[node name="PrevSpriteButton" type="Button" parent="Panel" unique_id=1922269354]
-layout_mode = 0
-offset_left = 111.0
-offset_top = 619.0
-offset_right = 150.0
-offset_bottom = 672.0
-theme_override_font_sizes/font_size = 32
-text = "<"
-alignment = 0
-
-[node name="PrevWeaponButton" type="Button" parent="Panel" unique_id=1708373104]
-layout_mode = 0
-offset_left = 802.0
-offset_top = 526.0
-offset_right = 838.0
-offset_bottom = 579.0
-theme_override_font_sizes/font_size = 32
-text = "<"
-
-[node name="NextSpriteButton" type="Button" parent="Panel" unique_id=132720416]
-layout_mode = 0
-offset_left = 191.0
-offset_top = 620.0
-offset_right = 225.0
-offset_bottom = 673.0
-theme_override_font_sizes/font_size = 32
-text = ">"
-alignment = 2
-
-[node name="NextWeaponButton" type="Button" parent="Panel" unique_id=945445404]
-layout_mode = 0
-offset_left = 862.0
-offset_top = 525.0
-offset_right = 895.0
-offset_bottom = 578.0
-theme_override_font_sizes/font_size = 32
-text = ">"
-
-[node name="BattleSpriteDisplay" type="TextureRect" parent="Panel" unique_id=1209881830]
-texture_filter = 1
-layout_mode = 0
-offset_left = 32.0
-offset_top = 735.0
-offset_right = 247.0
-offset_bottom = 973.0
-expand_mode = 1
-stretch_mode = 5
-
-[node name="WeaponDisplay" type="TextureRect" parent="Panel" unique_id=1608751749]
-layout_mode = 0
-offset_left = 758.0
-offset_top = 343.0
-offset_right = 933.0
-offset_bottom = 509.0
-expand_mode = 1
-stretch_mode = 5
-
-[node name="WeaponNameLabel" type="Label" parent="Panel" unique_id=1274038575]
-layout_mode = 0
-offset_left = 737.0
-offset_top = 247.0
-offset_right = 870.0
-offset_bottom = 277.0
-theme_override_font_sizes/font_size = 24
-
-[node name="BuildSummaryLabel" type="Label" parent="Panel" unique_id=598349207]
-layout_mode = 0
-offset_left = 248.0
-offset_top = 727.0
-offset_right = 522.0
-offset_bottom = 946.0
+[node name="BuildSummaryLabel" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/SummaryScroll" unique_id=598349207]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+autowrap_mode = 3
 theme_override_fonts/font = SubResource("SystemFont_j3eh0")
 theme_override_font_sizes/font_size = 18
 
-[node name="PresetDropdown" type="OptionButton" parent="Panel" unique_id=1972688792]
-layout_mode = 0
-offset_left = 380.0
-offset_top = 659.0
-offset_right = 526.0
-offset_bottom = 695.0
+[node name="PresetDropdown" type="OptionButton" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/PresetRow" unique_id=1972688792]
+layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="ApplyPresetButton" type="Button" parent="Panel" unique_id=1154070680]
-layout_mode = 0
-offset_left = 538.0
-offset_top = 660.0
-offset_right = 568.0
-offset_bottom = 691.0
+[node name="ApplyPresetButton" type="Button" parent="Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/PresetRow" unique_id=1154070680]
+layout_mode = 2
+custom_minimum_size = Vector2(44, 0)
 theme_override_colors/font_color = Color(0.19215687, 0.8745098, 0.13333334, 1)
 theme_override_font_sizes/font_size = 16
 text = "✓"
 
-[node name="ResetButton" type="Button" parent="Panel" unique_id=1326062847]
+[node name="ResetButton" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=1326062847]
 layout_mode = 0
 offset_left = 338.0
 offset_top = 229.0
@@ -469,7 +526,7 @@ theme_override_colors/font_color = Color(0.2784314, 0.8745098, 0.8745098, 1)
 theme_override_font_sizes/font_size = 32
 text = "↻"
 
-[node name="UndoButton" type="Button" parent="Panel" unique_id=234266807]
+[node name="UndoButton" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=234266807]
 layout_mode = 0
 offset_left = 389.0
 offset_top = 230.0
@@ -479,27 +536,249 @@ theme_override_colors/font_color = Color(0.2784314, 0.8745098, 0.8745098, 1)
 theme_override_font_sizes/font_size = 26
 text = "⎌"
 
-[node name="AbilityDescLabel" type="Label" parent="Panel" unique_id=597489255]
+[node name="Label" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=534159361]
 layout_mode = 0
-offset_left = 456.0
-offset_top = 171.0
-offset_right = 890.0
-offset_bottom = 249.0
-theme_override_colors/font_color = Color(0.40760005, 0.74125767, 0.9999996, 1)
+theme_override_font_sizes/font_size = 32
+text = "STRENGTH"
 
-[node name="DifficultyDropdown" type="OptionButton" parent="Panel" unique_id=1783038305]
+[node name="StrValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=418918931]
+custom_minimum_size = Vector2(25, 0)
 layout_mode = 0
-offset_left = 782.0
-offset_top = 800.0
-offset_right = 956.0
-offset_bottom = 841.0
+theme_override_font_sizes/font_size = 32
 
-[node name="DifficultyDescLabel" type="RichTextLabel" parent="Panel" unique_id=578912452]
+[node name="StrBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030001]
+custom_minimum_size = Vector2(140, 30)
 layout_mode = 0
-offset_left = 728.0
-offset_top = 737.0
-offset_right = 966.0
-offset_bottom = 777.0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="StrMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1120535943]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="StrPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=210849168]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Label2" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1042245871]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "MAGIC"
+
+[node name="MagValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=416491050]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+
+[node name="MagBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030002]
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="MagMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1866621512]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="MagPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1747317049]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Label3" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1903232087]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "HEALTH"
+
+[node name="HpValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1872610538]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+
+[node name="HpBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030003]
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="HpMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1454522099]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="HpPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=2077291264]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Label4" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=982612776]
+layout_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "DEFENSE"
+
+[node name="DefValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=550294856]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+
+[node name="DefBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030004]
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="DefMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1668856961]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="DefPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1817294888]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Label5" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=641598243]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "RESISTANCE"
+
+[node name="ResValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=305866273]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+
+[node name="ResBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030005]
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="ResMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1561915173]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="ResPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1239493779]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Label6" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1467470170]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "SPEED"
+
+[node name="SpdValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=699764939]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+
+[node name="SpdBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030006]
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="SpdMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=710314001]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="SpdPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1270109733]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Label7" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1733115632]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "AGILITY"
+
+[node name="AgiValue" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1380361333]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+
+[node name="AgiBar" type="ProgressBar" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=900030007]
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 0
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="AgiMinus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1787229331]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "-"
+
+[node name="AgiPlus" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer" unique_id=1255458121]
+layout_mode = 0
+theme_override_font_sizes/font_size = 32
+text = "+"
+
+[node name="Panel_SpriteDisplay#ColorRect2" type="ColorRect" parent="." unique_id=1678257983]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.19793725, 0.19793722, 0.19793722, 1)
+
+[node name="WeaponNameLabel" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard" unique_id=1274038575]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 18.0
+offset_right = 240.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 24
+
+[node name="WeaponDisplay" type="TextureRect" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard" unique_id=1608751749]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 56.0
+offset_right = 236.0
+offset_bottom = 248.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PrevWeaponButton" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard" unique_id=1708373104]
+layout_mode = 0
+offset_left = 36.0
+offset_top = 262.0
+offset_right = 76.0
+offset_bottom = 310.0
+theme_override_font_sizes/font_size = 32
+text = "<"
+
+[node name="NextWeaponButton" type="Button" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard" unique_id=945445404]
+layout_mode = 0
+offset_left = 184.0
+offset_top = 262.0
+offset_right = 224.0
+offset_bottom = 310.0
+theme_override_font_sizes/font_size = 32
+text = ">"
+
+[node name="DifficultyDropdown" type="OptionButton" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/DifficultyCard" unique_id=1783038305]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 18.0
+offset_right = 240.0
+offset_bottom = 54.0
+
+[node name="DifficultyDescLabel" type="RichTextLabel" parent="Panel/MainMargin/MainVBox/TopRow/RightCol/DifficultyCard" unique_id=578912452]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 58.0
+offset_right = 240.0
+offset_bottom = 148.0
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="." unique_id=1827327392]
 
@@ -507,16 +786,15 @@ offset_bottom = 777.0
 stream = ExtResource("6_803qg")
 
 [node name="StartConfirmation" type="ConfirmationDialog" parent="." unique_id=582697511]
-oversampling_override = 1.0
 title = "Confirm Character"
 position = Vector2i(860, 490)
-size = Vector2i(200, 110)
-content_scale_factor = 1.38
+size = Vector2i(260, 140)
 
 [node name="Label" type="Label" parent="." unique_id=2101231876]
+visible = false
 layout_mode = 0
 offset_left = 1149.0
 offset_top = 830.0
 offset_right = 1217.0
 offset_bottom = 845.0
-text = "Difficulty"
+text = "Enter · confirm    Esc · return"

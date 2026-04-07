@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("4_xo5hl")
 job_name = "Warrior"
+description = "A brutal frontliner built to break formations.\nHuge HP/Strength with axes, but less resilient to magic and sustained defense."
 allowed_weapon_types = Array[int]([2])
 class_skill_tree = ExtResource("1_4l6fw")
 class_combat_ability = "Charge"

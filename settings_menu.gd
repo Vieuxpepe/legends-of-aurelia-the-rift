@@ -101,6 +101,12 @@ func _find_ui(node_name: String) -> Node:
 @onready var ui_combat_log_font_option: OptionButton = _find_ui("UiCombatLogFontOption") as OptionButton
 @onready var ui_cursor_size_option: OptionButton = _find_ui("UiCursorSizeOption") as OptionButton
 @onready var ui_cursor_high_contrast_toggle: CheckBox = _find_ui("UiCursorHighContrastToggle") as CheckBox
+var ui_cursor_fx_enabled_toggle: CheckBox = null
+var ui_cursor_trail_toggle: CheckBox = null
+var ui_cursor_sound_toggle: CheckBox = null
+var ui_cursor_feedback_slider: HSlider = null
+var ui_cursor_press_depth_slider: HSlider = null
+var ui_cursor_tilt_slider: HSlider = null
 @onready var pause_interface_btn: Button = _find_ui("PauseInterfaceButton") as Button
 
 # --- EXISTING SETTINGS ---
@@ -210,6 +216,7 @@ func _ready() -> void:
 	CampaignManager.load_global_settings()
 	_build_feedback_category_rows()
 	_apply_theme()
+	_ensure_cursor_fx_controls()
 	if settings_scroll != null:
 		settings_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	if settings_scroll != null and settings_vbox != null:
@@ -874,6 +881,70 @@ func _connect_toggle_signal(toggle: BaseButton, callable_target: Callable) -> vo
 	if toggle != null and not toggle.toggled.is_connected(callable_target):
 		toggle.toggled.connect(callable_target)
 
+
+func _ensure_cursor_fx_controls() -> void:
+	if ui_cursor_fx_enabled_toggle != null:
+		return
+	var host_card: Node = _find_ui("HudOverlaysCard")
+	if host_card == null:
+		return
+	var vbox: VBoxContainer = host_card.get_node_or_null("Margin/VBox") as VBoxContainer
+	if vbox == null:
+		return
+	var section_rule := ColorRect.new()
+	section_rule.custom_minimum_size = Vector2(0, 2)
+	section_rule.color = Color(0.38, 0.82, 0.98, 0.40)
+	vbox.add_child(section_rule)
+	var title := Label.new()
+	title.text = "CURSOR FX"
+	vbox.add_child(title)
+	_style_label(title, SETTINGS_ACCENT, 20, 2)
+	ui_cursor_fx_enabled_toggle = CheckBox.new()
+	ui_cursor_fx_enabled_toggle.text = "ENABLE ENHANCED CURSOR FX"
+	vbox.add_child(ui_cursor_fx_enabled_toggle)
+	_style_checkbox(ui_cursor_fx_enabled_toggle)
+	ui_cursor_trail_toggle = CheckBox.new()
+	ui_cursor_trail_toggle.text = "ENABLE CURSOR TRAIL"
+	vbox.add_child(ui_cursor_trail_toggle)
+	_style_checkbox(ui_cursor_trail_toggle)
+	ui_cursor_sound_toggle = CheckBox.new()
+	ui_cursor_sound_toggle.text = "ENABLE CURSOR TICKS / CLICKS"
+	vbox.add_child(ui_cursor_sound_toggle)
+	_style_checkbox(ui_cursor_sound_toggle)
+	var fb_label := Label.new()
+	fb_label.text = "CURSOR FEEDBACK INTENSITY"
+	vbox.add_child(fb_label)
+	_style_label(fb_label, SETTINGS_TEXT, 15, 1)
+	ui_cursor_feedback_slider = HSlider.new()
+	ui_cursor_feedback_slider.min_value = 0.0
+	ui_cursor_feedback_slider.max_value = 1.0
+	ui_cursor_feedback_slider.step = 0.01
+	ui_cursor_feedback_slider.custom_minimum_size = Vector2(0, 26)
+	vbox.add_child(ui_cursor_feedback_slider)
+	_style_slider(ui_cursor_feedback_slider, SETTINGS_ACCENT_SOFT)
+	var press_label := Label.new()
+	press_label.text = "CURSOR PRESS DEPTH"
+	vbox.add_child(press_label)
+	_style_label(press_label, SETTINGS_TEXT, 15, 1)
+	ui_cursor_press_depth_slider = HSlider.new()
+	ui_cursor_press_depth_slider.min_value = 0.0
+	ui_cursor_press_depth_slider.max_value = 3.0
+	ui_cursor_press_depth_slider.step = 0.1
+	ui_cursor_press_depth_slider.custom_minimum_size = Vector2(0, 26)
+	vbox.add_child(ui_cursor_press_depth_slider)
+	_style_slider(ui_cursor_press_depth_slider, SETTINGS_ACCENT_SOFT)
+	var tilt_label := Label.new()
+	tilt_label.text = "CURSOR TILT (DEGREES)"
+	vbox.add_child(tilt_label)
+	_style_label(tilt_label, SETTINGS_TEXT, 15, 1)
+	ui_cursor_tilt_slider = HSlider.new()
+	ui_cursor_tilt_slider.min_value = -45.0
+	ui_cursor_tilt_slider.max_value = 45.0
+	ui_cursor_tilt_slider.step = 1.0
+	ui_cursor_tilt_slider.custom_minimum_size = Vector2(0, 26)
+	vbox.add_child(ui_cursor_tilt_slider)
+	_style_slider(ui_cursor_tilt_slider, SETTINGS_ACCENT_SOFT)
+
 func _connect_all_signals() -> void:
 	if close_button and not close_button.pressed.is_connected(_on_close_pressed):
 		close_button.pressed.connect(_on_close_pressed)
@@ -966,6 +1037,12 @@ func _connect_all_signals() -> void:
 	_connect_toggle_signal(ui_show_phase_banner_toggle, _on_ui_show_phase_banner_toggled)
 	_connect_toggle_signal(ui_show_status_effects_toggle, _on_ui_show_status_effects_toggled)
 	_connect_toggle_signal(ui_cursor_high_contrast_toggle, _on_ui_cursor_high_contrast_toggled)
+	_connect_toggle_signal(ui_cursor_fx_enabled_toggle, _on_ui_cursor_fx_enabled_toggled)
+	_connect_toggle_signal(ui_cursor_trail_toggle, _on_ui_cursor_trail_toggled)
+	_connect_toggle_signal(ui_cursor_sound_toggle, _on_ui_cursor_sound_toggled)
+	_connect_value_signal(ui_cursor_feedback_slider, _on_ui_cursor_feedback_intensity_changed)
+	_connect_value_signal(ui_cursor_press_depth_slider, _on_ui_cursor_press_depth_changed)
+	_connect_value_signal(ui_cursor_tilt_slider, _on_ui_cursor_tilt_changed)
 
 func _sync_ui_from_settings() -> void:
 	_is_syncing_ui = true
@@ -1079,6 +1156,8 @@ func _persist_and_apply() -> void:
 	_apply_settings_to_runtime()
 
 func _apply_settings_to_runtime() -> void:
+	CampaignManager.apply_custom_mouse_cursors()
+	CampaignManager.set_cursor_intent("default")
 	var current = get_tree().current_scene
 	if current != null and current.has_method("apply_campaign_settings"):
 		current.apply_campaign_settings()
@@ -1325,6 +1404,18 @@ func _sync_interface_ui_from_campaign() -> void:
 		ui_cursor_size_option.select(clampi(CampaignManager.interface_cursor_size, 0, ui_cursor_size_option.item_count - 1))
 	if ui_cursor_high_contrast_toggle:
 		ui_cursor_high_contrast_toggle.button_pressed = CampaignManager.interface_cursor_high_contrast
+	if ui_cursor_fx_enabled_toggle:
+		ui_cursor_fx_enabled_toggle.button_pressed = CampaignManager.interface_cursor_fx_enabled
+	if ui_cursor_trail_toggle:
+		ui_cursor_trail_toggle.button_pressed = CampaignManager.interface_cursor_trail_enabled
+	if ui_cursor_sound_toggle:
+		ui_cursor_sound_toggle.button_pressed = CampaignManager.interface_cursor_sound_enabled
+	if ui_cursor_feedback_slider:
+		ui_cursor_feedback_slider.value = CampaignManager.interface_cursor_feedback_intensity
+	if ui_cursor_press_depth_slider:
+		ui_cursor_press_depth_slider.value = CampaignManager.interface_cursor_press_depth
+	if ui_cursor_tilt_slider:
+		ui_cursor_tilt_slider.value = CampaignManager.interface_cursor_tilt_degrees
 	if ui_show_damage_numbers_toggle:
 		ui_show_damage_numbers_toggle.button_pressed = CampaignManager.interface_show_damage_numbers
 	if ui_show_health_bars_toggle:
@@ -1388,6 +1479,48 @@ func _on_ui_cursor_high_contrast_toggled(toggled_on: bool) -> void:
 	if _is_syncing_ui:
 		return
 	CampaignManager.interface_cursor_high_contrast = toggled_on
+	_persist_interface()
+
+
+func _on_ui_cursor_fx_enabled_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_fx_enabled = toggled_on
+	_persist_interface()
+
+
+func _on_ui_cursor_trail_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_trail_enabled = toggled_on
+	_persist_interface()
+
+
+func _on_ui_cursor_sound_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_sound_enabled = toggled_on
+	_persist_interface()
+
+
+func _on_ui_cursor_feedback_intensity_changed(value: float) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_feedback_intensity = clampf(value, 0.0, 1.0)
+	_persist_interface()
+
+
+func _on_ui_cursor_press_depth_changed(value: float) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_press_depth = clampf(value, 0.0, 3.0)
+	_persist_interface()
+
+
+func _on_ui_cursor_tilt_changed(value: float) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_cursor_tilt_degrees = clampf(value, -45.0, 45.0)
 	_persist_interface()
 
 
@@ -1722,6 +1855,12 @@ func _on_reset_defaults_pressed() -> void:
 	CampaignManager.battle_skip_loot_window = false
 	CampaignManager.interface_cursor_size = 0
 	CampaignManager.interface_cursor_high_contrast = false
+	CampaignManager.interface_cursor_fx_enabled = true
+	CampaignManager.interface_cursor_feedback_intensity = 0.85
+	CampaignManager.interface_cursor_press_depth = 1.0
+	CampaignManager.interface_cursor_tilt_degrees = 25.0
+	CampaignManager.interface_cursor_trail_enabled = true
+	CampaignManager.interface_cursor_sound_enabled = true
 	CampaignManager.interface_unit_bars_at_feet = false
 	CampaignManager.interface_focus_unit_bars = true
 

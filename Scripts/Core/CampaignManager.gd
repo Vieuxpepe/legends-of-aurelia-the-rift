@@ -335,6 +335,13 @@ var interface_cursor_size: int = 0
 var interface_cursor_high_contrast: bool = false
 ## Less motion in menus (sweeps, parallax drift, mouse tilt on the war table).
 var interface_reduced_motion: bool = false
+## Cursor FX accessibility tuning.
+var interface_cursor_fx_enabled: bool = true
+var interface_cursor_feedback_intensity: float = 0.85
+var interface_cursor_press_depth: float = 1.0
+var interface_cursor_tilt_degrees: float = 25.0
+var interface_cursor_trail_enabled: bool = true
+var interface_cursor_sound_enabled: bool = true
 ## In-game display name override (menus, co-op label, feedback). Empty = Steam (if any), then avatar, then fallback.
 var player_profile_display_override: String = ""
 const PLAYER_PROFILE_DISPLAY_NAME_MAX_LEN := 48
@@ -4052,13 +4059,46 @@ func get_highest_garrison_level() -> int:
 	return highest_level
 
 func _ready() -> void:
+	# Keep cursor FX and cursor intent sync alive while pause menus/dialogs freeze the tree.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	load_global_settings()
+	_apply_cursor_input_latency_mode()
+	var vp := get_viewport()
+	if vp != null:
+		_capture_cursor_mouse_pos(vp.get_mouse_position())
+		_cursor_last_mouse_pos = _cursor_mouse_pos
+	if not get_tree().node_added.is_connected(_on_tree_node_added_for_ui_cursor):
+		get_tree().node_added.connect(_on_tree_node_added_for_ui_cursor)
+	_apply_ui_button_cursor_shapes(get_tree().root)
 	var w := get_window()
 	if w != null:
 		if not w.focus_entered.is_connected(_on_window_focus_in_for_audio):
 			w.focus_entered.connect(_on_window_focus_in_for_audio)
 		if not w.focus_exited.is_connected(_on_window_focus_out_for_audio):
 			w.focus_exited.connect(_on_window_focus_out_for_audio)
+
+
+func _on_tree_node_added_for_ui_cursor(node: Node) -> void:
+	_apply_ui_button_cursor_shapes(node)
+
+
+func _apply_ui_button_cursor_shapes(node: Node) -> void:
+	if node == null:
+		return
+	if node is BaseButton and node is Control:
+		var ctl: Control = node as Control
+		ctl.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		if not ctl.has_meta("_cursor_fx_hooks"):
+			ctl.set_meta("_cursor_fx_hooks", true)
+			ctl.mouse_entered.connect(func() -> void:
+				set_cursor_intent("inspect")
+			)
+			ctl.mouse_exited.connect(func() -> void:
+				set_cursor_intent("default")
+			)
+	for ch in node.get_children():
+		if ch is Node:
+			_apply_ui_button_cursor_shapes(ch as Node)
 
 
 func _on_window_focus_out_for_audio() -> void:
@@ -4173,6 +4213,15 @@ func load_global_settings() -> void:
 	interface_cursor_size = clampi(int(cfg.get_value("interface", "cursor_size", interface_cursor_size)), 0, 2)
 	interface_cursor_high_contrast = bool(cfg.get_value("interface", "cursor_high_contrast", interface_cursor_high_contrast))
 	interface_reduced_motion = bool(cfg.get_value("interface", "reduced_motion", interface_reduced_motion))
+	interface_cursor_fx_enabled = bool(cfg.get_value("interface", "cursor_fx_enabled", interface_cursor_fx_enabled))
+	interface_cursor_feedback_intensity = clampf(float(cfg.get_value("interface", "cursor_feedback_intensity", interface_cursor_feedback_intensity)), 0.0, 1.0)
+	interface_cursor_press_depth = clampf(float(cfg.get_value("interface", "cursor_press_depth", interface_cursor_press_depth)), 0.0, 3.0)
+	interface_cursor_tilt_degrees = clampf(float(cfg.get_value("interface", "cursor_tilt_degrees", interface_cursor_tilt_degrees)), -45.0, 45.0)
+	interface_cursor_trail_enabled = bool(cfg.get_value("interface", "cursor_trail_enabled", interface_cursor_trail_enabled))
+	interface_cursor_sound_enabled = bool(cfg.get_value("interface", "cursor_sound_enabled", interface_cursor_sound_enabled))
+	# Backward-compat: early cursor FX rollout could leave tilt at 0; restore the prior tuned default.
+	if absf(interface_cursor_tilt_degrees) < 0.001:
+		interface_cursor_tilt_degrees = 25.0
 
 	player_profile_display_override = str(cfg.get_value("profile", "display_name_override", player_profile_display_override))
 	player_profile_display_override = sanitize_player_display_name(player_profile_display_override)
@@ -4180,6 +4229,7 @@ func load_global_settings() -> void:
 	apply_audio_settings()
 	apply_game_speed_scale()
 	apply_performance_settings()
+	apply_custom_mouse_cursors()
 
 func save_global_settings() -> void:
 	var cfg := ConfigFile.new()
@@ -4242,6 +4292,12 @@ func save_global_settings() -> void:
 	cfg.set_value("interface", "cursor_size", interface_cursor_size)
 	cfg.set_value("interface", "cursor_high_contrast", interface_cursor_high_contrast)
 	cfg.set_value("interface", "reduced_motion", interface_reduced_motion)
+	cfg.set_value("interface", "cursor_fx_enabled", interface_cursor_fx_enabled)
+	cfg.set_value("interface", "cursor_feedback_intensity", interface_cursor_feedback_intensity)
+	cfg.set_value("interface", "cursor_press_depth", interface_cursor_press_depth)
+	cfg.set_value("interface", "cursor_tilt_degrees", interface_cursor_tilt_degrees)
+	cfg.set_value("interface", "cursor_trail_enabled", interface_cursor_trail_enabled)
+	cfg.set_value("interface", "cursor_sound_enabled", interface_cursor_sound_enabled)
 
 	cfg.set_value("profile", "display_name_override", player_profile_display_override)
 
@@ -4321,7 +4377,8 @@ func _apply_windowed_resolution() -> void:
 	var res := RESOLUTION_OPTIONS[performance_resolution]
 	DisplayServer.window_set_size(res)
 	var screen_sz := DisplayServer.screen_get_size()
-	var win_pos := (screen_sz - res) / 2
+	var delta: Vector2i = screen_sz - res
+	var win_pos := Vector2i(int(delta.x * 0.5), int(delta.y * 0.5))
 	DisplayServer.window_set_position(Vector2i(maxi(win_pos.x, 0), maxi(win_pos.y, 0)))
 
 
@@ -4329,6 +4386,42 @@ const INTERFACE_HUD_SCALE_VALUES: Array[float] = [1.0, 1.25, 1.5, 1.75, 2.0]
 const INTERFACE_DAMAGE_TEXT_SIZES: Array[int] = [16, 22, 30]
 const INTERFACE_LOG_FONT_SIZES: Array[int] = [14, 18, 24]
 const INTERFACE_CURSOR_SCALE_VALUES: Array[float] = [1.0, 1.15, 1.30]
+const CURSOR_DEFAULT_PATH: String = "res://Assets/Cursor/Cursor Default Tilt.png"
+const CURSOR_MOVE_PATH: String = "res://Assets/Cursor/Cursor Move Tilt.png"
+const CURSOR_INSPECT_PATH: String = "res://Assets/Cursor/Cursor Inspect Tilt.png"
+const CURSOR_ATTACK_PATH: String = "res://Assets/Cursor/Cursor attack Tilt.png"
+const CURSOR_DEFAULT_PRESS_PATH: String = "res://Assets/Cursor/Cursor Default Tilt Press.png"
+const CURSOR_MOVE_PRESS_PATH: String = "res://Assets/Cursor/Cursor Move Tilt Press.png"
+const CURSOR_INSPECT_PRESS_PATH: String = "res://Assets/Cursor/Cursor Inspect Tilt Press.png"
+const CURSOR_ATTACK_PRESS_PATH: String = "res://Assets/Cursor/Cursor attack Tilt Press.png"
+const CURSOR_DEFAULT_HOTSPOT: Vector2 = Vector2(9, 2)
+const CURSOR_MOVE_HOTSPOT: Vector2 = Vector2(9, 2)
+const CURSOR_INSPECT_HOTSPOT: Vector2 = Vector2(9, 2)
+const CURSOR_ATTACK_HOTSPOT: Vector2 = Vector2(11, 4)
+const CURSOR_PRESS_OFFSET: Vector2 = Vector2(1, 1)
+const CURSOR_SOFTWARE_VELOCITY_RESPONSE: float = 42.0
+const CURSOR_SOFTWARE_SHADOW_PARALLAX_MAX: float = 0.0
+const CURSOR_SOFTWARE_TRAIL_MIN_SPEED: float = 6.0
+const CURSOR_SOFTWARE_TRAIL_BASE_OFFSET: float = 0.08
+const CURSOR_SOFTWARE_TRAIL_STEP_OFFSET: float = 0.05
+const CURSOR_SOFTWARE_TRAIL_FOLLOW: float = 60.0
+var _mouse_feedback_pressed: bool = false
+var _cursor_intent: String = "default"
+var _cursor_snap_timer: float = 0.0
+var _cursor_fail_shake_timer: float = 0.0
+var _cursor_mouse_pos: Vector2 = Vector2.ZERO
+var _cursor_last_mouse_pos: Vector2 = Vector2.ZERO
+var _cursor_mouse_velocity: Vector2 = Vector2.ZERO
+var _cursor_idle_timer: float = 0.0
+var _cursor_fx_layer: CanvasLayer = null
+var _cursor_fx_root: Node2D = null
+var _cursor_fx_shadow: Sprite2D = null
+var _cursor_fx_sprite: Sprite2D = null
+var _cursor_fx_trail: Array[Sprite2D] = []
+var _cursor_fx_trail_pos: Array[Vector2] = []
+var _cursor_beep_cooldown: float = 0.0
+var _cursor_debug_last_signature: String = ""
+var _cursor_low_latency_input_enabled: bool = false
 
 
 func get_hud_scale_float() -> float:
@@ -4345,6 +4438,311 @@ func get_combat_log_font_size() -> int:
 
 func get_cursor_scale_float() -> float:
 	return INTERFACE_CURSOR_SCALE_VALUES[clampi(interface_cursor_size, 0, INTERFACE_CURSOR_SCALE_VALUES.size() - 1)]
+
+
+func _load_cursor_texture(path: String) -> Texture2D:
+	if path == "":
+		return null
+	var res: Resource = load(path)
+	if res is Texture2D:
+		return res as Texture2D
+	return null
+
+
+func _normalize_cursor_intent(intent: String) -> String:
+	var normalized: String = str(intent).strip_edges().to_lower()
+	if normalized == "":
+		return "default"
+	if normalized not in ["default", "move", "attack", "inspect", "forbidden"]:
+		return "default"
+	return normalized
+
+
+func _cursor_texture_path_for_intent(intent: String, pressed: bool) -> String:
+	match _normalize_cursor_intent(intent):
+		"move":
+			return CURSOR_MOVE_PRESS_PATH if pressed else CURSOR_MOVE_PATH
+		"attack":
+			return CURSOR_ATTACK_PRESS_PATH if pressed else CURSOR_ATTACK_PATH
+		"inspect":
+			return CURSOR_INSPECT_PRESS_PATH if pressed else CURSOR_INSPECT_PATH
+		"forbidden":
+			return CURSOR_ATTACK_PRESS_PATH if pressed else CURSOR_ATTACK_PATH
+		_:
+			return CURSOR_DEFAULT_PRESS_PATH if pressed else CURSOR_DEFAULT_PATH
+
+
+func _cursor_hotspot_for_intent(intent: String, pressed: bool) -> Vector2:
+	var hotspot: Vector2 = CURSOR_DEFAULT_HOTSPOT
+	match _normalize_cursor_intent(intent):
+		"move":
+			hotspot = CURSOR_MOVE_HOTSPOT
+		"attack", "forbidden":
+			hotspot = CURSOR_ATTACK_HOTSPOT
+		"inspect":
+			hotspot = CURSOR_INSPECT_HOTSPOT
+	if pressed:
+		hotspot += CURSOR_PRESS_OFFSET
+	return hotspot
+
+
+func _debug_log_cursor_state(pressed: bool) -> void:
+	if not OS.is_debug_build():
+		return
+	var texture_path: String = _cursor_texture_path_for_intent(_cursor_intent, pressed)
+	var signature: String = "%s|%s|%s|%s" % [
+		"software_fx" if interface_cursor_fx_enabled else "os_cursor",
+		_cursor_intent,
+		str(pressed),
+		texture_path,
+	]
+	if signature == _cursor_debug_last_signature:
+		return
+	_cursor_debug_last_signature = signature
+	print(
+		"[CursorDebug] renderer=%s source=asset intent=%s tilt_deg=0 texture=%s hotspot=%s pressed=%s"
+		% [
+			"software_fx" if interface_cursor_fx_enabled else "os_cursor",
+			_cursor_intent,
+			texture_path,
+			_cursor_hotspot_for_intent(_cursor_intent, pressed),
+			str(pressed),
+		]
+	)
+
+
+func _apply_cursor_input_latency_mode() -> void:
+	if not Input.has_method("set_use_accumulated_input"):
+		return
+	var should_enable_low_latency: bool = interface_cursor_fx_enabled
+	if should_enable_low_latency == _cursor_low_latency_input_enabled:
+		return
+	# Software cursors feel tighter when mouse motion is not frame-accumulated.
+	Input.call("set_use_accumulated_input", not should_enable_low_latency)
+	_cursor_low_latency_input_enabled = should_enable_low_latency
+
+
+func apply_custom_mouse_cursors(pressed: bool = false) -> void:
+	var default_cursor: Texture2D = _load_cursor_texture(_cursor_texture_path_for_intent("default", pressed))
+	var move_cursor: Texture2D = _load_cursor_texture(_cursor_texture_path_for_intent("move", pressed))
+	var inspect_cursor: Texture2D = _load_cursor_texture(_cursor_texture_path_for_intent("inspect", pressed))
+	var attack_cursor: Texture2D = _load_cursor_texture(_cursor_texture_path_for_intent("attack", pressed))
+	Input.set_custom_mouse_cursor(default_cursor, Input.CURSOR_ARROW, _cursor_hotspot_for_intent("default", pressed))
+	Input.set_custom_mouse_cursor(move_cursor, Input.CURSOR_MOVE, _cursor_hotspot_for_intent("move", pressed))
+	Input.set_custom_mouse_cursor(inspect_cursor, Input.CURSOR_HELP, _cursor_hotspot_for_intent("inspect", pressed))
+	Input.set_custom_mouse_cursor(inspect_cursor, Input.CURSOR_POINTING_HAND, _cursor_hotspot_for_intent("inspect", pressed))
+	Input.set_custom_mouse_cursor(attack_cursor, Input.CURSOR_CROSS, _cursor_hotspot_for_intent("attack", pressed))
+	Input.set_custom_mouse_cursor(attack_cursor, Input.CURSOR_FORBIDDEN, _cursor_hotspot_for_intent("forbidden", pressed))
+	_debug_log_cursor_state(pressed)
+
+
+func set_cursor_intent(intent: String) -> void:
+	var next_intent: String = _normalize_cursor_intent(intent)
+	if next_intent != _cursor_intent:
+		_cursor_intent = next_intent
+		_cursor_snap_timer = 0.08
+		if interface_cursor_sound_enabled and _cursor_beep_cooldown <= 0.0:
+			DisplayServer.beep()
+			_cursor_beep_cooldown = 0.06
+	Input.set_default_cursor_shape(_cursor_intent_shape(_cursor_intent))
+	_debug_log_cursor_state(_mouse_feedback_pressed)
+
+
+func _cursor_intent_shape(intent: String) -> Input.CursorShape:
+	match intent:
+		"move":
+			return Input.CURSOR_MOVE
+		"attack":
+			return Input.CURSOR_CROSS
+		"inspect":
+			return Input.CURSOR_HELP
+		"forbidden":
+			return Input.CURSOR_FORBIDDEN
+		_:
+			return Input.CURSOR_ARROW
+
+
+func _cursor_texture_for_intent(pressed: bool) -> Texture2D:
+	return _load_cursor_texture(_cursor_texture_path_for_intent(_cursor_intent, pressed))
+
+
+func _ensure_cursor_fx_nodes() -> void:
+	if _cursor_fx_layer != null and is_instance_valid(_cursor_fx_layer):
+		return
+	_cursor_fx_layer = CanvasLayer.new()
+	# Ensure the software cursor renders above GUI popups/menus.
+	_cursor_fx_layer.layer = 4096
+	add_child(_cursor_fx_layer)
+	_cursor_fx_root = Node2D.new()
+	_cursor_fx_layer.add_child(_cursor_fx_root)
+	for _i in range(3):
+		var trail_sprite: Sprite2D = Sprite2D.new()
+		trail_sprite.centered = false
+		trail_sprite.visible = false
+		_cursor_fx_root.add_child(trail_sprite)
+		_cursor_fx_trail.append(trail_sprite)
+		_cursor_fx_trail_pos.append(_cursor_mouse_pos)
+	_cursor_fx_shadow = Sprite2D.new()
+	_cursor_fx_shadow.centered = false
+	_cursor_fx_shadow.modulate = Color(0, 0, 0, 0.35)
+	_cursor_fx_root.add_child(_cursor_fx_shadow)
+	_cursor_fx_sprite = Sprite2D.new()
+	_cursor_fx_sprite.centered = false
+	_cursor_fx_root.add_child(_cursor_fx_sprite)
+
+
+func _cursor_base_modulate(pressed: bool) -> Color:
+	var k: float = clampf(interface_cursor_feedback_intensity, 0.0, 1.0)
+	match _cursor_intent:
+		"move":
+			return Color(0.84, 1.0, 1.0, 1.0) if pressed else Color(0.92, 1.0, 1.0, 1.0)
+		"attack":
+			return Color(1.0, 0.74, 0.74, 1.0) if pressed else Color(1.0, 0.88, 0.88, 1.0)
+		"inspect":
+			return Color(1.0, 0.92, 0.78, 1.0) if pressed else Color(1.0, 0.97, 0.88, 1.0)
+		"forbidden":
+			return Color(0.72 - 0.12 * k, 0.72 - 0.12 * k, 0.72 - 0.12 * k, 0.96)
+		_:
+			return Color(0.9, 0.9, 0.9, 1.0) if pressed else Color(1, 1, 1, 1)
+
+
+func _capture_cursor_mouse_pos(pos: Vector2) -> void:
+	_cursor_mouse_pos = pos
+
+
+func _set_cursor_fx_positions(mouse_pos: Vector2, hotspot_offset: Vector2, shake: Vector2 = Vector2.ZERO, parallax: Vector2 = Vector2.ZERO) -> void:
+	var draw_origin: Vector2 = mouse_pos - hotspot_offset
+	_cursor_fx_sprite.position = draw_origin + shake
+	_cursor_fx_shadow.position = draw_origin + Vector2(2, 2) + parallax + shake
+
+
+func _refresh_cursor_fx_pose_immediate() -> void:
+	if not interface_cursor_fx_enabled:
+		return
+	_ensure_cursor_fx_nodes()
+	if _cursor_fx_sprite == null or _cursor_fx_shadow == null:
+		return
+	var pressed: bool = _mouse_feedback_pressed
+	var sc: float = get_cursor_scale_float()
+	if pressed:
+		sc *= 1.0 - (0.018 * clampf(interface_cursor_press_depth, 0.0, 3.0))
+	var hotspot_offset: Vector2 = _cursor_hotspot_for_intent(_cursor_intent, pressed) * sc
+	_set_cursor_fx_positions(_cursor_mouse_pos, hotspot_offset)
+
+
+func _update_cursor_fx(delta: float) -> void:
+	if _cursor_beep_cooldown > 0.0:
+		_cursor_beep_cooldown = maxf(0.0, _cursor_beep_cooldown - delta)
+	if _cursor_snap_timer > 0.0:
+		_cursor_snap_timer = maxf(0.0, _cursor_snap_timer - delta)
+	if _cursor_fail_shake_timer > 0.0:
+		_cursor_fail_shake_timer = maxf(0.0, _cursor_fail_shake_timer - delta)
+	_ensure_cursor_fx_nodes()
+	if _cursor_mouse_pos == Vector2.ZERO:
+		_capture_cursor_mouse_pos(get_viewport().get_mouse_position())
+	var mouse_pos: Vector2 = _cursor_mouse_pos
+	var vel: Vector2 = mouse_pos - _cursor_last_mouse_pos
+	_cursor_last_mouse_pos = mouse_pos
+	_cursor_mouse_velocity = _cursor_mouse_velocity.lerp(vel, clampf(delta * CURSOR_SOFTWARE_VELOCITY_RESPONSE, 0.0, 1.0))
+	if _cursor_mouse_velocity.length() < 0.2:
+		_cursor_idle_timer += delta
+	else:
+		_cursor_idle_timer = 0.0
+	var pressed: bool = _mouse_feedback_pressed
+	var tex: Texture2D = _cursor_texture_for_intent(pressed)
+	_cursor_fx_sprite.texture = tex
+	_cursor_fx_shadow.texture = tex
+	_cursor_fx_sprite.rotation_degrees = 0.0
+	_cursor_fx_shadow.rotation_degrees = 0.0
+	var base_scale: float = get_cursor_scale_float()
+	var press_scale: float = 1.0 - (0.018 * clampf(interface_cursor_press_depth, 0.0, 3.0)) if pressed else 1.0
+	var breathe: float = 1.0 + (sin(Time.get_ticks_msec() * 0.006) * 0.015 * clampf(interface_cursor_feedback_intensity, 0.0, 1.0)) if _cursor_idle_timer > 0.5 else 1.0
+	var snap: float = 1.0 + (_cursor_snap_timer / 0.08) * 0.10 * clampf(interface_cursor_feedback_intensity, 0.0, 1.0)
+	var sc: float = base_scale * press_scale * breathe * snap
+	var hotspot_offset: Vector2 = _cursor_hotspot_for_intent(_cursor_intent, pressed) * sc
+	_cursor_fx_sprite.scale = Vector2.ONE * sc
+	_cursor_fx_shadow.scale = Vector2.ONE * sc
+	var shake: Vector2 = Vector2.ZERO
+	if _cursor_fail_shake_timer > 0.0:
+		shake = Vector2(sin(Time.get_ticks_msec() * 0.12), 0.0) * 1.6
+	var parallax: Vector2 = _cursor_mouse_velocity.limit_length(CURSOR_SOFTWARE_SHADOW_PARALLAX_MAX)
+	_set_cursor_fx_positions(mouse_pos, hotspot_offset, shake, parallax)
+	_cursor_fx_sprite.modulate = _cursor_base_modulate(pressed)
+	_cursor_fx_shadow.modulate.a = 0.28 + 0.12 * clampf(interface_cursor_feedback_intensity, 0.0, 1.0)
+	var do_trail: bool = interface_cursor_trail_enabled and _cursor_mouse_velocity.length() > CURSOR_SOFTWARE_TRAIL_MIN_SPEED
+	for i in range(_cursor_fx_trail.size()):
+		var trail_sprite: Sprite2D = _cursor_fx_trail[i]
+		if trail_sprite == null:
+			continue
+		if do_trail:
+			var target_mouse: Vector2 = mouse_pos - (_cursor_mouse_velocity * (CURSOR_SOFTWARE_TRAIL_BASE_OFFSET + float(i) * CURSOR_SOFTWARE_TRAIL_STEP_OFFSET))
+			var target_origin: Vector2 = target_mouse - hotspot_offset
+			_cursor_fx_trail_pos[i] = (_cursor_fx_trail_pos[i] as Vector2).lerp(target_origin, clampf(delta * CURSOR_SOFTWARE_TRAIL_FOLLOW, 0.0, 1.0))
+			trail_sprite.texture = tex
+			trail_sprite.position = _cursor_fx_trail_pos[i]
+			trail_sprite.rotation_degrees = 0.0
+			trail_sprite.scale = Vector2.ONE * sc
+			trail_sprite.modulate = Color(1, 1, 1, 0.05 - float(i) * 0.015)
+			trail_sprite.visible = true
+		else:
+			trail_sprite.visible = false
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		var motion: InputEventMouseMotion = event as InputEventMouseMotion
+		_capture_cursor_mouse_pos(motion.position)
+		_refresh_cursor_fx_pose_immediate()
+		return
+	if not (event is InputEventMouseButton):
+		return
+	var mb: InputEventMouseButton = event as InputEventMouseButton
+	_capture_cursor_mouse_pos(mb.position)
+	if mb.button_index != MOUSE_BUTTON_LEFT:
+		_refresh_cursor_fx_pose_immediate()
+		return
+	if mb.pressed and not _mouse_feedback_pressed:
+		_mouse_feedback_pressed = true
+		if interface_cursor_sound_enabled:
+			DisplayServer.beep()
+		if _cursor_intent == "forbidden":
+			_cursor_fail_shake_timer = 0.12
+		apply_custom_mouse_cursors(true)
+	elif not mb.pressed and _mouse_feedback_pressed:
+		_mouse_feedback_pressed = false
+		apply_custom_mouse_cursors(false)
+	_refresh_cursor_fx_pose_immediate()
+
+
+func _process(delta: float) -> void:
+	_apply_cursor_input_latency_mode()
+	# Keep cursor FX responsive even when GUI popups capture mouse events.
+	_capture_cursor_mouse_pos(get_viewport().get_mouse_position())
+	if interface_cursor_fx_enabled:
+		# When a popup (e.g. OptionButton dropdown) is open, the engine expects a visible OS cursor.
+		# Hiding the mouse here makes it appear to "pause" or disappear over popup windows.
+		var focus_owner := get_viewport().gui_get_focus_owner()
+		var popup_open := false
+		var n: Node = focus_owner
+		while n != null:
+			if n is Popup and (n as Popup).visible:
+				popup_open = true
+				break
+			n = n.get_parent()
+		if popup_open:
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+			apply_custom_mouse_cursors(_mouse_feedback_pressed)
+			if _cursor_fx_layer != null and is_instance_valid(_cursor_fx_layer):
+				_cursor_fx_layer.visible = false
+			return
+		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+		_update_cursor_fx(delta)
+		if _cursor_fx_layer != null and is_instance_valid(_cursor_fx_layer):
+			_cursor_fx_layer.visible = true
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if _cursor_fx_layer != null and is_instance_valid(_cursor_fx_layer):
+			_cursor_fx_layer.visible = false
 
 
 func _set_bus_volume_linear(bus_name: String, linear_vol: float) -> void:

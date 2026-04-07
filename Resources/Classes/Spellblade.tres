@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1_6wpvu")
 job_name = "Spellblade"
+description = "A hybrid duelist who answers any threat.\nMix swordplay and magic to adapt on the fly—strong in 1v1s and flexible in team fights."
 move_range = 5
 allowed_weapon_types = Array[int]([0, 4])
 class_skill_tree = ExtResource("1_jgrcv")

@@ -10,6 +10,7 @@
 [resource]
 script = ExtResource("2_gm8yr")
 job_name = "Fire Sage"
+description = "An advanced pyromancer who controls space with relentless flame.\nSets traps, burns clustered foes, and overwhelms slower targets from range."
 allowed_weapon_types = Array[int]([4])
 class_skill_tree = ExtResource("1_gm8yr")
 class_tactical_ability = "Fire Trap"

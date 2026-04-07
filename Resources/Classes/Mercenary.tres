@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_keojr")
 job_name = "Mercenary"
+description = "A hardened blade-for-hire who thrives in the thick of battle.\nDurable and lethal up close, with a duelist’s tempo and self-sustain."
 move_range = 5
 allowed_weapon_types = Array[int]([0])
 class_skill_tree = ExtResource("1_acg5c")

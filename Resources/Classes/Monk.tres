@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_qlsdm")
 job_name = "Monk"
+description = "A close-quarters striker with disciplined footwork.\nFast hands, strong tempo, and solid growth—best when you control the engagement."
 move_range = 5
 allowed_weapon_types = Array[int]([8])
 class_skill_tree = ExtResource("1_euqpc")

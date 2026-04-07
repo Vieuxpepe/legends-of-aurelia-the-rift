@@ -21,7 +21,8 @@ const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
 ## pixels past the right edge — briefing + dispatch slide off when opening the campaign dossier
 const RIGHT_RAIL_SWEEP_PAD := 180.0
 const MAIN_MENU_STATE_FILE := "user://main_menu_state.cfg"
-const INTEL_TIPS: PackedStringArray = PackedStringArray([
+## Not `const`: PackedStringArray construction isn't a constant expression in GDScript.
+var INTEL_TIPS: PackedStringArray = PackedStringArray([
 	"Campaign: story-rich tactical warfare with bonds, rivalries, and convoy pressure.",
 	"Dragons: hatch, train, and breed with traits, rarity, and long-term bonds.",
 	"Arena: ranked 1v1 when you want clean tactical duels.",
@@ -69,6 +70,20 @@ const INTEL_TIPS: PackedStringArray = PackedStringArray([
 @onready var del_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/DeleteSlot3
 @onready var delete_dialog: ConfirmationDialog = $DeleteConfirmation
 @onready var overwrite_dialog: ConfirmationDialog = $OverwriteConfirmation
+@onready var load_dialog: ConfirmationDialog = $LoadConfirmation
+@onready var load_dialog_body: Label = $LoadConfirmation/Margin/VBox/BodyLabel
+@onready var load_dialog_dont_ask: CheckBox = $LoadConfirmation/Margin/VBox/DontAskAgainToggle
+@onready var quit_dialog: ConfirmationDialog = $QuitConfirmation
+@onready var quit_dialog_body: Label = $QuitConfirmation/Margin/VBox/BodyLabel
+@onready var quit_dialog_dont_ask: CheckBox = $QuitConfirmation/Margin/VBox/DontAskAgainToggle
+@onready var confirm_overlay: Control = $ConfirmOverlay
+@onready var confirm_card: PanelContainer = $ConfirmOverlay/Card
+@onready var confirm_title: Label = $ConfirmOverlay/Card/Margin/VBox/Title
+@onready var confirm_rule: ColorRect = $ConfirmOverlay/Card/Margin/VBox/Rule
+@onready var confirm_body: Label = $ConfirmOverlay/Card/Margin/VBox/Body
+@onready var confirm_dont_ask: CheckBox = $ConfirmOverlay/Card/Margin/VBox/DontAskAgain
+@onready var confirm_cancel: Button = $ConfirmOverlay/Card/Margin/VBox/Actions/CancelButton
+@onready var confirm_ok: Button = $ConfirmOverlay/Card/Margin/VBox/Actions/OkButton
 @onready var dispatch_editor_dialog: ConfirmationDialog = $DispatchEditorDialog
 
 @onready var intel_rule: ColorRect = $IntelPanel/IntelCard/Margin/VBox/IntelRule
@@ -134,6 +149,11 @@ var _dispatch_payload: Dictionary = {}
 var _last_dispatch_status: String = ""
 var _intel_tip_index: int = 0
 var _dispatch_fresh_tween: Tween = null
+var _pending_load_slot: int = 0
+var _pending_load_is_auto: bool = false
+var _suppress_load_confirm: bool = false
+var _suppress_quit_confirm: bool = false
+var _confirm_kind: String = ""
 
 var SFX_HOVER: AudioStream = preload("res://audio/menu_hover.wav")
 var SFX_CLICK: AudioStream = preload("res://audio/menu_click.wav")
@@ -212,11 +232,50 @@ func _menu_anim_scale(full: float) -> float:
 	return full
 
 
+func _popup_dialog_fixed(dialog: Window, sz: Vector2i) -> void:
+	if dialog == null:
+		return
+	var vp: Vector2i = get_viewport_rect().size
+	var w: int = clampi(sz.x, 320, maxi(320, vp.x - 40))
+	var h: int = clampi(sz.y, 180, maxi(180, vp.y - 40))
+	var size_i := Vector2i(w, h)
+	var pos_i := Vector2i(int((vp.x - w) * 0.5), int((vp.y - h) * 0.5))
+	dialog.unresizable = true
+	dialog.popup(Rect2i(pos_i, size_i))
+	# Some window backends re-apply constraints after popup; reassert next frame.
+	call_deferred("_reassert_dialog_size", dialog, pos_i, size_i)
+
+
+func _reassert_dialog_size(dialog: Window, pos_i: Vector2i, size_i: Vector2i) -> void:
+	if dialog == null or not is_instance_valid(dialog):
+		return
+	dialog.position = pos_i
+	dialog.size = Vector2(size_i)
+
+
 func _main_menu_last_bulletin_unix() -> int:
 	var cfg := ConfigFile.new()
 	if cfg.load(MAIN_MENU_STATE_FILE) != OK:
 		return 0
 	return int(cfg.get_value("dispatch", "last_exit_bulletin_unix", 0))
+
+
+func _load_confirmation_prefs() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(MAIN_MENU_STATE_FILE) != OK:
+		_suppress_load_confirm = false
+		_suppress_quit_confirm = false
+		return
+	_suppress_load_confirm = bool(cfg.get_value("confirmations", "skip_load", _suppress_load_confirm))
+	_suppress_quit_confirm = bool(cfg.get_value("confirmations", "skip_quit", _suppress_quit_confirm))
+
+
+func _save_confirmation_prefs() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(MAIN_MENU_STATE_FILE)
+	cfg.set_value("confirmations", "skip_load", _suppress_load_confirm)
+	cfg.set_value("confirmations", "skip_quit", _suppress_quit_confirm)
+	cfg.save(MAIN_MENU_STATE_FILE)
 
 
 func _persist_last_bulletin_seen_unix(u: int) -> void:
@@ -235,7 +294,10 @@ func _apply_main_menu_ui_scale() -> void:
 		return
 	var hud: float = CampaignManager.get_hud_scale_float()
 	center_stage.scale = Vector2.ONE * clampf(hud * 0.94, 0.86, 1.22)
-	center_stage.pivot_offset = center_stage.size * 0.5
+	var sz: Vector2 = center_stage.size
+	if sz.x < 2.0 or sz.y < 2.0:
+		sz = get_viewport_rect().size
+	center_stage.pivot_offset = sz * 0.5
 
 
 func _refresh_input_hint() -> void:
@@ -332,8 +394,8 @@ func _update_dispatch_new_badge(updated_at: int) -> void:
 	if _reduced_motion():
 		return
 	_dispatch_fresh_tween = create_tween().set_loops()
-	_dispatch_fresh_tween.tween_property(dispatch_new_badge, "modulate:a", 0.45, 0.85).set_trans(Tween.TRANS_SINE)
-	_dispatch_fresh_tween.tween_property(dispatch_new_badge, "modulate:a", 1.0, 0.85).set_trans(Tween.TRANS_SINE)
+	_dispatch_fresh_tween.tween_property(dispatch_new_badge, "modulate:a", 0.45, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_dispatch_fresh_tween.tween_property(dispatch_new_badge, "modulate:a", 1.0, 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 func _apply_save_progress_atmosphere() -> void:
@@ -769,6 +831,41 @@ func _style_dialog(dialog: AcceptDialog) -> void:
 	dialog.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
 	dialog.add_theme_constant_override("outline_size", 2)
 	dialog.add_theme_stylebox_override("panel", _make_panel_style(MENU_BG, MENU_BORDER, 2, 18, 0.44, 14, 6))
+
+
+func _style_menu_checkbox(box: CheckBox) -> void:
+	if box == null:
+		return
+	var regular_font: Font = box.get_theme_font("font", "Label")
+	if regular_font != null:
+		box.add_theme_font_override("font", regular_font)
+	box.add_theme_font_size_override("font_size", 16)
+	box.add_theme_color_override("font_color", MENU_TEXT_MUTED)
+	box.add_theme_color_override("font_hover_color", MENU_ACCENT)
+	box.add_theme_color_override("font_pressed_color", MENU_TEXT)
+	box.add_theme_color_override("font_hover_pressed_color", MENU_ACCENT)
+	box.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
+	box.add_theme_constant_override("outline_size", 2)
+	box.add_theme_constant_override("h_separation", 10)
+
+
+func _style_confirm_overlay() -> void:
+	if confirm_overlay == null:
+		return
+	if confirm_card != null:
+		_style_panel(confirm_card, MENU_BG, MENU_BORDER, 2, 22, 0.50)
+	if confirm_title != null:
+		_style_label(confirm_title, MENU_ACCENT, 22, 3)
+	if confirm_rule != null:
+		_style_rule(confirm_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
+	if confirm_body != null:
+		_style_label(confirm_body, MENU_TEXT, 15, 1)
+	confirm_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_style_menu_checkbox(confirm_dont_ask)
+	if confirm_cancel != null:
+		_style_button(confirm_cancel, "CANCEL", false, 18, 46)
+	if confirm_ok != null:
+		_style_button(confirm_ok, confirm_ok.text, false, 20, 50)
 
 
 func _get_roadmap_status_color(status_text: String) -> Color:
@@ -1298,6 +1395,7 @@ func _on_dispatch_editor_confirmed() -> void:
 func _publish_dispatch_async(payload: Dictionary) -> void:
 	if not has_node("/root/SilentWolf"):
 		_apply_dispatch_payload(payload, "LOCAL DEBUG // NO CLOUD SYNC")
+		_update_briefing_sync_line("Briefing edit stored locally — cloud pipeline not available.", MENU_WARNING)
 		return
 	var fresh_score := int(Time.get_unix_time_from_system())
 	var sw_result = await SilentWolf.Scores.save_score("SYSTEM", fresh_score, DISPATCH_LEADERBOARD, payload).sw_save_score_complete
@@ -1322,7 +1420,6 @@ func _apply_theme() -> void:
 
 	_style_label($IntelPanel/IntelCard/Margin/VBox/IntelTitle, MENU_ACCENT, 28, 3)
 	_style_rule(intel_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
-	_style_label($IntelPanel/IntelCard/Margin/VBox/IntelCopy, MENU_TEXT_MUTED, 15, 1)
 	for path in [
 		"IntelPanel/IntelCard/Margin/VBox/IntelCopy",
 		"IntelPanel/IntelCard/Margin/VBox/IntelItem1",
@@ -1337,7 +1434,7 @@ func _apply_theme() -> void:
 	if intel_rotating_tip != null:
 		_style_label(intel_rotating_tip, MENU_TEXT, 15, 1)
 		intel_rotating_tip.visible = true
-		if not INTEL_TIPS.is_empty():
+		if INTEL_TIPS != null and INTEL_TIPS.size() > 0:
 			intel_rotating_tip.text = INTEL_TIPS[0]
 	_style_label($DispatchPanel/DispatchCard/Margin/VBox/DispatchTitle, MENU_ACCENT, 26, 3)
 	_style_rule(dispatch_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
@@ -1438,6 +1535,34 @@ func _apply_theme() -> void:
 		var ach_ok := achievements_dialog.get_ok_button()
 		if ach_ok != null:
 			_style_button(ach_ok, "CLOSE", false, 20, 54)
+
+	# Load / quit confirmations follow the same glass-panel language.
+	_style_dialog(load_dialog)
+	_style_dialog(quit_dialog)
+	if load_dialog != null:
+		load_dialog.min_size = Vector2i(720, 260)
+		var load_ok := load_dialog.get_ok_button()
+		var load_cancel := load_dialog.get_cancel_button()
+		if load_ok != null:
+			_style_button(load_ok, "LOAD", false, 20, 50)
+		if load_cancel != null:
+			_style_button(load_cancel, "CANCEL", false, 18, 46)
+	if quit_dialog != null:
+		quit_dialog.min_size = Vector2i(720, 230)
+		var quit_ok := quit_dialog.get_ok_button()
+		var quit_cancel := quit_dialog.get_cancel_button()
+		if quit_ok != null:
+			_style_button(quit_ok, "QUIT", false, 20, 50)
+			# Push quit into a warning palette (without changing _style_button signature).
+			quit_ok.add_theme_stylebox_override("normal", _make_panel_style(Color(0.20, 0.15, 0.15, 0.98), Color(0.65, 0.38, 0.36, 0.92), 2, 12, 0.28, 9, 3))
+			quit_ok.add_theme_stylebox_override("hover", _make_panel_style(Color(0.30, 0.20, 0.19, 0.98), MENU_ERROR.lerp(MENU_BORDER, 0.25), 2, 12, 0.34, 11, 3))
+			quit_ok.add_theme_stylebox_override("pressed", _make_panel_style(Color(0.14, 0.11, 0.11, 0.98), MENU_ERROR.lerp(MENU_BORDER, 0.35), 2, 12, 0.24, 7, 1))
+			quit_ok.add_theme_stylebox_override("focus", _make_panel_style(Color(0.30, 0.20, 0.19, 0.98), MENU_ACCENT_SOFT, 2, 12, 0.34, 11, 3))
+		if quit_cancel != null:
+			_style_button(quit_cancel, "CANCEL", false, 18, 46)
+
+	_style_menu_checkbox(load_dialog_dont_ask)
+	_style_menu_checkbox(quit_dialog_dont_ask)
 	if profile_dialog != null:
 		profile_dialog.add_theme_font_size_override("title_font_size", 20)
 		profile_dialog.add_theme_color_override("title_color", MENU_ACCENT)
@@ -1608,6 +1733,20 @@ func _connect_signals() -> void:
 
 	if delete_dialog != null:
 		delete_dialog.confirmed.connect(_on_delete_confirmed)
+	if load_dialog != null:
+		load_dialog.confirmed.connect(_on_load_confirmed)
+		if load_dialog_dont_ask != null and not load_dialog_dont_ask.toggled.is_connected(_on_load_dont_ask_toggled):
+			load_dialog_dont_ask.toggled.connect(_on_load_dont_ask_toggled)
+	if quit_dialog != null:
+		quit_dialog.confirmed.connect(_on_quit_confirmed)
+		if quit_dialog_dont_ask != null and not quit_dialog_dont_ask.toggled.is_connected(_on_quit_dont_ask_toggled):
+			quit_dialog_dont_ask.toggled.connect(_on_quit_dont_ask_toggled)
+	if confirm_cancel != null and not confirm_cancel.pressed.is_connected(_hide_confirm_overlay):
+		confirm_cancel.pressed.connect(_hide_confirm_overlay)
+	if confirm_ok != null and not confirm_ok.pressed.is_connected(_on_confirm_overlay_ok):
+		confirm_ok.pressed.connect(_on_confirm_overlay_ok)
+	if confirm_dont_ask != null and not confirm_dont_ask.toggled.is_connected(_on_confirm_overlay_dont_ask_toggled):
+		confirm_dont_ask.toggled.connect(_on_confirm_overlay_dont_ask_toggled)
 	if dispatch_editor_dialog != null:
 		dispatch_editor_dialog.confirmed.connect(_on_dispatch_editor_confirmed)
 	if edit_dispatch_button != null:
@@ -1723,7 +1862,7 @@ func _prepare_intro_state() -> void:
 	if dispatch_panel != null:
 		intro.tween_property(dispatch_panel, "modulate:a", 1.0, _menu_anim_scale(0.40)).set_delay(_menu_anim_scale(0.25)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		intro.tween_property(dispatch_panel, "position:x", dispatch_panel.position.x - 80.0, _menu_anim_scale(0.50)).set_delay(_menu_anim_scale(0.25)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	intro.chain().tween_callback(_refresh_input_hint)
+	call_deferred("_refresh_input_hint")
 
 func _enter_tree() -> void:
 	_ensure_startup_black_overlay()
@@ -1737,9 +1876,15 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	if SettingsMenu != null and SettingsMenu.has_method("hide_menu"):
 		SettingsMenu.hide_menu()
+	if SettingsMenu != null:
+		var vis_cb := Callable(self, "_on_settings_overlay_visibility_changed")
+		if not SettingsMenu.visibility_changed.is_connected(vis_cb):
+			SettingsMenu.visibility_changed.connect(vis_cb)
 	_ensure_roadmap_data()
 	_apply_theme()
 	_connect_signals()
+	_load_confirmation_prefs()
+	_style_confirm_overlay()
 	_layout_menu()
 	_refresh_save_ui()
 	dispatch_category_option.clear()
@@ -1747,6 +1892,8 @@ func _ready() -> void:
 		dispatch_category_option.add_item(category)
 	edit_dispatch_button.visible = _can_edit_dispatch()
 	_init_audio()
+	_prepare_intel_tip_timer()
+	_apply_main_menu_ui_scale()
 	_prepare_intro_state()
 	_start_atmosphere_pass()
 	_fetch_dispatch_feed()
@@ -1754,6 +1901,27 @@ func _ready() -> void:
 	_handle_startup_black_handoff()
 	_request_steam_profile_avatar()
 	_update_steam_corner_playing_as_label()
+	call_deferred("_refresh_input_hint")
+	call_deferred("_refresh_campaign_resume_and_empty")
+
+
+func _prepare_intel_tip_timer() -> void:
+	if intel_rotating_tip == null or INTEL_TIPS.size() < 2:
+		return
+	if _intel_tip_timer != null:
+		return
+	_intel_tip_timer = Timer.new()
+	_intel_tip_timer.wait_time = 7.0
+	_intel_tip_timer.one_shot = false
+	add_child(_intel_tip_timer)
+	_intel_tip_timer.timeout.connect(_advance_intel_tip)
+	_intel_tip_timer.start()
+
+
+func _exit_tree() -> void:
+	if _dispatch_status_is_live_cloud(_last_dispatch_status):
+		_persist_last_bulletin_seen_unix(int(_dispatch_payload.get("updated_at", 0)))
+	_stop_dispatch_fresh_fx()
 
 
 func _request_steam_profile_avatar() -> void:
@@ -1838,6 +2006,24 @@ func _layout_menu() -> void:
 		main_menu_version_footer.offset_top = -92.0
 		main_menu_version_footer.offset_bottom = -pad_b
 	_refresh_dispatch_body_layout()
+	_apply_main_menu_ui_scale()
+	_layout_confirm_overlay()
+
+
+func _layout_confirm_overlay() -> void:
+	if confirm_overlay == null or confirm_card == null:
+		return
+	if not confirm_overlay.visible:
+		return
+	var vp: Vector2 = get_viewport_rect().size
+	var desired := Vector2(720.0, 260.0)
+	if _confirm_kind == "quit":
+		desired.y = 230.0
+	desired.x = minf(desired.x, vp.x - 40.0)
+	desired.y = minf(desired.y, vp.y - 40.0)
+	var pos := Vector2((vp.x - desired.x) * 0.5, (vp.y - desired.y) * 0.5)
+	_set_control_rect(confirm_card, pos, desired)
+	confirm_card.pivot_offset = desired * 0.5
 
 func _ensure_startup_black_overlay() -> void:
 	if _startup_black_overlay != null and is_instance_valid(_startup_black_overlay):
@@ -2056,8 +2242,8 @@ func _animate_archive_rows() -> void:
 		row.modulate.a = 0.0
 		row.scale = Vector2(0.985, 0.985)
 		var row_tween := create_tween()
-		row_tween.tween_property(row, "modulate:a", 1.0, 0.18).set_delay(delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		row_tween.parallel().tween_property(row, "scale", Vector2.ONE, 0.24).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		row_tween.tween_property(row, "modulate:a", 1.0, _menu_anim_scale(0.18)).set_delay(_menu_anim_scale(delay)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		row_tween.parallel().tween_property(row, "scale", Vector2.ONE, _menu_anim_scale(0.24)).set_delay(_menu_anim_scale(delay)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		delay += 0.045
 
 
@@ -2116,6 +2302,7 @@ func _refresh_save_ui() -> void:
 		slots_container.visible = false
 	_sync_archive_section_visibility()
 	call_deferred("_layout_menu")
+	_refresh_campaign_resume_and_empty()
 
 
 func _update_save_slot_ui(slot_button: Button, slot_num: int, is_auto: bool) -> void:
@@ -2190,15 +2377,16 @@ func _update_save_slot_ui(slot_button: Button, slot_num: int, is_auto: bool) -> 
 
 
 func _on_start_pressed() -> void:
+	_play_dossier_panel_sting()
 	var sweep_x := _right_rails_sweep_off_x()
 	var t := create_tween()
 	t.set_parallel(true)
-	t.tween_property(main_vbox, "modulate:a", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	t.tween_property(main_vbox, "scale", Vector2(0.97, 0.97), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_property(main_vbox, "modulate:a", 0.0, _menu_anim_scale(0.16)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	t.tween_property(main_vbox, "scale", Vector2(0.97, 0.97), _menu_anim_scale(0.18)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	if intel_panel != null:
-		t.tween_property(intel_panel, "position:x", sweep_x, 0.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		t.tween_property(intel_panel, "position:x", sweep_x, _menu_anim_scale(0.34)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	if dispatch_panel != null:
-		t.tween_property(dispatch_panel, "position:x", sweep_x, 0.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN).set_delay(0.07)
+		t.tween_property(dispatch_panel, "position:x", sweep_x, _menu_anim_scale(0.34)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN).set_delay(_menu_anim_scale(0.07))
 	t.set_parallel(false)
 	t.tween_callback(func():
 		if intel_panel != null:
@@ -2212,16 +2400,19 @@ func _on_start_pressed() -> void:
 		slots_container.visible = false
 		_sync_archive_section_visibility()
 		call_deferred("_layout_menu")
+		_refresh_campaign_resume_and_empty()
+		_refresh_input_hint()
 	)
 	t.set_parallel(true)
-	t.tween_property(campaign_vbox, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	t.tween_property(campaign_vbox, "scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(campaign_vbox, "modulate:a", 1.0, _menu_anim_scale(0.22)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.tween_property(campaign_vbox, "scale", Vector2.ONE, _menu_anim_scale(0.26)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	t.set_parallel(false)
 	t.tween_callback(func():
 		if continue_button.visible:
 			continue_button.grab_focus()
 		else:
 			new_game_button.grab_focus()
+		_refresh_input_hint()
 	)
 
 
@@ -2229,8 +2420,8 @@ func _on_back_pressed() -> void:
 	var sweep_x := _right_rails_sweep_off_x()
 	var t := create_tween()
 	t.set_parallel(true)
-	t.tween_property(campaign_vbox, "modulate:a", 0.0, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	t.tween_property(campaign_vbox, "scale", Vector2(0.97, 0.97), 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_property(campaign_vbox, "modulate:a", 0.0, _menu_anim_scale(0.14)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	t.tween_property(campaign_vbox, "scale", Vector2(0.97, 0.97), _menu_anim_scale(0.16)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	t.chain().tween_callback(func():
 		campaign_vbox.visible = false
 		slots_container.visible = false
@@ -2249,18 +2440,20 @@ func _on_back_pressed() -> void:
 		main_vbox.scale = Vector2(0.97, 0.97)
 		var t2 := create_tween()
 		t2.set_parallel(true)
-		t2.tween_property(main_vbox, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		t2.tween_property(main_vbox, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t2.tween_property(main_vbox, "modulate:a", 1.0, _menu_anim_scale(0.18)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		t2.tween_property(main_vbox, "scale", Vector2.ONE, _menu_anim_scale(0.22)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		if intel_panel != null:
-			t2.tween_property(intel_panel, "position:x", intel_x, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			t2.tween_property(intel_panel, "position:x", intel_x, _menu_anim_scale(0.40)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		if dispatch_panel != null:
-			t2.tween_property(dispatch_panel, "position:x", disp_x, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT).set_delay(0.08)
+			t2.tween_property(dispatch_panel, "position:x", disp_x, _menu_anim_scale(0.40)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT).set_delay(_menu_anim_scale(0.08))
 		t2.chain().tween_callback(func():
 			if intel_panel != null:
 				_sync_panel_position_to_offsets(intel_panel)
 			if dispatch_panel != null:
 				_sync_panel_position_to_offsets(dispatch_panel)
 			start_button.grab_focus()
+			_refresh_campaign_resume_and_empty()
+			_refresh_input_hint()
 		)
 	)
 
@@ -2397,20 +2590,21 @@ func _on_continue_pressed() -> void:
 				newest_slot = i
 				newest_is_auto = true
 	if newest_slot != -1:
-		_on_slot_pressed(newest_slot, newest_is_auto)
+		_request_load_confirmation(newest_slot, newest_is_auto, true)
 
 
 func _on_load_game_pressed() -> void:
 	var showing := not slots_container.visible
 	if showing:
+		_play_dossier_panel_sting()
 		slots_container.visible = true
 		_sync_archive_section_visibility()
 		call_deferred("_layout_menu")
 		slots_container.modulate.a = 0.0
 		slots_container.scale = Vector2(0.985, 0.985)
 		var t := create_tween()
-		t.tween_property(slots_container, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		t.parallel().tween_property(slots_container, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t.tween_property(slots_container, "modulate:a", 1.0, _menu_anim_scale(0.18)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		t.parallel().tween_property(slots_container, "scale", Vector2.ONE, _menu_anim_scale(0.20)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		t.tween_callback(_animate_archive_rows)
 		if slot_1_btn.visible:
 			slot_1_btn.grab_focus()
@@ -2418,25 +2612,59 @@ func _on_load_game_pressed() -> void:
 			slot_2_btn.grab_focus()
 		elif slot_3_btn.visible:
 			slot_3_btn.grab_focus()
+		_refresh_input_hint()
 	else:
 		var t := create_tween()
-		t.tween_property(slots_container, "modulate:a", 0.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		t.tween_property(slots_container, "modulate:a", 0.0, _menu_anim_scale(0.12)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		t.tween_callback(func():
 			slots_container.visible = false
 			_sync_archive_section_visibility()
 			call_deferred("_layout_menu")
+			_refresh_input_hint()
 		)
 		load_game_button.grab_focus()
 
 
 func _on_slot_pressed(slot_num: int, is_auto: bool = false) -> void:
-	if CampaignManager.load_game(slot_num, is_auto):
+	_request_load_confirmation(slot_num, is_auto, false)
+
+
+func _request_load_confirmation(slot_num: int, is_auto: bool, from_continue: bool) -> void:
+	if _suppress_load_confirm:
+		_pending_load_slot = slot_num
+		_pending_load_is_auto = is_auto
+		_on_load_confirmed()
+		return
+	_pending_load_slot = slot_num
+	_pending_load_is_auto = is_auto
+	var btn := _get_slot_button(slot_num, is_auto)
+	var label := ("AUTO %d" % slot_num) if is_auto else ("SLOT %d" % slot_num)
+	if btn != null:
+		var name_label := btn.get_node_or_null("MarginContainer/HBox/TextVBox/NameLabel") as Label
+		var loc_label := btn.get_node_or_null("MarginContainer/HBox/TextVBox/LocationLabel") as Label
+		if name_label != null and name_label.text.strip_edges() != "":
+			label = name_label.text
+		var loc_line := loc_label.text.strip_edges() if loc_label != null else ""
+		if loc_line != "":
+			label += "\n" + loc_line
+	_show_confirm_overlay(
+		"continue" if from_continue else "load",
+		"CONFIRM CONTINUE" if from_continue else "CONFIRM LOAD",
+		"Load this field record?\n\n%s" % label,
+		"load"
+	)
+
+
+func _on_load_confirmed() -> void:
+	if _pending_load_slot <= 0:
+		return
+	if CampaignManager.load_game(_pending_load_slot, _pending_load_is_auto):
 		SceneTransition.change_scene_to_file("res://Scenes/camp_menu.tscn")
 	else:
-		var btn := _get_slot_button(slot_num, is_auto)
+		var btn := _get_slot_button(_pending_load_slot, _pending_load_is_auto)
 		if btn != null:
 			_flash_slot_error(btn)
-		print("Error: Failed to load save slot ", slot_num)
+		print("Error: Failed to load save slot ", _pending_load_slot)
 
 
 func _flash_slot_error(control: Control) -> void:
@@ -2448,7 +2676,99 @@ func _flash_slot_error(control: Control) -> void:
 
 
 func _on_quit_pressed() -> void:
+	if _suppress_quit_confirm or quit_dialog == null:
+		get_tree().quit()
+		return
+	_show_confirm_overlay(
+		"quit",
+		"QUIT TO DESKTOP",
+		"Quit to desktop?\n\nAny unsaved progress in the current session will be lost.",
+		"quit"
+	)
+
+
+func _on_quit_confirmed() -> void:
 	get_tree().quit()
+
+
+func _on_load_dont_ask_toggled(pressed: bool) -> void:
+	_suppress_load_confirm = pressed
+	_save_confirmation_prefs()
+
+
+func _on_quit_dont_ask_toggled(pressed: bool) -> void:
+	_suppress_quit_confirm = pressed
+	_save_confirmation_prefs()
+
+
+func _show_confirm_overlay(kind: String, title_text: String, body_text: String, dont_ask_key: String) -> void:
+	if confirm_overlay == null:
+		return
+	_confirm_kind = kind
+	confirm_overlay.visible = true
+	confirm_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	if confirm_title != null:
+		confirm_title.text = title_text
+	if confirm_body != null:
+		confirm_body.text = body_text
+	if confirm_dont_ask != null:
+		if dont_ask_key == "load":
+			confirm_dont_ask.text = "Don't ask again for load & continue"
+			confirm_dont_ask.button_pressed = _suppress_load_confirm
+		elif dont_ask_key == "quit":
+			confirm_dont_ask.text = "Don't ask again when quitting from the war table"
+			confirm_dont_ask.button_pressed = _suppress_quit_confirm
+		else:
+			confirm_dont_ask.text = "Don't ask again"
+			confirm_dont_ask.button_pressed = false
+	if confirm_ok != null:
+		confirm_ok.text = "QUIT" if kind == "quit" else "LOAD"
+	_style_confirm_overlay()
+	_layout_confirm_overlay()
+	if confirm_ok != null:
+		confirm_ok.grab_focus()
+
+
+func _hide_confirm_overlay() -> void:
+	if confirm_overlay == null:
+		return
+	confirm_overlay.visible = false
+	_confirm_kind = ""
+	_refresh_input_hint()
+	# Restore focus to a sensible place.
+	if campaign_vbox != null and campaign_vbox.visible:
+		if slots_container != null and slots_container.visible:
+			if slot_1_btn != null and slot_1_btn.visible:
+				slot_1_btn.grab_focus()
+			elif slot_2_btn != null and slot_2_btn.visible:
+				slot_2_btn.grab_focus()
+			elif slot_3_btn != null and slot_3_btn.visible:
+				slot_3_btn.grab_focus()
+			elif load_game_button != null:
+				load_game_button.grab_focus()
+		else:
+			if continue_button != null and continue_button.visible:
+				continue_button.grab_focus()
+			elif new_game_button != null:
+				new_game_button.grab_focus()
+	else:
+		if start_button != null:
+			start_button.grab_focus()
+
+
+func _on_confirm_overlay_ok() -> void:
+	if _confirm_kind == "quit":
+		_on_quit_confirmed()
+		return
+	_on_load_confirmed()
+
+
+func _on_confirm_overlay_dont_ask_toggled(pressed: bool) -> void:
+	if _confirm_kind == "quit":
+		_suppress_quit_confirm = pressed
+	elif _confirm_kind in ["load", "continue"]:
+		_suppress_load_confirm = pressed
+	_save_confirmation_prefs()
 
 
 func _on_delete_pressed(slot_num: int) -> void:
@@ -2470,7 +2790,43 @@ func _on_delete_confirmed() -> void:
 		call_deferred("_layout_menu")
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if SettingsMenu != null and SettingsMenu.visible:
+		return
+	if confirm_overlay != null and confirm_overlay.visible:
+		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+			_hide_confirm_overlay()
+			get_viewport().set_input_as_handled()
+		return
+	if delete_dialog != null and delete_dialog.visible:
+		return
+	if overwrite_dialog != null and overwrite_dialog.visible:
+		return
+	if dispatch_editor_dialog != null and dispatch_editor_dialog.visible:
+		return
+	if roadmap_dialog != null and roadmap_dialog.visible:
+		return
+	if achievements_dialog != null and achievements_dialog.visible:
+		return
+	if profile_dialog != null and profile_dialog.visible:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE and campaign_vbox.visible:
+			if slots_container.visible:
+				_on_load_game_pressed()
+			else:
+				_on_back_pressed()
+			get_viewport().set_input_as_handled()
+
+
 func _process(delta: float) -> void:
+	if _reduced_motion():
+		var zr := 0.0
+		for panel in [main_vbox, intel_panel, dispatch_panel]:
+			if panel == null:
+				continue
+			panel.rotation = lerp(panel.rotation, zr, 8.0 * delta)
+		return
 	var vp_size = get_viewport_rect().size
 	var mouse_pos = get_global_mouse_position()
 	var center = vp_size * 0.5
@@ -2478,9 +2834,9 @@ func _process(delta: float) -> void:
 	var offset_ratio_x = clampf((mouse_pos.x - center.x) / center.x, -1.0, 1.0)
 	var offset_ratio_y = clampf((mouse_pos.y - center.y) / center.y, -1.0, 1.0)
 	
-	# 3D Tilt Parameters
 	var target_rot = (offset_ratio_x * 0.02) + (offset_ratio_y * 0.01)
 	
 	for panel in [main_vbox, intel_panel, dispatch_panel]:
-		if panel == null: continue
+		if panel == null:
+			continue
 		panel.rotation = lerp(panel.rotation, target_rot, 4.0 * delta)

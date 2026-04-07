@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1_68ox5")
 job_name = "Thief"
+description = "A swift skirmisher who wins with positioning, not armor.\nExcellent Speed/Agility for flanks and finishers—avoid prolonged trades."
 move_range = 5
 allowed_weapon_types = Array[int]([6])
 class_skill_tree = ExtResource("1_86v5e")

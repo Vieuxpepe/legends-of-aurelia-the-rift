@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1_242a2")
 job_name = "Cleric"
+description = "A devoted support who keeps your squad standing.\nHealing, buffs, and strong Resistance—low physical power, but priceless sustain."
 allowed_weapon_types = Array[int]([4])
 can_use_healing_staff = true
 can_use_buff_staff = true

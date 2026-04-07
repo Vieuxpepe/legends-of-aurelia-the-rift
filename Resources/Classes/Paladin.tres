@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_s7ydd")
 job_name = "Paladin"
+description = "A mounted protector who blends steel with sacred support.\nFlexible weapon access and healing utility—steady, reliable, and hard to dislodge."
 move_type = 1
 allowed_weapon_types = Array[int]([0, 1])
 can_use_healing_staff = true

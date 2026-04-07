@@ -663,6 +663,133 @@ autowrap_mode = 3
 
 [node name="OverwriteConfirmation" type="ConfirmationDialog" parent="." unique_id=310577295]
 
+[node name="LoadConfirmation" type="ConfirmationDialog" parent="." unique_id=900010101]
+title = "Confirm Load"
+initial_position = 1
+size = Vector2i(720, 260)
+
+[node name="Margin" type="MarginContainer" parent="LoadConfirmation" unique_id=900010103]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="LoadConfirmation/Margin" unique_id=900010104]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BodyLabel" type="Label" parent="LoadConfirmation/Margin/VBox" unique_id=900010105]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="DontAskAgainToggle" type="CheckBox" parent="LoadConfirmation/Margin/VBox" unique_id=900010106]
+layout_mode = 2
+text = "Don't ask again for load & continue"
+
+[node name="QuitConfirmation" type="ConfirmationDialog" parent="." unique_id=900010102]
+title = "Quit to Desktop"
+initial_position = 1
+size = Vector2i(720, 230)
+
+[node name="Margin" type="MarginContainer" parent="QuitConfirmation" unique_id=900010107]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="QuitConfirmation/Margin" unique_id=900010108]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BodyLabel" type="Label" parent="QuitConfirmation/Margin/VBox" unique_id=900010109]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="DontAskAgainToggle" type="CheckBox" parent="QuitConfirmation/Margin/VBox" unique_id=900010110]
+layout_mode = 2
+text = "Don't ask again when quitting from the war table"
+
+[node name="ConfirmOverlay" type="Control" parent="." unique_id=900010120]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+z_index = 3000
+
+[node name="Dimmer" type="ColorRect" parent="ConfirmOverlay" unique_id=900010121]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.70)
+
+[node name="Card" type="PanelContainer" parent="ConfirmOverlay" unique_id=900010122]
+custom_minimum_size = Vector2(720, 260)
+layout_mode = 0
+offset_left = 600.0
+offset_top = 220.0
+offset_right = 1320.0
+offset_bottom = 480.0
+mouse_filter = 0
+
+[node name="Margin" type="MarginContainer" parent="ConfirmOverlay/Card" unique_id=900010123]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="ConfirmOverlay/Card/Margin" unique_id=900010124]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="ConfirmOverlay/Card/Margin/VBox" unique_id=900010125]
+layout_mode = 2
+text = "CONFIRM"
+
+[node name="Rule" type="ColorRect" parent="ConfirmOverlay/Card/Margin/VBox" unique_id=900010126]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.82, 0.67, 0.29, 0.55)
+
+[node name="Body" type="Label" parent="ConfirmOverlay/Card/Margin/VBox" unique_id=900010127]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="DontAskAgain" type="CheckBox" parent="ConfirmOverlay/Card/Margin/VBox" unique_id=900010128]
+layout_mode = 2
+text = "Don't ask again"
+
+[node name="Actions" type="HBoxContainer" parent="ConfirmOverlay/Card/Margin/VBox" unique_id=900010129]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Spacer" type="Control" parent="ConfirmOverlay/Card/Margin/VBox/Actions" unique_id=900010130]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CancelButton" type="Button" parent="ConfirmOverlay/Card/Margin/VBox/Actions" unique_id=900010131]
+custom_minimum_size = Vector2(160, 46)
+layout_mode = 2
+text = "CANCEL"
+
+[node name="OkButton" type="Button" parent="ConfirmOverlay/Card/Margin/VBox/Actions" unique_id=900010132]
+custom_minimum_size = Vector2(160, 50)
+layout_mode = 2
+text = "OK"
+
 [node name="DispatchEditorDialog" type="ConfirmationDialog" parent="." unique_id=1513662551]
 title = "Edit War Dispatch"
 

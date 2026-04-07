@@ -5112,6 +5112,7 @@ func _ensure_forecast_support_labels() -> void:
 
 func apply_campaign_settings() -> void:
 	camera_follows_enemies = CampaignManager.battle_follow_enemy_camera
+	CampaignManager.apply_custom_mouse_cursors()
 	_apply_cursor_accessibility_settings()
 
 	zoom_step = CampaignManager.battle_zoom_step

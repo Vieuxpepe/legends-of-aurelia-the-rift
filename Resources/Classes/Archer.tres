@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_7paor")
 job_name = "Archer"
+description = "A disciplined marksman who wins fights at range.\nHigh Speed/Agility, but needs protection when enemies close in."
 allowed_weapon_types = Array[int]([3])
 class_skill_tree = ExtResource("1_s1e66")
 class_combat_ability = "Parting Shot"

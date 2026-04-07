@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_a442o")
 job_name = "Knight"
+description = "An armored bulwark that holds the line.\nExcellent Defense and staying power, but slower to reposition and chase."
 move_type = 1
 allowed_weapon_types = Array[int]([1])
 class_skill_tree = ExtResource("1_b8f3r")

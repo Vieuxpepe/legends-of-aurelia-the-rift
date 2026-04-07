@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_ob5bu")
 job_name = "Mage"
+description = "A battlefield caster who turns distance into damage.\nHigh Magic and elemental pressure, but fragile if caught in melee."
 allowed_weapon_types = Array[int]([4])
 class_skill_tree = ExtResource("1_tvfm5")
 class_combat_ability = "Fireball"

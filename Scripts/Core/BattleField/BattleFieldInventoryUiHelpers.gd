@@ -1,4 +1,4 @@
-extends RefCounted
+﻿extends RefCounted
 
 # Inventory / loot UI helpers extracted from `BattleField.gd`.
 
@@ -55,6 +55,25 @@ static func apply_inventory_panel_spacing(field) -> void:
 		field.inv_desc_label.offset_bottom -= dpad
 
 	field.inventory_panel.set_meta(field.META_INVENTORY_UI_SPACING_APPLIED, true)
+
+static func panel_pop_in(field, panel: Control) -> void:
+	if panel == null: return
+	panel.visible = true
+	panel.modulate.a = 0.0
+	panel.scale = Vector2(0.9, 0.9)
+	panel.pivot_offset = panel.size * 0.5
+	
+	var tw = field.create_tween().set_parallel(true).set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(panel, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(panel, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+static func panel_pop_out(field, panel: Control) -> void:
+	if panel == null: return
+	var tw = field.create_tween().set_parallel(true).set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(panel, "modulate:a", 0.0, 0.18).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(panel, "scale", Vector2(0.95, 0.95), 0.18).set_trans(Tween.TRANS_SINE)
+	tw.chain().tween_callback(func(): panel.visible = false)
 
 
 static func populate_unit_inventory_list(field) -> void:

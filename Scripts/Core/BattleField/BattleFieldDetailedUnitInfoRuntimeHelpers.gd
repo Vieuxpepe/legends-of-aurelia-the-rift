@@ -27,7 +27,7 @@ static func unit_info_primary_fill_color(field, bar_key: String, current_value: 
 		_:
 			return field.TACTICAL_UI_ACCENT_SOFT
 
-static func style_unit_info_primary_bar(field, bar: ProgressBar, fill: Color, bar_key: String = "") -> void:
+static func style_unit_info_primary_bar(_field, bar: ProgressBar, fill: Color, bar_key: String = "") -> void:
 	if bar == null:
 		return
 	bar.show_percentage = false
@@ -62,7 +62,7 @@ static func style_unit_info_primary_bar(field, bar: ProgressBar, fill: Color, ba
 	bar.add_theme_stylebox_override("background", bg_style)
 	bar.add_theme_stylebox_override("fill", fill_style)
 
-static func attach_unit_info_bar_sheen(field, bar: ProgressBar) -> ColorRect:
+static func attach_unit_info_bar_sheen(_field, bar: ProgressBar) -> ColorRect:
 	if bar == null:
 		return null
 	bar.clip_contents = true
@@ -229,7 +229,7 @@ static func animate_unit_info_primary_widgets_in(field, target_values: Dictionar
 		var widgets: Dictionary = field._unit_info_primary_widgets[bar_key]
 		var panel := widgets.get("panel") as Panel
 		var bar := widgets.get("bar") as ProgressBar
-		var sheen := widgets.get("sheen") as ColorRect
+		var _sheen := widgets.get("sheen") as ColorRect
 		var delay := float(idx) * 0.045
 		if panel != null:
 			panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
@@ -237,8 +237,8 @@ static func animate_unit_info_primary_widgets_in(field, target_values: Dictionar
 		if bar != null:
 			bar.value = 0.0
 			field._unit_info_primary_anim_tween.tween_property(bar, "value", float(target_values.get(bar_key, 0.0)), 0.28).set_delay(delay)
-		if sheen != null:
-			animate_unit_info_bar_sheen(field, sheen, bar, delay + 0.06)
+		if _sheen != null:
+			animate_unit_info_bar_sheen(field, _sheen, bar, delay + 0.06)
 	field._unit_info_primary_anim_tween.finished.connect(func():
 		field._unit_info_primary_anim_tween = null
 		field._unit_info_primary_animating = false
@@ -261,7 +261,7 @@ static func refresh_unit_info_primary_widgets(field, primary_values: Dictionary,
 		var value_chip := widgets.get("value_chip") as Panel
 		var value_label := widgets.get("value") as Label
 		var bar := widgets.get("bar") as ProgressBar
-		var sheen := widgets.get("sheen") as ColorRect
+		var _sheen := widgets.get("sheen") as ColorRect
 		var row_data: Dictionary = primary_values.get(bar_key, {})
 		var current_value: int = int(row_data.get("current", 0))
 		var max_value: int = max(1, int(row_data.get("max", 1)))
@@ -308,7 +308,7 @@ static func refresh_unit_info_primary_widgets(field, primary_values: Dictionary,
 	if animate:
 		animate_unit_info_primary_widgets_in(field, display_values, source_id)
 
-static func unit_info_stat_tier_index(field, stat_value: int) -> int:
+static func unit_info_stat_tier_index(_field, stat_value: int) -> int:
 	if stat_value >= 200:
 		return 4
 	if stat_value >= 150:
@@ -354,7 +354,7 @@ static func unit_info_stat_fill_color(field, stat_key: String, stat_value: int) 
 		_:
 			return field.TACTICAL_UI_ACCENT_SOFT
 
-static func style_unit_info_stat_bar(field, bar: ProgressBar, fill: Color, overcap: bool) -> void:
+static func style_unit_info_stat_bar(_field, bar: ProgressBar, fill: Color, overcap: bool) -> void:
 	if bar == null:
 		return
 	bar.show_percentage = false
@@ -744,7 +744,7 @@ static func layout_unit_info_stat_widgets(field) -> void:
 		var value_label := widgets.get("value") as Label
 		var bar := widgets.get("bar") as ProgressBar
 		var col: int = idx % 2
-		var row: int = idx / 2
+		var row: int = int(idx / 2.0)
 		var pos := Vector2(col * (block_width + gap_x), row * (block_height + gap_y))
 		if panel != null:
 			panel.position = pos

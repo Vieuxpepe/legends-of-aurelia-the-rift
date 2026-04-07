@@ -340,52 +340,6 @@ func _decorate_qte_indicator(n: Node, theme: Dictionary) -> void:
 		n.modulate = Color(1.3, 1.3, 1.4) # Slight HDR-like boost for controls
 
 
-## Decorates an inventory button with rarity-based glows and animations.
-func _decorate_inventory_slot(btn: Button, item: Resource) -> void:
-	if btn == null or item == null: return
-	
-	var rarity: String = item.get("rarity") if "rarity" in item else "Common"
-	var rarity_lc := rarity.to_lower()
-	
-	var glow_color := Color(0.4, 0.4, 0.4, 0.3)
-	var pulse_intensity := 0.0
-	
-	match rarity_lc:
-		"uncommon":
-			glow_color = Color(0.2, 0.8, 0.2, 0.4)
-			pulse_intensity = 0.2
-		"rare":
-			glow_color = Color(0.1, 0.4, 0.9, 0.5)
-			pulse_intensity = 0.4
-		"epic":
-			glow_color = Color(0.6, 0.1, 0.9, 0.6)
-			pulse_intensity = 0.6
-		"legendary", "mythic":
-			glow_color = Color(1.0, 0.7, 0.1, 0.7)
-			pulse_intensity = 0.8
-		_: # Common
-			glow_color = Color(0.3, 0.3, 0.3, 0.2)
-			pulse_intensity = 0.0
-
-	# 1. Background Glow
-	var glow := ColorRect.new()
-	glow.name = "RarityGlow"
-	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glow.show_behind_parent = true
-	glow.color = glow_color
-	
-	var pad = 4.0
-	glow.size = btn.custom_minimum_size + Vector2(pad*2, pad*2)
-	glow.position = Vector2(-pad, -pad)
-	btn.add_child(glow)
-	
-	if pulse_intensity > 0:
-		var tw = btn.create_tween().set_loops()
-		tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		tw.tween_property(glow, "modulate:a", 1.0, 0.8 / pulse_intensity)
-		tw.tween_property(glow, "modulate:a", 0.4, 0.8 / pulse_intensity)
-
-
 func _polish_qte_controls_deferred(qte_layer: CanvasLayer, accent: Color) -> void:
 	if qte_layer == null or not is_instance_valid(qte_layer):
 		return

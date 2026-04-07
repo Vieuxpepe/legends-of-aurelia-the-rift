@@ -38,6 +38,31 @@ static func set_cursor_state(field, cursor_node: Node, state_name: String) -> vo
 		return
 	if cursor_node.has_method("set_state_by_name"):
 		cursor_node.call("set_state_by_name", state_name)
+	var cursor_intent: String = "default"
+	match String(state_name).to_upper():
+		"ATTACK":
+			cursor_intent = "attack"
+		"MOVE":
+			cursor_intent = "move"
+		"INSPECT":
+			cursor_intent = "inspect"
+		"INVALID":
+			cursor_intent = "forbidden"
+	if CampaignManager != null and CampaignManager.has_method("set_cursor_intent"):
+		# CampaignManager now owns both the OS cursor shape and the software FX cursor.
+		CampaignManager.set_cursor_intent(cursor_intent)
+		return
+	match cursor_intent:
+		"move":
+			Input.set_default_cursor_shape(Input.CURSOR_MOVE)
+		"attack":
+			Input.set_default_cursor_shape(Input.CURSOR_CROSS)
+		"inspect":
+			Input.set_default_cursor_shape(Input.CURSOR_HELP)
+		"forbidden":
+			Input.set_default_cursor_shape(Input.CURSOR_FORBIDDEN)
+		_:
+			Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 
 
 static func apply_cursor_accessibility_settings(field) -> void:
@@ -214,4 +239,3 @@ static func get_path_preview_tick_positions_for_draw(field) -> Array[Vector2]:
 	if not CampaignManager.battle_show_path_preview or not CampaignManager.battle_path_cost_ticks:
 		return []
 	return field._path_preview_tick_world.duplicate()
-

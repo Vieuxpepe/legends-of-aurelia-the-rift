@@ -1,51 +1,76 @@
 extends Control
 
+# Visual language (kept local; matches warm, gold-accent UI)
+const CC_BG := Color(0.10, 0.08, 0.06, 0.98)
+const CC_BG_ALT := Color(0.15, 0.11, 0.08, 0.98)
+const CC_BORDER := Color(0.82, 0.67, 0.29, 0.96)
+const CC_BORDER_MUTED := Color(0.52, 0.43, 0.22, 0.85)
+const CC_TEXT := Color(0.96, 0.93, 0.86, 1.0)
+const CC_TEXT_MUTED := Color(0.75, 0.71, 0.62, 1.0)
+const CC_ACCENT := Color(0.96, 0.80, 0.32, 1.0)
+const CC_ERROR := Color(0.97, 0.42, 0.38, 1.0)
+const CC_METAL_TINT := Color(0.88, 0.88, 0.90, 1.0)
+const CC_CLASS_DESC := Color(0.86, 0.78, 0.56, 1.0)
+
+const UnitInfoRuntimeHelpers := preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoRuntimeHelpers.gd")
+
 # =========================
 # UI REFERENCES (existing)
 # =========================
-@onready var name_input: LineEdit = $Panel/NameInput
-@onready var class_dropdown: OptionButton = $Panel/ClassDropdown
-@onready var ability_dropdown: OptionButton = $Panel/AbilityDropdown
-@onready var points_label: Label = $Panel/PointsLabel
-@onready var difficulty_dropdown: OptionButton = $Panel/DifficultyDropdown
-@onready var difficulty_desc_label: RichTextLabel = $Panel/DifficultyDescLabel
+@onready var name_input: LineEdit = $Panel/MainMargin/MainVBox/TopRow/MidCol/NameInput
+@onready var class_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/MidCol/ClassDropdown
+@onready var class_desc_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/ClassDescLabel
+@onready var ability_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/MidCol/AbilityDropdown
+@onready var points_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/PointsLabel
+@onready var difficulty_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/RightCol/DifficultyCard/DifficultyDropdown
+@onready var difficulty_desc_label: RichTextLabel = $Panel/MainMargin/MainVBox/TopRow/RightCol/DifficultyCard/DifficultyDescLabel
 
 # Stat value labels
-@onready var hp_value: Label = $Panel/GridContainer/HpValue
-@onready var str_value: Label = $Panel/GridContainer/StrValue
-@onready var mag_value: Label = $Panel/GridContainer/MagValue
-@onready var def_value: Label = $Panel/GridContainer/DefValue
-@onready var res_value: Label = $Panel/GridContainer/ResValue
-@onready var spd_value: Label = $Panel/GridContainer/SpdValue
-@onready var agi_value: Label = $Panel/GridContainer/AgiValue
+@onready var hp_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/HpValue
+@onready var str_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/StrValue
+@onready var mag_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/MagValue
+@onready var def_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/DefValue
+@onready var res_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/ResValue
+@onready var spd_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/SpdValue
+@onready var agi_value: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/AgiValue
+
+# Stat bars (battlefield-style)
+@onready var hp_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/HpBar
+@onready var str_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/StrBar
+@onready var mag_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/MagBar
+@onready var def_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/DefBar
+@onready var res_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/ResBar
+@onready var spd_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/SpdBar
+@onready var agi_bar: ProgressBar = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/AgiBar
 
 # Stat buttons
-@onready var hp_plus: Button = $Panel/GridContainer/HpPlus
-@onready var hp_minus: Button = $Panel/GridContainer/HpMinus
-@onready var str_plus: Button = $Panel/GridContainer/StrPlus
-@onready var str_minus: Button = $Panel/GridContainer/StrMinus
-@onready var mag_plus: Button = $Panel/GridContainer/MagPlus
-@onready var mag_minus: Button = $Panel/GridContainer/MagMinus
-@onready var def_plus: Button = $Panel/GridContainer/DefPlus
-@onready var def_minus: Button = $Panel/GridContainer/DefMinus
-@onready var res_plus: Button = $Panel/GridContainer/ResPlus
-@onready var res_minus: Button = $Panel/GridContainer/ResMinus
-@onready var spd_plus: Button = $Panel/GridContainer/SpdPlus
-@onready var spd_minus: Button = $Panel/GridContainer/SpdMinus
-@onready var agi_plus: Button = $Panel/GridContainer/AgiPlus
-@onready var agi_minus: Button = $Panel/GridContainer/AgiMinus
+@onready var hp_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/HpPlus
+@onready var hp_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/HpMinus
+@onready var str_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/StrPlus
+@onready var str_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/StrMinus
+@onready var mag_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/MagPlus
+@onready var mag_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/MagMinus
+@onready var def_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/DefPlus
+@onready var def_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/DefMinus
+@onready var res_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/ResPlus
+@onready var res_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/ResMinus
+@onready var spd_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/SpdPlus
+@onready var spd_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/SpdMinus
+@onready var agi_plus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/AgiPlus
+@onready var agi_minus: Button = $Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/AgiMinus
 
 # Weapon selector
-@onready var weapon_display: TextureRect = $Panel/WeaponDisplay
-@onready var weapon_name_label: Label = $Panel/WeaponNameLabel
-@onready var prev_weapon_btn: Button = $Panel/PrevWeaponButton
-@onready var next_weapon_btn: Button = $Panel/NextWeaponButton
+@onready var weapon_display: TextureRect = $Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard/WeaponDisplay
+@onready var weapon_name_label: Label = $Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard/WeaponNameLabel
+@onready var prev_weapon_btn: Button = $Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard/PrevWeaponButton
+@onready var next_weapon_btn: Button = $Panel/MainMargin/MainVBox/TopRow/RightCol/WeaponCard/NextWeaponButton
 
 # Sprite selector
-@onready var sprite_display: TextureRect = $Panel/SpriteDisplay
-@onready var prev_sprite_btn: Button = $Panel/PrevSpriteButton
-@onready var next_sprite_btn: Button = $Panel/NextSpriteButton
-@onready var battle_sprite_display: TextureRect = $Panel/BattleSpriteDisplay
+@onready var sprite_display: TextureRect = $Panel/MainMargin/MainVBox/TopRow/LeftCol/PortraitFrame/SpriteDisplay
+@onready var prev_sprite_btn: Button = $Panel/MainMargin/MainVBox/TopRow/LeftCol/SpriteNavRow/PrevSpriteButton
+@onready var next_sprite_btn: Button = $Panel/MainMargin/MainVBox/TopRow/LeftCol/SpriteNavRow/NextSpriteButton
+@onready var battle_sprite_display: TextureRect = $Panel/MainMargin/MainVBox/TopRow/LeftCol/BattleSpriteFrame/BattleSpriteDisplay
+@onready var portrait_frame: PanelContainer = $Panel/MainMargin/MainVBox/TopRow/LeftCol/PortraitFrame
 
 # Music & dialogs
 @onready var bg_music: AudioStreamPlayer = $BackgroundMusic
@@ -53,7 +78,7 @@ extends Control
 @onready var start_confirmation: ConfirmationDialog = $StartConfirmation
 
 # Start button
-@onready var start_button: Button = $Panel/StartCampaignButton
+@onready var start_button: Button = $Panel/MainMargin/MainVBox/BottomRow/BottomRight/StartCampaignButton
 
 # Main panel (for entrance animation; no new node)
 @onready var _panel: Control = $Panel
@@ -61,17 +86,21 @@ extends Control
 # =========================
 # OPTIONAL UI (add these nodes if you want the features)
 # =========================
-@export var build_summary_label_path: NodePath = NodePath("Panel/BuildSummaryLabel")
-@export var preset_dropdown_path: NodePath = NodePath("Panel/PresetDropdown")
-@export var apply_preset_button_path: NodePath = NodePath("Panel/ApplyPresetButton")
-@export var reset_button_path: NodePath = NodePath("Panel/ResetButton")
-@export var undo_button_path: NodePath = NodePath("Panel/UndoButton")
+@export var build_summary_label_path: NodePath = NodePath("Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/SummaryScroll/BuildSummaryLabel")
+@export var preset_dropdown_path: NodePath = NodePath("Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/PresetRow/PresetDropdown")
+@export var apply_preset_button_path: NodePath = NodePath("Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/PresetRow/ApplyPresetButton")
+@export var reset_button_path: NodePath = NodePath("Panel/MainMargin/MainVBox/TopRow/MidCol/ResetButton")
+@export var undo_button_path: NodePath = NodePath("Panel/MainMargin/MainVBox/TopRow/MidCol/UndoButton")
 
 @onready var build_summary_label: Label = get_node_or_null(build_summary_label_path) as Label
 @onready var preset_dropdown: OptionButton = get_node_or_null(preset_dropdown_path) as OptionButton
 @onready var apply_preset_button: Button = get_node_or_null(apply_preset_button_path) as Button
 @onready var reset_button: Button = get_node_or_null(reset_button_path) as Button
 @onready var undo_button: Button = get_node_or_null(undo_button_path) as Button
+
+@onready var hero_brief_card: PanelContainer = $Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard
+@onready var summary_card_panel: Panel = $Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard
+@onready var soft_hints_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/SoftHintsLabel
 
 # =========================
 # DATA
@@ -120,11 +149,20 @@ const STAT_KEYS: Array[String] = ["hp", "str", "mag", "def", "res", "spd", "agi"
 var _value_labels: Dictionary = {}
 var _plus_buttons: Dictionary = {}
 var _minus_buttons: Dictionary = {}
+var _bars: Dictionary = {}
+var _bar_sheens: Dictionary = {} # stat -> ColorRect
+var _bar_tweens: Dictionary = {} # stat -> Tween
 
 # animation control (prevents “color gets messed up” when spam clicking)
 var _label_tweens: Dictionary = {} # stat -> Tween
+var _lock_in_feedback_tween: Tween
+var _cc_ready_done: bool = false
+var _start_ready_breathe_tween: Tween
+var _points_header_pulse_tween: Tween
+var _portrait_ambient_tween: Tween
+var _last_points_for_pulse: int = -99999 # first _update_ui skips pulse
 
-@onready var ability_desc_label: Label = $Panel/AbilityDescLabel
+@onready var ability_desc_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/AbilityDescLabel
 
 const DIFFICULTY_DESCRIPTIONS = {
 	"Normal": "The standard experience. A fair and balanced tactical challenge.",
@@ -169,6 +207,8 @@ const PRESETS: Array[Dictionary] = [
 
 func _ready() -> void:
 	randomize()
+	if not _cc_reduced_motion():
+		_cc_hide_sections_for_stagger()
 
 	name_input.max_length = 12
 	name_input.placeholder_text = "Your hero's name (optional)"
@@ -188,6 +228,7 @@ func _ready() -> void:
 		class_dropdown.selected = 0
 		_apply_selected_class_base(false)
 	
+	_update_class_description()
 	_update_ability_description()
 	_update_difficulty_description()
 	_update_sprite_display()
@@ -209,6 +250,340 @@ func _ready() -> void:
 
 	_update_ui()
 	_play_panel_entrance()
+	_apply_theme()
+	_setup_focus_chain()
+	if name_input != null:
+		name_input.call_deferred("grab_focus")
+	_cc_ready_done = true
+
+
+func _cc_reduced_motion() -> bool:
+	return CampaignManager != null and CampaignManager.interface_reduced_motion
+
+
+func _setup_focus_chain() -> void:
+	var chain: Array[Control] = []
+	chain.append(name_input)
+	chain.append(class_dropdown)
+	chain.append(ability_dropdown)
+	var stat_btns: Array[Button] = [
+		str_minus, str_plus, mag_minus, mag_plus, hp_minus, hp_plus,
+		def_minus, def_plus, res_minus, res_plus, spd_minus, spd_plus, agi_minus, agi_plus
+	]
+	for b in stat_btns:
+		chain.append(b)
+	chain.append(reset_button)
+	chain.append(undo_button)
+	chain.append(prev_sprite_btn)
+	chain.append(next_sprite_btn)
+	chain.append(prev_weapon_btn)
+	chain.append(next_weapon_btn)
+	chain.append(difficulty_dropdown)
+	if preset_dropdown != null:
+		chain.append(preset_dropdown)
+	if apply_preset_button != null:
+		chain.append(apply_preset_button)
+	chain.append(start_button)
+
+	var valid: Array[Control] = []
+	for c in chain:
+		if c != null:
+			valid.append(c)
+	var n: int = valid.size()
+	if n < 2:
+		return
+	for i in range(n):
+		var c: Control = valid[i]
+		c.focus_mode = Control.FOCUS_ALL
+		var next_c: Control = valid[(i + 1) % n]
+		var prev_c: Control = valid[(i - 1 + n) % n]
+		c.focus_next = c.get_path_to(next_c)
+		c.focus_previous = c.get_path_to(prev_c)
+
+
+func _cc_style_line_edit(input: LineEdit) -> void:
+	if input == null:
+		return
+	input.focus_mode = Control.FOCUS_ALL
+	input.mouse_default_cursor_shape = Control.CURSOR_IBEAM
+	var fs: int = input.get_theme_font_size("font_size")
+	if fs <= 0:
+		fs = 40
+	input.add_theme_font_size_override("font_size", fs)
+	input.add_theme_color_override("font_color", CC_TEXT)
+	input.add_theme_color_override("font_placeholder_color", CC_TEXT_MUTED)
+	input.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
+	input.add_theme_constant_override("outline_size", 1)
+	input.add_theme_stylebox_override("normal", _make_panel_style(Color(0.09, 0.075, 0.055, 0.96), CC_BORDER_MUTED, 1, 12, 0.22, 7, 3))
+	input.add_theme_stylebox_override("focus", _make_panel_style(Color(0.14, 0.11, 0.09, 0.98), CC_ACCENT, 2, 12, 0.28, 9, 3))
+
+
+func _cc_style_option_button(dd: OptionButton) -> void:
+	if dd == null:
+		return
+	dd.focus_mode = Control.FOCUS_ALL
+	dd.add_theme_stylebox_override("normal", _make_panel_style(Color(0.09, 0.075, 0.055, 0.94), CC_BORDER_MUTED, 1, 12, 0.20, 6, 3))
+	dd.add_theme_stylebox_override("hover", _make_panel_style(Color(0.12, 0.10, 0.075, 0.96), CC_BORDER, 1, 12, 0.26, 8, 3))
+	dd.add_theme_stylebox_override("pressed", _make_panel_style(Color(0.08, 0.065, 0.05, 0.96), CC_ACCENT, 2, 12, 0.18, 5, 2))
+	dd.add_theme_stylebox_override("focus", _make_panel_style(Color(0.13, 0.11, 0.085, 0.98), CC_ACCENT, 2, 12, 0.30, 9, 3))
+
+
+func _feedback_choice_locked_in() -> void:
+	_play_click_sound()
+	if _cc_reduced_motion():
+		return
+	if hero_brief_card == null and summary_card_panel == null:
+		return
+	if _lock_in_feedback_tween != null and _lock_in_feedback_tween.is_valid():
+		_lock_in_feedback_tween.kill()
+	var peak := Color(1.0, 0.97, 0.88, 1.0)
+	var t := create_tween()
+	_lock_in_feedback_tween = t
+	t.set_parallel(true)
+	if hero_brief_card != null:
+		hero_brief_card.modulate = Color.WHITE
+		t.tween_property(hero_brief_card, "modulate", peak, 0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if summary_card_panel != null:
+		summary_card_panel.modulate = Color.WHITE
+		t.tween_property(summary_card_panel, "modulate", peak, 0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.chain()
+	t.set_parallel(true)
+	if hero_brief_card != null:
+		t.tween_property(hero_brief_card, "modulate", Color.WHITE, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if summary_card_panel != null:
+		t.tween_property(summary_card_panel, "modulate", Color.WHITE, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func _soft_validation_message() -> String:
+	if available_points > 0:
+		var plural := "s" if available_points != 1 else ""
+		return "%d point%s unspent — allocate or begin anyway." % [available_points, plural]
+	var total_spent := 0
+	var max_spent := 0
+	for k in STAT_KEYS:
+		var s: int = int(stats.get(k, 0)) - int(base_stats.get(k, 0))
+		s = maxi(0, s)
+		total_spent += s
+		max_spent = maxi(max_spent, s)
+	if total_spent < 6:
+		return ""
+	if max_spent >= 9:
+		return "Heavy skew: one stat dominates — viable, but fragile."
+	if float(max_spent) / float(max(total_spent, 1)) >= 0.58:
+		return "Heavy skew: most points in one stat — fragile."
+	return ""
+
+
+func _make_panel_style(fill: Color, border: Color, border_width: int = 2, radius: int = 18, shadow_alpha: float = 0.38, shadow_size: int = 14, shadow_y: int = 6) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = fill
+	box.border_color = border
+	box.set_border_width_all(border_width)
+	box.set_corner_radius_all(radius)
+	box.shadow_color = Color(0, 0, 0, shadow_alpha)
+	box.shadow_size = shadow_size
+	box.shadow_offset = Vector2(0, shadow_y)
+	return box
+
+
+func _style_small_icon_button(btn: Button, accent: Color, bg: Color = Color(0.10, 0.08, 0.06, 0.92)) -> void:
+	if btn == null:
+		return
+	btn.focus_mode = Control.FOCUS_ALL
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.add_theme_font_size_override("font_size", 24)
+	btn.add_theme_color_override("font_color", CC_TEXT)
+	btn.add_theme_color_override("font_hover_color", CC_TEXT)
+	btn.add_theme_color_override("font_pressed_color", CC_TEXT)
+	btn.add_theme_color_override("font_focus_color", CC_TEXT)
+	btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
+	btn.add_theme_constant_override("outline_size", 2)
+	btn.add_theme_stylebox_override("normal", _make_panel_style(bg, CC_BORDER_MUTED, 1, 12, 0.22, 7, 3))
+	btn.add_theme_stylebox_override("hover", _make_panel_style(bg.lightened(0.06), accent, 2, 12, 0.26, 9, 3))
+	btn.add_theme_stylebox_override("pressed", _make_panel_style(bg.darkened(0.06), accent, 2, 12, 0.18, 5, 2))
+	btn.add_theme_stylebox_override("focus", _make_panel_style(bg.lightened(0.05), CC_ACCENT, 2, 12, 0.26, 9, 3))
+
+
+func _style_stat_step_button(btn: Button, is_plus: bool) -> void:
+	if btn == null:
+		return
+	var accent := CC_ACCENT if is_plus else CC_TEXT_MUTED
+	_style_small_icon_button(btn, accent, Color(0.09, 0.075, 0.055, 0.94))
+	btn.custom_minimum_size = Vector2(34, 32)
+
+
+func _style_dropdown_popup(dd: OptionButton) -> void:
+	if dd == null:
+		return
+	var popup := dd.get_popup()
+	if popup == null:
+		return
+	# PopupMenu theme
+	popup.add_theme_stylebox_override("panel", _make_panel_style(CC_BG_ALT, CC_BORDER_MUTED, 1, 12, 0.22, 8, 3))
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = Color(0.22, 0.17, 0.10, 0.95)
+	hover.border_color = CC_BORDER
+	hover.set_border_width_all(1)
+	hover.set_corner_radius_all(10)
+	popup.add_theme_stylebox_override("hover", hover)
+	popup.add_theme_color_override("font_color", CC_TEXT_MUTED)
+	popup.add_theme_color_override("font_hover_color", CC_TEXT)
+	popup.add_theme_color_override("font_disabled_color", CC_TEXT_MUTED.darkened(0.25))
+	popup.add_theme_color_override("font_separator_color", CC_BORDER_MUTED)
+	popup.add_theme_constant_override("v_separation", 8)
+	popup.add_theme_constant_override("outline_size", 0)
+	popup.add_theme_constant_override("icon_max_width", 0)
+	# Slightly taller rows
+	popup.add_theme_constant_override("item_start_padding", 14)
+	popup.add_theme_constant_override("item_end_padding", 14)
+	popup.add_theme_constant_override("item_top_padding", 8)
+	popup.add_theme_constant_override("item_bottom_padding", 8)
+
+
+func _apply_theme() -> void:
+	# Main card
+	var panel := _panel
+	if panel != null:
+		var style := _make_panel_style(CC_BG, CC_BORDER, 2, 22, 0.42, 16, 7)
+		if panel is Panel:
+			(panel as Panel).add_theme_stylebox_override("panel", style)
+
+		for card_name in ["WeaponCard", "DifficultyCard"]:
+			var card := panel.get_node_or_null("MainMargin/MainVBox/TopRow/RightCol/%s" % card_name) as Panel
+			if card != null:
+				var r_style := _make_panel_style(CC_BG_ALT, CC_BORDER_MUTED, 1, 18, 0.30, 10, 4)
+				card.add_theme_stylebox_override("panel", r_style)
+
+		for frame_name in ["PortraitFrame", "BattleSpriteFrame"]:
+			var frame := panel.get_node_or_null("MainMargin/MainVBox/TopRow/LeftCol/%s" % frame_name) as PanelContainer
+			if frame != null:
+				var f_style := _make_panel_style(Color(0.08, 0.07, 0.05, 0.96), CC_BORDER_MUTED, 1, 16, 0.22, 8, 3)
+				frame.add_theme_stylebox_override("panel", f_style)
+
+		var right_info := panel.get_node_or_null("MainMargin/MainVBox/TopRow/RightCol/RightInfoCard") as Panel
+		if right_info != null:
+			var i_style := _make_panel_style(Color(0.08, 0.07, 0.05, 0.96), CC_BORDER_MUTED, 1, 18, 0.26, 9, 3)
+			right_info.add_theme_stylebox_override("panel", i_style)
+
+		var hero_brief := panel.get_node_or_null("MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard") as PanelContainer
+		if hero_brief != null:
+			var hb_style := _make_panel_style(Color(0.08, 0.07, 0.05, 0.96), CC_BORDER_MUTED, 1, 18, 0.26, 9, 3)
+			hero_brief.add_theme_stylebox_override("panel", hb_style)
+
+		var summary_card := panel.get_node_or_null("MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard") as Panel
+		if summary_card != null:
+			var s_style := _make_panel_style(Color(0.08, 0.06, 0.04, 0.98), CC_BORDER_MUTED, 1, 16, 0.26, 9, 3)
+			summary_card.add_theme_stylebox_override("panel", s_style)
+
+	# Headline labels
+	for path in [
+		"Panel/Label",
+		"Panel/Label2",
+		"Panel/Label3"
+	]:
+		var lbl := get_node_or_null(path) as Label
+		if lbl != null:
+			lbl.add_theme_color_override("font_color", CC_TEXT)
+			lbl.add_theme_font_size_override("font_size", 20)
+
+	# Section labels (new container layout)
+	for path in [
+		"Panel/MainMargin/MainVBox/TopRow/LeftCol/Section_Appearance",
+		"Panel/MainMargin/MainVBox/TopRow/MidCol/Section_Training",
+		"Panel/MainMargin/MainVBox/TopRow/RightCol/Section_Loadout",
+		"Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard/SummaryMargin/SummaryVBox/DossierTitle",
+	]:
+		var s := get_node_or_null(path) as Label
+		if s != null:
+			s.add_theme_color_override("font_color", CC_ACCENT)
+			s.add_theme_font_size_override("font_size", 18)
+			s.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
+			s.add_theme_constant_override("outline_size", 2)
+
+	for path in [
+		"Panel/MainMargin/MainVBox/TopRow/LeftCol/PortraitLabel",
+		"Panel/MainMargin/MainVBox/TopRow/LeftCol/BattleSpriteLabel",
+	]:
+		var sub := get_node_or_null(path) as Label
+		if sub != null:
+			sub.add_theme_color_override("font_color", CC_TEXT_MUTED)
+			sub.add_theme_font_size_override("font_size", 14)
+			sub.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
+			sub.add_theme_constant_override("outline_size", 2)
+
+	points_label.add_theme_color_override("font_color", CC_ACCENT)
+
+	_cc_style_line_edit(name_input)
+
+	if soft_hints_label != null:
+		soft_hints_label.add_theme_color_override("font_color", CC_TEXT_MUTED)
+		soft_hints_label.add_theme_font_size_override("font_size", 14)
+
+	# Stat labels & values
+	for lbl in [
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label,
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label2,
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label3,
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label4,
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label5,
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label6,
+		$Panel/MainMargin/MainVBox/TopRow/MidCol/GridContainer/Label7
+	]:
+		if lbl != null:
+			lbl.add_theme_color_override("font_color", CC_TEXT_MUTED)
+
+	for v in [hp_value, str_value, mag_value, def_value, res_value, spd_value, agi_value]:
+		if v != null:
+			v.add_theme_color_override("font_color", CC_TEXT)
+
+	# Dropdowns & difficulty
+	for dd in [class_dropdown, ability_dropdown, difficulty_dropdown, preset_dropdown]:
+		if dd != null:
+			_cc_style_option_button(dd)
+			dd.add_theme_color_override("font_color", CC_TEXT)
+			dd.add_theme_color_override("font_hover_color", CC_ACCENT)
+			dd.add_theme_color_override("font_focus_color", CC_TEXT)
+			_style_dropdown_popup(dd)
+
+	if class_desc_label != null:
+		class_desc_label.add_theme_color_override("font_color", CC_CLASS_DESC)
+
+	if difficulty_desc_label != null:
+		difficulty_desc_label.add_theme_color_override("default_color", CC_TEXT_MUTED)
+
+	if build_summary_label != null:
+		build_summary_label.add_theme_color_override("font_color", CC_TEXT_MUTED)
+
+	var brief_title := get_node_or_null("Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard/Margin/VBox/Title") as Label
+	if brief_title != null:
+		brief_title.add_theme_color_override("font_color", CC_ACCENT)
+		brief_title.add_theme_font_size_override("font_size", 16)
+	var brief_body := get_node_or_null("Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard/Margin/VBox/Body") as Label
+	if brief_body != null:
+		brief_body.add_theme_color_override("font_color", CC_TEXT_MUTED)
+
+	var hero_title := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox/Title") as Label
+	if hero_title != null:
+		hero_title.add_theme_color_override("font_color", CC_ACCENT)
+		hero_title.add_theme_font_size_override("font_size", 16)
+	var hero_body := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox/Body") as Label
+	if hero_body != null:
+		hero_body.add_theme_color_override("font_color", CC_TEXT_MUTED)
+
+	# Stat +/- controls
+	for key in STAT_KEYS:
+		_style_stat_step_button(_plus_buttons.get(key) as Button, true)
+		_style_stat_step_button(_minus_buttons.get(key) as Button, false)
+
+	# Sprite / weapon arrows + utility buttons
+	_style_small_icon_button(prev_sprite_btn, CC_ACCENT)
+	_style_small_icon_button(next_sprite_btn, CC_ACCENT)
+	_style_small_icon_button(prev_weapon_btn, CC_ACCENT)
+	_style_small_icon_button(next_weapon_btn, CC_ACCENT)
+	_style_small_icon_button(reset_button, Color(0.62, 0.92, 1.0, 1.0))
+	_style_small_icon_button(undo_button, Color(0.62, 0.92, 1.0, 1.0))
+	_style_small_icon_button(apply_preset_button, Color(0.58, 1.0, 0.68, 1.0))
+
 
 # --- FIX 1D: THE HELPER FUNCTION ---
 func _apply_selected_class_base(push_undo: bool = false) -> void:
@@ -241,6 +616,24 @@ func _cache_stat_ui() -> void:
 		"hp": hp_value, "str": str_value, "mag": mag_value,
 		"def": def_value, "res": res_value, "spd": spd_value, "agi": agi_value
 	}
+	_bars = {
+		"hp": hp_bar, "str": str_bar, "mag": mag_bar,
+		"def": def_bar, "res": res_bar, "spd": spd_bar, "agi": agi_bar
+	}
+	_bar_sheens.clear()
+	for k in STAT_KEYS:
+		var b := _bars.get(k) as ProgressBar
+		if b == null:
+			continue
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sheen: ColorRect = UnitInfoRuntimeHelpers.attach_unit_info_bar_sheen(self, b)
+		if sheen != null:
+			# Stronger, more "metallic" sweep for thicker bars.
+			sheen.color = Color(1.0, 1.0, 1.0, 0.16)
+			sheen.size = Vector2(56, 44)
+			sheen.rotation_degrees = 12.0
+		_bar_sheens[k] = sheen
 	_plus_buttons = {
 		"hp": hp_plus, "str": str_plus, "mag": mag_plus,
 		"def": def_plus, "res": res_plus, "spd": spd_plus, "agi": agi_plus
@@ -273,14 +666,12 @@ func _wire_buttons() -> void:
 	agi_plus.pressed.connect(func(): _adjust_stat("agi", 1))
 	agi_minus.pressed.connect(func(): _adjust_stat("agi", -1))
 
-	# Dropdown click sound
-	class_dropdown.item_selected.connect(func(_i: int): _play_click_sound())
-	ability_dropdown.item_selected.connect(func(_i: int): _play_click_sound())
 	class_dropdown.item_selected.connect(_on_class_changed)
 	
 	difficulty_dropdown.item_selected.connect(func(_i): 
-		_play_click_sound()
 		_update_difficulty_description()
+		if _cc_ready_done:
+			_feedback_choice_locked_in()
 	)
 	
 	# Sprite buttons
@@ -292,8 +683,10 @@ func _wire_buttons() -> void:
 	next_weapon_btn.pressed.connect(_on_next_weapon_pressed)
 
 	ability_dropdown.item_selected.connect(func(_i): 
-		_play_click_sound()
 		_update_ability_description()
+		_update_ui()
+		if _cc_ready_done:
+			_feedback_choice_locked_in()
 	)
 
 func _wire_optional_buttons() -> void:
@@ -330,8 +723,10 @@ func _setup_dropdowns() -> void:
 	difficulty_dropdown.add_item("Maddening")
 
 func _on_class_changed(_index: int) -> void:
-	_play_click_sound()
-	_apply_selected_class_base(true)
+	_apply_selected_class_base(_cc_ready_done)
+	_update_class_description()
+	if _cc_ready_done:
+		_feedback_choice_locked_in()
 
 func _setup_presets_ui() -> void:
 	if preset_dropdown == null:
@@ -346,8 +741,111 @@ func _play_click_sound() -> void:
 		click_sound.play()
 
 # --- UX: Entrance and button feedback (no new nodes). ---
+func _cc_section_column_nodes() -> Array[Control]:
+	return [
+		get_node_or_null("Panel/MainMargin/MainVBox/TopRow/LeftCol") as Control,
+		get_node_or_null("Panel/MainMargin/MainVBox/TopRow/MidCol") as Control,
+		get_node_or_null("Panel/MainMargin/MainVBox/TopRow/RightCol") as Control,
+		get_node_or_null("Panel/MainMargin/MainVBox/BottomRow") as Control,
+	]
+
+
+func _cc_hide_sections_for_stagger() -> void:
+	for c in _cc_section_column_nodes():
+		if c != null:
+			c.modulate.a = 0.0
+
+
+func _play_cc_section_stagger() -> void:
+	if _cc_reduced_motion():
+		return
+	var cols := _cc_section_column_nodes()
+	var any: bool = false
+	for c in cols:
+		if c != null:
+			any = true
+			break
+	if not any:
+		_cc_start_portrait_ambient()
+		return
+	var step: float = 0.085
+	var dur: float = 0.36
+	var t := create_tween()
+	t.set_parallel(false)
+	var first := true
+	for c in cols:
+		if c == null:
+			continue
+		if not first:
+			t.tween_interval(step)
+		first = false
+		t.tween_property(c, "modulate:a", 1.0, dur).from(0.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.finished.connect(_cc_start_portrait_ambient, CONNECT_ONE_SHOT)
+
+
+func _cc_start_portrait_ambient() -> void:
+	if _cc_reduced_motion() or portrait_frame == null:
+		return
+	if _portrait_ambient_tween != null and _portrait_ambient_tween.is_valid():
+		return
+	call_deferred("_cc_apply_portrait_pivot")
+	var tw := create_tween()
+	_portrait_ambient_tween = tw
+	tw.set_loops()
+	tw.set_trans(Tween.TRANS_SINE)
+	tw.set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(portrait_frame, "scale", Vector2(1.014, 1.014), 2.8)
+	tw.tween_property(portrait_frame, "scale", Vector2.ONE, 2.8)
+
+
+func _cc_apply_portrait_pivot() -> void:
+	if portrait_frame == null:
+		return
+	portrait_frame.pivot_offset = portrait_frame.size * 0.5
+
+
+func _animate_points_header_pulse() -> void:
+	if points_label == null:
+		return
+	if _points_header_pulse_tween != null and _points_header_pulse_tween.is_valid():
+		_points_header_pulse_tween.kill()
+	points_label.scale = Vector2.ONE
+	var t := create_tween()
+	_points_header_pulse_tween = t
+	t.tween_property(points_label, "scale", Vector2(1.06, 1.06), 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(points_label, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _refresh_start_ready_breathe() -> void:
+	if start_button == null:
+		return
+	if _cc_reduced_motion():
+		start_button.modulate = Color.WHITE if available_points == 0 else Color(0.92, 0.92, 0.92)
+		return
+	if available_points != 0:
+		if _start_ready_breathe_tween != null and _start_ready_breathe_tween.is_valid():
+			_start_ready_breathe_tween.kill()
+		_start_ready_breathe_tween = null
+		start_button.modulate = Color(0.92, 0.92, 0.92)
+		return
+	if _start_ready_breathe_tween != null and _start_ready_breathe_tween.is_valid():
+		return
+	start_button.modulate = Color.WHITE
+	var t := create_tween()
+	_start_ready_breathe_tween = t
+	t.set_loops()
+	t.set_trans(Tween.TRANS_SINE)
+	t.set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(start_button, "modulate", Color(1.08, 0.97, 0.82, 1.0), 1.4)
+	t.tween_property(start_button, "modulate", Color.WHITE, 1.4)
+
+
 func _play_panel_entrance() -> void:
 	if _panel == null:
+		return
+	if _cc_reduced_motion():
+		_panel.scale = Vector2.ONE
+		_panel.modulate.a = 1.0
 		return
 	_panel.scale = Vector2(0.97, 0.97)
 	_panel.modulate.a = 0.0
@@ -356,9 +854,12 @@ func _play_panel_entrance() -> void:
 	t.set_trans(Tween.TRANS_BACK)
 	t.tween_property(_panel, "scale", Vector2(1.0, 1.0), 0.25)
 	t.parallel().tween_property(_panel, "modulate:a", 1.0, 0.2)
+	t.finished.connect(_play_cc_section_stagger, CONNECT_ONE_SHOT)
 
 func _button_press_feedback(btn: Button) -> void:
 	if btn == null:
+		return
+	if _cc_reduced_motion():
 		return
 	var t := create_tween()
 	t.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -367,21 +868,15 @@ func _button_press_feedback(btn: Button) -> void:
 func _style_start_button() -> void:
 	if start_button == null:
 		return
-	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(8)
-	style.bg_color = Color(0.15, 0.45, 0.2)
-	style.border_color = Color(0.3, 0.85, 0.4)
-	style.set_border_width_all(2)
-	style.shadow_color = Color(0, 0, 0, 0.25)
-	style.shadow_size = 4
-	style.shadow_offset = Vector2(0, 2)
-	start_button.add_theme_stylebox_override("normal", style)
-	var hover := style.duplicate()
-	hover.bg_color = Color(0.2, 0.55, 0.28)
+	start_button.text = "BEGIN CAMPAIGN"
+	start_button.add_theme_font_size_override("font_size", 28)
+	var normal := _make_panel_style(Color(0.75, 0.61, 0.22, 0.98), CC_BORDER, 2, 18, 0.30, 10, 4)
+	var hover := _make_panel_style(Color(0.83, 0.68, 0.26, 0.98), CC_BORDER, 2, 18, 0.34, 12, 4)
+	var pressed := _make_panel_style(Color(0.59, 0.47, 0.17, 0.98), CC_BORDER, 2, 18, 0.24, 7, 2)
+	start_button.add_theme_stylebox_override("normal", normal)
 	start_button.add_theme_stylebox_override("hover", hover)
-	var pressed := style.duplicate()
-	pressed.bg_color = Color(0.12, 0.38, 0.18)
 	start_button.add_theme_stylebox_override("pressed", pressed)
+	start_button.add_theme_stylebox_override("focus", _make_panel_style(Color(0.83, 0.68, 0.26, 0.98), CC_ACCENT, 2, 18, 0.34, 12, 4))
 
 func _wire_start_button_hover() -> void:
 	if start_button == null:
@@ -404,6 +899,9 @@ func _on_start_button_hover_exited() -> void:
 func _tween_display_pop(control: Control) -> void:
 	if control == null:
 		return
+	if _cc_reduced_motion():
+		control.scale = Vector2.ONE
+		return
 	control.scale = Vector2(1.08, 1.08)
 	var t := create_tween()
 	t.tween_property(control, "scale", Vector2(1.0, 1.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -418,6 +916,65 @@ func _set_stat_value(label_control: Label, stat_name: String, cap: int) -> void:
 	label_control.text = "%d / %d" % [val, cap]
 	# At-cap visual: gold tint so "value/cap" clarity is obvious (avoids confusion like current > cap)
 	label_control.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45) if val >= cap else Color.WHITE)
+	var bar := _bars.get(stat_name) as ProgressBar
+	if bar != null:
+		bar.min_value = 0
+		bar.max_value = cap
+		UnitInfoRuntimeHelpers.style_unit_info_stat_bar(self, bar, _stat_bar_fill(stat_name), val >= cap)
+		_animate_stat_bar_to(stat_name, float(val), val >= cap)
+
+
+func _animate_stat_bar_to(stat_name: String, target_value: float, _overcap: bool) -> void:
+	var bar := _bars.get(stat_name) as ProgressBar
+	if bar == null:
+		return
+	var existing := _bar_tweens.get(stat_name) as Tween
+	if existing != null:
+		existing.kill()
+	var tw := create_tween()
+	_bar_tweens[stat_name] = tw
+	tw.tween_property(bar, "value", target_value, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	var sheen := _bar_sheens.get(stat_name) as ColorRect
+	if sheen != null:
+		_animate_cc_bar_sheen(sheen, bar)
+
+
+func _animate_cc_bar_sheen(sheen: ColorRect, bar: ProgressBar) -> void:
+	if sheen == null or bar == null:
+		return
+	var bar_w: float = maxf(maxf(bar.size.x, bar.custom_minimum_size.x), 120.0)
+	var bar_h: float = maxf(maxf(bar.size.y, bar.custom_minimum_size.y), 16.0)
+
+	# Center the glint vertically for thicker bars.
+	var start_x := -sheen.size.x - 22.0
+	var y := -((sheen.size.y - bar_h) * 0.5)
+	sheen.position = Vector2(start_x, y)
+	sheen.modulate.a = 0.0
+
+	var tw := create_tween()
+	tw.tween_property(sheen, "modulate:a", 1.0, 0.08)
+	tw.parallel().tween_property(sheen, "position:x", bar_w + 18.0, 0.46).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(sheen, "modulate:a", 0.0, 0.12)
+
+
+func _stat_bar_fill(stat_name: String) -> Color:
+	match stat_name:
+		"hp":
+			return Color(0.94, 0.32, 0.30, 1.0).lerp(CC_METAL_TINT, 0.22)
+		"str":
+			return Color(0.96, 0.58, 0.24, 1.0).lerp(CC_METAL_TINT, 0.22)
+		"mag":
+			return Color(0.62, 0.62, 1.0, 1.0).lerp(CC_METAL_TINT, 0.22)
+		"def":
+			return Color(0.42, 0.88, 0.54, 1.0).lerp(CC_METAL_TINT, 0.22)
+		"res":
+			return Color(0.38, 0.90, 0.82, 1.0).lerp(CC_METAL_TINT, 0.22)
+		"spd":
+			return Color(0.46, 0.76, 1.0, 1.0).lerp(CC_METAL_TINT, 0.22)
+		"agi":
+			return Color(0.96, 0.82, 0.44, 1.0).lerp(CC_METAL_TINT, 0.22)
+		_:
+			return CC_ACCENT.lerp(CC_METAL_TINT, 0.22)
 
 func _on_name_input_focus_exited() -> void:
 	if name_input == null:
@@ -498,7 +1055,6 @@ func _on_reset_pressed() -> void:
 	_update_ui()
 
 func _on_apply_preset_pressed() -> void:
-	_play_click_sound()
 	if preset_dropdown == null:
 		return
 	var idx: int = preset_dropdown.selected
@@ -521,6 +1077,7 @@ func _on_apply_preset_pressed() -> void:
 			available_points -= 1
 
 	_update_ui()
+	_feedback_choice_locked_in()
 
 # =========================
 # Stat changing + animation
@@ -589,10 +1146,27 @@ func _update_ui() -> void:
 	else:
 		points_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35))
 
-	# Start button: copy + readiness cue (slight dim when points left, full brightness when ready)
+	var points_changed: bool = false
+	if _last_points_for_pulse != -99999:
+		points_changed = _last_points_for_pulse != available_points
+	_last_points_for_pulse = available_points
+	if points_changed and not _cc_reduced_motion():
+		_animate_points_header_pulse()
+
+	# Start button: copy + readiness cue + optional breathe when all points spent
 	if start_button != null:
 		start_button.text = "Begin Journey" + (" • Ready!" if available_points == 0 else "")
-		start_button.modulate = Color.WHITE if available_points == 0 else Color(0.92, 0.92, 0.92)
+		_refresh_start_ready_breathe()
+
+	if soft_hints_label != null:
+		var hint_msg: String = _soft_validation_message()
+		soft_hints_label.text = hint_msg
+		soft_hints_label.visible = not hint_msg.is_empty()
+		if not hint_msg.is_empty():
+			if available_points > 0:
+				soft_hints_label.add_theme_color_override("font_color", Color(0.55, 0.88, 0.62, 1.0))
+			else:
+				soft_hints_label.add_theme_color_override("font_color", Color(0.95, 0.72, 0.45, 1.0))
 
 	# Stat value labels: value / cap; at-cap stats use gold tint for clarity
 	_set_stat_value(hp_value, "hp", cap_hp)
@@ -605,6 +1179,112 @@ func _update_ui() -> void:
 
 	_refresh_button_states()
 	_update_build_summary()
+	_update_right_brief()
+
+
+func _cc_weapon_short_name() -> String:
+	if not available_starting_weapons.is_empty() and current_weapon_index >= 0 and current_weapon_index < available_starting_weapons.size():
+		var w: WeaponData = available_starting_weapons[current_weapon_index]
+		if w != null:
+			var wn := str(w.weapon_name).strip_edges()
+			if not wn.is_empty():
+				return wn
+	if weapon_name_label != null:
+		var raw := weapon_name_label.text.strip_edges()
+		var nl := raw.find("\n")
+		if nl >= 0:
+			raw = raw.substr(0, nl).strip_edges()
+		if not raw.is_empty():
+			return raw
+	return "bare hope and borrowed steel"
+
+
+func _brief_is_named() -> bool:
+	return name_input != null and not name_input.text.strip_edges().is_empty()
+
+
+func _brief_subject() -> String:
+	if _brief_is_named():
+		return name_input.text.strip_edges()
+	return "This recruit"
+
+
+func _hero_brief_variant() -> int:
+	var a: int = class_dropdown.selected if class_dropdown else 0
+	var b: int = ability_dropdown.selected if ability_dropdown else 0
+	var mix: int = ((a * 131 + b) * 17 + current_weapon_index * 7) & 0x7FFFFFFF
+	if name_input != null:
+		mix = (mix * 31 + hash(name_input.text)) & 0x7FFFFFFF
+	return int(mix) % 6
+
+
+func _compose_hero_brief_text() -> String:
+	var subject := _brief_subject()
+	var cls := ""
+	if class_dropdown != null and class_dropdown.selected >= 0:
+		cls = class_dropdown.get_item_text(class_dropdown.selected).strip_edges()
+	if cls.is_empty():
+		cls = "soldier"
+	var abil := ""
+	if ability_dropdown != null and ability_dropdown.selected >= 0:
+		abil = ability_dropdown.get_item_text(ability_dropdown.selected).strip_edges()
+	if abil.is_empty():
+		abil = "their knack"
+	var wpn := _cc_weapon_short_name()
+	var v: int = _hero_brief_variant()
+
+	var l1: String
+	var l2: String
+	var l3: String
+	match v:
+		0:
+			l1 = "%s steps toward the Rift—one more tale the embers will try to eat." % subject
+			l2 = "As a %s, they keep %s like a vow: close, familiar, earned." % [cls, wpn]
+			l3 = "%s is not something they buckle on. It rises with the breath before the blow." % abil
+		1:
+			l1 = "The war-log gains a line: %s." % subject
+			l2 = "Steel names itself %s; the ledger names them %s." % [wpn, cls]
+			l3 = "When the moment narrows, %s answers—instinct, not inventory." % abil
+		2:
+			l1 = "%s listens for the horn the way others listen for rain on a roof." % subject
+			l2 = "Their kit is plain: %s. Their pedigree reads %s." % [wpn, cls]
+			l3 = "The third truth is %s—a knack blood knows before the mind agrees." % abil
+		3:
+			l1 = "%s does not bargain with the Rift. They bargain with themselves." % subject
+			l2 = "Discipline of a %s; comfort with %s that only veterans recognize on sight." % [cls, wpn]
+			l3 = "%s waits behind the eyes—patient until patience is a lie." % abil
+		4:
+			if _brief_is_named():
+				l1 = "Another soul chooses the breach. This one is %s." % subject
+			else:
+				l1 = "Another soul chooses the breach—nameless still, but not hollow."
+			l2 = "On the field they read as %s; in the hand, %s." % [cls, wpn]
+			l3 = "What no drill teaches is %s—only the line reveals it." % abil
+		_:
+			l1 = "%s carries a quiet kind of thunder—useful, and a little dangerous." % subject
+			l2 = "As a %s, they trust %s the way others trust compass north." % [cls, wpn]
+			l3 = "%s is the wild card: not carried, but called up when the world goes sharp." % abil
+
+	return "%s\n%s\n%s" % [l1, l2, l3]
+
+
+func _update_right_brief() -> void:
+	var body := get_node_or_null("Panel/MainMargin/MainVBox/TopRow/RightCol/RightInfoCard/Margin/VBox/Body") as Label
+	if body == null:
+		return
+	var weapon_one := _cc_weapon_short_name()
+	var ability_name := ""
+	if ability_dropdown != null and ability_dropdown.selected >= 0:
+		ability_name = ability_dropdown.get_item_text(ability_dropdown.selected)
+	var diff_name := ""
+	if difficulty_dropdown != null and difficulty_dropdown.selected >= 0:
+		diff_name = difficulty_dropdown.get_item_text(difficulty_dropdown.selected)
+	body.text = "Knack: %s\nDifficulty: %s\nArms: %s" % [ability_name, diff_name, weapon_one]
+
+	var hero_body := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox/Body") as Label
+	if hero_body == null:
+		return
+	hero_body.text = _compose_hero_brief_text()
 
 func _format_growth(bonus: int) -> String:
 	"""Returns e.g. '+12%' or '-10%' for class growth display (avoids ambiguous '+-10%')."""
@@ -731,7 +1411,6 @@ func _update_sprite_display() -> void:
 # Weapon selector
 # =========================
 func _on_prev_weapon_pressed() -> void:
-	_play_click_sound()
 	_button_press_feedback(prev_weapon_btn)
 	if available_starting_weapons.is_empty():
 		return
@@ -740,9 +1419,9 @@ func _on_prev_weapon_pressed() -> void:
 	_update_weapon_display()
 	_tween_display_pop(weapon_display)
 	_update_ui()
+	_feedback_choice_locked_in()
 
 func _on_next_weapon_pressed() -> void:
-	_play_click_sound()
 	_button_press_feedback(next_weapon_btn)
 	if available_starting_weapons.is_empty():
 		return
@@ -751,6 +1430,7 @@ func _on_next_weapon_pressed() -> void:
 	_update_weapon_display()
 	_tween_display_pop(weapon_display)
 	_update_ui()
+	_feedback_choice_locked_in()
 
 func _update_weapon_display() -> void:
 	if available_starting_weapons.is_empty():
@@ -897,6 +1577,22 @@ func _update_ability_description() -> void:
 	ability_desc_label.text = ABILITY_DESCRIPTIONS.get(selected_ability, "No description available.")
 	_tween_description_in(ability_desc_label)
 
+
+func _update_class_description() -> void:
+	if class_desc_label == null or class_dropdown == null:
+		return
+	var c_data: ClassData = null
+	if class_dropdown.selected >= 0 and class_dropdown.selected < available_classes.size():
+		c_data = available_classes[class_dropdown.selected]
+	if c_data == null:
+		class_desc_label.text = ""
+		return
+	var txt := str(c_data.description).strip_edges()
+	if txt.is_empty():
+		txt = "Move: %d" % int(c_data.move_range)
+	class_desc_label.text = txt
+	_tween_description_in(class_desc_label)
+
 func _update_difficulty_description() -> void:
 	if difficulty_desc_label == null:
 		return
@@ -907,6 +1603,10 @@ func _update_difficulty_description() -> void:
 
 func _tween_description_in(label_control: Control) -> void:
 	if label_control == null:
+		return
+	if _cc_reduced_motion():
+		label_control.modulate.a = 1.0
+		label_control.scale = Vector2.ONE
 		return
 	label_control.modulate.a = 0.7
 	label_control.scale = Vector2(0.98, 0.98)
