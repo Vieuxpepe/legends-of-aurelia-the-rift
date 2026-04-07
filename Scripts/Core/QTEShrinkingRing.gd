@@ -24,7 +24,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEShrinkingRing:
 	var qte = QTEShrinkingRing.new()
 	qte.bf = parent_bf
@@ -34,29 +35,34 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(1.0, 0.9, 0.4))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.12, 0.08, 0.0, 0.6)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.12, 0.08, 0.0, 0.6))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
 	title.position = Vector2(0, 90)
 	title.size = Vector2(vp.x, 40)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 44)
-	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 140)
+	qte.help_lbl.position = Vector2(0, 145)
 	qte.help_lbl.size = Vector2(vp.x, 30)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
 	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -65,20 +71,21 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	var center := vp * 0.5 + Vector2(0, 20)
 
 	qte.target = Panel.new()
+	qte.target.name = "TargetCircle"
 	qte.target.size = Vector2(qte.target_size_f, qte.target_size_f)
 	qte.target.position = center - qte.target.size * 0.5
 	qte.target_style = StyleBoxFlat.new()
-	qte.target_style.bg_color = Color(0, 0, 0, 0)
+	qte.target_style.bg_color = Color(0, 0, 0, 0.2)
 	qte.target_style.border_width_left = 6
 	qte.target_style.border_width_top = 6
 	qte.target_style.border_width_right = 6
 	qte.target_style.border_width_bottom = 6
-	qte.target_style.border_color = Color(1.0, 0.4, 0.1, 1.0)
+	qte.target_style.border_color = accent
 	qte.target_style.corner_radius_top_left = 64
 	qte.target_style.corner_radius_top_right = 64
 	qte.target_style.corner_radius_bottom_left = 64
@@ -87,15 +94,16 @@ static func run(
 	qte.add_child(qte.target)
 
 	qte.ring = Panel.new()
+	qte.ring.name = "ShrinkingRing"
 	qte.ring.size = Vector2(qte.start_size, qte.start_size)
 	qte.ring.position = center - qte.ring.size * 0.5
 	qte.ring_style = StyleBoxFlat.new()
 	qte.ring_style.bg_color = Color(0, 0, 0, 0)
-	qte.ring_style.border_width_left = 8
-	qte.ring_style.border_width_top = 8
-	qte.ring_style.border_width_right = 8
-	qte.ring_style.border_width_bottom = 8
-	qte.ring_style.border_color = Color(1.0, 0.9, 0.4, 1.0)
+	qte.ring_style.border_width_left = 10
+	qte.ring_style.border_width_top = 10
+	qte.ring_style.border_width_right = 10
+	qte.ring_style.border_width_bottom = 10
+	qte.ring_style.border_color = theme.get("secondary", Color.WHITE)
 	qte.ring_style.corner_radius_top_left = 140
 	qte.ring_style.corner_radius_top_right = 140
 	qte.ring_style.corner_radius_bottom_left = 140

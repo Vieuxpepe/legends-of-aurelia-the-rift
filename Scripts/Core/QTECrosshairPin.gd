@@ -27,7 +27,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTECrosshairPin:
 	var qte = QTECrosshairPin.new()
 	qte.bf = parent_bf
@@ -37,30 +38,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.02, 0.02, 0.05, 0.82)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 60)
-	title.size = Vector2(vp.x, 42)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
-	title.add_theme_color_override("font_color", Color(0.75, 0.55, 1.0))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 105)
-	qte.help_lbl.size = Vector2(vp.x, 30)
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -68,36 +75,41 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	qte.arena = ColorRect.new()
+	qte.arena.name = "Arena"
 	qte.arena.size = Vector2(560, 320)
-	qte.arena.position = Vector2((vp.x - qte.arena.size.x) * 0.5, (vp.y - qte.arena.size.y) * 0.5 - 10.0)
-	qte.arena.color = Color(0.06, 0.06, 0.10, 0.95)
+	qte.arena.position = vp * 0.5 - Vector2(280, 160)
+	qte.arena.color = Color(0.02, 0.02, 0.03, 0.95)
 	qte.add_child(qte.arena)
 
 	qte.target = ColorRect.new()
-	qte.target.size = Vector2(18, 18)
-	qte.target.color = Color(1.0, 0.2, 0.2, 1.0)
+	qte.target.name = "Target"
+	qte.target.size = Vector2(28, 28)
+	qte.target.color = Color(1.0, 0.2, 0.2, 0.8)
 	qte.arena.add_child(qte.target)
 
 	qte.cursor_h = ColorRect.new()
-	qte.cursor_h.size = Vector2(34, 4)
+	qte.cursor_h.name = "CursorH"
+	qte.cursor_h.size = Vector2(40, 4)
 	qte.cursor_h.color = Color.WHITE
 	qte.arena.add_child(qte.cursor_h)
 
 	qte.cursor_v = ColorRect.new()
-	qte.cursor_v.size = Vector2(4, 34)
+	qte.cursor_v.name = "CursorV"
+	qte.cursor_v.size = Vector2(4, 40)
 	qte.cursor_v.color = Color.WHITE
 	qte.arena.add_child(qte.cursor_v)
 
 	qte.status = Label.new()
+	qte.status.name = "Status"
 	qte.status.text = "TIME: " + str(qte.total_duration)
-	qte.status.position = Vector2(0, qte.arena.position.y + qte.arena.size.y + 18.0)
+	qte.status.position = Vector2(0, qte.arena.position.y + qte.arena.size.y + 10.0)
 	qte.status.size = Vector2(vp.x, 30)
 	qte.status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	qte.status.add_theme_font_size_override("font_size", 22)
-	qte.status.add_theme_color_override("font_color", Color.WHITE)
+	qte.status.add_theme_color_override("font_color", secondary)
 	qte.status.add_theme_constant_override("outline_size", 5)
 	qte.status.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.status)

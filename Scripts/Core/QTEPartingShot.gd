@@ -21,36 +21,111 @@ var target_index: int = -1
 var action_names := ["ui_up", "ui_down", "ui_left", "ui_right"]
 var display_names := ["UP ↑", "DOWN ↓", "LEFT ←", "RIGHT →"]
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> QTEPartingShot:
+static func run(
+	parent_bf: Node2D,
+	title_text: String,
+	help_text: String,
+	theme: Dictionary = {}
+) -> QTEPartingShot:
 	var qte = QTEPartingShot.new()
-	qte.bf = parent_bf; qte.layer = 230; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
+	qte.bf = parent_bf
+	
+	qte.layer = 230
+	qte.process_mode = Node.PROCESS_MODE_ALWAYS
+	parent_bf.add_child(qte)
+	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
-	var dimmer := ColorRect.new(); dimmer.size = vp; dimmer.color = Color(0.02, 0.04, 0.08, 0.84); qte.add_child(dimmer)
+	
+	var dimmer := ColorRect.new()
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
+	dimmer.size = vp
+	qte.add_child(dimmer)
 
-	var title := Label.new(); title.text = title_text; title.position = Vector2(0, 68); title.size = Vector2(vp.x, 42); title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42); title.add_theme_color_override("font_color", Color(0.75, 0.92, 1.0))
-	title.add_theme_constant_override("outline_size", 8); title.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(title)
+	var title := Label.new()
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(title)
 
-	qte.help_lbl = Label.new(); qte.help_lbl.text = help_text; qte.help_lbl.position = Vector2(0, 112); qte.help_lbl.size = Vector2(vp.x, 30); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22); qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
-	qte.help_lbl.add_theme_constant_override("outline_size", 6); qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(qte.help_lbl)
+	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.help_lbl)
 
 	if parent_bf.has_node("/root/QTEManager"):
-		var mgr = parent_bf.get_node("/root/QTEManager"); mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		if mgr.has_method("_apply_qte_visual_overhaul"):
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
-	var center := vp * 0.5 + Vector2(0, 25)
-	qte.inner_ring = Panel.new(); qte.inner_ring.size = Vector2(92, 92); qte.inner_ring.position = center - Vector2(46,46)
-	var istyle := StyleBoxFlat.new(); istyle.bg_color=Color(0,0,0,0); istyle.border_width_left=6; istyle.border_width_top=6; istyle.border_width_right=6; istyle.border_width_bottom=6; istyle.border_color=Color(1,0.85,0.2); istyle.corner_radius_top_left=60; istyle.corner_radius_top_right=60; istyle.corner_radius_bottom_left=60; istyle.corner_radius_bottom_right=60
-	qte.inner_ring.add_theme_stylebox_override("panel", istyle); qte.add_child(qte.inner_ring)
+	var center := vp * 0.5 + Vector2(0, 40)
+	
+	qte.inner_ring = Panel.new()
+	qte.inner_ring.name = "InnerRing"
+	qte.inner_ring.size = Vector2(92, 92)
+	qte.inner_ring.position = center - Vector2(46, 46)
+	var istyle := StyleBoxFlat.new()
+	istyle.bg_color = Color(0, 0, 0, 0)
+	istyle.border_width_left = 6
+	istyle.border_width_top = 6
+	istyle.border_width_right = 6
+	istyle.border_width_bottom = 6
+	istyle.border_color = accent
+	istyle.corner_radius_top_left = 60
+	istyle.corner_radius_top_right = 60
+	istyle.corner_radius_bottom_left = 60
+	istyle.corner_radius_bottom_right = 60
+	qte.inner_ring.add_theme_stylebox_override("panel", istyle)
+	qte.add_child(qte.inner_ring)
 
-	qte.outer_ring = Panel.new(); qte.outer_ring.size = Vector2(240, 240); qte.outer_ring.position = center - Vector2(120,120)
-	var ostyle := StyleBoxFlat.new(); ostyle.bg_color=Color(0,0,0,0); ostyle.border_width_left=7; ostyle.border_width_top=7; ostyle.border_width_right=7; ostyle.border_width_bottom=7; ostyle.border_color=Color(0.7,0.92,1); ostyle.corner_radius_top_left=140; ostyle.corner_radius_top_right=140; ostyle.corner_radius_bottom_left=140; ostyle.corner_radius_bottom_right=140
-	qte.outer_ring.add_theme_stylebox_override("panel", ostyle); qte.add_child(qte.outer_ring)
+	qte.outer_ring = Panel.new()
+	qte.outer_ring.name = "OuterRing"
+	qte.outer_ring.size = Vector2(240, 240)
+	qte.outer_ring.position = center - Vector2(120, 120)
+	var ostyle := StyleBoxFlat.new()
+	ostyle.bg_color = Color(0, 0, 0, 0)
+	ostyle.border_width_left = 8
+	ostyle.border_width_top = 8
+	ostyle.border_width_right = 8
+	ostyle.border_width_bottom = 8
+	ostyle.border_color = secondary
+	ostyle.corner_radius_top_left = 140
+	ostyle.corner_radius_top_right = 140
+	ostyle.corner_radius_bottom_left = 140
+	ostyle.corner_radius_bottom_right = 140
+	qte.outer_ring.add_theme_stylebox_override("panel", ostyle)
+	qte.add_child(qte.outer_ring)
 
-	qte.arrow_lbl = Label.new(); qte.arrow_lbl.position = Vector2(0, center.y+130); qte.arrow_lbl.size = Vector2(vp.x, 90); qte.arrow_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.arrow_lbl.add_theme_font_size_override("font_size", 68); qte.arrow_lbl.add_theme_color_override("font_color", Color.WHITE); qte.arrow_lbl.add_theme_constant_override("outline_size", 8); qte.arrow_lbl.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(qte.arrow_lbl)
+	qte.arrow_lbl = Label.new()
+	qte.arrow_lbl.name = "ArrowLabel"
+	qte.arrow_lbl.position = Vector2(0, center.y + 130)
+	qte.arrow_lbl.size = Vector2(vp.x, 90)
+	qte.arrow_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.arrow_lbl.add_theme_font_size_override("font_size", 72)
+	qte.arrow_lbl.add_theme_color_override("font_color", secondary)
+	qte.arrow_lbl.add_theme_constant_override("outline_size", 10)
+	qte.arrow_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.arrow_lbl)
 
-	parent_bf.get_tree().paused = true; Input.flush_buffered_events(); return qte
+	parent_bf.get_tree().paused = true
+	Input.flush_buffered_events()
+	
+	return qte
 
 func _process(delta: float) -> void:
 	if is_done:

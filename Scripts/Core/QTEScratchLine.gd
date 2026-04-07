@@ -16,30 +16,87 @@ var start_pos: Vector2
 var end_pos: Vector2
 var sweet_t: float
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
-	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
-	qte.bf = parent_bf; qte.layer = 220; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
+static func run(
+	parent_bf: Node2D, 
+	title_text: String, 
+	help_text: String,
+	theme: Dictionary = {}
+) -> QTEScratchLine:
+	var qte = QTEScratchLine.new()
+	qte.bf = parent_bf
+	
+	qte.layer = 220
+	qte.process_mode = Node.PROCESS_MODE_ALWAYS
+	parent_bf.add_child(qte)
+	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
-	var dimmer := ColorRect.new(); dimmer.size = vp; dimmer.color = Color(0.1, 0.02, 0.02, 0.78); qte.add_child(dimmer)
 	
-	var title := Label.new(); title.text = title_text; title.position = Vector2(0, 74); title.size = Vector2(vp.x, 42); title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40); title.add_theme_color_override("font_color", Color(1.0, 0.45, 0.35))
-	title.add_theme_constant_override("outline_size", 8); title.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(title)
-	
-	qte.help_lbl = Label.new(); qte.help_lbl.text = help_text; qte.help_lbl.position = Vector2(0, 118); qte.help_lbl.size = Vector2(vp.x, 30); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22); qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
-	qte.help_lbl.add_theme_constant_override("outline_size", 6); qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(qte.help_lbl)
-	
+	var dimmer := ColorRect.new()
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
+	dimmer.size = vp
+	qte.add_child(dimmer)
+
+	var title := Label.new()
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(title)
+
+	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.help_lbl)
+
 	if parent_bf.has_node("/root/QTEManager"):
-		var mgr = parent_bf.get_node("/root/QTEManager"); mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		if mgr.has_method("_apply_qte_visual_overhaul"):
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
+
+	var line := ColorRect.new()
+	line.name = "ScratchLine"
+	line.size = Vector2(420, 10)
+	line.position = vp * 0.5 - Vector2(210, 0)
+	line.rotation_degrees = 38.0
+	line.color = Color(accent.r, accent.g, accent.b, 0.4)
+	qte.add_child(line)
+
+	qte.start_pos = vp * 0.5 - Vector2(170, 135)
+	qte.end_pos = vp * 0.5 + Vector2(170, 135)
+	qte.sweet_t = randf_range(0.58, 0.82)
+	var sp := qte.start_pos.lerp(qte.end_pos, qte.sweet_t)
+	var sb := ColorRect.new()
+	sb.name = "SweetSpot"
+	sb.size = Vector2(32, 32)
+	sb.position = sp - Vector2(16, 16)
+	sb.color = secondary
+	qte.add_child(sb)
+
+	qte.cursor = ColorRect.new()
+	qte.cursor.name = "Cursor"
+	qte.cursor.size = Vector2(24, 24)
+	qte.cursor.color = Color.WHITE
+	qte.add_child(qte.cursor)
+
+	parent_bf.get_tree().paused = true
+	Input.flush_buffered_events()
 	
-	var line := ColorRect.new(); line.size = Vector2(420, 8); line.position = vp*0.5 - Vector2(210,0); line.rotation_degrees = 38.0; line.color = Color(0.85,0.85,0.85,0.95); qte.add_child(line)
-	qte.start_pos = vp*0.5 - Vector2(170, 135); qte.end_pos = vp*0.5 + Vector2(170, 135)
-	qte.sweet_t = randf_range(0.58, 0.82); var sp := qte.start_pos.lerp(qte.end_pos, qte.sweet_t)
-	var sb := ColorRect.new(); sb.size = Vector2(28,28); sb.position = sp - Vector2(14,14); sb.color = Color(1, 0.86, 0.2); qte.add_child(sb)
-	qte.cursor = ColorRect.new(); qte.cursor.size = Vector2(22,22); qte.cursor.color = Color.WHITE; qte.add_child(qte.cursor)
-	
-	parent_bf.get_tree().paused = true; Input.flush_buffered_events(); return qte
+	return qte
 
 func _process(delta: float) -> void:
 	if is_done:

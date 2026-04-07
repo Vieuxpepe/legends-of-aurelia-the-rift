@@ -89,6 +89,7 @@ func _find_ui(node_name: String) -> Node:
 
 @onready var interface_margin: MarginContainer = _find_ui("InterfaceMargin") as MarginContainer
 @onready var ui_hud_scale_option: OptionButton = _find_ui("UiHudScaleOption") as OptionButton
+@onready var ui_reduced_motion_toggle: CheckBox = _find_ui("UiReducedMotionToggle") as CheckBox
 @onready var ui_show_damage_numbers_toggle: CheckBox = _find_ui("UiShowDamageNumbersToggle") as CheckBox
 @onready var ui_show_health_bars_toggle: CheckBox = _find_ui("UiShowHealthBarsToggle") as CheckBox
 @onready var ui_unit_bars_at_feet_toggle: CheckBox = _find_ui("UiUnitBarsAtFeetToggle") as CheckBox
@@ -737,6 +738,7 @@ func _apply_theme() -> void:
 	_style_option_button(perf_resolution_option)
 	_style_option_button(perf_msaa_option)
 	_style_option_button(ui_hud_scale_option)
+	_style_checkbox(ui_reduced_motion_toggle)
 	_style_option_button(ui_cursor_size_option)
 	_style_option_button(ui_damage_text_size_option)
 	_style_option_button(ui_combat_log_font_option)
@@ -950,6 +952,7 @@ func _connect_all_signals() -> void:
 		pause_interface_btn.pressed.connect(_on_pause_interface_pressed)
 	if ui_hud_scale_option and not ui_hud_scale_option.item_selected.is_connected(_on_ui_hud_scale_selected):
 		ui_hud_scale_option.item_selected.connect(_on_ui_hud_scale_selected)
+	_connect_toggle_signal(ui_reduced_motion_toggle, _on_ui_reduced_motion_toggled)
 	if ui_cursor_size_option and not ui_cursor_size_option.item_selected.is_connected(_on_ui_cursor_size_selected):
 		ui_cursor_size_option.item_selected.connect(_on_ui_cursor_size_selected)
 	if ui_damage_text_size_option and not ui_damage_text_size_option.item_selected.is_connected(_on_ui_damage_text_size_selected):
@@ -1316,6 +1319,8 @@ func _sync_interface_ui_from_campaign() -> void:
 	_ensure_ui_text_size_items(ui_combat_log_font_option)
 	if ui_hud_scale_option:
 		ui_hud_scale_option.select(clampi(CampaignManager.interface_hud_scale, 0, ui_hud_scale_option.item_count - 1))
+	if ui_reduced_motion_toggle:
+		ui_reduced_motion_toggle.button_pressed = CampaignManager.interface_reduced_motion
 	if ui_cursor_size_option:
 		ui_cursor_size_option.select(clampi(CampaignManager.interface_cursor_size, 0, ui_cursor_size_option.item_count - 1))
 	if ui_cursor_high_contrast_toggle:
@@ -1362,6 +1367,13 @@ func _on_ui_hud_scale_selected(index: int) -> void:
 	if _is_syncing_ui:
 		return
 	CampaignManager.interface_hud_scale = clampi(index, 0, 4)
+	_persist_interface()
+
+
+func _on_ui_reduced_motion_toggled(toggled_on: bool) -> void:
+	if _is_syncing_ui:
+		return
+	CampaignManager.interface_reduced_motion = toggled_on
 	_persist_interface()
 
 

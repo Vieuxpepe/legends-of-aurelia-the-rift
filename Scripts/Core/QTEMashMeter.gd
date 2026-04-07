@@ -27,7 +27,8 @@ static func run(
 	title_text: String,
 	help_text: String,
 	total_ms: int,
-	start_meter: float = 28.0
+	start_meter: float = 28.0,
+	theme: Dictionary = {}
 ) -> QTEMashMeter:
 	var qte = QTEMashMeter.new()
 	qte.bf = parent_bf
@@ -38,30 +39,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.02, 0.04, 0.08, 0.60)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 100)
-	title.size = Vector2(vp.x, 42)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", Color(0.70, 0.92, 1.0))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 145)
-	qte.help_lbl.size = Vector2(vp.x, 30)
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -69,57 +76,58 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	qte.bar_bg = ColorRect.new()
-	qte.bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
-	qte.bar_bg.size = Vector2(520, 34)
-	qte.bar_bg.position = Vector2((vp.x - qte.bar_bg.size.x) * 0.5, (vp.y - qte.bar_bg.size.y) * 0.5 - 18.0)
+	qte.bar_bg.name = "BarBackground"
+	qte.bar_bg.color = Color(0.02, 0.02, 0.03, 0.95)
+	qte.bar_bg.size = Vector2(520, 32)
+	qte.bar_bg.position = Vector2((vp.x - qte.bar_bg.size.x) * 0.5, (vp.y - qte.bar_bg.size.y) * 0.5 - 16.0)
 	qte.add_child(qte.bar_bg)
 
 	var good_line := ColorRect.new()
-	good_line.color = Color(0.30, 0.95, 0.35, 0.95)
-	good_line.size = Vector2(4, 34)
-	good_line.position = Vector2(qte.bar_bg.size.x * 0.58, 0)
+	good_line.name = "GoodThreshold"
+	good_line.color = Color(accent.r * 0.8, accent.g, accent.b * 0.8, 0.8)
+	good_line.size = Vector2(4, 48)
+	good_line.position = Vector2(qte.bar_bg.size.x * 0.58, -8)
 	qte.bar_bg.add_child(good_line)
 
 	var perfect_line := ColorRect.new()
-	perfect_line.color = Color(1.0, 0.86, 0.20, 0.98)
-	perfect_line.size = Vector2(4, 34)
-	perfect_line.position = Vector2(qte.bar_bg.size.x * 0.84, 0)
+	perfect_line.name = "PerfectThreshold"
+	perfect_line.color = secondary
+	perfect_line.size = Vector2(4, 48)
+	perfect_line.position = Vector2(qte.bar_bg.size.x * 0.84, -8)
 	qte.bar_bg.add_child(perfect_line)
 
 	qte.fill = ColorRect.new()
-	qte.fill.color = Color(0.55, 0.85, 1.0, 1.0)
-	qte.fill.size = Vector2(0, 34)
+	qte.fill.name = "Fill"
+	qte.fill.color = accent
+	qte.fill.size = Vector2(0, 32)
 	qte.fill.position = Vector2.ZERO
 	qte.bar_bg.add_child(qte.fill)
 
 	qte.arrow_1 = Label.new()
-	qte.arrow_1.text = "ARROW I"
-	qte.arrow_1.position = Vector2(qte.bar_bg.position.x + 30, qte.bar_bg.position.y + 55)
-	qte.arrow_1.add_theme_font_size_override("font_size", 20)
-	qte.arrow_1.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
-	qte.arrow_1.add_theme_constant_override("outline_size", 5)
-	qte.arrow_1.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.arrow_1.name = "Marker1"
+	qte.arrow_1.text = "LEVEL I"
+	qte.arrow_1.position = Vector2(qte.bar_bg.position.x + 30, qte.bar_bg.position.y + 40)
+	qte.arrow_1.add_theme_font_size_override("font_size", 18)
+	qte.arrow_1.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 	qte.add_child(qte.arrow_1)
 
 	qte.arrow_2 = Label.new()
-	qte.arrow_2.text = "ARROW II"
-	qte.arrow_2.position = Vector2(qte.bar_bg.position.x + 210, qte.bar_bg.position.y + 55)
-	qte.arrow_2.add_theme_font_size_override("font_size", 20)
-	qte.arrow_2.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
-	qte.arrow_2.add_theme_constant_override("outline_size", 5)
-	qte.arrow_2.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.arrow_2.name = "Marker2"
+	qte.arrow_2.text = "LEVEL II"
+	qte.arrow_2.position = Vector2(qte.bar_bg.position.x + 210, qte.bar_bg.position.y + 40)
+	qte.arrow_2.add_theme_font_size_override("font_size", 18)
+	qte.arrow_2.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 	qte.add_child(qte.arrow_2)
 
 	qte.arrow_3 = Label.new()
-	qte.arrow_3.text = "ARROW III"
-	qte.arrow_3.position = Vector2(qte.bar_bg.position.x + 395, qte.bar_bg.position.y + 55)
-	qte.arrow_3.add_theme_font_size_override("font_size", 20)
-	qte.arrow_3.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
-	qte.arrow_3.add_theme_constant_override("outline_size", 5)
-	qte.arrow_3.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.arrow_3.name = "Marker3"
+	qte.arrow_3.text = "MAX POWER"
+	qte.arrow_3.position = Vector2(qte.bar_bg.position.x + 395, qte.bar_bg.position.y + 40)
+	qte.arrow_3.add_theme_font_size_override("font_size", 18)
+	qte.arrow_3.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 	qte.add_child(qte.arrow_3)
 
 	parent_bf.get_tree().paused = true

@@ -107,6 +107,7 @@ haggle_boost={
 [legends_of_aurelia]
 
 build=""
+demo_build=false
 
 [physics]
 

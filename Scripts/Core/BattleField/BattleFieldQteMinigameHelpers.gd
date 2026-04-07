@@ -94,7 +94,12 @@ static func run_focused_strike_minigame(field, attacker: Node2D) -> int:
 	field.spawn_loot_text("FOCUS STRIKE!", Color(1.0, 0.5, 0.0), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
 	await field.get_tree().create_timer(0.6).timeout
 	
-	var qte = QTEHoldReleaseBar.run(field, "FOCUS STRIKE!", "HOLD SPACE... RELEASE IN GREEN!", 1200)
+	var job = attacker.get("job_name") if "job_name" in attacker else "Warrior"
+	var theme = {}
+	if field.has_node("/root/QTEManager"):
+		theme = field.get_node("/root/QTEManager")._get_class_theme(job)
+
+	var qte = QTEHoldReleaseBar.run(field, "FOCUS STRIKE!", "HOLD SPACE... RELEASE IN GREEN!", 1200, theme)
 	var res = await qte.qte_finished
 	return res
 
@@ -110,7 +115,12 @@ static func run_bloodthirster_minigame(field, attacker: Node2D) -> int:
 	field.spawn_loot_text("BLOODTHIRSTER!", Color(0.8, 0.1, 0.1), attacker.global_position + Vector2(32, -48), {"stack_anchor": attacker})
 	await field.get_tree().create_timer(0.6).timeout
 	
-	var qte = QTEComboSweepBar.run(field, "BLOODTHIRSTER", "TAP 3 TIMES!", [80.0, 200.0, 320.0], 1400)
+	var job = attacker.get("job_name") if "job_name" in attacker else "Warrior"
+	var theme = {}
+	if field.has_node("/root/QTEManager"):
+		theme = field.get_node("/root/QTEManager")._get_class_theme(job)
+
+	var qte = QTEComboSweepBar.run(field, "BLOODTHIRSTER", "TAP 3 TIMES!", [80.0, 200.0, 320.0], 1400, theme)
 	var res = await qte.qte_finished
 	return res
 
@@ -137,53 +147,75 @@ static func run_hundred_point_strike_minigame(field, attacker: Node2D) -> int:
 	# 2. THE UI POP
 	var qte_layer = CanvasLayer.new()
 	qte_layer.layer = 100 
-	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS 
 	field.add_child(qte_layer)
 	
+	var job = attacker.get("job_name") if "job_name" in attacker else "Martial Artist"
+	var theme = {}
+	if field.has_node("/root/QTEManager"):
+		theme = field.get_node("/root/QTEManager")._get_class_theme(job)
+	
+	var accent: Color = theme.get("accent", Color(0.9, 0.2, 1.0))
+	var secondary: Color = theme.get("secondary", Color.WHITE)
+	var glow: float = theme.get("glow_intensity", 1.0)
 	var vp_size = field.get_viewport_rect().size
 	
 	var screen_dimmer = ColorRect.new()
 	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0.1, 0.0, 0.2, 0.6) # Deep purple tint
+	screen_dimmer.color = theme.get("bg_mod", Color(0.02, 0.0, 0.05, 0.8))
 	qte_layer.add_child(screen_dimmer)
 	
 	# The Prompt Box (Shows the Arrow Key)
-	var prompt_box = ColorRect.new()
-	prompt_box.size = Vector2(120, 120)
-	prompt_box.position = (vp_size - prompt_box.size) / 2.0
-	prompt_box.position.y -= 50
-	prompt_box.color = Color(0.1, 0.1, 0.1, 0.9)
-	qte_layer.add_child(prompt_box)
+	var prompt_panel = Panel.new()
+	prompt_panel.size = Vector2(140, 140)
+	prompt_panel.position = (vp_size - prompt_panel.size) / 2.0
+	prompt_panel.position.y -= 50
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.05, 0.06, 0.08, 0.95)
+	panel_style.border_color = accent
+	panel_style.set_border_width_all(3)
+	panel_style.set_corner_radius_all(15)
+	panel_style.shadow_size = 25
+	panel_style.shadow_color = Color(0, 0, 0, 0.6)
+	prompt_panel.add_theme_stylebox_override("panel", panel_style)
+	qte_layer.add_child(prompt_panel)
 	
 	var prompt_label = Label.new()
 	prompt_label.text = "â†‘"
 	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	prompt_label.add_theme_font_size_override("font_size", 80)
-	prompt_label.add_theme_color_override("font_color", Color.WHITE)
-	prompt_label.size = prompt_box.size
-	prompt_box.add_child(prompt_label)
+	prompt_label.add_theme_font_size_override("font_size", 84)
+	prompt_label.add_theme_color_override("font_color", secondary)
+	prompt_label.add_theme_constant_override("outline_size", 8)
+	prompt_label.add_theme_color_override("font_outline_color", Color(accent.r*0.2, accent.g*0.2, accent.b*0.2, 0.8))
+	prompt_label.size = prompt_panel.size
+	prompt_panel.add_child(prompt_label)
 	
+	if field.has_node("/root/QTEManager"):
+		field.get_node("/root/QTEManager")._decorate_qte_indicator(prompt_panel, theme)
+
 	# The Timer Bar (Shrinks down)
-	var timer_bar = ProgressBar.new()
-	timer_bar.max_value = 100
-	timer_bar.value = 100
-	timer_bar.size = Vector2(300, 20)
-	timer_bar.position = Vector2((vp_size.x - 300) / 2.0, prompt_box.position.y + 140)
-	timer_bar.show_percentage = false
-	
-	var fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.9, 0.2, 1.0)
-	timer_bar.add_theme_stylebox_override("fill", fill_style)
+	var timer_bg = ColorRect.new()
+	timer_bg.size = Vector2(320, 12)
+	timer_bg.position = Vector2((vp_size.x - 320) / 2.0, prompt_panel.position.y + 160)
+	timer_bg.color = Color(0.1, 0.1, 0.1, 0.9)
+	qte_layer.add_child(timer_bg)
+
+	var timer_bar = ColorRect.new()
+	timer_bar.size = timer_bg.size
+	timer_bar.position = timer_bg.position
+	timer_bar.color = accent
 	qte_layer.add_child(timer_bar)
 	
 	# Combo Counter
 	var combo_label = Label.new()
 	combo_label.text = "HITS: 0"
 	combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	combo_label.add_theme_font_size_override("font_size", 40)
-	combo_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
-	combo_label.position = Vector2(0, prompt_box.position.y - 60)
+	combo_label.add_theme_font_size_override("font_size", 44)
+	combo_label.add_theme_color_override("font_color", secondary)
+	combo_label.add_theme_constant_override("outline_size", 10)
+	combo_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	combo_label.position = Vector2(0, prompt_panel.position.y - 75)
 	combo_label.size.x = vp_size.x
 	qte_layer.add_child(combo_label)
 
@@ -209,12 +241,12 @@ static func run_hundred_point_strike_minigame(field, attacker: Node2D) -> int:
 		time_left -= delta
 		
 		# Update visual bar
-		timer_bar.value = (time_left / max_time_for_hit) * 100.0
+		timer_bar.size.x = (time_left / max_time_for_hit) * 320.0
 		
 		# Did they run out of time?
 		if time_left <= 0:
 			failed = true
-			prompt_box.color = Color(0.8, 0.1, 0.1) # Turn red
+			panel_style.bg_color = Color(0.3, 0.05, 0.05, 0.95) # Turn dark red
 			prompt_label.text = "X"
 			if field.miss_sound.stream != null: field.miss_sound.play()
 			break
@@ -250,14 +282,14 @@ static func run_hundred_point_strike_minigame(field, attacker: Node2D) -> int:
 				prompt_label.text = arrows[current_target]
 				
 				# Micro flash for feedback
-				prompt_box.modulate = Color(2.0, 2.0, 2.0)
+				prompt_panel.modulate = Color(2.0, 2.0, 2.0)
 				var flash: Tween = qte_layer.create_tween()
-				flash.tween_property(prompt_box, "modulate", Color.WHITE, 0.05)
+				flash.tween_property(prompt_panel, "modulate", Color.WHITE, 0.05)
 				
 			else:
 				# WRONG KEY PRESSED!
 				failed = true
-				prompt_box.color = Color(0.8, 0.1, 0.1) 
+				panel_style.bg_color = Color(0.3, 0.05, 0.05, 0.95)
 				prompt_label.text = "X"
 				if field.miss_sound.stream != null: field.miss_sound.play()
 				break
@@ -295,41 +327,64 @@ static func run_tactical_action_minigame(field, attacker: Node2D, ability_name: 
 	qte_layer.process_mode = Node.PROCESS_MODE_ALWAYS 
 	field.add_child(qte_layer)
 
+	var job = attacker.get("job_name") if "job_name" in attacker else "Ranger"
+	var theme = {}
+	if field.has_node("/root/QTEManager"):
+		theme = field.get_node("/root/QTEManager")._get_class_theme(job)
+	
+	var accent: Color = theme.get("accent", Color(0.2, 1.0, 1.0))
+	var secondary: Color = theme.get("secondary", Color.WHITE)
+	var glow: float = theme.get("glow_intensity", 1.0)
 	var vp_size = field.get_viewport_rect().size
 
 	var screen_dimmer = ColorRect.new()
 	screen_dimmer.size = vp_size
-	screen_dimmer.color = Color(0, 0.1, 0.2, 0.3) # Slight blue tint
+	screen_dimmer.color = theme.get("bg_mod", Color(0, 0.05, 0.1, 0.8))
 	qte_layer.add_child(screen_dimmer)
 
 	# Bar
-	var bar_bg = ColorRect.new()
-	bar_bg.size = Vector2(380, 30)
-	bar_bg.pivot_offset = bar_bg.size / 2.0
-	bar_bg.position = (vp_size - bar_bg.size) / 2.0
-	bar_bg.position.y += 100.0 # Put it below the action
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.95)
-	bar_bg.scale = Vector2(0.86, 0.86)
-	bar_bg.modulate.a = 0.0
-	qte_layer.add_child(bar_bg)
+	var bar_frame = Panel.new()
+	bar_frame.size = Vector2(420, 50)
+	bar_frame.pivot_offset = bar_frame.size / 2.0
+	bar_frame.position = (vp_size - bar_frame.size) / 2.0
+	bar_frame.position.y += 120.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.06, 0.08, 0.95)
+	style.border_color = accent
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.shadow_size = 15
+	bar_frame.add_theme_stylebox_override("panel", style)
+	bar_frame.scale = Vector2(0.8, 0.8)
+	bar_frame.modulate.a = 0.0
+	qte_layer.add_child(bar_frame)
 
 	var bar_pop: Tween = qte_layer.create_tween().set_parallel(true)
-	bar_pop.tween_property(bar_bg, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	bar_pop.tween_property(bar_bg, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	bar_pop.tween_property(bar_frame, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_QUAD)
+	bar_pop.tween_property(bar_frame, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK)
+
+	var bar_bg = ColorRect.new()
+	bar_bg.size = Vector2(400, 30)
+	bar_bg.position = Vector2(10, 10)
+	bar_bg.color = Color(0, 0, 0, 0.8)
+	bar_frame.add_child(bar_bg)
 
 	# The "Perfect" Sweet Spot (Small and Green)
 	var perfect_zone = ColorRect.new()
 	perfect_zone.size = Vector2(40, 30)
 	var rand_max = bar_bg.size.x - perfect_zone.size.x
 	perfect_zone.position = Vector2(randf_range(50.0, rand_max), 0.0)
-	perfect_zone.color = Color(0.2, 1.0, 0.2, 0.9)
+	perfect_zone.color = Color(accent.r, accent.g, accent.b, 0.9)
 	bar_bg.add_child(perfect_zone)
 
 	var qte_cursor = ColorRect.new()
 	qte_cursor.size = Vector2(8, 50)
 	qte_cursor.position = Vector2(0, -10)
-	qte_cursor.color = Color.WHITE
+	qte_cursor.color = secondary
 	bar_bg.add_child(qte_cursor)
+	
+	if field.has_node("/root/QTEManager"):
+		field.get_node("/root/QTEManager")._decorate_qte_indicator(qte_cursor, theme)
 
 	var help_text = Label.new()
 	help_text.text = "STOP IN GREEN FOR +DAMAGE & TRAP DURATION!" if ability_name == "Fire Trap" else "STOP IN GREEN FOR 2x DISTANCE!"
@@ -391,4 +446,3 @@ static func run_tactical_action_minigame(field, attacker: Node2D, ability_name: 
 	field.get_tree().paused = prev_paused
 	
 	return is_perfect
-

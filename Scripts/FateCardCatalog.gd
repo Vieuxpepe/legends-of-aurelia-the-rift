@@ -14,6 +14,8 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "common",
 		"summary": "+5% post-battle iron income.",
 		"description": "Scouts secure old mining roads. After battle victory, gain bonus iron from salvage routes.",
+		"effect_summary": "+5% post-battle iron income",
+		"effect_polarity": "buff",
 		"portrait_path": "res://Assets/Portraits/FateCardMatte/Branik Portrait.png"
 	},
 	{
@@ -22,6 +24,8 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "common",
 		"summary": "Reveal 1 extra enemy at start.",
 		"description": "A smoke-marked watchpost reports first movement. In fog-heavy maps, start with extra enemy intel.",
+		"effect_summary": "Reveal 1 extra enemy at battle start",
+		"effect_polarity": "buff",
 		"portrait_path": "res://Assets/Portraits/FateCardMatte/Portrait Hero 1.png"
 	},
 	{
@@ -30,6 +34,8 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "rare",
 		"summary": "+1 random consumable after map clear.",
 		"description": "The Ember Brokers always collect. On battle clear, one bonus consumable is added to rewards.",
+		"effect_summary": "+1 random consumable after map clear",
+		"effect_polarity": "buff",
 		"portrait_path": "res://Assets/Portraits/FateCardMatte/Noemi Veyr Portrait.png"
 	},
 	{
@@ -38,6 +44,8 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "rare",
 		"summary": "+1 move for first player phase turn.",
 		"description": "A chart that predicts lethal wind lanes. One allied unit can move farther on the opening push.",
+		"effect_summary": "+1 move for the first player phase turn",
+		"effect_polarity": "buff",
 		"portrait_path": "res://Assets/Portraits/FateCardMatte/Sorrel Portrait.png"
 	},
 	{
@@ -46,6 +54,8 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "epic",
 		"summary": "Elite enemies drop +1 void shard.",
 		"description": "The house claims a piece of every anomaly. Enhanced enemies yield extra void shards when defeated.",
+		"effect_summary": "Elite enemies drop +1 void shard",
+		"effect_polarity": "buff",
 		"portrait_path": "res://Assets/Portraits/FateCardMatte/Portrait Malakor.png"
 	},
 	{
@@ -54,6 +64,8 @@ const CARDS: Array[Dictionary] = [
 		"rarity": "legendary",
 		"summary": "Dragon units start with +10 poise.",
 		"description": "Ancient drake compacts harden scales before battle. Dragon allies enter combat with bonus poise.",
+		"effect_summary": "Dragon units start battle with +10 poise",
+		"effect_polarity": "buff",
 		"portrait_path": "res://Assets/Portraits/FateCardMatte/Morgra Portrait.png"
 	}
 ]
@@ -98,3 +110,14 @@ static func get_rarity_color(rarity: String) -> Color:
 			return Color(0.72, 0.74, 0.76, 1.0)
 		_:
 			return Color(0.70, 0.70, 0.70, 1.0)
+
+
+static func get_effect_summary(card: Dictionary) -> String:
+	var effect_summary: String = str(card.get("effect_summary", "")).strip_edges()
+	if effect_summary != "":
+		return effect_summary
+	return str(card.get("summary", "")).strip_edges()
+
+
+static func get_effect_polarity(card: Dictionary) -> String:
+	return str(card.get("effect_polarity", "neutral")).strip_edges().to_lower()

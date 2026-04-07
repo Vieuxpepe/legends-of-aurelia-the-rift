@@ -55,14 +55,22 @@ static func populate_convoy_list(field) -> void:
 		if unit.is_queued_for_deletion() or unit.current_hp <= 0:
 			continue
 
-		# Create a visual header with the unit's name
+		# Create a visual header with the unit's name - Premium Tactical Style
+		var header_container = PanelContainer.new()
+		var h_style = StyleBoxFlat.new()
+		h_style.bg_color = Color(0.1, 0.1, 0.15, 0.7)
+		h_style.border_width_left = 4
+		h_style.border_color = Color(0.9, 0.8, 0.2, 0.8) # Gold accent
+		header_container.add_theme_stylebox_override("panel", h_style)
+		header_container.set_meta("is_dynamic", true)
+		vbox.add_child(header_container)
+
 		var header = Label.new()
-		header.text = "\n--- " + unit.unit_name.to_upper() + "'S BACKPACK ---"
-		header.add_theme_color_override("font_color", Color.CYAN)
-		header.add_theme_font_size_override("font_size", 18)
-		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		header.set_meta("is_dynamic", true) # Tag it so we can delete it later
-		vbox.add_child(header)
+		header.text = "  " + unit.unit_name.to_upper() + "'S BATTLE GEAR"
+		header.add_theme_color_override("font_color", Color(0.9, 0.9, 1.0))
+		header.add_theme_font_size_override("font_size", 16)
+		header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		header_container.add_child(header)
 
 		# Create a new 5-column grid just for this unit
 		var u_grid = GridContainer.new()
@@ -143,14 +151,137 @@ static func build_grid_items(
 
 	for i in range(total_slots):
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(64, 64)
+		btn.custom_minimum_size = Vector2(82, 82) # Slightly larger for better icon visibility
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.expand_icon = true
+		btn.pivot_offset = Vector2(41, 41)
 
+		# 1. Premium Glassmorphism Style
 		var style = StyleBoxFlat.new()
-		style.bg_color = Color(0.1, 0.1, 0.1, 0.8)
-		style.border_width_bottom = 2
-		style.border_color = Color(0.3, 0.3, 0.3)
+		style.bg_color = Color(0.12, 0.12, 0.15, 0.88)
+		style.border_width_bottom = 3
+		style.border_color = Color(0.35, 0.35, 0.45, 0.7)
+		style.corner_radius_top_left = 4
+		style.corner_radius_top_right = 4
+		style.corner_radius_bottom_right = 4
+		style.corner_radius_bottom_left = 4
+		
+		var hover_style = style.duplicate()
+		hover_style.bg_color = Color(0.22, 0.22, 0.28, 0.92)
+		hover_style.border_color = Color(0.9, 0.8, 0.4, 1.0) # Tactical Gold highlight
+		
 		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_stylebox_override("hover", hover_style)
+		btn.add_theme_stylebox_override("pressed", hover_style)
+		btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+		# 2. Hover Effects (Scale + Sound)
+		btn.mouse_entered.connect(func():
+			var tw = btn.create_tween()
+			tw.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(btn, "scale", Vector2(1.1, 1.1), 0.18)
+			if field.has_method("play_ui_sfx"): field.play_ui_sfx(field.UISfx.MOVE_OK)
+		)
+		btn.mouse_exited.connect(func():
+			var tw = btn.create_tween()
+			tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			tw.tween_property(btn, "scale", Vector2.ONE, 0.2)
+		)
+
+		grid.add_child(btn)
+
+		if i < display_items.size():
+			var d = display_items[i]
+			var item = d.item
+			var count = d.count
+			var real_index = d.indices[0]
+
+			# Integrate QTEManager Rarity Decoration
+			if field.has_node("/root/QTEManager"):
+				field.get_node("/root/QTEManager")._decorate_inventory_slot(btn, item)
+
+			if item.get("icon") != null:
+				btn.icon = item.icon
+				btn.modulate = Color(1.1, 1.1, 1.15) # HDR-like boost for icons
+			else:
+				var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
+				btn.text = str(i_name).substr(0, 3).to_upper() if i_name else "???"
+
+			# Stack counter - Modern styling
+			if count > 1:
+				var count_lbl = Label.new()
+				count_lbl.text = "x" + str(count)
+				count_lbl.add_theme_font_size_override("font_size", 16)
+				count_lbl.add_theme_color_override("font_color", Color.WHITE)
+				count_lbl.add_theme_constant_override("outline_size", 4)
+				count_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+
+				btn.add_child(count_lbl)
+				count_lbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+				count_lbl.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+				count_lbl.offset_right = -6
+				count_lbl.offset_bottom = -2
+
+			var meta = {
+				"source": source_type,
+				"index": real_index,
+				"item": item,
+				"unit": owner_unit,
+				"count": count
+			}
+			btn.set_meta("inv_data", meta)
+
+			var is_usable_for_owner: bool = true
+			if owner_unit != null and item is WeaponData:
+				is_usable_for_owner = field._unit_can_use_item_for_ui(owner_unit, item)
+
+			if not is_usable_for_owner:
+				btn.modulate = Color(0.65, 0.65, 0.7, 0.85) # Dim + Cool tint
+				# Subtle restricted badge
+				var restricted = ColorRect.new()
+				restricted.custom_minimum_size = Vector2(24, 24)
+				restricted.color = Color(0.8, 0.1, 0.1, 0.85)
+				btn.add_child(restricted)
+				restricted.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+				restricted.position = Vector2(-2, -2)
+				var l = Label.new()
+				l.text = "!"
+				l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				l.add_theme_font_size_override("font_size", 14)
+				restricted.add_child(l)
+				l.set_anchors_preset(Control.PRESET_CENTER)
+
+			if owner_unit != null and item == owner_unit.get("equipped_weapon"):
+				var eq_style = style.duplicate()
+				eq_style.border_color = Color(0.9, 0.8, 0.2)
+				eq_style.border_width_left = 2
+				eq_style.border_width_top = 2
+				eq_style.border_width_right = 2
+				eq_style.bg_color = Color(0.15, 0.18, 0.12, 0.9)
+				btn.add_theme_stylebox_override("normal", eq_style)
+				
+				# Premium Equipped Sash
+				var sash = ColorRect.new()
+				sash.custom_minimum_size = Vector2(40, 20)
+				sash.color = Color(0.1, 0.8, 0.4, 0.9)
+				sash.rotation = deg_to_rad(-45)
+				btn.add_child(sash)
+				sash.position = Vector2(-12, 2)
+				var eq_lbl = Label.new()
+				eq_lbl.text = "E"
+				eq_lbl.add_theme_font_size_override("font_size", 12)
+				eq_lbl.add_theme_color_override("font_color", Color.WHITE)
+				sash.add_child(eq_lbl)
+				eq_lbl.set_anchors_preset(Control.PRESET_CENTER)
+
+			btn.pressed.connect(func(): field._on_grid_item_clicked(btn, meta))
+		else:
+			btn.disabled = true
+			var empty_style = style.duplicate()
+			empty_style.bg_color = Color(0.08, 0.08, 0.1, 0.35)
+			empty_style.border_width_bottom = 1
+			btn.add_theme_stylebox_override("disabled", empty_style)
+		}
 
 		grid.add_child(btn)
 

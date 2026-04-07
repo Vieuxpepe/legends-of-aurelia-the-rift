@@ -15,19 +15,63 @@ var help_lbl: Label
 var dimmer: ColorRect
 var flash_time: float = 0.0
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
-	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
-	qte.bf = parent_bf; qte.layer = 220; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
+static func run(
+	parent_bf: Node2D,
+	title_text: String,
+	help_text: String,
+	theme: Dictionary = {}
+) -> QTEReactionFlash:
+	var qte = QTEReactionFlash.new()
+	qte.bf = parent_bf
+	
+	qte.layer = 220
+	qte.process_mode = Node.PROCESS_MODE_ALWAYS
+	parent_bf.add_child(qte)
+	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
-	qte.dimmer = ColorRect.new(); qte.dimmer.size = vp; qte.dimmer.color = Color(0, 0, 0, 0.95); qte.add_child(qte.dimmer)
 	
-	qte.help_lbl = Label.new(); qte.help_lbl.text = help_text; qte.help_lbl.position = vp*0.5 - Vector2(vp.x*0.5, 20); qte.help_lbl.size = Vector2(vp.x, 40); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 28); qte.help_lbl.add_theme_color_override("font_color", Color(0.6,0.6,0.7)); qte.add_child(qte.help_lbl)
-	
+	qte.dimmer = ColorRect.new()
+	qte.dimmer.name = "Dimmer"
+	qte.dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.75))
+	qte.dimmer.size = vp
+	qte.add_child(qte.dimmer)
+
+	var title := Label.new()
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(title)
+
+	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.help_lbl)
+
 	if parent_bf.has_node("/root/QTEManager"):
-		var mgr = parent_bf.get_node("/root/QTEManager"); mgr._apply_qte_visual_overhaul(qte, null, qte.help_lbl)
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		if mgr.has_method("_apply_qte_visual_overhaul"):
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
+
+	qte.wait_limit = randf_range(1.2, 3.2)
+	parent_bf.get_tree().paused = true
+	Input.flush_buffered_events()
 	
-	qte.wait_limit = randf_range(1.2, 3.2); parent_bf.get_tree().paused = true; Input.flush_buffered_events(); return qte
+	return qte
 
 func _process(delta: float) -> void:
 	if is_done:

@@ -24,7 +24,8 @@ static func run(
 	help_text: String,
 	angles: Array,
 	speed: float,
-	max_duration_ms: int
+	max_duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEMultiTapDial:
 	var qte = QTEMultiTapDial.new()
 	qte.bf = parent_bf
@@ -38,30 +39,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.04, 0.06, 0.10, 0.72)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 60)
-	title.size = Vector2(vp.x, 42)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
-	title.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 105)
-	qte.help_lbl.size = Vector2(vp.x, 30)
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -69,18 +76,19 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	var dial := Panel.new()
+	dial.name = "Dial"
 	dial.size = Vector2(320, 320)
-	dial.position = Vector2((vp.x - 320) * 0.5, (vp.y - 320) * 0.5 - 10)
+	dial.position = Vector2((vp.x - dial.size.x) * 0.5, (vp.y - dial.size.y) * 0.5 + 40)
 	var dial_style := StyleBoxFlat.new()
-	dial_style.bg_color = Color(0.06, 0.06, 0.06, 0.96)
-	dial_style.border_width_left = 4
-	dial_style.border_width_top = 4
-	dial_style.border_width_right = 4
-	dial_style.border_width_bottom = 4
-	dial_style.border_color = Color(0.75, 0.75, 0.8, 0.85)
+	dial_style.bg_color = Color(0.02, 0.02, 0.03, 0.95)
+	dial_style.border_width_left = 6
+	dial_style.border_width_top = 6
+	dial_style.border_width_right = 6
+	dial_style.border_width_bottom = 6
+	dial_style.border_color = accent
 	dial_style.corner_radius_top_left = 180
 	dial_style.corner_radius_top_right = 180
 	dial_style.corner_radius_bottom_left = 180
@@ -89,27 +97,30 @@ static func run(
 	qte.add_child(dial)
 
 	var pivot := ColorRect.new()
-	pivot.size = Vector2(12, 12)
-	pivot.position = dial.size * 0.5 - Vector2(6, 6)
+	pivot.name = "Pivot"
+	pivot.size = Vector2(16, 16)
+	pivot.position = dial.size * 0.5 - Vector2(8, 8)
 	pivot.color = Color.WHITE
 	dial.add_child(pivot)
 
 	var radius := 118.0
 	for angle_deg in qte.target_angles:
 		var dot := ColorRect.new()
-		dot.size = Vector2(18, 18)
+		dot.name = "TargetDot"
+		dot.size = Vector2(24, 24)
 		var rad := deg_to_rad(angle_deg - 90.0)
 		var center_pos := dial.size * 0.5 + Vector2(cos(rad), sin(rad)) * radius
 		dot.position = center_pos - dot.size * 0.5
-		dot.color = Color(1.0, 0.86, 0.2, 1.0)
+		dot.color = secondary
 		dial.add_child(dot)
 		qte.target_dots.append(dot)
 
 	qte.needle = ColorRect.new()
-	qte.needle.size = Vector2(6, 128)
-	qte.needle.position = dial.size * 0.5 - Vector2(3, 114)
-	qte.needle.pivot_offset = Vector2(3, 114)
-	qte.needle.color = Color(0.85, 0.95, 1.0, 1.0)
+	qte.needle.name = "Needle"
+	qte.needle.size = Vector2(8, 128)
+	qte.needle.position = dial.size * 0.5 - Vector2(4, 114)
+	qte.needle.pivot_offset = Vector2(4, 114)
+	qte.needle.color = accent
 	dial.add_child(qte.needle)
 	
 	parent_bf.get_tree().paused = true

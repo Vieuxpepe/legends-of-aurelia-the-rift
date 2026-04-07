@@ -28,7 +28,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTESniperZoom:
 	var qte = QTESniperZoom.new()
 	qte.bf = parent_bf
@@ -38,37 +39,61 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.08, 0.08, 0.10, 0.96); dimmer.size = vp; qte.add_child(dimmer)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
+	dimmer.size = vp
+	qte.add_child(dimmer)
 
 	var title := Label.new()
-	title.text = title_text; title.position = Vector2(0, 80); title.size = Vector2(vp.x, 40); title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42); title.add_theme_color_override("font_color", Color(1, 1, 1))
-	title.add_theme_constant_override("outline_size", 8); title.add_theme_color_override("font_outline_color", Color.BLACK)
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
-	qte.help_lbl.text = help_text; qte.help_lbl.position = Vector2(0, 130); qte.help_lbl.size = Vector2(vp.x, 30); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22); qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
-	qte.help_lbl.add_theme_constant_override("outline_size", 6); qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
 
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	var arena := ColorRect.new()
-	arena.size = qte.arena_size; arena.position = (vp - qte.arena_size)*0.5 - Vector2(0,10); arena.color = Color(0.08, 0.08, 0.10, 1.0)
+	arena.size = qte.arena_size; arena.position = (vp - qte.arena_size)*0.5 - Vector2(0,10); arena.color = Color(0.02, 0.02, 0.03, 1.0)
 	qte.add_child(arena)
 
-	qte.target_dot = ColorRect.new(); qte.target_dot.size = Vector2(10, 10); qte.target_dot.color = Color(1, 0.2, 0.2); arena.add_child(qte.target_dot)
-	qte.cross_h = ColorRect.new(); qte.cross_h.color = Color.WHITE; arena.add_child(qte.cross_h)
-	qte.cross_v = ColorRect.new(); qte.cross_v.color = Color.WHITE; arena.add_child(qte.cross_v)
+	qte.target_dot = ColorRect.new(); qte.target_dot.size = Vector2(12, 12); qte.target_dot.color = accent; arena.add_child(qte.target_dot)
+	qte.cross_h = ColorRect.new(); qte.cross_h.color = secondary; arena.add_child(qte.cross_h)
+	qte.cross_v = ColorRect.new(); qte.cross_v.color = secondary; arena.add_child(qte.cross_v)
+
+	if parent_bf.has_node("/root/QTEManager"):
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		mgr._decorate_qte_indicator(qte.cross_h, theme)
+		mgr._decorate_qte_indicator(qte.cross_v, theme)
+		mgr._decorate_qte_indicator(qte.target_dot, theme)
 
 	qte.status_lbl = Label.new(); qte.status_lbl.position = Vector2(0, arena.position.y+qte.arena_size.y+16); qte.status_lbl.size = Vector2(vp.x, 30); qte.status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.status_lbl.add_theme_font_size_override("font_size", 24); qte.status_lbl.add_theme_color_override("font_color", Color.WHITE); qte.add_child(qte.status_lbl)
+	qte.status_lbl.add_theme_font_size_override("font_size", 24); qte.status_lbl.add_theme_color_override("font_color", secondary); qte.add_child(qte.status_lbl)
 
 	qte.target_pos = qte.arena_size * Vector2(0.65, 0.40); qte.target_vel = Vector2(155, 105); qte.cross_pos = qte.arena_size * 0.5
 	parent_bf.get_tree().paused = true; Input.flush_buffered_events()

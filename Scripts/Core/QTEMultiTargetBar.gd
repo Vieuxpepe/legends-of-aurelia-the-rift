@@ -22,7 +22,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEMultiTargetBar:
 	var qte = QTEMultiTargetBar.new()
 	qte.bf = parent_bf
@@ -32,30 +33,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.65, 0.2, 1.0))
+	var secondary: Color = theme.get("secondary", Color(0.1, 0.9, 0.95))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.15, 0.02, 0.02, 0.8)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.03, 0.0, 0.08, 0.85))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
 	title.position = Vector2(0, 80)
-	title.size = Vector2(vp.x, 40)
+	title.size = Vector2(vp.x, 42)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
-	title.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
 	qte.help_lbl.position = Vector2(0, 130)
 	qte.help_lbl.size = Vector2(vp.x, 30)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -63,27 +70,35 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	qte.bar_bg = ColorRect.new()
-	qte.bar_bg.size = Vector2(600, 20)
-	qte.bar_bg.position = Vector2((vp.x - 600) * 0.5, vp.y * 0.5 - 10)
-	qte.bar_bg.color = Color(0.05, 0.05, 0.05, 0.9)
+	qte.bar_bg.name = "BarBackground"
+	qte.bar_bg.size = Vector2(600, 24)
+	qte.bar_bg.position = Vector2((vp.x - 600) * 0.5, vp.y * 0.5 - 12)
+	qte.bar_bg.color = Color(0.02, 0.02, 0.03, 0.95)
 	qte.add_child(qte.bar_bg)
 
 	for pos_x in qte.vital_positions:
 		var v_dot := ColorRect.new()
-		v_dot.size = Vector2(16, 36)
-		v_dot.position = Vector2(pos_x, -8)
-		v_dot.color = Color(1.0, 0.85, 0.2)
+		v_dot.name = "VitalPoint"
+		v_dot.size = Vector2(20, 48)
+		v_dot.position = Vector2(pos_x, -12)
+		v_dot.color = secondary
 		qte.bar_bg.add_child(v_dot)
 		qte.vitals.append(v_dot)
 
 	qte.cursor = ColorRect.new()
-	qte.cursor.size = Vector2(6, 40)
-	qte.cursor.position = Vector2(0, -10)
+	qte.cursor.name = "Cursor"
+	qte.cursor.size = Vector2(8, 56)
+	qte.cursor.position = Vector2(0, -16)
 	qte.cursor.color = Color.WHITE
 	qte.bar_bg.add_child(qte.cursor)
+
+	parent_bf.get_tree().paused = true
+	Input.flush_buffered_events()
+	
+	return qte
 
 	parent_bf.get_tree().paused = true
 	Input.flush_buffered_events()

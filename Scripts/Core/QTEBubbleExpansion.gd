@@ -21,7 +21,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEBubbleExpansion:
 	var qte = QTEBubbleExpansion.new()
 	qte.bf = parent_bf
@@ -31,29 +32,33 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(1.0, 0.55, 0.15))
 	var vp := parent_bf.get_viewport_rect().size
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.12, 0.04, 0.02, 0.74)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.12, 0.04, 0.02, 0.74))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 70)
+	title.position = Vector2(0, 75)
 	title.size = Vector2(vp.x, 42)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 44)
-	title.add_theme_color_override("font_color", Color(1.0, 0.55, 0.15))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 115)
+	qte.help_lbl.position = Vector2(0, 125)
 	qte.help_lbl.size = Vector2(vp.x, 30)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
 	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -62,16 +67,17 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	qte.wave = Panel.new()
+	qte.wave.name = "ExpansionBubble"
 	var wave_style := StyleBoxFlat.new()
-	wave_style.bg_color = Color(0, 0, 0, 0)
+	wave_style.bg_color = Color(accent.r, accent.g, accent.b, 0.15)
 	wave_style.border_width_left = 8
 	wave_style.border_width_top = 8
 	wave_style.border_width_right = 8
 	wave_style.border_width_bottom = 8
-	wave_style.border_color = Color(1.0, 0.55, 0.15, 1.0)
+	wave_style.border_color = accent
 	wave_style.corner_radius_top_left = 500
 	wave_style.corner_radius_top_right = 500
 	wave_style.corner_radius_bottom_left = 500
@@ -80,13 +86,14 @@ static func run(
 	qte.add_child(qte.wave)
 
 	qte.counter = Label.new()
+	qte.counter.name = "Counter"
 	qte.counter.text = "POWER: 0"
-	qte.counter.position = Vector2(0, vp.y - 140.0)
+	qte.counter.position = Vector2(0, vp.y - 145.0)
 	qte.counter.size = Vector2(vp.x, 36)
 	qte.counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.counter.add_theme_font_size_override("font_size", 30)
-	qte.counter.add_theme_color_override("font_color", Color.WHITE)
-	qte.counter.add_theme_constant_override("outline_size", 6)
+	qte.counter.add_theme_font_size_override("font_size", 32)
+	qte.counter.add_theme_color_override("font_color", theme.get("secondary", Color.WHITE))
+	qte.counter.add_theme_constant_override("outline_size", 7)
 	qte.counter.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.counter)
 	

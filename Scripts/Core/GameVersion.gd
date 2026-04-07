@@ -16,6 +16,20 @@ static func get_build_label() -> String:
 	return str(ProjectSettings.get_setting("legends_of_aurelia/build", "")).strip_edges()
 
 
+static func is_demo_build() -> bool:
+	return bool(ProjectSettings.get_setting("legends_of_aurelia/demo_build", false))
+
+
+## Streamer-facing channel line (demo flag + non-empty build label). Empty if neither applies.
+static func get_channel_footer_line() -> String:
+	if is_demo_build():
+		return "DEMO BUILD"
+	var b := get_build_label()
+	if b.is_empty():
+		return ""
+	return "CHANNEL: %s" % b
+
+
 static func get_display_string() -> String:
 	var v := get_version()
 	var b := get_build_label()

@@ -21,6 +21,28 @@ static func coop_wire_serialize_items(field, items: Array) -> Array:
 				path = str(res.get_meta("original_path", "")).strip_edges()
 			if path != "":
 				entry = {"path": path}
+				# Fallback parity: preserve rune primitives when CampaignManager serializer is unavailable.
+				if res is WeaponData:
+					var w: WeaponData = res as WeaponData
+					entry["rune_slot_count"] = clampi(int(w.rune_slot_count), 0, 8)
+					var sockets_raw: Variant = w.socketed_runes
+					var sockets: Array = sockets_raw as Array if sockets_raw is Array else []
+					var out_rows: Array = []
+					var cap: int = int(entry["rune_slot_count"])
+					for row in sockets:
+						if out_rows.size() >= cap:
+							break
+						if not (row is Dictionary):
+							continue
+						var d: Dictionary = row as Dictionary
+						var rid: String = str(d.get("id", "")).strip_edges()
+						if rid == "":
+							continue
+						var out_row: Dictionary = {"id": rid, "rank": clampi(int(d.get("rank", 0)), 0, 999)}
+						if d.has("charges"):
+							out_row["charges"] = clampi(int(d.get("charges", 0)), 0, 999999)
+						out_rows.append(out_row)
+					entry["socketed_runes"] = out_rows
 		if not entry.is_empty():
 			out.append(entry)
 	return out
@@ -32,8 +54,38 @@ static func coop_wire_deserialize_items(field, raw: Variant) -> Array:
 		return out
 	for item_data in raw as Array:
 		var inst: Resource = null
-		if item_data is Dictionary and CampaignManager != null and CampaignManager.has_method("_deserialize_item"):
-			inst = CampaignManager._deserialize_item(item_data as Dictionary)
+		if item_data is Dictionary:
+			var d: Dictionary = item_data as Dictionary
+			if CampaignManager != null and CampaignManager.has_method("_deserialize_item"):
+				inst = CampaignManager._deserialize_item(d)
+			else:
+				var p: String = str(d.get("path", "")).strip_edges()
+				if p != "" and ResourceLoader.exists(p):
+					var loaded: Resource = load(p) as Resource
+					if loaded != null:
+						inst = loaded.duplicate(true)
+						# Fallback parity: apply rune primitives in correct order.
+						if inst is WeaponData:
+							var w: WeaponData = inst as WeaponData
+							if d.has("rune_slot_count"):
+								w.rune_slot_count = clampi(int(d.get("rune_slot_count", 0)), 0, 8)
+							if d.has("socketed_runes") and d.get("socketed_runes") is Array:
+								var cap: int = clampi(int(w.rune_slot_count), 0, 8)
+								var out_rows: Array[Dictionary] = []
+								for row in d.get("socketed_runes", []) as Array:
+									if out_rows.size() >= cap:
+										break
+									if not (row is Dictionary):
+										continue
+									var rd: Dictionary = row as Dictionary
+									var rid: String = str(rd.get("id", "")).strip_edges()
+									if rid == "":
+										continue
+									var out_row: Dictionary = {"id": rid, "rank": clampi(int(rd.get("rank", 0)), 0, 999)}
+									if rd.has("charges"):
+										out_row["charges"] = clampi(int(rd.get("charges", 0)), 0, 999999)
+									out_rows.append(out_row)
+								w.socketed_runes = out_rows
 		elif item_data is String:
 			var loaded: Resource = load(str(item_data)) as Resource
 			if loaded != null:

@@ -19,7 +19,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	sweep_ms: int
+	sweep_ms: int,
+	theme: Dictionary = {}
 ) -> QTETimingBar:
 	var qte = QTETimingBar.new()
 	qte.bf = parent_bf
@@ -29,65 +30,76 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
-	# Setup boilerplate UI natively
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.0, 0.0, 0.0, 0.55)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 110)
-	title.size = Vector2(vp.x, 40)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 38)
-	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.30))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 155)
+	qte.help_lbl.position = Vector2(0, 130)
 	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
 
-	# Apply the visual overhaul from manager
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	var bar_bg := ColorRect.new()
-	bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
-	bar_bg.size = Vector2(520, 30)
-	bar_bg.position = Vector2((vp.x - bar_bg.size.x) * 0.5, (vp.y - bar_bg.size.y) * 0.5 - 20.0)
+	bar_bg.name = "BarBackground"
+	bar_bg.color = Color(0.02, 0.02, 0.03, 0.95)
+	bar_bg.size = Vector2(520, 24)
+	bar_bg.position = Vector2((vp.x - bar_bg.size.x) * 0.5, (vp.y - bar_bg.size.y) * 0.5 - 12.0)
 	qte.add_child(bar_bg)
 
 	qte.outer_good = ColorRect.new()
-	qte.outer_good.color = Color(0.20, 0.85, 0.30, 0.95)
-	qte.outer_good.size = Vector2(92, 30)
+	qte.outer_good.name = "GoodZone"
+	qte.outer_good.color = Color(accent.r * 0.7, accent.g * 0.9, accent.b * 0.7, 0.9)
+	qte.outer_good.size = Vector2(100, 24)
 	qte.outer_good.position = Vector2(randf_range(160.0, bar_bg.size.x - 160.0), 0.0)
 	bar_bg.add_child(qte.outer_good)
 
 	qte.perfect_zone = ColorRect.new()
-	qte.perfect_zone.color = Color(1.0, 0.85, 0.20, 0.98)
-	qte.perfect_zone.size = Vector2(24, 30)
+	qte.perfect_zone.name = "PerfectZone"
+	qte.perfect_zone.color = secondary
+	qte.perfect_zone.size = Vector2(24, 24)
 	qte.perfect_zone.position = Vector2((qte.outer_good.size.x - qte.perfect_zone.size.x) * 0.5, 0.0)
 	qte.outer_good.add_child(qte.perfect_zone)
 
 	qte.cursor = ColorRect.new()
-	qte.cursor.color = Color.WHITE
-	qte.cursor.size = Vector2(8, 46)
-	qte.cursor.position = Vector2(0.0, -8.0)
+	qte.cursor.name = "Cursor"
+	qte.cursor.color = secondary
+	qte.cursor.size = Vector2(8, 52)
+	qte.cursor.position = Vector2(0.0, -14.0)
 	bar_bg.add_child(qte.cursor)
 	
+	if parent_bf.has_node("/root/QTEManager"):
+		parent_bf.get_node("/root/QTEManager")._decorate_qte_indicator(qte.cursor, theme)
+
 	parent_bf.get_tree().paused = true
 	Input.flush_buffered_events()
 	

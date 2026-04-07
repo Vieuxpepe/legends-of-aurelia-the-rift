@@ -73,6 +73,7 @@ var _fate_header_label: Label = null
 var _fate_summary_label: Label = null
 var _fate_feedback_label: Label = null
 var _fate_active_strip: HBoxContainer = null
+var _fate_effects_list: VBoxContainer = null
 var _fate_hand_area: Control = null
 var _fate_card_scroll: Control = null
 var _fate_card_grid: Control = null
@@ -753,6 +754,32 @@ func _ensure_fate_deck_ui() -> void:
 	active_strip_bottom_pad.custom_minimum_size = Vector2(0, 24)
 	active_bar_root.add_child(active_strip_bottom_pad)
 
+	var effects_panel: PanelContainer = PanelContainer.new()
+	effects_panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.10, 0.085, 0.06, 0.98), CARD_BORDER_SOFT, 12, 1, 10, 10))
+	effects_panel.clip_contents = false
+	root.add_child(effects_panel)
+
+	var effects_root: VBoxContainer = VBoxContainer.new()
+	effects_root.add_theme_constant_override("separation", 6)
+	effects_panel.add_child(effects_root)
+
+	var effects_title: Label = Label.new()
+	effects_title.text = "ACTIVE EFFECTS"
+	effects_title.add_theme_font_size_override("font_size", 14)
+	effects_title.add_theme_color_override("font_color", CARD_TEXT_MUTED)
+	effects_root.add_child(effects_title)
+
+	var effects_hint: Label = Label.new()
+	effects_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	effects_hint.add_theme_font_size_override("font_size", 12)
+	effects_hint.add_theme_color_override("font_color", CARD_TEXT_MUTED)
+	effects_hint.text = "Green effects help you. Red effects are drawbacks."
+	effects_root.add_child(effects_hint)
+
+	_fate_effects_list = VBoxContainer.new()
+	_fate_effects_list.add_theme_constant_override("separation", 6)
+	effects_root.add_child(_fate_effects_list)
+
 	var hand_hint: Label = Label.new()
 	hand_hint.add_theme_font_size_override("font_size", 13)
 	hand_hint.add_theme_color_override("font_color", CARD_TEXT_MUTED)
@@ -1078,6 +1105,7 @@ func _set_fate_active_slot_hover(slot_root: Control, hovered: bool) -> void:
 		return
 	if str(slot_root.get_meta("_slot_card_id", "")).strip_edges() == "":
 		return
+	var glow: Control = slot_root.get_meta("_slot_glow", null) as Control
 	var old_tween: Variant = slot_root.get_meta("_hover_tween", null)
 	if old_tween is Tween and is_instance_valid(old_tween):
 		(old_tween as Tween).kill()
@@ -1087,6 +1115,10 @@ func _set_fate_active_slot_hover(slot_root: Control, hovered: bool) -> void:
 	tw.set_parallel(true)
 	tw.tween_property(slot_root, "scale", Vector2(1.035, 1.035) if hovered else Vector2.ONE, 0.10 if hovered else 0.08)
 	tw.tween_property(slot_root, "rotation_degrees", 0.0, 0.10 if hovered else 0.08)
+	if glow != null and is_instance_valid(glow):
+		glow.pivot_offset = glow.size * 0.5
+		tw.tween_property(glow, "modulate:a", 1.0 if hovered else 0.0, 0.12 if hovered else 0.08)
+		tw.tween_property(glow, "scale", Vector2(1.04, 1.04) if hovered else Vector2.ONE, 0.12 if hovered else 0.08)
 	slot_root.set_meta("_hover_tween", tw)
 
 
@@ -1105,6 +1137,7 @@ func _on_fate_active_slot_mouse_exited(slot_root: Control) -> void:
 func _play_fate_active_slot_remove_feedback(slot_root: Control) -> void:
 	if slot_root == null or not is_instance_valid(slot_root):
 		return
+	var glow: Control = slot_root.get_meta("_slot_glow", null) as Control
 	var old_hover_tween: Variant = slot_root.get_meta("_hover_tween", null)
 	if old_hover_tween is Tween and is_instance_valid(old_hover_tween):
 		(old_hover_tween as Tween).kill()
@@ -1117,17 +1150,27 @@ func _play_fate_active_slot_remove_feedback(slot_root: Control) -> void:
 	tw.set_parallel(true)
 	tw.tween_property(slot_root, "scale", base_scale * 1.045, 0.05).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(slot_root, "modulate", Color(1.0, 0.86, 0.86, 1.0), 0.05)
+	if glow != null and is_instance_valid(glow):
+		glow.pivot_offset = glow.size * 0.5
+		tw.tween_property(glow, "modulate:a", 1.0, 0.05)
+		tw.tween_property(glow, "scale", Vector2(1.08, 1.08), 0.05).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.chain().tween_property(slot_root, "rotation_degrees", -2.2, 0.04)
 	tw.chain().tween_property(slot_root, "rotation_degrees", 2.8, 0.06)
 	tw.chain().tween_property(slot_root, "rotation_degrees", 0.0, 0.05)
 	tw.parallel().tween_property(slot_root, "scale", base_scale * 0.92, 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	tw.parallel().tween_property(slot_root, "modulate:a", 0.0, 0.11)
+	if glow != null and is_instance_valid(glow):
+		tw.parallel().tween_property(glow, "modulate:a", 0.0, 0.11)
+		tw.parallel().tween_property(glow, "scale", Vector2(1.12, 1.12), 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	await tw.finished
 	if is_instance_valid(slot_root):
 		slot_root.scale = base_scale
 		slot_root.rotation_degrees = base_rotation
 		slot_root.modulate = base_modulate
 		slot_root.z_index = 0
+	if glow != null and is_instance_valid(glow):
+		glow.scale = Vector2.ONE
+		glow.modulate = Color(1.0, 1.0, 1.0, 0.0)
 
 
 func _slot_from_global_position(global_pos: Vector2) -> int:
@@ -1444,6 +1487,7 @@ func _refresh_fate_deck_ui(feedback_line: String) -> void:
 	if _fate_cash_button != null:
 		_fate_cash_button.disabled = int(state.get("chips", 0)) < maxi(1, chips_per_title_unlock)
 	_rebuild_active_cards_strip(active_slots)
+	_refresh_fate_effects_panel(active_slots)
 
 	_set_hovered_hand_card(null)
 
@@ -1813,6 +1857,31 @@ func _build_fate_card_widget(
 		shell.set_meta("_slot_index", active_strip_slot)
 		shell.set_meta("_slot_border", rarity_color if strip_has_card else CARD_BORDER_SOFT)
 		shell.set_meta("_slot_card_id", str(card.get("id", "")).strip_edges() if strip_has_card else "")
+		if strip_has_card:
+			var glow: PanelContainer = PanelContainer.new()
+			glow.anchor_left = 0.0
+			glow.anchor_top = 0.0
+			glow.anchor_right = 1.0
+			glow.anchor_bottom = 1.0
+			glow.offset_left = -8.0
+			glow.offset_top = -8.0
+			glow.offset_right = 8.0
+			glow.offset_bottom = 8.0
+			glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			glow.modulate = Color(1.0, 1.0, 1.0, 0.0)
+			glow.add_theme_stylebox_override(
+				"panel",
+				_make_panel_style(
+					Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.18),
+					Color(rarity_color.r, rarity_color.g, rarity_color.b, 0.0),
+					16,
+					0,
+					0,
+					0
+				)
+			)
+			shell.add_child(glow)
+			shell.set_meta("_slot_glow", glow)
 		shell.gui_input.connect(_on_fate_active_slot_gui_input.bind(shell))
 		if strip_has_card:
 			shell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -1845,6 +1914,74 @@ func _build_fate_card_widget(
 
 func _on_fate_card_button_pressed(card_id: String) -> void:
 	_refresh_fate_deck_ui(_toggle_fate_card(card_id))
+
+
+func _refresh_fate_effects_panel(active_slots: Array[String]) -> void:
+	if _fate_effects_list == null:
+		return
+	for child in _fate_effects_list.get_children():
+		child.queue_free()
+	var has_any: bool = false
+	for slot_value in active_slots:
+		var card_id: String = str(slot_value).strip_edges()
+		if card_id == "":
+			continue
+		var card: Dictionary = FateCardCatalog.get_card(card_id)
+		if card.is_empty():
+			continue
+		_fate_effects_list.add_child(_build_fate_effect_row(card))
+		has_any = true
+	if not has_any:
+		var empty_label: Label = Label.new()
+		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty_label.add_theme_font_size_override("font_size", 13)
+		empty_label.add_theme_color_override("font_color", CARD_TEXT_MUTED)
+		empty_label.text = "No active effects yet. Slot Fate cards above to populate this panel."
+		_fate_effects_list.add_child(empty_label)
+
+
+func _build_fate_effect_row(card: Dictionary) -> Control:
+	var polarity: String = FateCardCatalog.get_effect_polarity(card)
+	var effect_text: String = FateCardCatalog.get_effect_summary(card)
+	var accent: Color = _fate_effect_color(polarity)
+	var bg: Color = Color(0.09, 0.16, 0.10, 0.92) if polarity == "buff" else (Color(0.20, 0.09, 0.09, 0.92) if polarity == "debuff" else Color(0.12, 0.12, 0.12, 0.90))
+	var row: PanelContainer = PanelContainer.new()
+	row.add_theme_stylebox_override("panel", _make_panel_style(bg, accent, 10, 1, 8, 7))
+	var row_box: VBoxContainer = VBoxContainer.new()
+	row_box.add_theme_constant_override("separation", 4)
+	row.add_child(row_box)
+	var top_row: HBoxContainer = HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 6)
+	row_box.add_child(top_row)
+	var polarity_label: String = "BUFF"
+	if polarity == "debuff":
+		polarity_label = "DEBUFF"
+	elif polarity != "buff":
+		polarity_label = "EFFECT"
+	top_row.add_child(_build_card_chip(polarity_label, accent, Color(0.07, 0.07, 0.07, 0.94), 10, true))
+	var name_label: Label = Label.new()
+	name_label.text = str(card.get("name", "Unknown Card")).to_upper()
+	name_label.add_theme_font_size_override("font_size", 13)
+	name_label.add_theme_color_override("font_color", CARD_TEXT)
+	name_label.clip_text = true
+	top_row.add_child(name_label)
+	var effect_label: Label = Label.new()
+	effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	effect_label.add_theme_font_size_override("font_size", 13)
+	effect_label.add_theme_color_override("font_color", accent)
+	effect_label.text = effect_text
+	row_box.add_child(effect_label)
+	return row
+
+
+func _fate_effect_color(polarity: String) -> Color:
+	match polarity.strip_edges().to_lower():
+		"buff":
+			return Color(0.42, 0.96, 0.58, 1.0)
+		"debuff":
+			return Color(0.98, 0.40, 0.40, 1.0)
+		_:
+			return CARD_TEXT_MUTED
 
 
 func _load_texture_safe(path: String) -> Texture2D:

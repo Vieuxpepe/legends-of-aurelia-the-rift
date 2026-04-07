@@ -21,7 +21,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEAlternatingMashMeter:
 	var qte = QTEAlternatingMashMeter.new()
 	qte.bf = parent_bf
@@ -31,30 +32,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.04, 0.02, 0.10, 0.70)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 75)
-	title.size = Vector2(vp.x, 40)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", Color(0.78, 0.72, 1.0))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 120)
-	qte.help_lbl.size = Vector2(vp.x, 30)
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -62,29 +69,33 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	qte.bar_bg = ColorRect.new()
-	qte.bar_bg.size = Vector2(520, 36)
-	qte.bar_bg.position = Vector2((vp.x - 520) * 0.5, vp.y * 0.5 - 10)
-	qte.bar_bg.color = Color(0.08, 0.08, 0.08, 0.96)
+	qte.bar_bg.name = "BarBackground"
+	qte.bar_bg.color = Color(0.02, 0.02, 0.03, 0.95)
+	qte.bar_bg.size = Vector2(520, 32)
+	qte.bar_bg.position = Vector2((vp.x - 520) * 0.5, (vp.y - 32) * 0.5 - 16)
 	qte.add_child(qte.bar_bg)
 
 	qte.fill = ColorRect.new()
-	qte.fill.size = Vector2(0, 36)
-	qte.fill.color = Color(0.7, 0.5, 1.0, 1.0)
+	qte.fill.name = "Fill"
+	qte.fill.size = Vector2(0, 32)
+	qte.fill.color = accent
 	qte.bar_bg.add_child(qte.fill)
 
 	var good_line := ColorRect.new()
-	good_line.size = Vector2(4, 36)
-	good_line.position = Vector2(520.0 * 0.66, 0)
-	good_line.color = Color(0.3, 1.0, 0.35, 0.95)
+	good_line.name = "GoodThreshold"
+	good_line.size = Vector2(4, 48)
+	good_line.position = Vector2(520.0 * 0.66, -8)
+	good_line.color = Color(accent.r * 0.8, accent.g, accent.b * 0.8, 0.8)
 	qte.bar_bg.add_child(good_line)
 
 	var perfect_line := ColorRect.new()
-	perfect_line.size = Vector2(4, 36)
-	perfect_line.position = Vector2(520.0 * 0.90, 0)
-	perfect_line.color = Color(1.0, 0.86, 0.2, 0.98)
+	perfect_line.name = "PerfectThreshold"
+	perfect_line.size = Vector2(4, 48)
+	perfect_line.position = Vector2(520.0 * 0.90, -8)
+	perfect_line.color = secondary
 	qte.bar_bg.add_child(perfect_line)
 	
 	parent_bf.get_tree().paused = true

@@ -28,7 +28,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	sequence_length: int = 5
+	sequence_length: int = 5,
+	theme: Dictionary = {}
 ) -> QTESequenceMemory:
 	var qte = QTESequenceMemory.new()
 	qte.bf = parent_bf
@@ -36,33 +37,39 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(1.0, 0.9, 0.45))
+	var secondary: Color = theme.get("secondary", Color.WHITE)
+	
 	for i in range(sequence_length):
 		qte.sequence.append(randi() % 4)
 
 	var vp := parent_bf.get_viewport_rect().size
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.06, 0.06, 0.10, 0.68)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.06, 0.06, 0.10, 0.68))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	qte.title_lbl = Label.new()
+	qte.title_lbl.name = "Title"
 	qte.title_lbl.text = title_text
 	qte.title_lbl.position = Vector2(0, 85)
 	qte.title_lbl.size = Vector2(vp.x, 42)
 	qte.title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.title_lbl.add_theme_font_size_override("font_size", 40)
-	qte.title_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.45))
-	qte.title_lbl.add_theme_constant_override("outline_size", 8)
+	qte.title_lbl.add_theme_font_size_override("font_size", 44)
+	qte.title_lbl.add_theme_color_override("font_color", accent)
+	qte.title_lbl.add_theme_constant_override("outline_size", 10)
 	qte.title_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.title_lbl)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.position = Vector2(0, 135)
 	qte.help_lbl.size = Vector2(vp.x, 30)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -70,32 +77,40 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, qte.title_lbl, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, qte.title_lbl, qte.help_lbl, theme)
 
-	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.08, 0.08, 0.96)
-	panel.size = Vector2(640, 220)
+	var panel := Panel.new()
+	panel.name = "MemoryPanel"
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.08, 0.92)
+	style.border_color = Color(accent.r, accent.g, accent.b, 0.6)
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(12)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.size = Vector2(660, 240)
 	panel.position = Vector2((vp.x - panel.size.x) * 0.5, (vp.y - panel.size.y) * 0.5 - 20.0)
 	qte.add_child(panel)
 
 	qte.big_prompt = Label.new()
+	qte.big_prompt.name = "BigPrompt"
 	qte.big_prompt.text = "-"
-	qte.big_prompt.position = Vector2(0, 28)
+	qte.big_prompt.position = Vector2(0, 32)
 	qte.big_prompt.size = Vector2(panel.size.x, 72)
 	qte.big_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.big_prompt.add_theme_font_size_override("font_size", 54)
-	qte.big_prompt.add_theme_color_override("font_color", Color.WHITE)
+	qte.big_prompt.add_theme_font_size_override("font_size", 58)
+	qte.big_prompt.add_theme_color_override("font_color", secondary)
 	qte.big_prompt.add_theme_constant_override("outline_size", 8)
 	qte.big_prompt.add_theme_color_override("font_outline_color", Color.BLACK)
 	panel.add_child(qte.big_prompt)
 
 	qte.status_lbl = Label.new()
+	qte.status_lbl.name = "StatusLabel"
 	qte.status_lbl.text = "WATCH"
-	qte.status_lbl.position = Vector2(0, 100)
+	qte.status_lbl.position = Vector2(0, 110)
 	qte.status_lbl.size = Vector2(panel.size.x, 32)
 	qte.status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.status_lbl.add_theme_font_size_override("font_size", 24)
-	qte.status_lbl.add_theme_color_override("font_color", Color(0.80, 0.85, 1.0))
+	qte.status_lbl.add_theme_font_size_override("font_size", 28)
+	qte.status_lbl.add_theme_color_override("font_color", accent)
 	qte.status_lbl.add_theme_constant_override("outline_size", 6)
 	qte.status_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	panel.add_child(qte.status_lbl)
@@ -103,12 +118,13 @@ static func run(
 	var slot_names: Array[String] = ["1", "2", "3", "4", "5"]
 	for i in range(sequence_length):
 		var slot := Label.new()
+		slot.name = "Slot" + str(i+1)
 		slot.text = slot_names[i] if i < slot_names.size() else str(i+1)
-		slot.position = Vector2(90 + (i * 95), 150)
+		slot.position = Vector2(95 + (i * 100), 165)
 		slot.size = Vector2(70, 32)
 		slot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		slot.add_theme_font_size_override("font_size", 24)
-		slot.add_theme_color_override("font_color", Color(0.45, 0.45, 0.45))
+		slot.add_theme_font_size_override("font_size", 26)
+		slot.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 		slot.add_theme_constant_override("outline_size", 5)
 		slot.add_theme_color_override("font_outline_color", Color.BLACK)
 		panel.add_child(slot)

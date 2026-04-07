@@ -22,7 +22,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEComboRush:
 	var qte = QTEComboRush.new()
 	qte.bf = parent_bf
@@ -32,40 +33,65 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.06, 0.08, 0.12, 0.84)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
-	title.text = title_text; title.position = Vector2(0, 60); title.size = Vector2(vp.x, 42); title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42); title.add_theme_color_override("font_color", Color(0.90, 0.95, 1.0))
-	title.add_theme_constant_override("outline_size", 8); title.add_theme_color_override("font_outline_color", Color.BLACK)
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
-	qte.help_lbl.text = help_text; qte.help_lbl.position = Vector2(0, 105); qte.help_lbl.size = Vector2(vp.x, 30); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22); qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
-	qte.help_lbl.add_theme_constant_override("outline_size", 6); qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
 
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	var panel := ColorRect.new()
-	panel.size = Vector2(760, 230); panel.position = Vector2((vp.x-760)*0.5, (vp.y-230)*0.5-10); panel.color = Color(0.08, 0.08, 0.08, 0.96)
+	panel.name = "Arena"
+	panel.size = Vector2(760, 230)
+	panel.position = vp * 0.5 - Vector2(380, 115)
+	panel.color = Color(0.02, 0.02, 0.03, 0.95)
 	qte.add_child(panel)
 
 	for i in range(4):
 		var lbl := Label.new()
-		lbl.position = Vector2(30 + i * 180, 50); lbl.size = Vector2(160, 60); lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; lbl.add_theme_font_size_override("font_size", 34)
-		lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25)); lbl.add_theme_constant_override("outline_size", 6)
+		lbl.name = "Label" + str(i)
+		lbl.position = Vector2(30 + i * 180, 60)
+		lbl.size = Vector2(160, 60)
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_size_override("font_size", 42)
+		lbl.add_theme_color_override("font_color", accent)
+		lbl.add_theme_constant_override("outline_size", 8)
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		panel.add_child(lbl); qte.labels.append(lbl)
+		panel.add_child(lbl)
+		qte.labels.append(lbl)
 
 	qte._generate_sequence()
 	parent_bf.get_tree().paused = true

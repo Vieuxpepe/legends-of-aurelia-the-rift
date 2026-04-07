@@ -333,6 +333,8 @@ var interface_combat_log_font_size: int = 1
 ## 0 = 1.0x, 1 = 1.15x, 2 = 1.3x
 var interface_cursor_size: int = 0
 var interface_cursor_high_contrast: bool = false
+## Less motion in menus (sweeps, parallax drift, mouse tilt on the war table).
+var interface_reduced_motion: bool = false
 ## In-game display name override (menus, co-op label, feedback). Empty = Steam (if any), then avatar, then fallback.
 var player_profile_display_override: String = ""
 const PLAYER_PROFILE_DISPLAY_NAME_MAX_LEN := 48
@@ -4170,6 +4172,7 @@ func load_global_settings() -> void:
 	interface_combat_log_font_size = clampi(int(cfg.get_value("interface", "combat_log_font_size", interface_combat_log_font_size)), 0, 2)
 	interface_cursor_size = clampi(int(cfg.get_value("interface", "cursor_size", interface_cursor_size)), 0, 2)
 	interface_cursor_high_contrast = bool(cfg.get_value("interface", "cursor_high_contrast", interface_cursor_high_contrast))
+	interface_reduced_motion = bool(cfg.get_value("interface", "reduced_motion", interface_reduced_motion))
 
 	player_profile_display_override = str(cfg.get_value("profile", "display_name_override", player_profile_display_override))
 	player_profile_display_override = sanitize_player_display_name(player_profile_display_override)
@@ -4238,6 +4241,7 @@ func save_global_settings() -> void:
 	cfg.set_value("interface", "combat_log_font_size", interface_combat_log_font_size)
 	cfg.set_value("interface", "cursor_size", interface_cursor_size)
 	cfg.set_value("interface", "cursor_high_contrast", interface_cursor_high_contrast)
+	cfg.set_value("interface", "reduced_motion", interface_reduced_motion)
 
 	cfg.set_value("profile", "display_name_override", player_profile_display_override)
 

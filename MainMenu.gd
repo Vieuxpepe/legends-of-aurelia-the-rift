@@ -18,7 +18,18 @@ const DISPATCH_APPROVED_STEAM_IDS: Array[String] = []
 const DISPATCH_ALLOW_DEBUG_EDITOR := true
 const STUDIO_HANDOFF_META_FLAG := "studio_intro_black_handoff"
 const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
+## pixels past the right edge — briefing + dispatch slide off when opening the campaign dossier
+const RIGHT_RAIL_SWEEP_PAD := 180.0
+const MAIN_MENU_STATE_FILE := "user://main_menu_state.cfg"
+const INTEL_TIPS: PackedStringArray = PackedStringArray([
+	"Campaign: story-rich tactical warfare with bonds, rivalries, and convoy pressure.",
+	"Dragons: hatch, train, and breed with traits, rarity, and long-term bonds.",
+	"Arena: ranked 1v1 when you want clean tactical duels.",
+	"Co-op: stage expeditions with a partner against tougher contracts.",
+	"Tip: Field Settings scales HUD — useful if tactical UI feels small.",
+])
 
+@onready var center_stage: Control = $CenterStage
 @onready var backdrop_art: TextureRect = $BackdropArt
 @onready var backdrop_shade: ColorRect = $BackdropShade
 @onready var backdrop_warmth: ColorRect = $BackdropWarmth
@@ -28,6 +39,8 @@ const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
 @onready var dispatch_card: PanelContainer = $DispatchPanel/DispatchCard
 @onready var main_vbox: Control = $CenterStage/MainPanel
 @onready var campaign_vbox: Control = $CenterStage/CampaignMenu
+@onready var slots_header_label: Label = $CenterStage/CampaignMenu/Margin/VBox/SlotsHeader
+@onready var archive_section_rule: ColorRect = $CenterStage/CampaignMenu/Margin/VBox/ArchiveSectionRule
 
 @onready var start_button: Button = $CenterStage/MainPanel/Margin/VBox/StartButton
 @onready var settings_button: Button = $CenterStage/MainPanel/Margin/VBox/SettingsButton
@@ -37,23 +50,23 @@ const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
 @onready var achievements_button: Button = $CenterStage/MainPanel/Margin/VBox/AchievementsButton
 @onready var quit_button: Button = $CenterStage/MainPanel/Margin/VBox/QuitButton
 
-@onready var continue_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/ContinueButton
-@onready var new_game_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/NewGameButton
-@onready var load_game_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/LoadGameButton
-@onready var back_button: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/BackButton
-@onready var slots_container: VBoxContainer = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer
+@onready var continue_button: Button = $CenterStage/CampaignMenu/Margin/VBox/ContinueButton
+@onready var new_game_button: Button = $CenterStage/CampaignMenu/Margin/VBox/NewGameButton
+@onready var load_game_button: Button = $CenterStage/CampaignMenu/Margin/VBox/LoadGameButton
+@onready var back_button: Button = $CenterStage/CampaignMenu/Margin/VBox/BackButton
+@onready var slots_container: VBoxContainer = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer
 
-@onready var auto_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/AutoSlot1Button
-@onready var auto_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/AutoSlot2Button
-@onready var auto_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/AutoSlot3Button
+@onready var auto_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/AutoSlot1Button
+@onready var auto_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/AutoSlot2Button
+@onready var auto_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/AutoSlot3Button
 
-@onready var slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button
-@onready var slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button
-@onready var slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button
+@onready var slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button
+@onready var slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button
+@onready var slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button
 
-@onready var del_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/DeleteSlot1
-@onready var del_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/DeleteSlot2
-@onready var del_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/DeleteSlot3
+@onready var del_slot_1_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/DeleteSlot1
+@onready var del_slot_2_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/DeleteSlot2
+@onready var del_slot_3_btn: Button = $CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/DeleteSlot3
 @onready var delete_dialog: ConfirmationDialog = $DeleteConfirmation
 @onready var overwrite_dialog: ConfirmationDialog = $OverwriteConfirmation
 @onready var dispatch_editor_dialog: ConfirmationDialog = $DispatchEditorDialog
@@ -109,16 +122,27 @@ const STUDIO_HANDOFF_META_FADE := "studio_intro_black_handoff_fade"
 @onready var steam_avatar_button: TextureButton = $SteamProfileCorner/SteamCornerVBox/SteamAvatarFrame/Margin/SteamAvatarButton
 @onready var steam_playing_as_label: Label = $SteamProfileCorner/SteamCornerVBox/SteamPlayingAsLabel
 @onready var main_menu_version_footer: Label = $MainMenuVersionFooter
+@onready var intel_rotating_tip: Label = $IntelPanel/IntelCard/Margin/VBox/IntelRotatingTip
+@onready var dispatch_new_badge: Label = $DispatchPanel/DispatchCard/Margin/VBox/DispatchNewBadge
+@onready var dispatch_sync_line: Label = $DispatchPanel/DispatchCard/Margin/VBox/Footer/DispatchSyncLine
+@onready var input_hint_label: Label = $CenterStage/MainPanel/Margin/VBox/InputHintLabel
+@onready var campaign_resume_strip: Label = $CenterStage/CampaignMenu/Margin/VBox/CampaignResumeStrip
+@onready var empty_saves_callout: Label = $CenterStage/CampaignMenu/Margin/VBox/EmptySavesCallout
 
 var pending_delete_slot: int = 0
 var _dispatch_payload: Dictionary = {}
+var _last_dispatch_status: String = ""
+var _intel_tip_index: int = 0
+var _dispatch_fresh_tween: Tween = null
 
 var SFX_HOVER: AudioStream = preload("res://audio/menu_hover.wav")
 var SFX_CLICK: AudioStream = preload("res://audio/menu_click.wav")
 var MENU_MUSIC: AudioStream = preload("res://audio/Menu Music (Remastered).wav")
 
 var _music_player: AudioStreamPlayer
+var _ambient_player: AudioStreamPlayer
 var _sfx_player: AudioStreamPlayer
+var _intel_tip_timer: Timer = null
 var _startup_black_overlay: ColorRect = null
 var _startup_black_tween: Tween = null
 
@@ -178,6 +202,184 @@ const DEFAULT_ROADMAP_MILESTONES: Array[Dictionary] = [
 ]
 
 
+func _reduced_motion() -> bool:
+	return CampaignManager != null and CampaignManager.interface_reduced_motion
+
+
+func _menu_anim_scale(full: float) -> float:
+	if _reduced_motion():
+		return minf(full, 0.06)
+	return full
+
+
+func _main_menu_last_bulletin_unix() -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(MAIN_MENU_STATE_FILE) != OK:
+		return 0
+	return int(cfg.get_value("dispatch", "last_exit_bulletin_unix", 0))
+
+
+func _persist_last_bulletin_seen_unix(u: int) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(MAIN_MENU_STATE_FILE)
+	cfg.set_value("dispatch", "last_exit_bulletin_unix", maxi(u, int(cfg.get_value("dispatch", "last_exit_bulletin_unix", 0))))
+	cfg.save(MAIN_MENU_STATE_FILE)
+
+
+func _dispatch_status_is_live_cloud(status: String) -> bool:
+	return status == "LIVE DISPATCH // VERIFIED" or status == "LIVE DISPATCH // PUBLISHED"
+
+
+func _apply_main_menu_ui_scale() -> void:
+	if center_stage == null or CampaignManager == null:
+		return
+	var hud: float = CampaignManager.get_hud_scale_float()
+	center_stage.scale = Vector2.ONE * clampf(hud * 0.94, 0.86, 1.22)
+	center_stage.pivot_offset = center_stage.size * 0.5
+
+
+func _refresh_input_hint() -> void:
+	if input_hint_label == null:
+		return
+	if campaign_vbox.visible:
+		if slots_container.visible:
+			input_hint_label.text = "Enter · load record    Esc · close archive"
+		else:
+			input_hint_label.text = "Enter · confirm    Esc · return to command entry"
+	else:
+		input_hint_label.text = "Enter · confirm    ↑ / ↓ · move focus"
+
+
+func _advance_intel_tip() -> void:
+	if intel_rotating_tip == null or INTEL_TIPS.is_empty():
+		return
+	_intel_tip_index = (_intel_tip_index + 1) % INTEL_TIPS.size()
+	intel_rotating_tip.text = INTEL_TIPS[_intel_tip_index]
+
+
+func _format_resume_playtime_short(sec: int) -> String:
+	var s: int = maxi(sec, 0)
+	var h: int = s / 3600
+	var m: int = (s % 3600) / 60
+	if h > 0:
+		return "%dh" % h if m < 5 else "%dh %dm" % [h, m]
+	if m > 0:
+		return "%dm" % m
+	return "0m"
+
+
+func _refresh_campaign_resume_and_empty() -> void:
+	if campaign_resume_strip != null:
+		if CampaignManager == null or not CampaignManager.has_method("get_newest_save_snapshot"):
+			campaign_resume_strip.visible = false
+		else:
+			var snap: Dictionary = CampaignManager.get_newest_save_snapshot()
+			if snap.is_empty():
+				campaign_resume_strip.visible = false
+			else:
+				campaign_resume_strip.visible = true
+				var leader: String = str(snap.get("leader_name", "—")).strip_edges()
+				if leader == "":
+					leader = "—"
+				var map_n: int = int(snap.get("map_display_index", 1))
+				var pt: int = int(snap.get("playtime_seconds", 0))
+				campaign_resume_strip.text = "Last: %s · Map %d · %s" % [leader, map_n, _format_resume_playtime_short(pt)]
+	var has_any := false
+	if CampaignManager != null:
+		for i in range(1, 4):
+			if FileAccess.file_exists(CampaignManager.get_save_path(i, false)) or FileAccess.file_exists(CampaignManager.get_save_path(i, true)):
+				has_any = true
+				break
+	if empty_saves_callout != null:
+		empty_saves_callout.visible = not has_any and campaign_vbox.visible
+		if empty_saves_callout.visible:
+			empty_saves_callout.text = "No field records on file yet — open New Campaign and the war table starts remembering."
+
+
+func _update_briefing_sync_line(text: String, color: Color = MENU_TEXT_MUTED) -> void:
+	if dispatch_sync_line == null:
+		return
+	dispatch_sync_line.text = text
+	dispatch_sync_line.add_theme_color_override("font_color", color)
+
+
+func _stop_dispatch_fresh_fx() -> void:
+	if _dispatch_fresh_tween != null:
+		_dispatch_fresh_tween.kill()
+		_dispatch_fresh_tween = null
+	if dispatch_new_badge != null:
+		dispatch_new_badge.modulate = Color.WHITE
+	if dispatch_card != null:
+		dispatch_card.modulate = Color.WHITE
+
+
+func _update_dispatch_new_badge(updated_at: int) -> void:
+	if dispatch_new_badge == null:
+		return
+	if not _dispatch_status_is_live_cloud(_last_dispatch_status) or updated_at <= 0:
+		dispatch_new_badge.visible = false
+		_stop_dispatch_fresh_fx()
+		return
+	var last_seen: int = _main_menu_last_bulletin_unix()
+	var is_fresh: bool = updated_at > last_seen
+	dispatch_new_badge.visible = is_fresh
+	if not is_fresh:
+		_stop_dispatch_fresh_fx()
+		return
+	dispatch_new_badge.add_theme_color_override("font_color", MENU_SUCCESS)
+	if _dispatch_fresh_tween != null:
+		_dispatch_fresh_tween.kill()
+	if _reduced_motion():
+		return
+	_dispatch_fresh_tween = create_tween().set_loops()
+	_dispatch_fresh_tween.tween_property(dispatch_new_badge, "modulate:a", 0.45, 0.85).set_trans(Tween.TRANS_SINE)
+	_dispatch_fresh_tween.tween_property(dispatch_new_badge, "modulate:a", 1.0, 0.85).set_trans(Tween.TRANS_SINE)
+
+
+func _apply_save_progress_atmosphere() -> void:
+	if backdrop_art == null or backdrop_warmth == null:
+		return
+	var map_idx: int = 1
+	if CampaignManager != null and CampaignManager.has_method("get_newest_save_snapshot"):
+		var sn: Dictionary = CampaignManager.get_newest_save_snapshot()
+		if not sn.is_empty():
+			map_idx = maxi(1, int(sn.get("map_display_index", 1)))
+	var tier: int = clampi((map_idx - 1) / 3, 0, 4)
+	var parallax: Vector2 = Vector2(-18.0 - tier * 6.0, -10.0 - tier * 3.0)
+	backdrop_art.position = parallax
+	backdrop_art.scale = Vector2(1.02 + tier * 0.008, 1.02 + tier * 0.008)
+	var warmth_tints: Array[Color] = [
+		Color(0.14, 0.16, 0.22, 0.14),
+		Color(0.18, 0.12, 0.04, 0.16),
+		Color(0.20, 0.10, 0.02, 0.17),
+		Color(0.12, 0.08, 0.18, 0.15),
+		Color(0.06, 0.10, 0.20, 0.16),
+	]
+	var shade_alphas: Array[float] = [0.74, 0.78, 0.80, 0.82, 0.84]
+	backdrop_warmth.color = warmth_tints[tier]
+	if backdrop_shade != null:
+		var c: Color = backdrop_shade.color
+		c.a = shade_alphas[tier]
+		backdrop_shade.color = c
+
+
+func _play_dossier_panel_sting() -> void:
+	if _sfx_player == null:
+		return
+	_sfx_player.stream = SFX_CLICK
+	_sfx_player.volume_db = -16.0
+	_sfx_player.pitch_scale = 0.82
+	_sfx_player.play()
+
+
+func _on_settings_overlay_visibility_changed() -> void:
+	if SettingsMenu == null or SettingsMenu.visible:
+		return
+	if CampaignManager != null and CampaignManager.has_method("load_global_settings"):
+		CampaignManager.load_global_settings()
+	_apply_main_menu_ui_scale()
+
+
 func _make_panel_style(fill: Color, border: Color, border_width: int = 2, radius: int = 16, shadow_alpha: float = 0.40, shadow_size: int = 10, shadow_y: int = 4) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
@@ -188,6 +390,40 @@ func _make_panel_style(fill: Color, border: Color, border_width: int = 2, radius
 	box.shadow_size = shadow_size
 	box.shadow_offset = Vector2(0, shadow_y)
 	return box
+
+
+func _make_menu_scrollbar_style(fill: Color, border: Color, radius: int = 8) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(radius)
+	return style
+
+
+## Thin war-table scrollbar; track stays dark, grabber reads as gold/teal accent.
+func _style_menu_scrollbars(scroll: ScrollContainer) -> void:
+	if scroll == null:
+		return
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var track_bg := Color(0.07, 0.058, 0.042, 0.82)
+	var track_border := MENU_BORDER_MUTED.darkened(0.12)
+	var grab_core := MENU_ACCENT.lerp(MENU_BORDER, 0.28)
+	var vbar: ScrollBar = scroll.get_v_scroll_bar()
+	var hbar: ScrollBar = scroll.get_h_scroll_bar()
+	for bar in [vbar, hbar]:
+		if bar == null:
+			continue
+		if bar == vbar:
+			bar.custom_minimum_size = Vector2(7, 0)
+		else:
+			bar.custom_minimum_size = Vector2(0, 7)
+		bar.add_theme_stylebox_override("scroll", _make_menu_scrollbar_style(track_bg, track_border, 12))
+		bar.add_theme_stylebox_override("grabber", _make_menu_scrollbar_style(grab_core.darkened(0.24), MENU_BORDER.lerp(MENU_ACCENT_SOFT, 0.35), 8))
+		bar.add_theme_stylebox_override("grabber_highlight", _make_menu_scrollbar_style(grab_core, MENU_ACCENT_SOFT, 8))
+		bar.add_theme_stylebox_override("grabber_pressed", _make_menu_scrollbar_style(MENU_ACCENT.darkened(0.06), MENU_BORDER, 8))
+		bar.add_theme_stylebox_override("focus", _make_menu_scrollbar_style(track_bg.lightened(0.04), MENU_ACCENT_SOFT, 12))
 
 
 func _style_panel(panel: Control, fill: Color, border: Color, border_width: int = 2, radius: int = 16, shadow_alpha: float = 0.36) -> void:
@@ -302,6 +538,7 @@ func _style_hero_primary_button(btn: Button, label_text: String, font_size: int 
 		btn.add_theme_font_override("font", regular_font)
 	btn.text = label_text
 	btn.custom_minimum_size = Vector2(0, min_height)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.add_theme_font_size_override("font_size", font_size)
 	var font_color := Color(0.11, 0.07, 0.03, 1.0)
 	btn.add_theme_color_override("font_color", font_color)
@@ -315,28 +552,76 @@ func _style_hero_primary_button(btn: Button, label_text: String, font_size: int 
 	var hover_fill := Color(0.84, 0.64, 0.22, 0.99).lerp(gold_neutral.lightened(0.07), 0.38)
 	var press_fill := Color(0.52, 0.38, 0.12, 0.99).lerp(gold_neutral.darkened(0.12), 0.35)
 	var border_gold := Color(0.55, 0.42, 0.14, 1.0).lerp(MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.62), 0.45)
-	btn.add_theme_stylebox_override("normal", _make_panel_style(normal_fill, border_gold, 3, 14, 0.36, 11, 4))
-	btn.add_theme_stylebox_override("hover", _make_panel_style(hover_fill, MENU_BORDER, 3, 14, 0.40, 13, 4))
-	btn.add_theme_stylebox_override("pressed", _make_panel_style(press_fill, MENU_BORDER, 3, 14, 0.30, 8, 2))
-	btn.add_theme_stylebox_override("focus", _make_panel_style(hover_fill, MENU_ACCENT_SOFT, 3, 14, 0.40, 12, 4))
+	var hero_r: int = 15 if min_height >= 88 else 14
+	btn.add_theme_stylebox_override("normal", _make_panel_style(normal_fill, border_gold, 3, hero_r, 0.38, 12, 4))
+	btn.add_theme_stylebox_override("hover", _make_panel_style(hover_fill, MENU_BORDER, 3, hero_r, 0.42, 14, 4))
+	btn.add_theme_stylebox_override("pressed", _make_panel_style(press_fill, MENU_BORDER, 3, hero_r, 0.32, 9, 2))
+	btn.add_theme_stylebox_override("focus", _make_panel_style(hover_fill, MENU_ACCENT_SOFT, 3, hero_r, 0.42, 13, 4))
 
 
 ## Secondary main-menu actions: each slot uses a different hue while staying in the same leather / gold / parchment family.
-func _style_secondary_main_menu_button(btn: Button, label_text: String, slot: String, font_size: int = 22, min_height: int = 58) -> void:
+## tier "major" = full-width field utilities (stronger body tint). "minor" = reference links (compact, border-forward hue).
+## "exit" = quit row (narrowest, most subdued label).
+func _style_secondary_main_menu_button(btn: Button, label_text: String, slot: String, font_size: int = 22, min_height: int = 58, tier: String = "major") -> void:
 	if btn == null:
 		return
 	var regular_font: Font = btn.get_theme_font("font", "Label")
 	if regular_font != null:
 		btn.add_theme_font_override("font", regular_font)
 	btn.text = label_text
-	btn.custom_minimum_size = Vector2(0, min_height)
 	btn.add_theme_font_size_override("font_size", font_size)
-	btn.add_theme_color_override("font_color", MENU_TEXT)
-	btn.add_theme_color_override("font_hover_color", MENU_TEXT)
-	btn.add_theme_color_override("font_pressed_color", MENU_TEXT)
-	btn.add_theme_color_override("font_focus_color", MENU_TEXT)
+	var fill_mute_weight: float = 0.55
+	var border_mute_weight: float = 0.50
+	var border_w: int = 2
+	var corner_r: int = 13
+	var label_mute: float = 0.0
+	var min_w: int = 0
+	var shadow_s: int = 7
+	var shadow_y: int = 2
+	var hover_shadow_s: int = 9
+	match tier:
+		"major":
+			fill_mute_weight = 0.26
+			border_mute_weight = 0.34
+			border_w = 3
+			corner_r = 14
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			min_w = 0
+			shadow_s = 9
+			shadow_y = 3
+			hover_shadow_s = 11
+		"minor":
+			fill_mute_weight = 0.76
+			border_mute_weight = 0.14
+			border_w = 2
+			corner_r = 11
+			label_mute = 0.38
+			btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			min_w = 536
+			shadow_s = 5
+			shadow_y = 2
+			hover_shadow_s = 7
+		"exit":
+			fill_mute_weight = 0.82
+			border_mute_weight = 0.10
+			border_w = 2
+			corner_r = 10
+			label_mute = 0.52
+			btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			min_w = 430
+			shadow_s = 4
+			shadow_y = 2
+			hover_shadow_s = 6
+		_:
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.custom_minimum_size = Vector2(min_w, min_height)
+	var font_col: Color = MENU_TEXT.lerp(MENU_TEXT_MUTED, label_mute)
+	btn.add_theme_color_override("font_color", font_col)
+	btn.add_theme_color_override("font_hover_color", font_col)
+	btn.add_theme_color_override("font_pressed_color", font_col)
+	btn.add_theme_color_override("font_focus_color", font_col)
 	btn.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.94))
-	btn.add_theme_constant_override("outline_size", 2)
+	btn.add_theme_constant_override("outline_size", 1 if tier != "major" else 2)
 	var n: Color
 	var h: Color
 	var p: Color
@@ -379,15 +664,17 @@ func _style_secondary_main_menu_button(btn: Button, label_text: String, slot: St
 			b = MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.45)
 	var mute_fill: Color = Color(0.192, 0.156, 0.11, 0.98)
 	var mute_border: Color = MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.44)
-	n = n.lerp(mute_fill, 0.55)
-	h = h.lerp(mute_fill.lightened(0.05), 0.55)
-	p = p.lerp(mute_fill.darkened(0.05), 0.55)
-	b = b.lerp(mute_border, 0.52)
+	n = n.lerp(mute_fill, fill_mute_weight)
+	h = h.lerp(mute_fill.lightened(0.05), fill_mute_weight)
+	p = p.lerp(mute_fill.darkened(0.05), fill_mute_weight)
+	b = b.lerp(mute_border, border_mute_weight)
 	var bh: Color = b.lerp(MENU_BORDER, 0.5)
-	btn.add_theme_stylebox_override("normal", _make_panel_style(n, b, 2, 13, 0.22, 7, 2))
-	btn.add_theme_stylebox_override("hover", _make_panel_style(h, bh, 2, 13, 0.28, 9, 3))
-	btn.add_theme_stylebox_override("pressed", _make_panel_style(p, b, 2, 13, 0.18, 5, 2))
-	btn.add_theme_stylebox_override("focus", _make_panel_style(h, MENU_ACCENT_SOFT, 2, 13, 0.28, 8, 3))
+	var sh_norm: float = 0.20 if tier == "major" else 0.16
+	var sh_hov: float = 0.26 if tier == "major" else 0.20
+	btn.add_theme_stylebox_override("normal", _make_panel_style(n, b, border_w, corner_r, sh_norm, shadow_s, shadow_y))
+	btn.add_theme_stylebox_override("hover", _make_panel_style(h, bh, border_w, corner_r, sh_hov, hover_shadow_s, shadow_y + 1))
+	btn.add_theme_stylebox_override("pressed", _make_panel_style(p, b, border_w, corner_r, 0.14, 4, 1))
+	btn.add_theme_stylebox_override("focus", _make_panel_style(h, MENU_ACCENT_SOFT, border_w, corner_r, sh_hov, hover_shadow_s, shadow_y + 1))
 
 
 func _style_steam_avatar_button(btn: TextureButton) -> void:
@@ -422,10 +709,11 @@ func _style_slot_button(btn: Button) -> void:
 		btn.add_theme_font_override("font", regular_font)
 	btn.text = ""
 	btn.focus_mode = Control.FOCUS_ALL
-	btn.add_theme_stylebox_override("normal", _make_panel_style(Color(0.17, 0.13, 0.09, 0.98), MENU_BORDER_MUTED, 1, 14, 0.28, 8, 3))
-	btn.add_theme_stylebox_override("hover", _make_panel_style(Color(0.23, 0.18, 0.12, 0.98), MENU_BORDER, 2, 14, 0.34, 10, 3))
-	btn.add_theme_stylebox_override("pressed", _make_panel_style(Color(0.13, 0.10, 0.07, 0.98), MENU_BORDER, 2, 14, 0.24, 6, 1))
-	btn.add_theme_stylebox_override("focus", _make_panel_style(Color(0.23, 0.18, 0.12, 0.98), MENU_ACCENT_SOFT, 2, 14, 0.34, 10, 3))
+	var focus_ring: Color = MENU_BORDER.lerp(MENU_ACCENT, 0.35)
+	btn.add_theme_stylebox_override("normal", _make_panel_style(Color(0.15, 0.12, 0.085, 0.98), MENU_BORDER_MUTED.lerp(MENU_BORDER, 0.22), 2, 16, 0.26, 9, 3))
+	btn.add_theme_stylebox_override("hover", _make_panel_style(Color(0.22, 0.17, 0.11, 0.99), MENU_BORDER, 2, 16, 0.32, 11, 3))
+	btn.add_theme_stylebox_override("pressed", _make_panel_style(Color(0.12, 0.095, 0.065, 0.99), MENU_BORDER, 2, 16, 0.22, 6, 1))
+	btn.add_theme_stylebox_override("focus", _make_panel_style(Color(0.24, 0.19, 0.12, 0.99), focus_ring.lerp(MENU_ACCENT_SOFT, 0.22), 2, 16, 0.34, 11, 3))
 
 
 func _style_auto_slot_button(btn: Button, slot_num: int) -> void:
@@ -835,20 +1123,20 @@ func _style_slot_contents(slot_button: Button) -> void:
 	var meta_label = slot_button.get_node_or_null("MarginContainer/HBox/TextVBox/MetaLabel") as Label
 	var gold_label = slot_button.get_node_or_null("MarginContainer/HBox/GoldLabel") as Label
 	if accent_bar != null:
-		accent_bar.color = MENU_ACCENT_SOFT.lerp(MENU_ACCENT, 0.55)
-		accent_bar.custom_minimum_size = Vector2(6, 0)
+		accent_bar.color = MENU_ACCENT.lerp(MENU_BORDER, 0.12)
+		accent_bar.custom_minimum_size = Vector2(7, 0)
 	if portrait_rect != null:
-		portrait_rect.custom_minimum_size = Vector2(92, 92)
+		portrait_rect.custom_minimum_size = Vector2(98, 98)
 		portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if name_label != null:
-		_style_label(name_label, MENU_ACCENT, 22, 2)
+		_style_label(name_label, MENU_ACCENT, 24, 3)
 	if loc_label != null:
-		_style_label(loc_label, MENU_TEXT, 16, 1)
+		_style_label(loc_label, MENU_TEXT, 17, 1)
 	if meta_label != null:
-		_style_label(meta_label, MENU_ACCENT_SOFT.lerp(MENU_TEXT, 0.42), 15, 1)
+		_style_label(meta_label, MENU_TEXT.lerp(MENU_TEXT_MUTED, 0.45), 16, 1)
 	if gold_label != null:
-		_style_label(gold_label, MENU_ACCENT_SOFT, 20, 2, HORIZONTAL_ALIGNMENT_RIGHT)
+		_style_label(gold_label, MENU_ACCENT.lerp(MENU_ACCENT_SOFT, 0.25), 21, 2, HORIZONTAL_ALIGNMENT_RIGHT)
 
 
 func _get_dispatch_category_color(category: String) -> Color:
@@ -909,6 +1197,7 @@ func _format_dispatch_stamp(unix_time: int, author: String) -> String:
 
 func _apply_dispatch_payload(payload: Dictionary, status_text: String = "Awaiting dispatch confirmation.") -> void:
 	_dispatch_payload = payload.duplicate(true)
+	_last_dispatch_status = status_text
 	var category := str(payload.get("category", "NEWS")).to_upper()
 	var category_color := _get_dispatch_category_color(category)
 	var headline := str(payload.get("title", "WAR TABLE UPDATES")).strip_edges()
@@ -926,31 +1215,24 @@ func _apply_dispatch_payload(payload: Dictionary, status_text: String = "Awaitin
 	dispatch_status_label.text = status_text
 	dispatch_status_label.add_theme_color_override("font_color", MENU_TEXT_MUTED)
 	dispatch_body_label.text = "[color=#f1d07a]%s[/color]\n\n[color=#efe7d5]%s[/color]" % [headline, body]
+	_update_dispatch_new_badge(updated_at)
 	call_deferred("_refresh_dispatch_body_layout")
 
 
 func _refresh_dispatch_body_layout() -> void:
 	if dispatch_body_label == null or dispatch_scroll == null:
 		return
-	var body_width: float = maxf(dispatch_scroll.size.x - 18.0, 280.0)
+	var body_width: float = maxf(dispatch_scroll.size.x - 24.0, 280.0)
 	dispatch_body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dispatch_body_label.custom_minimum_size = Vector2(body_width, 0.0)
-	dispatch_body_label.size = Vector2(body_width, dispatch_body_label.size.y)
-	call_deferred("_finish_dispatch_body_layout", body_width)
-
-
-func _finish_dispatch_body_layout(body_width: float) -> void:
-	if dispatch_body_label == null or dispatch_scroll == null:
-		return
-	var content_height: float = maxf(dispatch_body_label.get_content_height() + 12.0, dispatch_scroll.size.y)
-	dispatch_body_label.custom_minimum_size = Vector2(body_width, content_height)
-	dispatch_body_label.size = Vector2(body_width, content_height)
 
 
 func _fetch_dispatch_feed() -> void:
+	_update_briefing_sync_line("Briefing link: contacting bulletin service…", MENU_TEXT_MUTED)
 	_apply_dispatch_payload(_default_dispatch_payload(), "SYNCING DISPATCH FEED...")
 	if not has_node("/root/SilentWolf"):
 		_apply_dispatch_payload(_default_dispatch_payload(), "LOCAL FALLBACK // SILENTWOLF OFFLINE")
+		_update_briefing_sync_line("Briefing offline — table showing local fallback copy.", MENU_WARNING)
 		return
 	_fetch_dispatch_feed_async()
 
@@ -964,6 +1246,7 @@ func _fetch_dispatch_feed_async() -> void:
 		scores = SilentWolf.Scores.scores
 	if scores.is_empty():
 		_apply_dispatch_payload(_default_dispatch_payload(), "LOCAL FALLBACK // NO LIVE DISPATCH")
+		_update_briefing_sync_line("Briefing unavailable — no live bulletin on file.", MENU_WARNING)
 		return
 	var top_entry: Dictionary = scores[0]
 	var metadata: Dictionary = top_entry.get("metadata", {})
@@ -975,6 +1258,7 @@ func _fetch_dispatch_feed_async() -> void:
 		"updated_at": int(metadata.get("updated_at", int(top_entry.get("score", 0))))
 	}
 	_apply_dispatch_payload(payload, "LIVE DISPATCH // VERIFIED")
+	_update_briefing_sync_line("Briefing synced — live bulletin verified.", MENU_SUCCESS)
 
 
 func _open_dispatch_editor() -> void:
@@ -1022,8 +1306,10 @@ func _publish_dispatch_async(payload: Dictionary) -> void:
 		success = bool(sw_result.get("success", false))
 	if success:
 		_apply_dispatch_payload(payload, "LIVE DISPATCH // PUBLISHED")
+		_update_briefing_sync_line("Briefing synced — bulletin published to cloud.", MENU_SUCCESS)
 		return
 	_apply_dispatch_payload(payload, "LOCAL DISPLAY // CLOUD PUBLISH NOT CONFIRMED")
+	_update_briefing_sync_line("Briefing not confirmed on cloud — showing local copy only.", MENU_WARNING)
 
 
 func _apply_theme() -> void:
@@ -1038,30 +1324,48 @@ func _apply_theme() -> void:
 	_style_rule(intel_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
 	_style_label($IntelPanel/IntelCard/Margin/VBox/IntelCopy, MENU_TEXT_MUTED, 15, 1)
 	for path in [
+		"IntelPanel/IntelCard/Margin/VBox/IntelCopy",
 		"IntelPanel/IntelCard/Margin/VBox/IntelItem1",
 		"IntelPanel/IntelCard/Margin/VBox/IntelItem2",
 		"IntelPanel/IntelCard/Margin/VBox/IntelItem3",
 		"IntelPanel/IntelCard/Margin/VBox/IntelItem4",
 		"IntelPanel/IntelCard/Margin/VBox/IntelItem5"
 	]:
-		_style_label(get_node(path) as Label, MENU_TEXT, 15, 1)
+		var hidden_intel := get_node_or_null(path) as Label
+		if hidden_intel != null:
+			hidden_intel.visible = false
+	if intel_rotating_tip != null:
+		_style_label(intel_rotating_tip, MENU_TEXT, 15, 1)
+		intel_rotating_tip.visible = true
+		if not INTEL_TIPS.is_empty():
+			intel_rotating_tip.text = INTEL_TIPS[0]
 	_style_label($DispatchPanel/DispatchCard/Margin/VBox/DispatchTitle, MENU_ACCENT, 26, 3)
 	_style_rule(dispatch_rule, MENU_BORDER_MUTED.lerp(MENU_ACCENT_SOFT, 0.35), 2)
 	_style_label(dispatch_meta_label, MENU_TEXT_MUTED, 14, 1)
 	_style_label(dispatch_category_label, MENU_ACCENT, 15, 2)
 	_style_label(dispatch_status_label, MENU_TEXT_MUTED, 14, 1)
+	if dispatch_new_badge != null:
+		_style_label(dispatch_new_badge, MENU_SUCCESS, 13, 2)
+	if dispatch_sync_line != null:
+		_style_label(dispatch_sync_line, MENU_TEXT_MUTED, 12, 1)
 	dispatch_status_label.clip_text = true
 	dispatch_status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	dispatch_body_label.add_theme_font_size_override("normal_font_size", 16)
 	dispatch_body_label.add_theme_font_override("normal_font", dispatch_body_label.get_theme_font("normal_font", "RichTextLabel"))
 	dispatch_body_label.add_theme_color_override("default_color", MENU_TEXT)
 	dispatch_body_label.scroll_active = false
-	dispatch_body_label.fit_content = false
+	dispatch_body_label.fit_content = true
 
-	_style_label($CenterStage/MainPanel/Margin/VBox/MainKicker, MENU_TEXT_MUTED, 16, 1)
-	_style_label($CenterStage/MainPanel/Margin/VBox/MainTitle, MENU_ACCENT, 30, 3)
-	_style_label($CenterStage/MainPanel/Margin/VBox/MainBody, MENU_TEXT_MUTED, 17, 1)
-	_style_label($CenterStage/MainPanel/Margin/VBox/MainHint, MENU_ACCENT_SOFT.lerp(MENU_TEXT, 0.35), 15, 1)
+	_style_label($CenterStage/MainPanel/Margin/VBox/MainKicker, MENU_TEXT_MUTED, 15, 1)
+	_style_label($CenterStage/MainPanel/Margin/VBox/MainTitle, MENU_ACCENT, 34, 3)
+	_style_label($CenterStage/MainPanel/Margin/VBox/MainBody, MENU_TEXT_MUTED, 16, 1)
+	_style_label($CenterStage/MainPanel/Margin/VBox/MainHint, MENU_ACCENT_SOFT.lerp(MENU_TEXT, 0.35), 14, 1)
+	if input_hint_label != null:
+		_style_label(input_hint_label, MENU_TEXT_MUTED, 13, 1)
+	if campaign_resume_strip != null:
+		_style_label(campaign_resume_strip, MENU_TEXT_MUTED, 14, 1)
+	if empty_saves_callout != null:
+		_style_label(empty_saves_callout, MENU_ACCENT_SOFT, 15, 2)
 	_style_label(roadmap_overline_label, MENU_TEXT_MUTED, 15, 1)
 	_style_label(roadmap_title_label, MENU_ACCENT, 28, 3)
 	_style_label(roadmap_hint_label, MENU_TEXT_MUTED, 15, 1)
@@ -1075,30 +1379,37 @@ func _apply_theme() -> void:
 	_style_label(achievements_placeholder_label, MENU_TEXT, 15, 1)
 
 	if main_menu_version_footer != null:
-		main_menu_version_footer.text = "GAME VERSION %s\n%s\n%s · %s" % [
-			GameVersion.get_display_string(),
+		var ver_lead := "GAME VERSION %s" % GameVersion.get_display_string()
+		var channel := GameVersion.get_channel_footer_line()
+		if not channel.is_empty():
+			ver_lead += "\n%s" % channel
+		main_menu_version_footer.text = "%s\n%s\n%s · %s" % [
+			ver_lead,
 			GameVersion.get_game_copyright_line(),
 			GameVersion.get_godot_version_label(),
 			GameVersion.get_godot_attribution_short(),
 		]
 		_style_label(main_menu_version_footer, MENU_TEXT_MUTED, 12, 1)
 
-	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignKicker, MENU_TEXT_MUTED, 16, 1)
-	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignTitle, MENU_ACCENT, 30, 3)
-	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/CampaignBody, MENU_TEXT_MUTED, 17, 1)
-	_style_label($CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsHeader, MENU_WARNING, 18, 2)
+	_style_label($CenterStage/CampaignMenu/Margin/VBox/CampaignKicker, MENU_TEXT_MUTED, 15, 1)
+	_style_label($CenterStage/CampaignMenu/Margin/VBox/CampaignTitle, MENU_ACCENT, 36, 3)
+	_style_label($CenterStage/CampaignMenu/Margin/VBox/CampaignBody, MENU_TEXT_MUTED, 16, 1)
+	if slots_header_label != null:
+		_style_label(slots_header_label, MENU_ACCENT, 22, 3)
+	_style_menu_scrollbars(dispatch_scroll)
 
-	_style_hero_primary_button(start_button, "CAMPAIGN COMMAND", 24, 64)
-	_style_secondary_main_menu_button(settings_button, "FIELD SETTINGS", "settings")
-	_style_secondary_main_menu_button(profile_button, "COMMANDER PROFILE", "profile")
-	_style_secondary_main_menu_button(credits_button, "CREDITS", "credits")
-	_style_secondary_main_menu_button(roadmap_button, "ROADMAP", "roadmap")
-	_style_secondary_main_menu_button(achievements_button, "ACHIEVEMENTS", "achievements")
-	_style_secondary_main_menu_button(quit_button, "QUIT TO DESKTOP", "quit")
-	_style_button(continue_button, "CONTINUE CAMPAIGN", true, 22, 66)
-	_style_button(new_game_button, "NEW CAMPAIGN", false, 22, 62)
+	# Main command stack: hero → full-width utilities → compact accent-border links → narrow exit.
+	_style_hero_primary_button(start_button, "CAMPAIGN COMMAND", 33, 96)
+	_style_secondary_main_menu_button(settings_button, "FIELD SETTINGS", "settings", 27, 80, "major")
+	_style_secondary_main_menu_button(profile_button, "COMMANDER PROFILE", "profile", 27, 80, "major")
+	_style_secondary_main_menu_button(credits_button, "CREDITS", "credits", 18, 50, "minor")
+	_style_secondary_main_menu_button(roadmap_button, "ROADMAP", "roadmap", 18, 50, "minor")
+	_style_secondary_main_menu_button(achievements_button, "ACHIEVEMENTS", "achievements", 18, 50, "minor")
+	_style_secondary_main_menu_button(quit_button, "QUIT TO DESKTOP", "quit", 15, 40, "exit")
+	_style_hero_primary_button(continue_button, "CONTINUE CAMPAIGN", 32, 92)
+	_style_button(new_game_button, "NEW CAMPAIGN", false, 26, 76)
 	_style_button(load_game_button, "ARCHIVE SLOTS", false, 22, 62)
-	_style_button(back_button, "RETURN TO ENTRY", false, 20, 54)
+	_style_secondary_main_menu_button(back_button, "RETURN TO ENTRY", "quit", 16, 42, "exit")
 	_style_button(edit_dispatch_button, "EDIT", false, 18, 46)
 
 	for auto_btn in [auto_slot_1_btn, auto_slot_2_btn, auto_slot_3_btn]:
@@ -1171,14 +1482,28 @@ func _init_audio() -> void:
 	_music_player.autoplay = true
 	_music_player.volume_db = -6.0
 	add_child(_music_player)
+	var amb_path := "res://audio/CampAmbient.mp3"
+	if ResourceLoader.exists(amb_path):
+		var amb_stream: AudioStream = load(amb_path)
+		if amb_stream != null:
+			if amb_stream is AudioStreamMP3:
+				(amb_stream as AudioStreamMP3).loop = true
+			_ambient_player = AudioStreamPlayer.new()
+			_ambient_player.stream = amb_stream
+			_ambient_player.bus = "Music"
+			_ambient_player.volume_db = -32.0
+			_ambient_player.autoplay = true
+			add_child(_ambient_player)
 	_sfx_player = AudioStreamPlayer.new()
 	_sfx_player.bus = "SFX"
+	_sfx_player.volume_db = 0.0
 	add_child(_sfx_player)
 
 
 func _play_hover_sfx() -> void:
 	if _sfx_player == null:
 		return
+	_sfx_player.volume_db = 0.0
 	_sfx_player.stream = SFX_HOVER
 	_sfx_player.pitch_scale = randf_range(0.95, 1.05)
 	_sfx_player.play()
@@ -1187,6 +1512,7 @@ func _play_hover_sfx() -> void:
 func _play_click_sfx() -> void:
 	if _sfx_player == null:
 		return
+	_sfx_player.volume_db = 0.0
 	_sfx_player.stream = SFX_CLICK
 	_sfx_player.pitch_scale = randf_range(0.92, 1.08)
 	_sfx_player.play()
@@ -1374,6 +1700,7 @@ func _prepare_intro_state() -> void:
 	main_vbox.visible = true
 	campaign_vbox.visible = false
 	slots_container.visible = false
+	_sync_archive_section_visibility()
 	main_vbox.modulate.a = 0.0
 	main_vbox.position.x -= 80.0
 	campaign_vbox.modulate.a = 0.0
@@ -1387,15 +1714,16 @@ func _prepare_intro_state() -> void:
 		
 	var intro := create_tween()
 	intro.set_parallel(true)
-	intro.tween_property(main_vbox, "modulate:a", 1.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	intro.tween_property(main_vbox, "position:x", main_vbox.position.x + 80.0, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	intro.tween_property(main_vbox, "modulate:a", 1.0, _menu_anim_scale(0.45)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	intro.tween_property(main_vbox, "position:x", main_vbox.position.x + 80.0, _menu_anim_scale(0.55)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	if intel_panel != null:
-		intro.tween_property(intel_panel, "modulate:a", 1.0, 0.40).set_delay(0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		intro.tween_property(intel_panel, "position:x", intel_panel.position.x - 80.0, 0.50).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		intro.tween_property(intel_panel, "modulate:a", 1.0, _menu_anim_scale(0.40)).set_delay(_menu_anim_scale(0.15)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		intro.tween_property(intel_panel, "position:x", intel_panel.position.x - 80.0, _menu_anim_scale(0.50)).set_delay(_menu_anim_scale(0.15)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if dispatch_panel != null:
-		intro.tween_property(dispatch_panel, "modulate:a", 1.0, 0.40).set_delay(0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		intro.tween_property(dispatch_panel, "position:x", dispatch_panel.position.x - 80.0, 0.50).set_delay(0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		intro.tween_property(dispatch_panel, "modulate:a", 1.0, _menu_anim_scale(0.40)).set_delay(_menu_anim_scale(0.25)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		intro.tween_property(dispatch_panel, "position:x", dispatch_panel.position.x - 80.0, _menu_anim_scale(0.50)).set_delay(_menu_anim_scale(0.25)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	intro.chain().tween_callback(_refresh_input_hint)
 
 func _enter_tree() -> void:
 	_ensure_startup_black_overlay()
@@ -1436,11 +1764,34 @@ func _request_steam_profile_avatar() -> void:
 	SteamService.request_local_player_avatar(true)
 
 
+func _right_rails_sweep_off_x() -> float:
+	return get_viewport_rect().size.x + RIGHT_RAIL_SWEEP_PAD
+
+
+func _sync_panel_position_to_offsets(panel: Control) -> void:
+	if panel == null:
+		return
+	var r := Rect2(panel.position, panel.size)
+	panel.offset_left = r.position.x
+	panel.offset_top = r.position.y
+	panel.offset_right = r.end.x
+	panel.offset_bottom = r.end.y
+
+
+func _sync_archive_section_visibility() -> void:
+	var open := slots_container != null and slots_container.visible
+	if slots_header_label != null:
+		slots_header_label.visible = open
+	if archive_section_rule != null:
+		archive_section_rule.visible = open
+
+
 func _layout_menu() -> void:
 	var vp_size := get_viewport_rect().size
 	if backdrop_art != null:
 		backdrop_art.pivot_offset = vp_size * 0.5
-	if intel_panel != null:
+	# While the campaign dossier is open, the right rails stay swept off-screen; do not snap them back here.
+	if main_vbox != null and main_vbox.visible and intel_panel != null:
 		var right_width := clampf(vp_size.x * 0.23, 360.0, 430.0)
 		var right_x := vp_size.x - right_width - 32.0
 		var right_top := 34.0
@@ -1463,8 +1814,21 @@ func _layout_menu() -> void:
 		_set_control_rect(main_vbox, Vector2((vp_size.x - main_size.x) * 0.5, clampf(vp_size.y * 0.21, 175.0, 255.0)), main_size)
 		main_vbox.pivot_offset = main_size * 0.5
 	if campaign_vbox != null:
-		var campaign_size := Vector2(clampf(vp_size.x * 0.66, 1120.0, 1320.0), clampf(vp_size.y * 0.56, 520.0, 640.0))
-		_set_control_rect(campaign_vbox, Vector2((vp_size.x - campaign_size.x) * 0.5, clampf(vp_size.y * 0.22, 196.0, 252.0)), campaign_size)
+		var archive_open := slots_container != null and slots_container.visible
+		var panel_w: float = clampf(vp_size.x * 0.66, 1120.0, 1320.0)
+		if archive_open:
+			# Only three slot rows: grow the panel toward the bottom of the viewport so the inner ScrollContainer
+			# does not clip — avoids a scrollbar when there is empty space below on typical layouts.
+			var top_y: float = clampf(vp_size.y * 0.095, 88.0, 160.0)
+			var bottom_reserve: float = clampf(vp_size.y * 0.085, 52.0, 96.0)
+			var campaign_h: float = maxf(520.0, vp_size.y - top_y - bottom_reserve)
+			campaign_h = minf(campaign_h, 900.0)
+			_set_control_rect(campaign_vbox, Vector2((vp_size.x - panel_w) * 0.5, top_y), Vector2(panel_w, campaign_h))
+		else:
+			var ch: float = 0.54
+			var campaign_size := Vector2(panel_w, clampf(vp_size.y * ch, 500.0, 620.0))
+			var top_y: float = clampf(vp_size.y * 0.192, 172.0, 236.0)
+			_set_control_rect(campaign_vbox, Vector2((vp_size.x - campaign_size.x) * 0.5, top_y), campaign_size)
 	if main_menu_version_footer != null:
 		var pad_l := 24.0
 		var pad_b := 14.0
@@ -1631,17 +1995,24 @@ func _update_steam_corner_playing_as_label() -> void:
 
 
 func _start_atmosphere_pass() -> void:
+	_apply_save_progress_atmosphere()
+	if _reduced_motion():
+		if backdrop_warmth != null:
+			backdrop_warmth.modulate.a = 0.82
+		if backdrop_shade != null:
+			backdrop_shade.modulate.a = 1.0
+		return
 	if backdrop_art != null:
-		backdrop_art.scale = Vector2(1.02, 1.02)
-		backdrop_art.position = Vector2(-18.0, -10.0)
+		var bp: Vector2 = backdrop_art.position
+		var bs: Vector2 = backdrop_art.scale
 		var drift := create_tween()
 		drift.set_loops()
 		drift.set_parallel(true)
-		drift.tween_property(backdrop_art, "scale", Vector2(1.05, 1.05), 10.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		drift.tween_property(backdrop_art, "position", Vector2(-34.0, -18.0), 10.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.tween_property(backdrop_art, "scale", bs + Vector2(0.03, 0.03), 10.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.tween_property(backdrop_art, "position", bp + Vector2(-16.0, -8.0), 10.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		drift.chain().set_parallel(true)
-		drift.tween_property(backdrop_art, "scale", Vector2(1.03, 1.03), 12.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		drift.tween_property(backdrop_art, "position", Vector2(12.0, -6.0), 12.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.tween_property(backdrop_art, "scale", bs + Vector2(0.01, 0.01), 12.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.tween_property(backdrop_art, "position", bp + Vector2(30.0, 4.0), 12.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	if backdrop_warmth != null:
 		backdrop_warmth.modulate.a = 0.72
 		var warmth := create_tween()
@@ -1656,24 +2027,22 @@ func _start_atmosphere_pass() -> void:
 		shade.tween_property(backdrop_shade, "modulate:a", 1.0, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	var vp_size = get_viewport_rect().size
-	
-	# Vignette Overlay
+
 	var vignette = ColorRect.new()
 	vignette.color = Color(0.01, 0.005, 0.0, 0.65)
 	vignette.size = vp_size
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(vignette)
-	move_child(vignette, 3) # Move behind UI panels but above background
-	
+	move_child(vignette, 3)
+
 	var vig_t = create_tween().set_loops()
 	vig_t.tween_property(vignette, "color:a", 0.85, 4.0).set_trans(Tween.TRANS_SINE)
 	vig_t.tween_property(vignette, "color:a", 0.65, 4.0).set_trans(Tween.TRANS_SINE)
 
-	# Interactive Particles that repel from mouse cursor
 	var ParticleSys = load("res://Scripts/UI/MenuParticleSystem.gd")
 	var particles = ParticleSys.new()
 	add_child(particles)
-	move_child(particles, 4) # Move above vignette but below UI
+	move_child(particles, 4)
 
 
 func _animate_archive_rows() -> void:
@@ -1745,6 +2114,8 @@ func _refresh_save_ui() -> void:
 	load_game_button.visible = has_any_saves
 	if not has_any_saves:
 		slots_container.visible = false
+	_sync_archive_section_visibility()
+	call_deferred("_layout_menu")
 
 
 func _update_save_slot_ui(slot_button: Button, slot_num: int, is_auto: bool) -> void:
@@ -1807,10 +2178,10 @@ func _update_save_slot_ui(slot_button: Button, slot_num: int, is_auto: bool) -> 
 		loc_label.add_theme_color_override("font_color", MENU_TEXT_MUTED)
 	if meta_label != null:
 		meta_label.text = _format_record_timestamp(modified_time)
-		meta_label.add_theme_color_override("font_color", MENU_ACCENT_SOFT.lerp(MENU_TEXT, 0.35))
+		meta_label.add_theme_color_override("font_color", MENU_TEXT.lerp(MENU_TEXT_MUTED, 0.38))
 	if gold_label != null:
 		gold_label.text = "GOLD %d" % gold
-		gold_label.add_theme_color_override("font_color", MENU_ACCENT_SOFT)
+		gold_label.add_theme_color_override("font_color", MENU_ACCENT.lerp(MENU_BORDER, 0.18))
 	if portrait_rect != null:
 		if portrait_value is String and ResourceLoader.exists(str(portrait_value)):
 			portrait_rect.texture = load(str(portrait_value))
@@ -1819,18 +2190,33 @@ func _update_save_slot_ui(slot_button: Button, slot_num: int, is_auto: bool) -> 
 
 
 func _on_start_pressed() -> void:
+	var sweep_x := _right_rails_sweep_off_x()
 	var t := create_tween()
+	t.set_parallel(true)
 	t.tween_property(main_vbox, "modulate:a", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	t.parallel().tween_property(main_vbox, "scale", Vector2(0.97, 0.97), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_property(main_vbox, "scale", Vector2(0.97, 0.97), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if intel_panel != null:
+		t.tween_property(intel_panel, "position:x", sweep_x, 0.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	if dispatch_panel != null:
+		t.tween_property(dispatch_panel, "position:x", sweep_x, 0.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN).set_delay(0.07)
+	t.set_parallel(false)
 	t.tween_callback(func():
+		if intel_panel != null:
+			_sync_panel_position_to_offsets(intel_panel)
+		if dispatch_panel != null:
+			_sync_panel_position_to_offsets(dispatch_panel)
 		main_vbox.visible = false
 		campaign_vbox.visible = true
 		campaign_vbox.modulate.a = 0.0
 		campaign_vbox.scale = Vector2(0.97, 0.97)
 		slots_container.visible = false
+		_sync_archive_section_visibility()
+		call_deferred("_layout_menu")
 	)
+	t.set_parallel(true)
 	t.tween_property(campaign_vbox, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	t.parallel().tween_property(campaign_vbox, "scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(campaign_vbox, "scale", Vector2.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.set_parallel(false)
 	t.tween_callback(func():
 		if continue_button.visible:
 			continue_button.grab_focus()
@@ -1840,19 +2226,43 @@ func _on_start_pressed() -> void:
 
 
 func _on_back_pressed() -> void:
+	var sweep_x := _right_rails_sweep_off_x()
 	var t := create_tween()
+	t.set_parallel(true)
 	t.tween_property(campaign_vbox, "modulate:a", 0.0, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	t.parallel().tween_property(campaign_vbox, "scale", Vector2(0.97, 0.97), 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	t.tween_callback(func():
+	t.tween_property(campaign_vbox, "scale", Vector2(0.97, 0.97), 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.chain().tween_callback(func():
 		campaign_vbox.visible = false
 		slots_container.visible = false
+		_sync_archive_section_visibility()
 		main_vbox.visible = true
+		_layout_menu()
+		var intel_x := intel_panel.position.x if intel_panel != null else 0.0
+		var disp_x := dispatch_panel.position.x if dispatch_panel != null else 0.0
+		if intel_panel != null:
+			intel_panel.position.x = sweep_x
+			_sync_panel_position_to_offsets(intel_panel)
+		if dispatch_panel != null:
+			dispatch_panel.position.x = sweep_x + 36.0
+			_sync_panel_position_to_offsets(dispatch_panel)
 		main_vbox.modulate.a = 0.0
 		main_vbox.scale = Vector2(0.97, 0.97)
+		var t2 := create_tween()
+		t2.set_parallel(true)
+		t2.tween_property(main_vbox, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		t2.tween_property(main_vbox, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		if intel_panel != null:
+			t2.tween_property(intel_panel, "position:x", intel_x, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		if dispatch_panel != null:
+			t2.tween_property(dispatch_panel, "position:x", disp_x, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT).set_delay(0.08)
+		t2.chain().tween_callback(func():
+			if intel_panel != null:
+				_sync_panel_position_to_offsets(intel_panel)
+			if dispatch_panel != null:
+				_sync_panel_position_to_offsets(dispatch_panel)
+			start_button.grab_focus()
+		)
 	)
-	t.tween_property(main_vbox, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	t.parallel().tween_property(main_vbox, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	t.tween_callback(func(): start_button.grab_focus())
 
 
 func _on_settings_pressed() -> void:
@@ -1994,6 +2404,8 @@ func _on_load_game_pressed() -> void:
 	var showing := not slots_container.visible
 	if showing:
 		slots_container.visible = true
+		_sync_archive_section_visibility()
+		call_deferred("_layout_menu")
 		slots_container.modulate.a = 0.0
 		slots_container.scale = Vector2(0.985, 0.985)
 		var t := create_tween()
@@ -2009,7 +2421,11 @@ func _on_load_game_pressed() -> void:
 	else:
 		var t := create_tween()
 		t.tween_property(slots_container, "modulate:a", 0.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-		t.tween_callback(func(): slots_container.visible = false)
+		t.tween_callback(func():
+			slots_container.visible = false
+			_sync_archive_section_visibility()
+			call_deferred("_layout_menu")
+		)
 		load_game_button.grab_focus()
 
 
@@ -2050,6 +2466,8 @@ func _on_delete_confirmed() -> void:
 	if not continue_button.visible:
 		new_game_button.grab_focus()
 		slots_container.visible = false
+		_sync_archive_section_visibility()
+		call_deferred("_layout_menu")
 
 
 func _process(delta: float) -> void:

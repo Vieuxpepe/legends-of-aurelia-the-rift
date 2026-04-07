@@ -19,29 +19,68 @@ var cursor_y: float = 280.0
 var gravity: float = 220.0
 var fly_power: float = -280.0
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
-	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
-	qte.bf = parent_bf; qte.layer = 220; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
+static func run(
+	parent_bf: Node2D,
+	title_text: String,
+	help_text: String,
+	theme: Dictionary = {}
+) -> QTEGlideBox:
+	var qte = QTEGlideBox.new()
+	qte.bf = parent_bf
+	qte.layer = 220
+	qte.process_mode = Node.PROCESS_MODE_ALWAYS
+	parent_bf.add_child(qte)
+	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
-	var dimmer := ColorRect.new(); dimmer.size = vp; dimmer.color = Color(0.12, 0.03, 0.03, 0.7); qte.add_child(dimmer)
 	
-	var title := Label.new(); title.text = title_text; title.position = Vector2(0, 60); title.size = Vector2(vp.x, 42); title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40); title.add_theme_color_override("font_color", Color(1.0, 0.5, 0.2))
-	title.add_theme_constant_override("outline_size", 8); title.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(title)
+	var dimmer := ColorRect.new()
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
+	dimmer.size = vp
+	qte.add_child(dimmer)
+
+	var title := Label.new()
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(title)
+
+	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.help_lbl)
+
+	if parent_bf.has_node("/root/QTEManager"):
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		if mgr.has_method("_apply_qte_visual_overhaul"):
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 	
-	qte.help_lbl = Label.new(); qte.help_lbl.text = help_text; qte.help_lbl.position = Vector2(0, 105); qte.help_lbl.size = Vector2(vp.x, 30); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22); qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
-	qte.help_lbl.add_theme_constant_override("outline_size", 6); qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(qte.help_lbl)
+	var bg := ColorRect.new(); bg.size = Vector2(40,300); bg.position = vp*0.5 - Vector2(20, 150); bg.color = Color(0.05,0.05,0.06,0.96); qte.add_child(bg)
+	qte.target_box = ColorRect.new(); qte.target_box.size = Vector2(40, 80); qte.target_box.position = Vector2(0, 110); qte.target_box.color = Color(accent.r, accent.g, accent.b, 0.45); bg.add_child(qte.target_box)
+	qte.cursor = ColorRect.new(); qte.cursor.size = Vector2(30,12); qte.cursor.position = Vector2(5,280); qte.cursor.color = secondary; bg.add_child(qte.cursor)
 	
 	if parent_bf.has_node("/root/QTEManager"):
-		var mgr = parent_bf.get_node("/root/QTEManager"); mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		mgr._decorate_qte_indicator(qte.cursor, theme)
+		mgr._decorate_qte_indicator(qte.target_box, theme)
 	
-	var bg := ColorRect.new(); bg.size = Vector2(40,300); bg.position = vp*0.5 - Vector2(20, 150); bg.color = Color(0.08,0.08,0.08,0.96); qte.add_child(bg)
-	qte.target_box = ColorRect.new(); qte.target_box.size = Vector2(40, 80); qte.target_box.position = Vector2(0, 110); qte.target_box.color = Color(1, 0.6, 0.1, 0.6); bg.add_child(qte.target_box)
-	qte.cursor = ColorRect.new(); qte.cursor.size = Vector2(30,10); qte.cursor.position = Vector2(5,280); qte.cursor.color = Color.WHITE; bg.add_child(qte.cursor)
-	
-	var hbg := ColorRect.new(); hbg.size = Vector2(300, 20); hbg.position = Vector2((vp.x-300)*0.5, bg.position.y + 330); hbg.color = Color(0.1,0.1,0.1,0.9); qte.add_child(hbg)
-	qte.heat_fill = ColorRect.new(); qte.heat_fill.size = Vector2(0,20); qte.heat_fill.color = Color(1, 0.4, 0.1); hbg.add_child(qte.heat_fill)
+	var hbg := ColorRect.new(); hbg.size = Vector2(300, 20); hbg.position = Vector2((vp.x-300)*0.5, bg.position.y + 330); hbg.color = Color(0.05,0.05,0.06,0.92); qte.add_child(hbg)
+	qte.heat_fill = ColorRect.new(); qte.heat_fill.size = Vector2(0,20); qte.heat_fill.color = accent; hbg.add_child(qte.heat_fill)
 	
 	parent_bf.get_tree().paused = true; Input.flush_buffered_events(); return qte
 

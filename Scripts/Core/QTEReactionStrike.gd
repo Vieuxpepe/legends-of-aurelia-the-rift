@@ -27,7 +27,8 @@ static func run(
 	title_text: String,
 	help_text: String,
 	num_stages: int,
-	react_ms: int
+	react_ms: int,
+	theme: Dictionary = {}
 ) -> QTEReactionStrike:
 	var qte = QTEReactionStrike.new()
 	qte.bf = parent_bf
@@ -38,30 +39,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.04, 0.04, 0.08, 0.70)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.70))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 75)
-	title.size = Vector2(vp.x, 40)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.30))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
 	qte.help_lbl.position = Vector2(0, 130)
-	qte.help_lbl.size = Vector2(vp.x, 30)
+	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -69,16 +76,17 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	qte.arrow_label = Label.new()
+	qte.arrow_label.name = "ArrowLabel"
 	qte.arrow_label.text = ""
 	qte.arrow_label.position = Vector2(0, vp.y * 0.5 - 50)
 	qte.arrow_label.size = Vector2(vp.x, 100)
 	qte.arrow_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.arrow_label.add_theme_font_size_override("font_size", 80)
-	qte.arrow_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
-	qte.arrow_label.add_theme_constant_override("outline_size", 10)
+	qte.arrow_label.add_theme_font_size_override("font_size", 84)
+	qte.arrow_label.add_theme_color_override("font_color", accent)
+	qte.arrow_label.add_theme_constant_override("outline_size", 12)
 	qte.arrow_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.arrow_label)
 	

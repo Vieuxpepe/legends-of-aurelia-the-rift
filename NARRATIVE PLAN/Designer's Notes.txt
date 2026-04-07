@@ -85,6 +85,10 @@ Make encounters interconnect between characters
 Small icon floating on top of level nodes in WorldMap.gd to show that clearing that node as skirmish, you get bonus loot at the end
 
 Death log/cemetary where players can see the info of their characters death with a small quote
+
+--- Designer note (UX / flow) ---
+Campaign resume card (later): On continue / load into an in-progress save, consider a very short briefing on a black (or near-black) full-screen card — 2–4 lines max — reminding the player where they are in the campaign (e.g. region, last objective, commander name) so returning after a break isn't disorienting. Must be skippable instantly (any input). Avoid heavy spoilers in copy; skip entirely for brand-new saves. Implementation can pull from existing save metadata (map index, roster headline, etc.).
+
 ====================================
 PRESQUE FINI :
 ====================================

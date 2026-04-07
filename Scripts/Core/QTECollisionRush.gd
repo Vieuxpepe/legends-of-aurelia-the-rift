@@ -19,31 +19,104 @@ var start_pos: Vector2
 var phase_timer: float = 0.0
 var phase_limit := 0.72
 
-static func run(parent_bf: Node2D, title_text: String, help_text: String) -> CanvasLayer:
-	var qte = load("res://" + get_script().resource_path.trim_prefix("res://")).new()
-	qte.bf = parent_bf; qte.layer = 230; qte.process_mode = Node.PROCESS_MODE_ALWAYS; parent_bf.add_child(qte)
+static func run(
+	parent_bf: Node2D,
+	title_text: String,
+	help_text: String,
+	theme: Dictionary = {}
+) -> QTECollisionRush:
+	var qte = QTECollisionRush.new()
+	qte.bf = parent_bf
+	
+	qte.layer = 230
+	qte.process_mode = Node.PROCESS_MODE_ALWAYS
+	parent_bf.add_child(qte)
+	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
-	var dimmer := ColorRect.new(); dimmer.size = vp; dimmer.color = Color(0.03, 0.02, 0.06, 0.84); qte.add_child(dimmer)
 	
-	var title := Label.new(); title.text = title_text; title.position = Vector2(0, 60); title.size = Vector2(vp.x, 42); title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42); title.add_theme_color_override("font_color", Color(0.9, 0.95, 1))
-	title.add_theme_constant_override("outline_size", 8); title.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(title)
-	
-	qte.help_lbl = Label.new(); qte.help_lbl.text = help_text; qte.help_lbl.position = Vector2(0, 105); qte.help_lbl.size = Vector2(vp.x, 30); qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22); qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
-	qte.help_lbl.add_theme_constant_override("outline_size", 6); qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(qte.help_lbl)
-	
+	var dimmer := ColorRect.new()
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
+	dimmer.size = vp
+	qte.add_child(dimmer)
+
+	var title := Label.new()
+	title.name = "Title"
+	title.text = title_text
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(title)
+
+	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
+	qte.help_lbl.text = help_text
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
+	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
+	qte.help_lbl.add_theme_constant_override("outline_size", 6)
+	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.help_lbl)
+
 	if parent_bf.has_node("/root/QTEManager"):
-		var mgr = parent_bf.get_node("/root/QTEManager"); mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+		var mgr = parent_bf.get_node("/root/QTEManager")
+		if mgr.has_method("_apply_qte_visual_overhaul"):
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
+
+	var arena := ColorRect.new()
+	arena.name = "Arena"
+	arena.size = Vector2(640, 340)
+	arena.position = vp * 0.5 - Vector2(320, 170)
+	arena.color = Color(0.02, 0.02, 0.03, 0.95)
+	qte.add_child(arena)
+
+	qte.round_lbl = Label.new()
+	qte.round_lbl.name = "RoundLabel"
+	qte.round_lbl.position = Vector2(0, arena.position.y + arena.size.y + 10)
+	qte.round_lbl.size = Vector2(vp.x, 28)
+	qte.round_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qte.round_lbl.add_theme_font_size_override("font_size", 24)
+	qte.round_lbl.add_theme_color_override("font_color", secondary)
+	qte.round_lbl.add_theme_constant_override("outline_size", 5)
+	qte.round_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	qte.add_child(qte.round_lbl)
+
+	qte.target_ring = Panel.new()
+	qte.target_ring.name = "TargetRing"
+	qte.target_ring.size = Vector2(80, 80)
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0, 0, 0, 0)
+	s.border_width_left = 6
+	s.border_width_top = 6
+	s.border_width_right = 6
+	s.border_width_bottom = 6
+	s.border_color = accent
+	s.corner_radius_top_left = 40
+	s.corner_radius_top_right = 40
+	s.corner_radius_bottom_left = 40
+	s.corner_radius_bottom_right = 40
+	qte.target_ring.add_theme_stylebox_override("panel", s)
+	arena.add_child(qte.target_ring)
+
+	qte.cursor = ColorRect.new()
+	qte.cursor.name = "Cursor"
+	qte.cursor.size = Vector2(16, 16)
+	qte.cursor.color = Color.WHITE
+	arena.add_child(qte.cursor)
+
+	parent_bf.get_tree().paused = true
+	Input.flush_buffered_events()
+	qte._start_round()
 	
-	var arena := ColorRect.new(); arena.size = Vector2(640, 340); arena.position = vp*0.5 - Vector2(320, 178); arena.color = Color(0.08,0.08,0.1,0.96); qte.add_child(arena)
-	qte.round_lbl = Label.new(); qte.round_lbl.position = Vector2(0, arena.position.y + 356); qte.round_lbl.size = Vector2(vp.x, 28); qte.round_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.round_lbl.add_theme_font_size_override("font_size", 24); qte.round_lbl.add_theme_color_override("font_color", Color.WHITE); qte.round_lbl.add_theme_constant_override("outline_size", 5); qte.round_lbl.add_theme_color_override("font_outline_color", Color.BLACK); qte.add_child(qte.round_lbl)
-	
-	qte.target_ring = Panel.new(); qte.target_ring.size = Vector2(68,68); var s := StyleBoxFlat.new(); s.bg_color=Color(0,0,0,0); s.border_width_left=5; s.border_width_top=5; s.border_width_right=5; s.border_width_bottom=5; s.border_color=Color(1,0.85,0.2); s.corner_radius_top_left=40; s.corner_radius_top_right=40; s.corner_radius_bottom_left=40; s.corner_radius_bottom_right=40; qte.target_ring.add_theme_stylebox_override("panel", s); arena.add_child(qte.target_ring)
-	qte.cursor = ColorRect.new(); qte.cursor.size = Vector2(14,14); qte.cursor.color=Color.WHITE; arena.add_child(qte.cursor)
-	
-	parent_bf.get_tree().paused = true; Input.flush_buffered_events(); qte._start_round(); return qte
+	return qte
 
 func _start_round():
 	if current_round >= rounds: _resolve(); return

@@ -967,6 +967,11 @@ text = "HUD SCALE"
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="UiReducedMotionToggle" type="CheckBox" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "REDUCED MENU MOTION (war table sweeps, drift, tilt)"
+
 [node name="CursorSizeLabel" type="Label" parent="CanvasLayer/ModalRoot/ModalPanel/InterfaceMargin/InterfaceHBox/HudOverlaysCard/Margin/VBox"]
 layout_mode = 2
 text = "CURSOR SIZE"

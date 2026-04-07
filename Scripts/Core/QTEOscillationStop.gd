@@ -18,7 +18,8 @@ static func run(
 	parent_bf: Node2D,
 	title_text: String,
 	help_text: String,
-	duration_ms: int
+	duration_ms: int,
+	theme: Dictionary = {}
 ) -> QTEOscillationStop:
 	var qte = QTEOscillationStop.new()
 	qte.bf = parent_bf
@@ -28,30 +29,36 @@ static func run(
 	qte.process_mode = Node.PROCESS_MODE_ALWAYS
 	parent_bf.add_child(qte)
 	
+	var accent: Color = theme.get("accent", Color(0.96, 0.82, 0.32))
+	var secondary: Color = theme.get("secondary", Color(1.0, 1.0, 1.0))
 	var vp := parent_bf.get_viewport_rect().size
+	
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.14, 0.03, 0.02, 0.84)
+	dimmer.name = "Dimmer"
+	dimmer.color = theme.get("bg_mod", Color(0.0, 0.0, 0.0, 0.65))
 	dimmer.size = vp
 	qte.add_child(dimmer)
 
 	var title := Label.new()
+	title.name = "Title"
 	title.text = title_text
-	title.position = Vector2(0, 70)
-	title.size = Vector2(vp.x, 42)
+	title.position = Vector2(0, 80)
+	title.size = Vector2(vp.x, 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
-	title.add_theme_color_override("font_color", Color(1.0, 0.45, 0.25))
-	title.add_theme_constant_override("outline_size", 8)
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", accent)
+	title.add_theme_constant_override("outline_size", 10)
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(title)
 
 	qte.help_lbl = Label.new()
+	qte.help_lbl.name = "Help"
 	qte.help_lbl.text = help_text
-	qte.help_lbl.position = Vector2(0, 115)
-	qte.help_lbl.size = Vector2(vp.x, 30)
+	qte.help_lbl.position = Vector2(0, 130)
+	qte.help_lbl.size = Vector2(vp.x, 32)
 	qte.help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qte.help_lbl.add_theme_font_size_override("font_size", 22)
-	qte.help_lbl.add_theme_color_override("font_color", Color.WHITE)
+	qte.help_lbl.add_theme_font_size_override("font_size", 24)
+	qte.help_lbl.add_theme_color_override("font_color", secondary)
 	qte.help_lbl.add_theme_constant_override("outline_size", 6)
 	qte.help_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	qte.add_child(qte.help_lbl)
@@ -59,7 +66,7 @@ static func run(
 	if parent_bf.has_node("/root/QTEManager"):
 		var mgr = parent_bf.get_node("/root/QTEManager")
 		if mgr.has_method("_apply_qte_visual_overhaul"):
-			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl)
+			mgr._apply_qte_visual_overhaul(qte, title, qte.help_lbl, theme)
 
 	var dial := Panel.new()
 	dial.size = Vector2(340, 340)
@@ -75,16 +82,20 @@ static func run(
 	qte.add_child(dial)
 
 	var pivot := ColorRect.new()
-	pivot.size = Vector2(12, 12); pivot.position = Vector2(170-6, 170-6); pivot.color = Color.WHITE
+	pivot.size = Vector2(14, 14); pivot.position = Vector2(170-7, 170-7); pivot.color = secondary
 	dial.add_child(pivot)
 
 	qte.sweet_dot = ColorRect.new()
-	qte.sweet_dot.size = Vector2(22, 22); qte.sweet_dot.position = Vector2(170-11, 18); qte.sweet_dot.color = Color(1.0, 0.85, 0.2, 1.0)
+	qte.sweet_dot.size = Vector2(24, 24); qte.sweet_dot.position = Vector2(170-12, 18); qte.sweet_dot.color = accent
 	dial.add_child(qte.sweet_dot)
 
 	qte.needle = ColorRect.new()
-	qte.needle.size = Vector2(8, 132); qte.needle.position = Vector2(170-4, 170-118); qte.needle.pivot_offset = Vector2(4, 118); qte.needle.color = Color(1.0, 0.72, 0.28, 1.0)
+	qte.needle.size = Vector2(8, 134); qte.needle.position = Vector2(170-4, 170-120); qte.needle.pivot_offset = Vector2(4, 120); qte.needle.color = secondary
 	dial.add_child(qte.needle)
+	
+	if parent_bf.has_node("/root/QTEManager"):
+		parent_bf.get_node("/root/QTEManager")._decorate_qte_indicator(qte.needle, theme)
+		parent_bf.get_node("/root/QTEManager")._decorate_qte_indicator(pivot, theme)
 
 	parent_bf.get_tree().paused = true
 	Input.flush_buffered_events()

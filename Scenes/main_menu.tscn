@@ -76,6 +76,11 @@ custom_minimum_size = Vector2(0, 2)
 layout_mode = 2
 color = Color(0.82, 0.67, 0.29, 0.55)
 
+[node name="IntelRotatingTip" type="Label" parent="IntelPanel/IntelCard/Margin/VBox" unique_id=900010001]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
 [node name="IntelCopy" type="Label" parent="IntelPanel/IntelCard/Margin/VBox" unique_id=299904904]
 layout_mode = 2
 text = "Choose a lane into Aurelia and keep your progress moving:"
@@ -142,6 +147,12 @@ color = Color(0.82, 0.67, 0.29, 0.55)
 layout_mode = 2
 text = "NEWS // LIVE BULLETIN"
 
+[node name="DispatchNewBadge" type="Label" parent="DispatchPanel/DispatchCard/Margin/VBox" unique_id=900010002]
+visible = false
+layout_mode = 2
+text = "NEW"
+horizontal_alignment = 2
+
 [node name="DispatchScroll" type="ScrollContainer" parent="DispatchPanel/DispatchCard/Margin/VBox" unique_id=249982665]
 custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
@@ -177,6 +188,11 @@ text = "Awaiting dispatch confirmation."
 layout_mode = 2
 theme_override_constants/separation = 8
 
+[node name="DispatchSyncLine" type="Label" parent="DispatchPanel/DispatchCard/Margin/VBox/Footer" unique_id=900010003]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
 [node name="DispatchActionSpacer" type="Control" parent="DispatchPanel/DispatchCard/Margin/VBox/Footer/DispatchActionsRow" unique_id=211466857]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -197,7 +213,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="MainPanel" type="PanelContainer" parent="CenterStage" unique_id=1968253241]
-custom_minimum_size = Vector2(640, 0)
+custom_minimum_size = Vector2(700, 0)
 layout_mode = 0
 
 [node name="Margin" type="MarginContainer" parent="CenterStage/MainPanel" unique_id=69479731]
@@ -209,7 +225,7 @@ theme_override_constants/margin_bottom = 28
 
 [node name="VBox" type="VBoxContainer" parent="CenterStage/MainPanel/Margin" unique_id=2110605419]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 10
 
 [node name="MainKicker" type="Label" parent="CenterStage/MainPanel/Margin/VBox" unique_id=811548713]
 layout_mode = 2
@@ -228,6 +244,10 @@ autowrap_mode = 3
 layout_mode = 2
 text = "CAMPAIGN COMMAND"
 
+[node name="SpacerAfterCampaignCommand" type="Control" parent="CenterStage/MainPanel/Margin/VBox" unique_id=900000710]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
 [node name="SettingsButton" type="Button" parent="CenterStage/MainPanel/Margin/VBox" unique_id=547466327]
 layout_mode = 2
 text = "FIELD SETTINGS"
@@ -235,6 +255,10 @@ text = "FIELD SETTINGS"
 [node name="ProfileButton" type="Button" parent="CenterStage/MainPanel/Margin/VBox" unique_id=900000001]
 layout_mode = 2
 text = "COMMANDER PROFILE"
+
+[node name="SpacerBeforeReferenceLinks" type="Control" parent="CenterStage/MainPanel/Margin/VBox" unique_id=900000711]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
 
 [node name="CreditsButton" type="Button" parent="CenterStage/MainPanel/Margin/VBox" unique_id=1019040465]
 layout_mode = 2
@@ -248,6 +272,10 @@ text = "ROADMAP"
 layout_mode = 2
 text = "ACHIEVEMENTS"
 
+[node name="SpacerBeforeQuit" type="Control" parent="CenterStage/MainPanel/Margin/VBox" unique_id=900000712]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+
 [node name="QuitButton" type="Button" parent="CenterStage/MainPanel/Margin/VBox" unique_id=947014074]
 layout_mode = 2
 text = "QUIT TO DESKTOP"
@@ -255,6 +283,11 @@ text = "QUIT TO DESKTOP"
 [node name="MainHint" type="Label" parent="CenterStage/MainPanel/Margin/VBox" unique_id=1287771436]
 layout_mode = 2
 text = "Tip: Continue jumps to the most recent field record automatically. Archive Slots lets you inspect manual and auto records before loading."
+autowrap_mode = 3
+
+[node name="InputHintLabel" type="Label" parent="CenterStage/MainPanel/Margin/VBox" unique_id=900010004]
+layout_mode = 2
+text = ""
 autowrap_mode = 3
 
 [node name="CampaignMenu" type="PanelContainer" parent="CenterStage" unique_id=162460539]
@@ -265,76 +298,92 @@ layout_mode = 0
 [node name="Margin" type="MarginContainer" parent="CenterStage/CampaignMenu" unique_id=1222347170]
 layout_mode = 2
 theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 26
-theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 22
 
-[node name="CampaignScroll" type="ScrollContainer" parent="CenterStage/CampaignMenu/Margin" unique_id=900000060]
+[node name="VBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin" unique_id=462546882]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-mouse_filter = 0
-horizontal_scroll_mode = 0
-vertical_scroll_mode = 2
+theme_override_constants/separation = 8
 
-[node name="VBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll" unique_id=462546882]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 16
-
-[node name="CampaignKicker" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=190531023]
+[node name="CampaignKicker" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=190531023]
 layout_mode = 2
 text = "CAMPAIGN DOSSIER"
 
-[node name="CampaignTitle" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=1619768366]
+[node name="CampaignTitle" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=1619768366]
 layout_mode = 2
 text = "FIELD RECORDS"
 
-[node name="CampaignBody" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=301359317]
+[node name="CampaignResumeStrip" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=900010005]
+layout_mode = 2
+visible = false
+text = ""
+autowrap_mode = 3
+
+[node name="CampaignBody" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=301359317]
 layout_mode = 2
 text = "Continue from the newest campaign record, begin a fresh war story, or open the archive and inspect individual field saves."
 autowrap_mode = 3
 
-[node name="ContinueButton" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=184744394]
+[node name="EmptySavesCallout" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=900010006]
+visible = false
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="ContinueButton" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=184744394]
 layout_mode = 2
 text = "CONTINUE CAMPAIGN"
 
-[node name="NewGameButton" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=1509997363]
+[node name="SpacerAfterContinueCampaign" type="Control" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=900000720]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="NewGameButton" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=1509997363]
 layout_mode = 2
 text = "NEW CAMPAIGN"
 
-[node name="LoadGameButton" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=2089416601]
+[node name="LoadGameButton" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=2089416601]
 layout_mode = 2
 text = "ARCHIVE SLOTS"
 
-[node name="BackButton" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=1105295698]
+[node name="SpacerBeforeArchiveSection" type="Control" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=900000722]
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
-text = "RETURN TO ENTRY"
 
-[node name="SlotsHeader" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=1981276719]
+[node name="SlotsHeader" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=1981276719]
+visible = false
 layout_mode = 2
 text = "CAMPAIGN ARCHIVE"
 
-[node name="SlotsContainer" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox" unique_id=1655265091]
+[node name="ArchiveSectionRule" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=900000723]
 visible = false
+custom_minimum_size = Vector2(0, 2)
 layout_mode = 2
-theme_override_constants/separation = 14
+color = Color(0.82, 0.67, 0.29, 0.65)
 
-[node name="SlotRow1" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer" unique_id=765915538]
+[node name="SlotsContainer" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=1655265091]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="AutoSlot1Button" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1" unique_id=1032375464]
-custom_minimum_size = Vector2(112, 124)
+[node name="SlotRow1" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer" unique_id=765915538]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AutoSlot1Button" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1" unique_id=1032375464]
+custom_minimum_size = Vector2(116, 138)
 layout_mode = 2
 text = "AUTO"
 
-[node name="Slot1Button" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1" unique_id=389972122]
-custom_minimum_size = Vector2(0, 124)
+[node name="Slot1Button" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1" unique_id=389972122]
+custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button" unique_id=1261503589]
+[node name="MarginContainer" type="MarginContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button" unique_id=1261503589]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -342,69 +391,69 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 14
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_bottom = 16
 
-[node name="HBox" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer" unique_id=580750296]
+[node name="HBox" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer" unique_id=580750296]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="AccentBar" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=709552113]
+[node name="AccentBar" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=709552113]
 custom_minimum_size = Vector2(6, 0)
 layout_mode = 2
 color = Color(0.95, 0.79, 0.28, 0.95)
 
-[node name="Portrait" type="TextureRect" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=841339747]
-custom_minimum_size = Vector2(86, 86)
+[node name="Portrait" type="TextureRect" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=841339747]
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TextVBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=1406242848]
+[node name="TextVBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=1406242848]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
-[node name="NameLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=1704478197]
+[node name="NameLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=1704478197]
 layout_mode = 2
 text = "SLOT 1"
 
-[node name="LocationLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=740436439]
+[node name="LocationLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=740436439]
 layout_mode = 2
 text = "FIELD RECORD"
 
-[node name="MetaLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=294663382]
+[node name="MetaLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox/TextVBox" unique_id=294663382]
 layout_mode = 2
 text = "UPDATED: --"
 
-[node name="GoldLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=481297328]
+[node name="GoldLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1/Slot1Button/MarginContainer/HBox" unique_id=481297328]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 text = "0 G"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="DeleteSlot1" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow1" unique_id=1990085944]
-custom_minimum_size = Vector2(72, 124)
+[node name="DeleteSlot1" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow1" unique_id=1990085944]
+custom_minimum_size = Vector2(78, 138)
 layout_mode = 2
 text = "X"
 
-[node name="SlotRow2" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer" unique_id=205541465]
+[node name="SlotRow2" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer" unique_id=205541465]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="AutoSlot2Button" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2" unique_id=593777635]
-custom_minimum_size = Vector2(112, 124)
+[node name="AutoSlot2Button" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2" unique_id=593777635]
+custom_minimum_size = Vector2(116, 138)
 layout_mode = 2
 text = "AUTO"
 
-[node name="Slot2Button" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2" unique_id=1572362678]
-custom_minimum_size = Vector2(0, 124)
+[node name="Slot2Button" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2" unique_id=1572362678]
+custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button" unique_id=110015208]
+[node name="MarginContainer" type="MarginContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button" unique_id=110015208]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -412,69 +461,69 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 14
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_bottom = 16
 
-[node name="HBox" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer" unique_id=874761087]
+[node name="HBox" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer" unique_id=874761087]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="AccentBar" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=348188375]
+[node name="AccentBar" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=348188375]
 custom_minimum_size = Vector2(6, 0)
 layout_mode = 2
 color = Color(0.95, 0.79, 0.28, 0.95)
 
-[node name="Portrait" type="TextureRect" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=328048492]
-custom_minimum_size = Vector2(86, 86)
+[node name="Portrait" type="TextureRect" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=328048492]
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TextVBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=688066038]
+[node name="TextVBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=688066038]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
-[node name="NameLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=1287653201]
+[node name="NameLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=1287653201]
 layout_mode = 2
 text = "SLOT 2"
 
-[node name="LocationLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=930615054]
+[node name="LocationLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=930615054]
 layout_mode = 2
 text = "FIELD RECORD"
 
-[node name="MetaLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=1315184511]
+[node name="MetaLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox/TextVBox" unique_id=1315184511]
 layout_mode = 2
 text = "UPDATED: --"
 
-[node name="GoldLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=2092008280]
+[node name="GoldLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2/Slot2Button/MarginContainer/HBox" unique_id=2092008280]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 text = "0 G"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="DeleteSlot2" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow2" unique_id=1845161255]
-custom_minimum_size = Vector2(72, 124)
+[node name="DeleteSlot2" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow2" unique_id=1845161255]
+custom_minimum_size = Vector2(78, 138)
 layout_mode = 2
 text = "X"
 
-[node name="SlotRow3" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer" unique_id=229662421]
+[node name="SlotRow3" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer" unique_id=229662421]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="AutoSlot3Button" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3" unique_id=159226183]
-custom_minimum_size = Vector2(112, 124)
+[node name="AutoSlot3Button" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3" unique_id=159226183]
+custom_minimum_size = Vector2(116, 138)
 layout_mode = 2
 text = "AUTO"
 
-[node name="Slot3Button" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3" unique_id=2021886452]
-custom_minimum_size = Vector2(0, 124)
+[node name="Slot3Button" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3" unique_id=2021886452]
+custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button" unique_id=1728616852]
+[node name="MarginContainer" type="MarginContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button" unique_id=1728616852]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -482,53 +531,61 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 14
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_bottom = 16
 
-[node name="HBox" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer" unique_id=344690618]
+[node name="HBox" type="HBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer" unique_id=344690618]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="AccentBar" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=409677843]
+[node name="AccentBar" type="ColorRect" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=409677843]
 custom_minimum_size = Vector2(6, 0)
 layout_mode = 2
 color = Color(0.95, 0.79, 0.28, 0.95)
 
-[node name="Portrait" type="TextureRect" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=1916803229]
-custom_minimum_size = Vector2(86, 86)
+[node name="Portrait" type="TextureRect" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=1916803229]
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TextVBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=750771537]
+[node name="TextVBox" type="VBoxContainer" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=750771537]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
-[node name="NameLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=950431524]
+[node name="NameLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=950431524]
 layout_mode = 2
 text = "SLOT 3"
 
-[node name="LocationLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=697544863]
+[node name="LocationLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=697544863]
 layout_mode = 2
 text = "FIELD RECORD"
 
-[node name="MetaLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=1611596473]
+[node name="MetaLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox/TextVBox" unique_id=1611596473]
 layout_mode = 2
 text = "UPDATED: --"
 
-[node name="GoldLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=1374147045]
+[node name="GoldLabel" type="Label" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3/Slot3Button/MarginContainer/HBox" unique_id=1374147045]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 text = "0 G"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="DeleteSlot3" type="Button" parent="CenterStage/CampaignMenu/Margin/CampaignScroll/VBox/SlotsContainer/SlotRow3" unique_id=1062360358]
-custom_minimum_size = Vector2(72, 124)
+[node name="DeleteSlot3" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox/SlotsContainer/SlotRow3" unique_id=1062360358]
+custom_minimum_size = Vector2(78, 138)
 layout_mode = 2
 text = "X"
+
+[node name="SpacerBeforeCampaignBack" type="Control" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=900000721]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="CenterStage/CampaignMenu/Margin/VBox" unique_id=1105295698]
+layout_mode = 2
+text = "RETURN TO ENTRY"
 
 [node name="SteamProfileCorner" type="Control" parent="." unique_id=900000030]
 visible = false
