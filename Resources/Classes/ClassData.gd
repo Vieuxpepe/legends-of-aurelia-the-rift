@@ -64,3 +64,4 @@ enum MoveType { INFANTRY, ARMORED, FLYING, CAVALRY }
 
 @export_category("UI")
 @export_multiline var description: String = ""
+@export var story_tag: String = "martial"

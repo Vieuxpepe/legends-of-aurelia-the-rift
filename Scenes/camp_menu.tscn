@@ -289,7 +289,6 @@ text = "Haggle"
 
 [node name="HaggleConfirmation" type="ConfirmationDialog" parent="." unique_id=32889657]
 oversampling_override = 1.0
-popup_window = false
 title = "Bartholomew — terms of the haggle"
 initial_position = 1
 size = Vector2i(700, 400)
@@ -825,14 +824,18 @@ offset_bottom = 275.0
 expand_mode = 1
 stretch_mode = 5
 
-[node name="BlacksmithDialogue" type="Label" parent="BlacksmithPanel" unique_id=212260933]
+[node name="BlacksmithDialogue" type="RichTextLabel" parent="BlacksmithPanel" unique_id=212260933]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 388.0
 offset_top = 267.0
 offset_right = 711.0
 offset_bottom = 413.0
-theme_override_font_sizes/font_size = 22
+mouse_filter = 0
+theme_override_font_sizes/normal_font_size = 22
+bbcode_enabled = true
+fit_content = false
+scroll_active = false
 autowrap_mode = 2
 
 [node name="BlacksmithTalkButton" type="Button" parent="BlacksmithPanel" unique_id=588787663]

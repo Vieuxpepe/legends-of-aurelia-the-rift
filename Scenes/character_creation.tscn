@@ -112,6 +112,20 @@ offset_bottom = 477.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="FloatingStartCampaignButton" type="Button" parent="." unique_id=900060178]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 690.0
+offset_top = 210.0
+offset_right = 940.0
+offset_bottom = 310.0
+theme_override_font_sizes/font_size = 32
+text = "Begin Journey"
+
 [node name="MainMargin" type="MarginContainer" parent="Panel" unique_id=900050001]
 layout_mode = 1
 anchors_preset = 15
@@ -230,6 +244,7 @@ layout_mode = 2
 text = "TRAINING"
 
 [node name="Header_Name" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060001]
+visible = false
 layout_mode = 2
 text = "Choose your Character's Name :"
 
@@ -297,6 +312,11 @@ color = Color(0.82, 0.67, 0.29, 0.10)
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 theme_override_constants/separation = 14
+
+[node name="RightColTopSpacer" type="Control" parent="Panel/MainMargin/MainVBox/TopRow/RightCol" unique_id=900060176]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
+mouse_filter = 2
 
 [node name="Section_Loadout" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/RightCol" unique_id=900060082]
 layout_mode = 2
@@ -411,16 +431,16 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="BottomRightSpacer" type="Control" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=900060040]
+[node name="HeroAndStartRow" type="HBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=900060177]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 12
 
-[node name="HeroBriefCard" type="PanelContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=900060170]
+[node name="HeroBriefCard" type="PanelContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow" unique_id=900060170]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 96)
 size_flags_horizontal = 3
 
-[node name="Margin" type="MarginContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard" unique_id=900060171]
+[node name="Margin" type="MarginContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard" unique_id=900060171]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -432,15 +452,15 @@ theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 12
 
-[node name="VBox" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin" unique_id=900060172]
+[node name="VBox" type="VBoxContainer" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard/Margin" unique_id=900060172]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox" unique_id=900060173]
+[node name="Title" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard/Margin/VBox" unique_id=900060173]
 layout_mode = 2
 text = "HERO BRIEF"
 
-[node name="Body" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox" unique_id=900060174]
+[node name="Body" type="Label" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard/Margin/VBox" unique_id=900060174]
 layout_mode = 2
 autowrap_mode = 3
 text = ""
@@ -475,12 +495,7 @@ offset_top = 152.0
 offset_right = 449.0
 offset_bottom = 175.0
 
-[node name="StartCampaignButton" type="Button" parent="Panel/MainMargin/MainVBox/BottomRow/BottomRight" unique_id=988009488]
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 32
-text = "Start Campaign"
+
 
 [node name="Label" type="Label" parent="Panel" unique_id=2123922835]
 visible = false

@@ -26,7 +26,8 @@ var items_by_rarity: Dictionary = {
 var folders_to_scan: Array[String] = [
 	"res://Resources/Materials/GeneratedMaterials/",
 	"res://Resources/Weapons/",
-	"res://Resources/GeneratedItems/"
+	"res://Resources/GeneratedItems/",
+	"res://Resources/Runes/",
 ]
 
 # Purpose: Triggers the recursive scan when the game starts.

@@ -78,7 +78,7 @@ const UnitInfoRuntimeHelpers := preload("res://Scripts/Core/BattleField/BattleFi
 @onready var start_confirmation: ConfirmationDialog = $StartConfirmation
 
 # Start button
-@onready var start_button: Button = $Panel/MainMargin/MainVBox/BottomRow/BottomRight/StartCampaignButton
+@onready var start_button: Button = $FloatingStartCampaignButton
 
 # Main panel (for entrance animation; no new node)
 @onready var _panel: Control = $Panel
@@ -98,7 +98,7 @@ const UnitInfoRuntimeHelpers := preload("res://Scripts/Core/BattleField/BattleFi
 @onready var reset_button: Button = get_node_or_null(reset_button_path) as Button
 @onready var undo_button: Button = get_node_or_null(undo_button_path) as Button
 
-@onready var hero_brief_card: PanelContainer = $Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard
+@onready var hero_brief_card: PanelContainer = $Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard
 @onready var summary_card_panel: Panel = $Panel/MainMargin/MainVBox/BottomRow/BottomLeft/SummaryCard
 @onready var soft_hints_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/SoftHintsLabel
 
@@ -465,7 +465,7 @@ func _apply_theme() -> void:
 			var i_style := _make_panel_style(Color(0.08, 0.07, 0.05, 0.96), CC_BORDER_MUTED, 1, 18, 0.26, 9, 3)
 			right_info.add_theme_stylebox_override("panel", i_style)
 
-		var hero_brief := panel.get_node_or_null("MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard") as PanelContainer
+		var hero_brief := panel.get_node_or_null("MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard") as PanelContainer
 		if hero_brief != null:
 			var hb_style := _make_panel_style(Color(0.08, 0.07, 0.05, 0.96), CC_BORDER_MUTED, 1, 18, 0.26, 9, 3)
 			hero_brief.add_theme_stylebox_override("panel", hb_style)
@@ -562,11 +562,11 @@ func _apply_theme() -> void:
 	if brief_body != null:
 		brief_body.add_theme_color_override("font_color", CC_TEXT_MUTED)
 
-	var hero_title := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox/Title") as Label
+	var hero_title := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard/Margin/VBox/Title") as Label
 	if hero_title != null:
 		hero_title.add_theme_color_override("font_color", CC_ACCENT)
 		hero_title.add_theme_font_size_override("font_size", 16)
-	var hero_body := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox/Body") as Label
+	var hero_body := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard/Margin/VBox/Body") as Label
 	if hero_body != null:
 		hero_body.add_theme_color_override("font_color", CC_TEXT_MUTED)
 
@@ -1218,6 +1218,252 @@ func _hero_brief_variant() -> int:
 	return int(mix) % 6
 
 
+func _class_key(class_label: String) -> String:
+	var k := class_label.strip_edges().to_lower()
+	k = k.replace("-", " ").replace("_", " ")
+	k = k.replace("  ", " ").strip_edges()
+	if k == "firesage":
+		k = "fire sage"
+	return k
+
+
+func _pick_weighted(pool: Array[String], seed: int) -> String:
+	if pool.is_empty():
+		return ""
+	var idx: int = int(abs(seed)) % pool.size()
+	return pool[idx]
+
+
+func _to_string_array(v: Variant) -> Array[String]:
+	var out: Array[String] = []
+	if v is Array:
+		for it in (v as Array):
+			out.append(str(it))
+	return out
+
+
+func _class_brief_pack(class_label: String) -> Dictionary:
+	# A small “voice pack” per class. Keep lines punchy so they fit the card.
+	var k := _class_key(class_label)
+	match k:
+		"archer":
+			return {
+				"openers": [
+					"%s watches the Rift like a distant treeline—quiet, measuring, unblinking.",
+					"%s counts breaths the way others count coins.",
+					"%s keeps their nerves where their arrows are: steady."
+				],
+				"ethos": [
+					"A %s with %s—range is safety, patience is pressure.",
+					"A %s carrying %s—every shot is a choice, not a reflex.",
+					"A %s with %s—distance buys time, time buys truth."
+				],
+				"closers": [
+					"When it matters, %s threads the gap between panic and precision.",
+					"%s isn't carried. It's the calm that finds the pulse of the fight.",
+					"%s arrives like a held breath finally released."
+				]
+			}
+		"knight":
+			return {
+				"openers": [
+					"%s stands where the line breaks—so it doesn't.",
+					"%s learned early: hold fast, and the world has to move around you.",
+					"%s carries the weight of orders like armor."
+				],
+				"ethos": [
+					"A %s braced behind %s—first in, last to yield.",
+					"A %s with %s—every step is a promise the enemy must answer.",
+					"A %s with %s—discipline made visible."
+				],
+				"closers": [
+					"%s isn't a tool. It's the moment their stance becomes law.",
+					"When the blow comes, %s answers with more than steel.",
+					"%s turns fear into a foothold."
+				]
+			}
+		"thief":
+			return {
+				"openers": [
+					"%s moves like a rumor—heard too late, never held.",
+					"%s smiles at locks, shadows, and bad odds.",
+					"%s treats the Rift like a crowded street: watch hands, watch exits."
+				],
+				"ethos": [
+					"A %s with %s—quick work, cleaner escape.",
+					"A %s carrying %s—fight unfair, live longer.",
+					"A %s with %s—never where the enemy expects the weight."
+				],
+				"closers": [
+					"%s is a trick of timing: a window opened, then gone.",
+					"%s isn't carried. It's stolen—one heartbeat at a time.",
+					"%s turns the battlefield into a puzzle with missing pieces."
+				]
+			}
+		"mage":
+			return {
+				"openers": [
+					"%s keeps their voice low—power doesn't need to shout.",
+					"%s reads the air like a page waiting to burn.",
+					"%s learned that thought can be sharper than any edge."
+				],
+				"ethos": [
+					"A %s with %s—knowledge made dangerous.",
+					"A %s carrying %s—every sigil paid for in sleepless nights.",
+					"A %s with %s—distance is nice, control is better."
+				],
+				"closers": [
+					"%s isn't carried. It's invoked—clean, deliberate, final.",
+					"%s is the spark that turns a plan into a problem.",
+					"%s arrives like a verdict."
+				]
+			}
+		"cleric":
+			return {
+				"openers": [
+					"%s learned mercy with their hands—and judgment with their spine.",
+					"%s prays without asking permission from the world.",
+					"%s keeps a quiet tally: who needs mending, and who needs ending."
+				],
+				"ethos": [
+					"A %s with %s—hope on one side, consequence on the other.",
+					"A %s carrying %s—steady hands in an unsteady war.",
+					"A %s with %s—healing is a strategy, not a sentiment."
+				],
+				"closers": [
+					"%s isn't carried. It's a decision: save, or sever.",
+					"%s turns pain into momentum.",
+					"%s arrives like a blessing that bites."
+				]
+			}
+		"paladin":
+			return {
+				"openers": [
+					"%s wears conviction the way others wear steel.",
+					"%s steps forward and the air feels… judged.",
+					"%s doesn't ask if the path is hard. They ask if it's right."
+				],
+				"ethos": [
+					"A %s with %s—vows first, victory second.",
+					"A %s carrying %s—radiance with a sharp edge.",
+					"A %s with %s—steadfast, luminous, relentless."
+				],
+				"closers": [
+					"%s isn't carried. It's answered for—by oath and by action.",
+					"%s turns resolve into a weapon no hand can drop.",
+					"%s arrives like dawn: slow, then all at once."
+				]
+			}
+		"spellblade":
+			return {
+				"openers": [
+					"%s balances two hungers: steel and spell.",
+					"%s learned to fight in margins—between blade‑range and casting distance.",
+					"%s makes war look like craft."
+				],
+				"ethos": [
+					"A %s with %s—edge and ember in the same motion.",
+					"A %s carrying %s—every swing writes a rune the enemy can feel.",
+					"A %s with %s—precision first, spectacle second."
+				],
+				"closers": [
+					"%s isn't carried. It's woven—threaded through muscle and mind.",
+					"%s turns an opening into a chain of certainties.",
+					"%s arrives like a practiced duet: blade, then breath."
+				]
+			}
+		"monk":
+			return {
+				"openers": [
+					"%s counts heartbeats and calls it training.",
+					"%s learned to win by yielding—until yielding stops.",
+					"%s carries no noise they can't afford."
+				],
+				"ethos": [
+					"A %s with %s—focus made lethal.",
+					"A %s carrying %s—every motion paid for in discipline.",
+					"A %s with %s—calm, then impact."
+				],
+				"closers": [
+					"%s isn't carried. It's breathed—then delivered.",
+					"%s turns chaos into cadence.",
+					"%s arrives like silence after thunder."
+				]
+			}
+		"mercenary":
+			return {
+				"openers": [
+					"%s has seen too many banners to trust any of them.",
+					"%s knows the sound a bad plan makes—right before it costs lives.",
+					"%s walks into the Rift like it's just another contract… until it isn't."
+				],
+				"ethos": [
+					"A %s with %s—practical, proven, paid for.",
+					"A %s carrying %s—no sermons, just outcomes.",
+					"A %s with %s—survive first, heroics later."
+				],
+				"closers": [
+					"%s isn't carried. It's the trick they only use when the math goes ugly.",
+					"%s arrives like a veteran's shortcut: fast and final.",
+					"%s turns risk into leverage."
+				]
+			}
+		"warrior":
+			return {
+				"openers": [
+					"%s treats fear like kindling.",
+					"%s lives for the first clash—the moment the world admits it can bleed.",
+					"%s doesn't wait for permission to be dangerous."
+				],
+				"ethos": [
+					"A %s with %s—momentum made manifest.",
+					"A %s carrying %s—hit hard, hit honest, keep moving.",
+					"A %s with %s—frontline truth."
+				],
+				"closers": [
+					"%s isn't carried. It's unleashed—loud, clean, irreversible.",
+					"%s arrives like a roar the enemy can't ignore.",
+					"%s turns pain into fuel."
+				]
+			}
+		"fire sage":
+			return {
+				"openers": [
+					"%s keeps embers under the tongue and a storm behind the eyes.",
+					"%s learned to burn carefully—so the world burns instead.",
+					"%s looks at the Rift and sees something that can be cauterized."
+				],
+				"ethos": [
+					"A %s with %s—heat with intent, not chaos.",
+					"A %s carrying %s—every spark placed where it hurts most.",
+					"A %s with %s—control the blaze, control the battle."
+				],
+				"closers": [
+					"%s isn't carried. It's kindled—then fed.",
+					"%s arrives like flame finding oil.",
+					"%s turns the air itself into an argument."
+				]
+			}
+		_:
+			return {
+				"openers": [
+					"%s steps toward the Rift—one more name for the dark to test.",
+					"%s answers the call with a steady gaze.",
+					"%s doesn't know what the Rift wants. They plan to find out."
+				],
+				"ethos": [
+					"A %s with %s—ready enough.",
+					"A %s carrying %s—whatever works.",
+					"A %s with %s—sharp, stubborn, present."
+				],
+				"closers": [
+					"%s isn't carried. It's the moment they decide the fight ends.",
+					"%s arrives when the world goes sharp.",
+					"%s turns doubt into motion."
+				]
+			}
+
+
 func _compose_hero_brief_text() -> String:
 	var subject := _brief_subject()
 	var cls := ""
@@ -1231,39 +1477,24 @@ func _compose_hero_brief_text() -> String:
 	if abil.is_empty():
 		abil = "their knack"
 	var wpn := _cc_weapon_short_name()
+	var pack := _class_brief_pack(cls)
 	var v: int = _hero_brief_variant()
 
-	var l1: String
-	var l2: String
-	var l3: String
-	match v:
-		0:
-			l1 = "%s steps toward the Rift—one more tale the embers will try to eat." % subject
-			l2 = "As a %s, they keep %s like a vow: close, familiar, earned." % [cls, wpn]
-			l3 = "%s is not something they buckle on. It rises with the breath before the blow." % abil
-		1:
-			l1 = "The war-log gains a line: %s." % subject
-			l2 = "Steel names itself %s; the ledger names them %s." % [wpn, cls]
-			l3 = "When the moment narrows, %s answers—instinct, not inventory." % abil
-		2:
-			l1 = "%s listens for the horn the way others listen for rain on a roof." % subject
-			l2 = "Their kit is plain: %s. Their pedigree reads %s." % [wpn, cls]
-			l3 = "The third truth is %s—a knack blood knows before the mind agrees." % abil
-		3:
-			l1 = "%s does not bargain with the Rift. They bargain with themselves." % subject
-			l2 = "Discipline of a %s; comfort with %s that only veterans recognize on sight." % [cls, wpn]
-			l3 = "%s waits behind the eyes—patient until patience is a lie." % abil
-		4:
-			if _brief_is_named():
-				l1 = "Another soul chooses the breach. This one is %s." % subject
-			else:
-				l1 = "Another soul chooses the breach—nameless still, but not hollow."
-			l2 = "On the field they read as %s; in the hand, %s." % [cls, wpn]
-			l3 = "What no drill teaches is %s—only the line reveals it." % abil
-		_:
-			l1 = "%s carries a quiet kind of thunder—useful, and a little dangerous." % subject
-			l2 = "As a %s, they trust %s the way others trust compass north." % [cls, wpn]
-			l3 = "%s is the wild card: not carried, but called up when the world goes sharp." % abil
+	var openers: Array[String] = _to_string_array(pack.get("openers", []))
+	var ethos: Array[String] = _to_string_array(pack.get("ethos", []))
+	var closers: Array[String] = _to_string_array(pack.get("closers", []))
+
+	var l1_t := _pick_weighted(openers, v * 37 + current_weapon_index * 11 + hash(subject))
+	var l2_t := _pick_weighted(ethos, v * 53 + ability_dropdown.selected * 13 + hash(cls))
+	var l3_t := _pick_weighted(closers, v * 71 + hash(abil))
+
+	var l1 := l1_t % subject if l1_t.find("%s") >= 0 else l1_t
+	var l2 := l2_t % [cls, wpn] if l2_t.find("%s") >= 0 else l2_t
+	var l3 := l3_t % abil if l3_t.find("%s") >= 0 else l3_t
+
+	# Make unnamed subjects read better ("This recruit") by avoiding awkward repetition.
+	if not _brief_is_named():
+		l1 = l1.replace("This recruit", "The recruit")
 
 	return "%s\n%s\n%s" % [l1, l2, l3]
 
@@ -1281,7 +1512,7 @@ func _update_right_brief() -> void:
 		diff_name = difficulty_dropdown.get_item_text(difficulty_dropdown.selected)
 	body.text = "Knack: %s\nDifficulty: %s\nArms: %s" % [ability_name, diff_name, weapon_one]
 
-	var hero_body := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroBriefCard/Margin/VBox/Body") as Label
+	var hero_body := get_node_or_null("Panel/MainMargin/MainVBox/BottomRow/BottomRight/HeroAndStartRow/HeroBriefCard/Margin/VBox/Body") as Label
 	if hero_body == null:
 		return
 	hero_body.text = _compose_hero_brief_text()

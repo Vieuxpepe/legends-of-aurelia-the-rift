@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RuneItemData" format=3]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_icon"]
+[ext_resource type="Script" path="res://Scripts/Core/RuneItemData.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+rune_id = "ward_rune"
+rarity = "Rare"
+item_name = "Ward Rune Stone"
+description = "A protective rune stone. Requires advanced runesmithing. Socket at the forge with a weapon."
+gold_cost = 90
+icon = ExtResource("1_icon")
+category = "Runes"

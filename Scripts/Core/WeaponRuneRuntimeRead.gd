@@ -24,6 +24,10 @@ const _SOCKET_SOURCE_KEYS_ALLOWED: Dictionary = {"id": true, "rank": true, "char
 const KNOWN_AUTHORING_RUNE_IDS: Dictionary = {
 	"ember": true,
 	"ember_rune": true,
+	"swift": true,
+	"swift_rune": true,
+	"flux": true,
+	"flux_rune": true,
 	"ward": true,
 	"ward_rune": true,
 }

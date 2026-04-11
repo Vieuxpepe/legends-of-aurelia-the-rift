@@ -394,6 +394,23 @@ var iron_item_path: String = "res://Resources/GeneratedItems/Mat_Iron_Ore.tres"
 
 # --- CRAFTING UNLOCKS ---
 var has_recipe_book: bool = false
+## One-time Haldor line the first time the forge opens after runesmithing is unlocked (save/load with campaign).
+var seen_haldor_runesmith_forge_intro: bool = false
+## Between-battle Haldor beat IDs (FIFO). Queued when a frontier story map is cleared; consumed by Talk / rare forge open.
+var haldor_beat_queue: Array[String] = []
+## Beat IDs already shown (once-only beats skipped on re-queue).
+var haldor_seen_beat_ids: Dictionary = {}
+## Optional full-screen Haldor solo scenes (see [method begin_haldor_solo_scene]); not saved while mid-transition.
+var pending_haldor_solo_scene_id: String = ""
+var haldor_solo_return_scene_path: String = "res://Scenes/camp_menu.tscn"
+## Solo scene ids the player has finished at least once (replay still allowed from camp).
+var haldor_solo_seen_scene_ids: Dictionary = {}
+## Solo scene ids whose [method try_grant_haldor_solo_scene_rewards] bundle was already granted (persisted).
+var haldor_solo_rewards_claimed: Dictionary = {}
+## Queued after a solo scene ends; camp_menu plays pickup FX then clears (not saved).
+var pending_haldor_solo_gift_fx: Array = []
+## Dev-only: when true, forge [signal RichTextLabel.meta_clicked] may launch a solo scene even if locked/already seen (camp_menu F9 test).
+var debug_haldor_solo_meta_gates_bypass: bool = false
 var has_smelter: bool = false
 var unlocked_recipes: Array[String] = []
 
@@ -673,6 +690,15 @@ func reset_campaign_data() -> void:
 	expedition_cartographer_visible_map_ids.clear()
 	clear_pending_mock_coop_battle_handoff()
 	has_recipe_book = false
+	seen_haldor_runesmith_forge_intro = false
+	haldor_beat_queue.clear()
+	haldor_seen_beat_ids.clear()
+	pending_haldor_solo_scene_id = ""
+	haldor_solo_return_scene_path = "res://Scenes/camp_menu.tscn"
+	haldor_solo_seen_scene_ids.clear()
+	haldor_solo_rewards_claimed.clear()
+	pending_haldor_solo_gift_fx.clear()
+	debug_haldor_solo_meta_gates_bypass = false
 	has_smelter = false
 	unlocked_recipes.clear()
 	unlocked_music_paths.clear()
@@ -1133,6 +1159,11 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"expedition_cartographer_offer_stamp": int(expedition_cartographer_offer_stamp),
 		"expedition_cartographer_visible_map_ids": expedition_cartographer_visible_map_ids.duplicate(),
 		"has_recipe_book": has_recipe_book,
+		"seen_haldor_runesmith_forge_intro": seen_haldor_runesmith_forge_intro,
+		"haldor_beat_queue": haldor_beat_queue.duplicate(),
+		"haldor_seen_beat_ids": haldor_seen_beat_ids.duplicate(),
+		"haldor_solo_seen_scene_ids": haldor_solo_seen_scene_ids.duplicate(),
+		"haldor_solo_rewards_claimed": haldor_solo_rewards_claimed.duplicate(),
 		"has_smelter": has_smelter,
 		"unlocked_music_paths": unlocked_music_paths,
 		"saved_music_playlists": saved_music_playlists.duplicate(),
@@ -1398,6 +1429,28 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		jukebox_sort_mode = "unlock"
 
 	has_recipe_book = save_data.get("has_recipe_book", false)
+	seen_haldor_runesmith_forge_intro = bool(save_data.get("seen_haldor_runesmith_forge_intro", false))
+	haldor_beat_queue.clear()
+	for x in save_data.get("haldor_beat_queue", []):
+		haldor_beat_queue.append(str(x))
+	haldor_seen_beat_ids.clear()
+	var raw_haldor_seen: Variant = save_data.get("haldor_seen_beat_ids", {})
+	if raw_haldor_seen is Dictionary:
+		for k in (raw_haldor_seen as Dictionary).keys():
+			haldor_seen_beat_ids[str(k)] = true
+	haldor_solo_seen_scene_ids.clear()
+	var raw_haldor_solo_seen: Variant = save_data.get("haldor_solo_seen_scene_ids", {})
+	if raw_haldor_solo_seen is Dictionary:
+		for k2 in (raw_haldor_solo_seen as Dictionary).keys():
+			haldor_solo_seen_scene_ids[str(k2)] = true
+	haldor_solo_rewards_claimed.clear()
+	var raw_haldor_rew: Variant = save_data.get("haldor_solo_rewards_claimed", {})
+	if raw_haldor_rew is Dictionary:
+		for rk in (raw_haldor_rew as Dictionary).keys():
+			haldor_solo_rewards_claimed[str(rk)] = true
+	pending_haldor_solo_scene_id = ""
+	pending_haldor_solo_gift_fx.clear()
+	debug_haldor_solo_meta_gates_bypass = false
 	unlocked_recipes.clear()
 	for r in save_data.get("unlocked_recipes", []): unlocked_recipes.append(str(r))
 		
@@ -1604,6 +1657,112 @@ func is_runesmithing_unlocked() -> bool:
 
 func has_advanced_runesmithing() -> bool:
 	return get_runesmithing_unlock_tier() >= RUNESMITHING_TIER_ADVANCED
+
+
+## Queues Haldor interstitial beat IDs after clearing story map index [param cleared_map_index] (frontier clear only; see victory handler).
+func queue_haldor_beats_for_cleared_map(cleared_map_index: int) -> void:
+	var ids: Array = DialogueDatabase.get_haldor_beat_ids_for_cleared_map(cleared_map_index)
+	for v in ids:
+		var sid: String = str(v).strip_edges()
+		if sid == "":
+			continue
+		var ent: Dictionary = DialogueDatabase.get_haldor_beat_entry(sid)
+		if bool(ent.get("once", true)) and bool(haldor_seen_beat_ids.get(sid, false)):
+			continue
+		haldor_beat_queue.append(sid)
+
+
+func haldor_has_pending_beats() -> bool:
+	return not haldor_beat_queue.is_empty()
+
+
+func peek_haldor_beat_queue_front_id() -> String:
+	if haldor_beat_queue.is_empty():
+		return ""
+	return str(haldor_beat_queue[0]).strip_edges()
+
+
+## Pops front beat, marks once-only as seen, returns line text (may be empty if data missing).
+func try_consume_haldor_beat_from_queue() -> String:
+	if haldor_beat_queue.is_empty():
+		return ""
+	var id: String = str(haldor_beat_queue[0]).strip_edges()
+	haldor_beat_queue.remove_at(0)
+	var ent: Dictionary = DialogueDatabase.get_haldor_beat_entry(id)
+	var txt: String = str(ent.get("text", "")).strip_edges()
+	if bool(ent.get("once", true)) and id != "":
+		haldor_seen_beat_ids[id] = true
+	return txt
+
+
+func mark_haldor_solo_scene_seen(scene_id: String) -> void:
+	var k: String = str(scene_id).strip_edges()
+	if k == "":
+		return
+	haldor_solo_seen_scene_ids[k] = true
+
+
+func try_grant_haldor_solo_scene_rewards(scene_id: String) -> void:
+	var sid: String = str(scene_id).strip_edges()
+	if sid == "":
+		return
+	if bool(haldor_solo_rewards_claimed.get(sid, false)):
+		return
+	var specs: Array = DialogueDatabase.get_haldor_solo_reward_entries(sid)
+	if specs.is_empty():
+		return
+	var any_inventory_added: bool = false
+	for spec_raw in specs:
+		if not (spec_raw is Dictionary):
+			continue
+		var spec: Dictionary = spec_raw as Dictionary
+		var path: String = str(spec.get("item_path", "")).strip_edges()
+		if path == "" or not ResourceLoader.exists(path):
+			push_warning("Haldor solo reward: missing item_path %s" % path)
+			continue
+		var tpl: Resource = load(path) as Resource
+		if tpl == null:
+			continue
+		var amt: int = maxi(1, int(spec.get("amount", 1)))
+		var toast: String = str(spec.get("toast", "From Haldor")).strip_edges()
+		if toast == "":
+			toast = "From Haldor"
+		var icon_item: Resource = null
+		for _i in range(amt):
+			var inst: Resource = duplicate_item(tpl)
+			if inst == null:
+				continue
+			global_inventory.append(inst)
+			if icon_item == null:
+				icon_item = inst
+		if icon_item != null:
+			any_inventory_added = true
+			pending_haldor_solo_gift_fx.append({
+				"item": icon_item,
+				"amount": amt,
+				"toast": toast,
+			})
+	# One grant attempt per scene: never farm replays even if every item path failed.
+	if not specs.is_empty():
+		haldor_solo_rewards_claimed[sid] = true
+
+
+func consume_pending_haldor_solo_gift_fx() -> Array:
+	var out: Array = pending_haldor_solo_gift_fx.duplicate()
+	pending_haldor_solo_gift_fx.clear()
+	return out
+
+
+func has_pending_haldor_solo_gift_fx() -> bool:
+	return not pending_haldor_solo_gift_fx.is_empty()
+
+
+func begin_haldor_solo_scene(scene_id: String, return_scene_path: String = "") -> void:
+	debug_haldor_solo_meta_gates_bypass = false
+	pending_haldor_solo_scene_id = str(scene_id).strip_edges()
+	var rp: String = str(return_scene_path).strip_edges()
+	haldor_solo_return_scene_path = rp if rp != "" else "res://Scenes/camp_menu.tscn"
+	SceneTransition.change_scene_to_file("res://Scenes/Narrative/HaldorSoloScene.tscn")
 
 
 func has_seen_camp_lore(lore_id: String) -> bool:
@@ -2163,7 +2322,9 @@ func load_next_level() -> void:
 		next_scene = post_battle_transitions[current_level_index]
 
 	if current_level_index == max_unlocked_index:
+		var cleared_story_map_index: int = current_level_index
 		max_unlocked_index += 1
+		queue_haldor_beats_for_cleared_map(cleared_story_map_index)
 		# Camp request pacing: advance only when a story level is actually cleared.
 		camp_request_progress_level += 1
 		_sync_runesmithing_unlock_tier_from_camp_progress()

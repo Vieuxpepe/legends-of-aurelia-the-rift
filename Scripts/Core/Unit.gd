@@ -193,7 +193,7 @@ var equipped_weapon: WeaponData
 func get_equipped_weapon_rune_runtime_summary() -> Dictionary:
 	return WeaponRuneRuntimeRead.build_summary(equipped_weapon)
 
-## Pass 6: aggregated rune combat modifiers (see [WeaponRuneAppliedEffectsResolver]); not gated by combat toggle.
+## Pass 6: aggregated rune combat modifiers (see [WeaponRuneAppliedEffectsResolver]). Forecast/strike use [method WeaponRuneAppliedEffectsResolver.is_apply_enabled].
 func get_equipped_weapon_rune_applied_effects() -> Dictionary:
 	return WeaponRuneAppliedEffectsResolver.resolve_from_weapon(equipped_weapon)
 

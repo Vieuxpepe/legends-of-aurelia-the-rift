@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RuneItemData" format=3]
+
+[ext_resource type="Texture2D" uid="uid://icqmcnyv647u" path="res://Resources/Materials/GeneratedMaterials/Icons/crafting.png" id="1_icon"]
+[ext_resource type="Script" path="res://Scripts/Core/RuneItemData.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+rune_id = "swift_rune"
+rarity = "Uncommon"
+item_name = "Swift Rune Stone"
+description = "A nimble rune stone. Socket at the forge with a weapon — no ore cost, only this stone is consumed."
+gold_cost = 45
+icon = ExtResource("1_icon")
+category = "Runes"

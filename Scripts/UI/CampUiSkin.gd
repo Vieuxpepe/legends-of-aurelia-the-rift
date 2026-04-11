@@ -420,3 +420,128 @@ static func style_dossier_row_panel(surface: Control, accent: Color, overcap: bo
 		0.92
 	)
 	style_panel_surface(surface, tinted, border, 8, 2)
+
+
+## Tab bar for camp inventory / shop category rails (matches hub menu styling).
+static func style_tabs(tab_bar: TabBar) -> void:
+	if tab_bar == null:
+		return
+	tab_bar.clip_tabs = true
+	tab_bar.add_theme_font_size_override("font_size", 18)
+	tab_bar.add_theme_stylebox_override("tab_selected", make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 14, 0))
+	tab_bar.add_theme_stylebox_override("tab_hovered", make_button_style(Color(0.35, 0.27, 0.15, 0.98), CAMP_BORDER, 14, 0))
+	tab_bar.add_theme_stylebox_override("tab_unselected", make_button_style(Color(0.18, 0.13, 0.08, 0.92), CAMP_BORDER_SOFT, 14, 0))
+	tab_bar.add_theme_stylebox_override("tab_disabled", make_button_style(Color(0.12, 0.09, 0.06, 0.82), CAMP_BORDER_SOFT.darkened(0.15), 14, 0))
+
+
+static func style_slider(slider: Range) -> void:
+	if slider == null:
+		return
+	slider.mouse_filter = Control.MOUSE_FILTER_STOP
+	if not slider is Slider:
+		return
+	var groove := make_button_style(Color(0.08, 0.06, 0.04, 0.94), Color(0, 0, 0, 0), 8, 0)
+	var grabber := make_button_style(CAMP_BORDER, CAMP_BORDER, 10, 2)
+	var grabber_highlight := make_button_style(CAMP_ACCENT_CYAN, CAMP_ACCENT_CYAN, 10, 2)
+	var s := slider as Slider
+	s.add_theme_stylebox_override("slider", groove)
+	s.add_theme_stylebox_override("grabber_area", groove)
+	s.add_theme_stylebox_override("grabber_area_highlight", make_button_style(Color(0.15, 0.12, 0.08, 0.98), CAMP_BORDER_SOFT, 8, 0))
+	s.add_theme_stylebox_override("grabber", grabber)
+	s.add_theme_stylebox_override("grabber_highlight", grabber_highlight)
+
+
+static func style_item_list(list: ItemList) -> void:
+	if list == null:
+		return
+	list.mouse_filter = Control.MOUSE_FILTER_STOP
+	list.focus_mode = Control.FOCUS_ALL
+	list.select_mode = ItemList.SELECT_MULTI
+	list.add_theme_font_size_override("font_size", 18)
+	list.add_theme_color_override("font_color", CAMP_TEXT)
+	list.add_theme_color_override("font_selected_color", CAMP_TEXT)
+	list.add_theme_color_override("font_hovered_color", Color(1, 1, 1, 1))
+	list.add_theme_color_override("font_hovered_selected_color", Color(1, 1, 1, 1))
+	list.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
+	list.add_theme_constant_override("outline_size", 2)
+	list.add_theme_color_override("guide_color", CAMP_BORDER_SOFT)
+	var panel_style := make_panel_style(Color(0.08, 0.06, 0.04, 0.94), CAMP_BORDER_SOFT, 16, 0)
+	panel_style.content_margin_left = 10.0
+	panel_style.content_margin_top = 20.0
+	panel_style.content_margin_right = 10.0
+	panel_style.content_margin_bottom = 8.0
+	list.add_theme_stylebox_override("panel", panel_style)
+	list.add_theme_stylebox_override("cursor", make_button_style(Color(0.13, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 12, 0))
+	list.add_theme_stylebox_override("cursor_unfocused", make_button_style(Color(0.10, 0.08, 0.06, 0.96), CAMP_BORDER, 12, 0))
+	list.add_theme_stylebox_override("selected", make_button_style(Color(0.12, 0.09, 0.06, 0.98), CAMP_BORDER, 12, 0))
+	list.add_theme_stylebox_override("selected_focus", make_button_style(Color(0.14, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 12, 0))
+
+
+static func style_check_button(check: BaseButton, font_size: int = 16) -> void:
+	if check == null:
+		return
+	check.focus_mode = Control.FOCUS_ALL
+	check.mouse_filter = Control.MOUSE_FILTER_STOP
+	check.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	check.add_theme_font_size_override("font_size", font_size)
+	check.add_theme_color_override("font_color", CAMP_TEXT)
+	check.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	check.add_theme_color_override("font_pressed_color", CAMP_TEXT)
+	check.add_theme_color_override("font_focus_color", CAMP_TEXT)
+
+
+## Non-interactive header strip (roster / quartermaster / merchant section titles).
+static func style_section_badge(button: Button, text_value: String, font_color: Color = CAMP_BORDER) -> void:
+	if button == null:
+		return
+	button.text = text_value
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.add_theme_font_size_override("font_size", 20)
+	button.add_theme_color_override("font_color", font_color)
+	button.add_theme_color_override("font_hover_color", font_color)
+	button.add_theme_color_override("font_pressed_color", font_color)
+	button.add_theme_color_override("font_focus_color", font_color)
+	var clear_style := StyleBoxFlat.new()
+	clear_style.bg_color = Color(0, 0, 0, 0)
+	clear_style.set_border_width_all(0)
+	button.add_theme_stylebox_override("normal", clear_style)
+	button.add_theme_stylebox_override("hover", clear_style)
+	button.add_theme_stylebox_override("pressed", clear_style)
+	button.add_theme_stylebox_override("focus", clear_style)
+	button.add_theme_stylebox_override("disabled", clear_style)
+
+
+## Merchant dialogue option: normal or “dangerous” (red) accent.
+static func style_merchant_talk_option(btn: Button, dangerous: bool, font_size: int = 16, min_h: float = 38.0) -> void:
+	if btn == null:
+		return
+	btn.focus_mode = Control.FOCUS_ALL
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn.custom_minimum_size.y = min_h
+	btn.add_theme_font_size_override("font_size", font_size)
+	btn.add_theme_color_override("font_color", CAMP_TEXT)
+	btn.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
+	btn.add_theme_color_override("font_pressed_color", CAMP_TEXT)
+	btn.add_theme_color_override("font_focus_color", CAMP_TEXT)
+	var fill: Color = CAMP_ACTION_SECONDARY
+	var border_n: Color = CAMP_BORDER_SOFT
+	var border_h: Color = CAMP_BORDER
+	var border_f: Color = Color(0.96, 0.84, 0.42, 1.0)
+	if dangerous:
+		border_n = Color(0.68, 0.30, 0.26, 1.0)
+		border_h = Color(0.88, 0.40, 0.34, 1.0)
+		border_f = Color(1.0, 0.52, 0.42, 1.0)
+	btn.add_theme_stylebox_override("normal", make_button_style(fill, border_n))
+	btn.add_theme_stylebox_override("hover", make_button_style(fill.lightened(0.12), border_h))
+	btn.add_theme_stylebox_override("pressed", make_button_style(fill.darkened(0.08), border_h))
+	var focus_st := make_button_style(fill.lightened(0.06), border_f, 18, 8)
+	focus_st.set_border_width_all(3)
+	btn.add_theme_stylebox_override("focus", focus_st)
+	btn.add_theme_stylebox_override(
+		"disabled",
+		make_button_style(fill.darkened(0.10), border_n.darkened(0.15), 18, 0)
+	)

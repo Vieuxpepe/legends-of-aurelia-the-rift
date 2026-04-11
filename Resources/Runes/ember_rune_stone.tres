@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RuneItemData" format=3]
+
+[ext_resource type="Texture2D" uid="uid://d2hocs24kueux" path="res://Resources/Materials/GeneratedMaterials/Icons/lore_and_misc.png" id="1_icon"]
+[ext_resource type="Script" path="res://Scripts/Core/RuneItemData.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+rune_id = "ember_rune"
+rarity = "Uncommon"
+item_name = "Ember Rune Stone"
+description = "A warm rune stone. At the forge, place this and a weapon on the anvil, then choose SOCKET. No extra materials."
+gold_cost = 45
+icon = ExtResource("1_icon")
+category = "Runes"

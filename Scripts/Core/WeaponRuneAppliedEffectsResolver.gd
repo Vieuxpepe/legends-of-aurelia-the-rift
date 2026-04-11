@@ -11,7 +11,9 @@
 # - Charges: not used in Pass 6 ([member apply_notes] includes [code]charges_not_applied_pass6[/code]).
 #
 # --- Known families (display-aligned ids) ---
-# - ember / ember_rune → might (+1 base per scaled row; hit reserved at 0 for now).
+# - ember / ember_rune → might (+1 base per scaled row).
+# - swift / swift_rune → hit (+1 base per scaled row).
+# - flux / flux_rune → might and hit (+1 each base per scaled row).
 # - ward / ward_rune → defense and resistance (+1 each base per scaled row); combat applies the
 #   stat that matches incoming damage type (physical → defense, magic → resistance).
 class_name WeaponRuneAppliedEffectsResolver
@@ -21,21 +23,26 @@ const APPLIED_VERSION: int = 1
 const RANK_SCALE_CAP: int = 10
 
 ## When false, forecast and strike resolution skip rune flat modifiers (this script still resolves for UI/tools).
-## Default off until runesmithing is unlocked in campaign progression; set true to roll combat runes on.
-const WEAPON_RUNE_APPLY_IN_COMBAT: bool = false
+## Gated at runtime by [method is_apply_enabled] (campaign runesmithing unlock).
+const WEAPON_RUNE_APPLY_IN_COMBAT: bool = true
 
 const _FAMILY_EMBER: String = "ember"
+const _FAMILY_SWIFT: String = "swift"
+const _FAMILY_FLUX: String = "flux"
 const _FAMILY_WARD: String = "ward"
 
 ## Per-family base contribution at multiplier 1 (scaled per row by rank policy above).
 const _FAMILY_BASE: Dictionary = {
 	"ember": {"might": 1, "hit": 0, "defense": 0, "resistance": 0},
+	"swift": {"might": 0, "hit": 1, "defense": 0, "resistance": 0},
+	"flux": {"might": 1, "hit": 1, "defense": 0, "resistance": 0},
 	"ward": {"might": 0, "hit": 0, "defense": 1, "resistance": 1},
 }
 
 
 static func is_apply_enabled() -> bool:
-	return WEAPON_RUNE_APPLY_IN_COMBAT
+	# Master switch + campaign gate: sockets only matter in combat once runesmithing is unlocked.
+	return WEAPON_RUNE_APPLY_IN_COMBAT and CampaignManager.is_runesmithing_unlocked()
 
 
 static func resolve_from_weapon(weapon: Variant) -> Dictionary:
@@ -86,6 +93,10 @@ static func resolve_from_runtime_summary(runtime: Variant) -> Dictionary:
 static func _family_for_normalized_id(id_norm: String) -> String:
 	if id_norm == "ember" or id_norm == "ember_rune":
 		return _FAMILY_EMBER
+	if id_norm == "swift" or id_norm == "swift_rune":
+		return _FAMILY_SWIFT
+	if id_norm == "flux" or id_norm == "flux_rune":
+		return _FAMILY_FLUX
 	if id_norm == "ward" or id_norm == "ward_rune":
 		return _FAMILY_WARD
 	return ""

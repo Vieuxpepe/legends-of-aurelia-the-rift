@@ -16,6 +16,7 @@
  #   - DragonManager: dragon roster + hatch/ownership flows used by the ranch panel.
  #   - DialogueDatabase: merchant/herder/blacksmith talk lines + selection helpers.
  #   - SceneTransition: scene changes to map/levels/arena.
+ #   - CampUiSkin (Scripts/UI/CampUiSkin.gd): shared palette + style helpers; camp_menu aliases CAMP_* from it.
  #
  # AI/Reviewer Guidance
  # - Entry point: `_ready()` wires signals and performs initial population.
@@ -29,27 +30,35 @@ extends Control
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
 const PromotionChoiceUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionChoiceUiHelpers.gd")
 const PromotionFlowSharedHelpers = preload("res://Scripts/Core/PromotionFlowSharedHelpers.gd")
-const CAMP_PANEL_BG := Color(0.13, 0.097, 0.068, 0.88)
-const CAMP_PANEL_BG_ALT := Color(0.17, 0.126, 0.083, 0.94)
-const CAMP_PANEL_BG_SOFT := Color(0.08, 0.061, 0.043, 0.82)
-const CAMP_BORDER := Color(0.82, 0.66, 0.24, 0.96)
-const CAMP_BORDER_SOFT := Color(0.47, 0.38, 0.17, 0.94)
-const CAMP_TEXT := Color(0.94, 0.91, 0.84, 1.0)
-const CAMP_MUTED := Color(0.73, 0.68, 0.60, 1.0)
-const CAMP_ACCENT_CYAN := Color(0.48, 0.87, 1.0, 1.0)
-const CAMP_ACCENT_GREEN := Color(0.40, 0.94, 0.54, 1.0)
-const CAMP_ACTION_PRIMARY := Color(0.76, 0.58, 0.19, 0.96)
-const CAMP_ACTION_SECONDARY := Color(0.28, 0.21, 0.13, 0.94)
-const CAMP_UNIT_INFO_STAT_BAR_CAP := 50.0
-const CAMP_UNIT_INFO_STAT_TIER_CYAN := Color(0.28, 0.88, 1.0, 1.0)
-const CAMP_UNIT_INFO_STAT_TIER_PURPLE := Color(0.76, 0.48, 1.0, 1.0)
-const CAMP_UNIT_INFO_STAT_TIER_ORANGE := Color(1.0, 0.64, 0.22, 1.0)
-const CAMP_UNIT_INFO_STAT_TIER_WHITE := Color(0.96, 0.96, 0.98, 1.0)
+## Single source for camp palette + shared UI helpers (`Scripts/UI/CampUiSkin.gd`).
+const CampUiSkin := preload("res://Scripts/UI/CampUiSkin.gd")
+const CampMenuMotion: Script = preload("res://Scripts/UI/CampMenuMotion.gd")
+const CAMP_PANEL_BG := CampUiSkin.CAMP_PANEL_BG
+const CAMP_PANEL_BG_ALT := CampUiSkin.CAMP_PANEL_BG_ALT
+const CAMP_PANEL_BG_SOFT := CampUiSkin.CAMP_PANEL_BG_SOFT
+const CAMP_BORDER := CampUiSkin.CAMP_BORDER
+const CAMP_BORDER_SOFT := CampUiSkin.CAMP_BORDER_SOFT
+const CAMP_TEXT := CampUiSkin.CAMP_TEXT
+const CAMP_MUTED := CampUiSkin.CAMP_MUTED
+const CAMP_ACCENT_CYAN := CampUiSkin.CAMP_ACCENT_CYAN
+const CAMP_ACCENT_GREEN := CampUiSkin.CAMP_ACCENT_GREEN
+const CAMP_ACTION_PRIMARY := CampUiSkin.CAMP_ACTION_PRIMARY
+const CAMP_ACTION_SECONDARY := CampUiSkin.CAMP_ACTION_SECONDARY
+const CAMP_UNIT_INFO_STAT_BAR_CAP := CampUiSkin.UNIT_DOSSIER_STAT_BAR_CAP
+const CAMP_UNIT_INFO_STAT_TIER_CYAN := CampUiSkin.UNIT_DOSSIER_STAT_TIER_CYAN
+const CAMP_UNIT_INFO_STAT_TIER_PURPLE := CampUiSkin.UNIT_DOSSIER_STAT_TIER_PURPLE
+const CAMP_UNIT_INFO_STAT_TIER_ORANGE := CampUiSkin.UNIT_DOSSIER_STAT_TIER_ORANGE
+const CAMP_UNIT_INFO_STAT_TIER_WHITE := CampUiSkin.UNIT_DOSSIER_STAT_TIER_WHITE
 const CAMP_QM_DESC_FONT_SIZE := 23
 const CAMP_QM_DESC_STYLE_MARGIN_H := 18
 const CAMP_QM_DESC_STYLE_MARGIN_V := 14
 ## Debug: show the camp Blacksmith button without clearing level 3+. Set to false for release / real progression tests.
 const DEBUG_CAMP_ALWAYS_SHOW_BLACKSMITH := true
+
+var _camp_motion_intro_done: bool = false
+var _camp_motion_last_gold: int = -1
+var _camp_motion_fire_layer: ColorRect = null
+var _camp_motion_ambient_started: bool = false
 
 # =============================================================================
 # camp_menu.gd – Camp / Hub Scene Controller
@@ -93,7 +102,7 @@ const DEBUG_CAMP_ALWAYS_SHOW_BLACKSMITH := true
 @onready var select_sound: AudioStreamPlayer = get_node_or_null("%SelectSound") 
 @onready var save_popup: Panel = get_node_or_null("%SavePopup") # The new wrapper
 @onready var blacksmith_portrait: TextureRect = get_node_or_null("%BlacksmithPortrait")
-@onready var blacksmith_label: Label = get_node_or_null("%BlacksmithDialogue")
+@onready var blacksmith_label: RichTextLabel = get_node_or_null("%BlacksmithDialogue") as RichTextLabel
 @onready var open_save_menu_btn: Button = get_node_or_null("%OpenSaveMenuButton")
 @onready var close_save_btn: Button = get_node_or_null("%CloseSaveButton")
 @onready var use_button: Button = $UseButton # Adjust path if it's inside a container
@@ -254,11 +263,24 @@ var _blacksmith_runesmith_status_lbl: Label = null
 var _blacksmith_runesmith_status_tween: Tween = null
 var _blacksmith_runesmith_last_tier: int = -1
 var _blacksmith_runesmith_base_modulate: Color = Color.WHITE
+var _blacksmith_pop_rune_btn: Button = null
 var _blacksmith_basic_runesmith_btn: Button = null
+var _blacksmith_swift_runesmith_btn: Button = null
+var _blacksmith_ward_runesmith_btn: Button = null
+var _blacksmith_flux_runesmith_btn: Button = null
+var _blacksmith_rune_row_legend_lbl: Label = null
 var _blacksmith_craft_ready_tween: Tween = null
 var _blacksmith_was_craft_ready: bool = false
+var _blacksmith_runic_fallback_font: Font = null
+## Dev-only: first time the blacksmith forge opens per camp session, add sample rune stones + a rune-slot test sword to convoy and unlock runesmithing for testing. Set false before release builds.
+const DEBUG_GRANT_RUNE_STONES_FIRST_BLACKSMITH_OPEN: bool = true
+## Dev: in camp, press F9 to open the forge with a forced underlined HINTTEST → solo scene (ignores unlock/seen for that tap). Set false before release.
+const DEBUG_HALDOR_SOLO_TAP_TEST: bool = true
+var _debug_blacksmith_test_kit_granted: bool = false
 
 var last_monologue_text: String = ""
+## Plain text (no BBCode) last shown in the forge dialogue; used for welcome gating and duplicate checks.
+var last_blacksmith_dialogue_plain: String = ""
 
 # This array tracks what is currently sitting on the 3 anvil slots
 var anvil_items: Array[Resource] = [null, null, null]
@@ -508,56 +530,11 @@ func _camp_make_panel_style(
 	radius: int = 24,
 	shadow_size: int = 12
 ) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = bg
-	style.border_color = border
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_right = radius
-	style.corner_radius_bottom_left = radius
-	style.shadow_color = Color(0, 0, 0, 0.38)
-	style.shadow_size = shadow_size
-	style.shadow_offset = Vector2(0, 6)
-	return style
+	return CampUiSkin.make_panel_style(bg, border, radius, shadow_size)
+
 
 func _camp_style_merchant_talk_option(btn: Button, dangerous: bool, font_size: int = 16, min_h: float = 38.0) -> void:
-	if btn == null:
-		return
-	btn.focus_mode = Control.FOCUS_ALL
-	btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	btn.custom_minimum_size.y = min_h
-	btn.add_theme_font_size_override("font_size", font_size)
-	btn.add_theme_color_override("font_color", CAMP_TEXT)
-	btn.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
-	btn.add_theme_color_override("font_pressed_color", CAMP_TEXT)
-	btn.add_theme_color_override("font_focus_color", CAMP_TEXT)
-	var fill: Color = CAMP_ACTION_SECONDARY
-	var border_n: Color = CAMP_BORDER_SOFT
-	var border_h: Color = CAMP_BORDER
-	var border_f: Color = Color(0.96, 0.84, 0.42, 1.0)
-	if dangerous:
-		border_n = Color(0.68, 0.30, 0.26, 1.0)
-		border_h = Color(0.88, 0.40, 0.34, 1.0)
-		border_f = Color(1.0, 0.52, 0.42, 1.0)
-	btn.add_theme_stylebox_override("normal", _camp_make_button_style(fill, border_n))
-	btn.add_theme_stylebox_override("hover", _camp_make_button_style(fill.lightened(0.12), border_h))
-	btn.add_theme_stylebox_override("pressed", _camp_make_button_style(fill.darkened(0.08), border_h))
-	var focus_st := _camp_make_button_style(fill.lightened(0.06), border_f, 18, 8)
-	focus_st.border_width_left = 3
-	focus_st.border_width_top = 3
-	focus_st.border_width_right = 3
-	focus_st.border_width_bottom = 3
-	btn.add_theme_stylebox_override("focus", focus_st)
-	btn.add_theme_stylebox_override(
-		"disabled",
-		_camp_make_button_style(fill.darkened(0.10), border_n.darkened(0.15), 18, 0)
-	)
+	CampUiSkin.style_merchant_talk_option(btn, dangerous, font_size, min_h)
 
 
 func _camp_make_button_style(
@@ -566,21 +543,7 @@ func _camp_make_button_style(
 	radius: int = 18,
 	shadow_size: int = 6
 ) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_right = radius
-	style.corner_radius_bottom_left = radius
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_size = shadow_size
-	style.shadow_offset = Vector2(0, 4)
-	return style
+	return CampUiSkin.make_button_style(fill, border, radius, shadow_size)
 
 func _camp_set_rect(control: Control, pos: Vector2, size: Vector2) -> void:
 	if control == null:
@@ -656,50 +619,12 @@ func _camp_prepare_for_container(control: Control, expand_horizontal: bool = tru
 		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func _camp_style_button(button: Button, primary: bool = false, font_size: int = 22, min_height: float = 52.0) -> void:
-	if button == null:
-		return
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	button.custom_minimum_size.y = min_height
-	button.add_theme_font_size_override("font_size", font_size)
-	var base_font_color := Color(0.12, 0.09, 0.04, 1.0) if primary else CAMP_TEXT
-	button.add_theme_color_override("font_color", base_font_color)
-	button.add_theme_color_override("font_hover_color", Color(0.08, 0.06, 0.03, 1.0) if primary else Color(1, 1, 1, 1))
-	button.add_theme_color_override("font_pressed_color", Color(0.08, 0.06, 0.03, 1.0) if primary else CAMP_TEXT)
-	button.add_theme_color_override("font_focus_color", base_font_color)
-	var base_fill := CAMP_ACTION_PRIMARY if primary else CAMP_ACTION_SECONDARY
-	var base_border := CAMP_ACCENT_CYAN if primary else CAMP_BORDER_SOFT
-	button.add_theme_stylebox_override("normal", _camp_make_button_style(base_fill, base_border))
-	button.add_theme_stylebox_override("hover", _camp_make_button_style(base_fill.lightened(0.08) if primary else base_fill.lightened(0.12), CAMP_BORDER))
-	button.add_theme_stylebox_override("pressed", _camp_make_button_style(base_fill.darkened(0.08), CAMP_ACCENT_CYAN if primary else CAMP_BORDER))
-	button.add_theme_stylebox_override("focus", _camp_make_button_style(base_fill, CAMP_ACCENT_CYAN))
-	button.add_theme_stylebox_override("disabled", _camp_make_button_style(base_fill.darkened(0.10), base_border.darkened(0.12), 18, 0))
+	CampUiSkin.style_button(button, primary, font_size, min_height)
+
 
 func _camp_style_section_badge(button: Button, text_value: String, font_color: Color = CAMP_BORDER) -> void:
-	if button == null:
-		return
-	button.text = text_value
-	button.focus_mode = Control.FOCUS_NONE
-	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.add_theme_font_size_override("font_size", 20)
-	button.add_theme_color_override("font_color", font_color)
-	button.add_theme_color_override("font_hover_color", font_color)
-	button.add_theme_color_override("font_pressed_color", font_color)
-	button.add_theme_color_override("font_focus_color", font_color)
-	var clear_style := StyleBoxFlat.new()
-	clear_style.bg_color = Color(0, 0, 0, 0)
-	clear_style.border_width_left = 0
-	clear_style.border_width_top = 0
-	clear_style.border_width_right = 0
-	clear_style.border_width_bottom = 0
-	button.add_theme_stylebox_override("normal", clear_style)
-	button.add_theme_stylebox_override("hover", clear_style)
-	button.add_theme_stylebox_override("pressed", clear_style)
-	button.add_theme_stylebox_override("focus", clear_style)
-	button.add_theme_stylebox_override("disabled", clear_style)
+	CampUiSkin.style_section_badge(button, text_value, font_color)
+
 
 func _camp_style_rich_label(
 	label: Control,
@@ -708,137 +633,39 @@ func _camp_style_rich_label(
 	border: Color = CAMP_BORDER_SOFT,
 	scrollable: bool = false
 ) -> void:
-	if label == null:
-		return
-	if label is RichTextLabel:
-		var rtl: RichTextLabel = label as RichTextLabel
-		rtl.fit_content = false
-		rtl.scroll_active = scrollable
-		rtl.scroll_following = false
-		rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rtl.mouse_filter = Control.MOUSE_FILTER_STOP if scrollable else Control.MOUSE_FILTER_IGNORE
-		rtl.add_theme_font_size_override("normal_font_size", font_size)
-		rtl.add_theme_color_override("default_color", CAMP_TEXT)
-		rtl.add_theme_stylebox_override("normal", _camp_make_panel_style(panel_bg, border, 18, 0))
-		return
-	if label is Label:
-		var plain: Label = label as Label
-		plain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		plain.add_theme_font_size_override("font_size", font_size)
-		plain.add_theme_color_override("font_color", CAMP_TEXT)
-		plain.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
-		plain.add_theme_constant_override("outline_size", 2)
-		plain.add_theme_stylebox_override("normal", _camp_make_panel_style(panel_bg, border, 18, 0))
+	CampUiSkin.style_rich_label(label, font_size, panel_bg, border, scrollable)
+
 
 func _camp_style_scroll(scroll: ScrollContainer) -> void:
-	if scroll == null:
-		return
-	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	var vbar := scroll.get_v_scroll_bar()
-	if vbar != null:
-		vbar.custom_minimum_size.x = 10.0
-		vbar.add_theme_stylebox_override("scroll", _camp_make_button_style(Color(0.09, 0.07, 0.05, 0.72), Color(0, 0, 0, 0), 8, 0))
-		vbar.add_theme_stylebox_override("grabber", _camp_make_button_style(CAMP_BORDER_SOFT, CAMP_BORDER_SOFT, 8, 0))
-		vbar.add_theme_stylebox_override("grabber_highlight", _camp_make_button_style(CAMP_BORDER, CAMP_BORDER, 8, 0))
-		vbar.add_theme_stylebox_override("grabber_pressed", _camp_make_button_style(CAMP_ACCENT_CYAN, CAMP_ACCENT_CYAN, 8, 0))
+	CampUiSkin.style_scroll(scroll)
+
 
 func _camp_style_tabs(tab_bar: TabBar) -> void:
-	if tab_bar == null:
-		return
-	tab_bar.clip_tabs = true
-	tab_bar.add_theme_font_size_override("font_size", 18)
-	tab_bar.add_theme_stylebox_override("tab_selected", _camp_make_button_style(CAMP_ACTION_PRIMARY, CAMP_ACCENT_CYAN, 14, 0))
-	tab_bar.add_theme_stylebox_override("tab_hovered", _camp_make_button_style(Color(0.35, 0.27, 0.15, 0.98), CAMP_BORDER, 14, 0))
-	tab_bar.add_theme_stylebox_override("tab_unselected", _camp_make_button_style(Color(0.18, 0.13, 0.08, 0.92), CAMP_BORDER_SOFT, 14, 0))
-	tab_bar.add_theme_stylebox_override("tab_disabled", _camp_make_button_style(Color(0.12, 0.09, 0.06, 0.82), CAMP_BORDER_SOFT.darkened(0.15), 14, 0))
+	CampUiSkin.style_tabs(tab_bar)
+
 
 func _camp_style_panel(panel: Panel, bg: Color = CAMP_PANEL_BG_SOFT, border: Color = CAMP_BORDER_SOFT, radius: int = 18, shadow_size: int = 8) -> void:
-	if panel == null:
-		return
-	panel.add_theme_stylebox_override("panel", _camp_make_panel_style(bg, border, radius, shadow_size))
+	CampUiSkin.style_panel(panel, bg, border, radius, shadow_size)
+
 
 func _camp_style_label(label: Label, color: Color = CAMP_TEXT, font_size: int = 18, outline_size: int = 2) -> void:
-	if label == null:
-		return
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
-	label.add_theme_constant_override("outline_size", outline_size)
-	label.add_theme_font_size_override("font_size", font_size)
+	CampUiSkin.style_label(label, color, font_size, outline_size)
+
 
 func _camp_style_option_button(option: OptionButton, font_size: int = 16, min_height: float = 40.0) -> void:
-	if option == null:
-		return
-	option.focus_mode = Control.FOCUS_ALL
-	option.mouse_filter = Control.MOUSE_FILTER_STOP
-	option.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	option.custom_minimum_size.y = min_height
-	option.add_theme_font_size_override("font_size", font_size)
-	option.add_theme_color_override("font_color", CAMP_TEXT)
-	option.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
-	option.add_theme_color_override("font_pressed_color", CAMP_TEXT)
-	option.add_theme_color_override("font_focus_color", CAMP_TEXT)
-	var normal_style := _camp_make_button_style(Color(0.20, 0.15, 0.09, 0.96), CAMP_BORDER_SOFT, 14, 4)
-	var hover_style := _camp_make_button_style(Color(0.24, 0.18, 0.10, 0.98), CAMP_BORDER, 14, 4)
-	var pressed_style := _camp_make_button_style(Color(0.16, 0.12, 0.08, 0.98), CAMP_ACCENT_CYAN, 14, 4)
-	option.add_theme_stylebox_override("normal", normal_style)
-	option.add_theme_stylebox_override("hover", hover_style)
-	option.add_theme_stylebox_override("pressed", pressed_style)
-	option.add_theme_stylebox_override("focus", pressed_style)
-	option.add_theme_stylebox_override("disabled", normal_style)
+	CampUiSkin.style_option_button(option, font_size, min_height)
+
 
 func _camp_style_check_button(check: BaseButton, font_size: int = 16) -> void:
-	if check == null:
-		return
-	check.focus_mode = Control.FOCUS_ALL
-	check.mouse_filter = Control.MOUSE_FILTER_STOP
-	check.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	check.add_theme_font_size_override("font_size", font_size)
-	check.add_theme_color_override("font_color", CAMP_TEXT)
-	check.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
-	check.add_theme_color_override("font_pressed_color", CAMP_TEXT)
-	check.add_theme_color_override("font_focus_color", CAMP_TEXT)
+	CampUiSkin.style_check_button(check, font_size)
+
 
 func _camp_style_slider(slider: Range) -> void:
-	if slider == null:
-		return
-	slider.mouse_filter = Control.MOUSE_FILTER_STOP
-	var groove := _camp_make_button_style(Color(0.08, 0.06, 0.04, 0.94), Color(0, 0, 0, 0), 8, 0)
-	var grabber := _camp_make_button_style(CAMP_BORDER, CAMP_BORDER, 10, 2)
-	var grabber_highlight := _camp_make_button_style(CAMP_ACCENT_CYAN, CAMP_ACCENT_CYAN, 10, 2)
-	if slider is Slider:
-		var s := slider as Slider
-		s.add_theme_stylebox_override("slider", groove)
-		s.add_theme_stylebox_override("grabber_area", groove)
-		s.add_theme_stylebox_override("grabber_area_highlight", _camp_make_button_style(Color(0.15, 0.12, 0.08, 0.98), CAMP_BORDER_SOFT, 8, 0))
-		s.add_theme_stylebox_override("grabber", grabber)
-		s.add_theme_stylebox_override("grabber_highlight", grabber_highlight)
+	CampUiSkin.style_slider(slider)
+
 
 func _camp_style_item_list(list: ItemList) -> void:
-	if list == null:
-		return
-	list.mouse_filter = Control.MOUSE_FILTER_STOP
-	list.focus_mode = Control.FOCUS_ALL
-	list.select_mode = ItemList.SELECT_MULTI
-	list.add_theme_font_size_override("font_size", 18)
-	list.add_theme_color_override("font_color", CAMP_TEXT)
-	list.add_theme_color_override("font_selected_color", CAMP_TEXT)
-	list.add_theme_color_override("font_hovered_color", Color(1, 1, 1, 1))
-	list.add_theme_color_override("font_hovered_selected_color", Color(1, 1, 1, 1))
-	list.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02, 0.92))
-	list.add_theme_constant_override("outline_size", 2)
-	list.add_theme_color_override("guide_color", CAMP_BORDER_SOFT)
-	var panel_style := _camp_make_panel_style(Color(0.08, 0.06, 0.04, 0.94), CAMP_BORDER_SOFT, 16, 0)
-	panel_style.content_margin_left = 10.0
-	panel_style.content_margin_top = 20.0
-	panel_style.content_margin_right = 10.0
-	panel_style.content_margin_bottom = 8.0
-	list.add_theme_stylebox_override("panel", panel_style)
-	list.add_theme_stylebox_override("cursor", _camp_make_button_style(Color(0.13, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 12, 0))
-	list.add_theme_stylebox_override("cursor_unfocused", _camp_make_button_style(Color(0.10, 0.08, 0.06, 0.96), CAMP_BORDER, 12, 0))
-	list.add_theme_stylebox_override("selected", _camp_make_button_style(Color(0.12, 0.09, 0.06, 0.98), CAMP_BORDER, 12, 0))
-	list.add_theme_stylebox_override("selected_focus", _camp_make_button_style(Color(0.14, 0.10, 0.07, 0.98), CAMP_ACCENT_CYAN, 12, 0))
+	CampUiSkin.style_item_list(list)
 
 func _jukebox_make_meta_chip(text_value: String, accent: Color = CAMP_ACCENT_CYAN) -> Label:
 	var chip := Label.new()
@@ -2139,61 +1966,15 @@ func _camp_style_unit_info_primary_bar(bar: ProgressBar, fill: Color, bar_key: S
 	bar.add_theme_stylebox_override("fill", fill_style)
 
 func _camp_unit_info_stat_fill_color(stat_key: String, stat_value: int) -> Color:
-	if stat_value >= 200:
-		return CAMP_UNIT_INFO_STAT_TIER_WHITE
-	if stat_value >= 150:
-		return CAMP_UNIT_INFO_STAT_TIER_ORANGE
-	if stat_value >= 100:
-		return CAMP_UNIT_INFO_STAT_TIER_PURPLE
-	if stat_value >= 50:
-		return CAMP_UNIT_INFO_STAT_TIER_CYAN
-	match stat_key:
-		"strength":
-			return Color(0.94, 0.48, 0.36, 1.0)
-		"magic":
-			return Color(0.78, 0.48, 0.96, 1.0)
-		"defense":
-			return Color(0.50, 0.88, 0.50, 1.0)
-		"resistance":
-			return Color(0.38, 0.90, 0.82, 1.0)
-		"speed":
-			return Color(0.46, 0.76, 1.0, 1.0)
-		"agility":
-			return Color(0.96, 0.82, 0.44, 1.0)
-		_:
-			return CAMP_BORDER
+	return CampUiSkin.dossier_stat_fill_color(stat_key, stat_value)
+
 
 func _camp_style_unit_info_stat_bar(bar: ProgressBar, fill: Color, overcap: bool) -> void:
-	if bar == null:
-		return
-	bar.show_percentage = false
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar.clip_contents = true
-	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.06, 0.06, 0.05, 0.98)
-	bg_style.border_color = fill if overcap else Color(0.24, 0.22, 0.18, 1.0)
-	bg_style.set_border_width_all(1)
-	bg_style.set_corner_radius_all(5)
-	bg_style.shadow_color = Color(0.0, 0.0, 0.0, 0.22)
-	bg_style.shadow_size = 2
-	var fill_style := StyleBoxFlat.new()
-	fill_style.bg_color = fill
-	fill_style.border_color = fill.lightened(0.18)
-	fill_style.set_border_width_all(1)
-	fill_style.set_corner_radius_all(5)
-	bar.add_theme_stylebox_override("background", bg_style)
-	bar.add_theme_stylebox_override("fill", fill_style)
+	CampUiSkin.style_dossier_stat_bar(bar, fill, overcap)
+
 
 func _camp_unit_info_stat_display_value(raw_value: int) -> float:
-	if raw_value <= 0:
-		return 0.0
-	var cap_int := int(CAMP_UNIT_INFO_STAT_BAR_CAP)
-	if raw_value < cap_int:
-		return float(raw_value)
-	var wrapped := raw_value % cap_int
-	if wrapped == 0:
-		return CAMP_UNIT_INFO_STAT_BAR_CAP
-	return float(wrapped)
+	return CampUiSkin.dossier_stat_bar_display_value(raw_value)
 
 func _camp_weapon_type_name_safe(w_type: int) -> String:
 	match int(w_type):
@@ -3412,6 +3193,21 @@ func _camp_apply_ui_overhaul() -> void:
 		_camp_layout_blacksmith_dimmer()
 	_camp_layout_merchant_talk_panel()
 	_sync_merchant_talk_button_state()
+	call_deferred("_camp_deferred_motion_intro")
+
+
+func _camp_deferred_motion_intro() -> void:
+	if _camp_motion_intro_done:
+		return
+	_camp_motion_intro_done = true
+	if _camp_cards.is_empty():
+		return
+	CampMenuMotion.play_card_stagger_intro(self, _camp_cards)
+
+
+func _camp_motion_shop_deal_one(btn: Button) -> void:
+	if is_instance_valid(btn):
+		CampMenuMotion.shop_deal_sparkle(self, btn)
 
 
 func _ensure_blacksmith_dimmer() -> void:
@@ -3665,8 +3461,15 @@ func _camp_layout_blacksmith_panel() -> void:
 	var dialogue_h: float = clampf(ph * 0.14, 96.0, 148.0)
 	if blacksmith_label != null:
 		blacksmith_label.z_index = 7
-		_camp_style_label(blacksmith_label, CAMP_TEXT, 22, 2)
+		CampUiSkin.style_rich_label_flat(blacksmith_label, 22, false)
+		blacksmith_label.bbcode_enabled = true
+		blacksmith_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		blacksmith_label.fit_content = false
+		blacksmith_label.scroll_active = false
 		blacksmith_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		blacksmith_label.add_theme_color_override("default_color", CAMP_TEXT)
+		blacksmith_label.add_theme_constant_override("outline_size", 2)
+		blacksmith_label.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
 		_camp_set_rect(blacksmith_label, Vector2(mid_x + 6.0, dialogue_y), Vector2(mid_w - 12.0, dialogue_h))
 
 	var talk_w: float = 118.0
@@ -3702,12 +3505,59 @@ func _camp_layout_blacksmith_panel() -> void:
 		craft_button.z_index = 12
 		_camp_style_button(craft_button, true, 20, craft_h)
 		_camp_set_rect(craft_button, Vector2(mid_x + (mid_w - 172.0) * 0.5, craft_y), Vector2(172.0, craft_h))
+	var rune_row_y: float
+	if CampaignManager.is_runesmithing_unlocked():
+		var rune_legend_h: float = 36.0
+		var rune_legend_y: float = craft_y + craft_h + 2.0
+		if _blacksmith_rune_row_legend_lbl != null:
+			_blacksmith_rune_row_legend_lbl.visible = true
+			_blacksmith_rune_row_legend_lbl.z_index = 11
+			_camp_style_label(_blacksmith_rune_row_legend_lbl, CAMP_MUTED, 15, 1)
+			_blacksmith_rune_row_legend_lbl.text = "Glyphs = inscribe with convoy materials. Rune stone = put weapon + stone on anvil, then SOCKET (stone only is consumed)."
+			_camp_set_rect(
+				_blacksmith_rune_row_legend_lbl,
+				Vector2(mid_x + 10.0, rune_legend_y),
+				Vector2(mid_w - 20.0, rune_legend_h)
+			)
+		rune_row_y = rune_legend_y + rune_legend_h + 4.0
+	else:
+		if _blacksmith_rune_row_legend_lbl != null:
+			_blacksmith_rune_row_legend_lbl.visible = false
+		rune_row_y = craft_y + craft_h + 6.0
+	var rune_h: float = 40.0
+	var rune_btns: Array[Button] = []
+	if _blacksmith_pop_rune_btn != null:
+		rune_btns.append(_blacksmith_pop_rune_btn)
 	if _blacksmith_basic_runesmith_btn != null:
-		_blacksmith_basic_runesmith_btn.z_index = 12
-		_camp_style_button(_blacksmith_basic_runesmith_btn, false, 18, craft_h)
-		_camp_set_rect(_blacksmith_basic_runesmith_btn, Vector2(mid_x + (mid_w - 172.0) * 0.5 + 182.0, craft_y), Vector2(118.0, craft_h))
-		_sync_blacksmith_basic_runesmith_button()
-	var craft_bottom: float = craft_y + craft_h
+		rune_btns.append(_blacksmith_basic_runesmith_btn)
+	if _blacksmith_swift_runesmith_btn != null:
+		rune_btns.append(_blacksmith_swift_runesmith_btn)
+	if CampaignManager.has_advanced_runesmithing():
+		if _blacksmith_ward_runesmith_btn != null:
+			rune_btns.append(_blacksmith_ward_runesmith_btn)
+		if _blacksmith_flux_runesmith_btn != null:
+			rune_btns.append(_blacksmith_flux_runesmith_btn)
+	var rune_n: int = rune_btns.size()
+	if rune_n > 0:
+		var rune_gap: float = 5.0
+		var rune_btn_w: float = clampf((mid_w - rune_gap * float(maxi(rune_n - 1, 0))) / float(rune_n), 52.0, 76.0)
+		var rune_total: float = rune_btn_w * float(rune_n) + rune_gap * float(maxi(rune_n - 1, 0))
+		var rune_x0: float = mid_x + (mid_w - rune_total) * 0.5
+		var rx: float = rune_x0
+		for rb: Button in rune_btns:
+			if rb == null or not is_instance_valid(rb):
+				continue
+			rb.z_index = 12
+			_camp_style_button(rb, false, 20, rune_h)
+			_blacksmith_apply_rune_glyph_font(rb)
+			_camp_set_rect(rb, Vector2(rx, rune_row_y), Vector2(rune_btn_w, rune_h))
+			rx += rune_btn_w + rune_gap
+	if _blacksmith_ward_runesmith_btn != null and not CampaignManager.has_advanced_runesmithing():
+		_blacksmith_ward_runesmith_btn.visible = false
+	if _blacksmith_flux_runesmith_btn != null and not CampaignManager.has_advanced_runesmithing():
+		_blacksmith_flux_runesmith_btn.visible = false
+	_sync_blacksmith_runesmith_buttons()
+	var craft_bottom: float = rune_row_y + rune_h
 	var socket_lbl_gap_after_craft: float = 10.0
 	var socket_lbl_h: float = 24.0
 	var socket_lbl_y: float = craft_bottom + socket_lbl_gap_after_craft
@@ -3747,18 +3597,18 @@ func _camp_layout_blacksmith_panel() -> void:
 		_camp_set_rect(
 			_blacksmith_anvil_hint_strip,
 			Vector2(mid_x + hint_strip_pad_h, anvil_y + anvil_slot + 4.0),
-			Vector2(mid_w - hint_strip_pad_h * 2.0, 72.0)
+			Vector2(mid_w - hint_strip_pad_h * 2.0, 88.0)
 		)
 	if _blacksmith_anvil_hint_lbl != null:
 		_blacksmith_anvil_hint_lbl.z_index = 15
-		_camp_style_label(_blacksmith_anvil_hint_lbl, CAMP_TEXT, 20, 1)
+		_camp_style_label(_blacksmith_anvil_hint_lbl, CAMP_TEXT, 19, 1)
 		_camp_set_rect(
 			_blacksmith_anvil_hint_lbl,
-			Vector2(mid_x + hint_strip_pad_h + hint_inner_pad, anvil_y + anvil_slot + 10.0),
-			Vector2(mid_w - (hint_strip_pad_h + hint_inner_pad) * 2.0, 58.0)
+			Vector2(mid_x + hint_strip_pad_h + hint_inner_pad, anvil_y + anvil_slot + 8.0),
+			Vector2(mid_w - (hint_strip_pad_h + hint_inner_pad) * 2.0, 76.0)
 		)
 
-	var recipe_book_y: float = anvil_y + anvil_slot + 86.0
+	var recipe_book_y: float = anvil_y + anvil_slot + 102.0
 	var recipe_book_btn_w: float = 240.0
 	if recipe_book_btn != null:
 		recipe_book_btn.z_index = 12
@@ -3790,11 +3640,12 @@ func _camp_layout_blacksmith_panel() -> void:
 		recipe_result_label.z_index = 9
 		_camp_style_rich_label(
 			recipe_result_label,
-			21,
+			22,
 			Color(0.11, 0.082, 0.055, 0.90),
 			CAMP_BORDER_SOFT,
 			true
 		)
+		recipe_result_label.add_theme_font_override("normal_font", _blacksmith_runic_fallback_font_get())
 		_camp_set_rect(
 			recipe_result_label,
 			Vector2(pw - pad - right_col_w + 8.0, icon_y + icon_side + 8.0),
@@ -3841,7 +3692,7 @@ func _camp_layout_blacksmith_panel() -> void:
 func _blacksmith_finish_recipe_check() -> void:
 	_sync_blacksmith_anvil_hint()
 	_blacksmith_update_craft_ready_affordance()
-	_sync_blacksmith_basic_runesmith_button()
+	_sync_blacksmith_runesmith_buttons()
 
 
 func _ensure_blacksmith_workbench_chrome() -> void:
@@ -3871,14 +3722,70 @@ func _ensure_blacksmith_workbench_chrome() -> void:
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		blacksmith_panel.add_child(sl)
 		_blacksmith_socket_labels.append(sl)
+	if _blacksmith_pop_rune_btn == null:
+		_blacksmith_pop_rune_btn = Button.new()
+		_blacksmith_pop_rune_btn.name = "PopRuneButton"
+		_blacksmith_pop_rune_btn.text = WeaponRuneDisplayHelpers.BLACKSMITH_POP_GLYPH
+		_blacksmith_pop_rune_btn.visible = false
+		_blacksmith_pop_rune_btn.disabled = true
+		blacksmith_panel.add_child(_blacksmith_pop_rune_btn)
+		_blacksmith_pop_rune_btn.pressed.connect(_on_blacksmith_pop_rune_pressed)
+	if _blacksmith_rune_row_legend_lbl == null:
+		_blacksmith_rune_row_legend_lbl = Label.new()
+		_blacksmith_rune_row_legend_lbl.name = "RuneRowLegend"
+		_blacksmith_rune_row_legend_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_blacksmith_rune_row_legend_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_blacksmith_rune_row_legend_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_blacksmith_rune_row_legend_lbl.visible = false
+		blacksmith_panel.add_child(_blacksmith_rune_row_legend_lbl)
 	if _blacksmith_basic_runesmith_btn == null:
 		_blacksmith_basic_runesmith_btn = Button.new()
 		_blacksmith_basic_runesmith_btn.name = "BasicRunesmithButton"
-		_blacksmith_basic_runesmith_btn.text = "SOCKET"
+		_blacksmith_basic_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("ember_rune")
 		_blacksmith_basic_runesmith_btn.visible = false
 		_blacksmith_basic_runesmith_btn.disabled = true
 		blacksmith_panel.add_child(_blacksmith_basic_runesmith_btn)
-		_blacksmith_basic_runesmith_btn.pressed.connect(_on_blacksmith_basic_runesmith_pressed)
+		_blacksmith_basic_runesmith_btn.pressed.connect(_on_blacksmith_ember_runesmith_pressed)
+	if _blacksmith_swift_runesmith_btn == null:
+		_blacksmith_swift_runesmith_btn = Button.new()
+		_blacksmith_swift_runesmith_btn.name = "SwiftRunesmithButton"
+		_blacksmith_swift_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("swift_rune")
+		_blacksmith_swift_runesmith_btn.visible = false
+		_blacksmith_swift_runesmith_btn.disabled = true
+		blacksmith_panel.add_child(_blacksmith_swift_runesmith_btn)
+		_blacksmith_swift_runesmith_btn.pressed.connect(_on_blacksmith_swift_runesmith_pressed)
+	if _blacksmith_ward_runesmith_btn == null:
+		_blacksmith_ward_runesmith_btn = Button.new()
+		_blacksmith_ward_runesmith_btn.name = "WardRunesmithButton"
+		_blacksmith_ward_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("ward_rune")
+		_blacksmith_ward_runesmith_btn.visible = false
+		_blacksmith_ward_runesmith_btn.disabled = true
+		blacksmith_panel.add_child(_blacksmith_ward_runesmith_btn)
+		_blacksmith_ward_runesmith_btn.pressed.connect(_on_blacksmith_ward_runesmith_pressed)
+	if _blacksmith_flux_runesmith_btn == null:
+		_blacksmith_flux_runesmith_btn = Button.new()
+		_blacksmith_flux_runesmith_btn.name = "FluxRunesmithButton"
+		_blacksmith_flux_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("flux_rune")
+		_blacksmith_flux_runesmith_btn.visible = false
+		_blacksmith_flux_runesmith_btn.disabled = true
+		blacksmith_panel.add_child(_blacksmith_flux_runesmith_btn)
+		_blacksmith_flux_runesmith_btn.pressed.connect(_on_blacksmith_flux_runesmith_pressed)
+
+
+func _blacksmith_anvil_item_kind_counts() -> Dictionary:
+	var wn: int = 0
+	var sn: int = 0
+	var on: int = 0
+	for it in anvil_items:
+		if it == null:
+			continue
+		if it is WeaponData:
+			wn += 1
+		elif it is RuneItemData:
+			sn += 1
+		else:
+			on += 1
+	return {"weapons": wn, "stones": sn, "other": on, "filled": wn + sn + on}
 
 
 func _sync_blacksmith_anvil_hint() -> void:
@@ -3889,23 +3796,46 @@ func _sync_blacksmith_anvil_hint() -> void:
 		if _blacksmith_anvil_hint_strip != null and is_instance_valid(_blacksmith_anvil_hint_strip):
 			_blacksmith_anvil_hint_strip.visible = false
 		return
-	var filled: int = 0
-	for it in anvil_items:
-		if it != null:
-			filled += 1
+	var counts: Dictionary = _blacksmith_anvil_item_kind_counts()
+	var filled: int = int(counts.get("filled", 0))
 	var show_hint: bool = filled < 3 and craft_button != null and craft_button.disabled
 	_blacksmith_anvil_hint_lbl.visible = show_hint
 	if _blacksmith_anvil_hint_strip != null and is_instance_valid(_blacksmith_anvil_hint_strip):
 		_blacksmith_anvil_hint_strip.visible = show_hint
 	if not show_hint:
 		return
+	var rs_ok: bool = CampaignManager.is_runesmithing_unlocked()
 	match filled:
 		0:
-			_blacksmith_anvil_hint_lbl.text = "Drag materials from convoy into the sockets, or double-click a stack to send one."
+			_blacksmith_anvil_hint_lbl.text = "Drag from convoy into the sockets, or double-click a stack. Runes: weapon + one rune stone → SOCKET (third socket empty is fine)."
 		1:
-			_blacksmith_anvil_hint_lbl.text = "Add more to the sockets — salvage uses one weapon; most recipes need three materials."
+			var wn1: int = int(counts.get("weapons", 0))
+			var sn1: int = int(counts.get("stones", 0))
+			if wn1 == 1:
+				var w1: WeaponData = _blacksmith_get_first_anvil_weapon()
+				if w1 != null and bool(w1.get_meta("is_locked", false)):
+					_blacksmith_anvil_hint_lbl.text = "This weapon is locked — it cannot be inscribed or salvaged from here."
+				elif w1 != null and int(w1.rune_slot_count) <= 0:
+					_blacksmith_anvil_hint_lbl.text = "No rune sockets on this weapon. Use three materials to forge, or one weapon alone to salvage."
+				elif w1 != null and rs_ok:
+					_blacksmith_anvil_hint_lbl.text = "Rune-ready weapon. Add a matching rune stone and press SOCKET, or tap a glyph above (spends materials from convoy)."
+				else:
+					_blacksmith_anvil_hint_lbl.text = "Add materials for a recipe, a rune stone for SOCKET, or leave one weapon alone to salvage."
+			elif sn1 == 1:
+				_blacksmith_anvil_hint_lbl.text = "Add a rune-capable weapon with this stone for SOCKET, or two more materials for normal forging."
+			else:
+				_blacksmith_anvil_hint_lbl.text = "Most recipes need three materials on the anvil. Salvage uses a single weapon; runes use weapon + stone."
 		2:
-			_blacksmith_anvil_hint_lbl.text = "One more socket. Fill all three to test a forge pattern (unless you are salvaging a single weapon)."
+			var wn2: int = int(counts.get("weapons", 0))
+			var sn2: int = int(counts.get("stones", 0))
+			if wn2 == 1 and sn2 == 1:
+				_blacksmith_anvil_hint_lbl.text = "Weapon + rune stone: read the Outcome panel. If SOCKET is blocked, check locks, rune sockets, or runesmithing tier."
+			elif wn2 == 1 and int(counts.get("other", 0)) == 1:
+				_blacksmith_anvil_hint_lbl.text = "Broken weapon + ingot can repair. Otherwise try three materials for forging, or clear a slot for weapon + rune stone."
+			else:
+				_blacksmith_anvil_hint_lbl.text = "No match for these two items. For runes use exactly one weapon and one rune stone (leave the third socket empty), then SOCKET."
+		_:
+			_blacksmith_anvil_hint_lbl.text = "One more socket. Three materials forge; one weapon salvages; weapon + stone sockets a rune."
 
 
 func _blacksmith_stop_craft_ready_affordance() -> void:
@@ -3923,6 +3853,21 @@ func _blacksmith_play_craft_ready_tick_sound() -> void:
 		select_sound.play()
 
 
+func _blacksmith_runic_fallback_font_get() -> Font:
+	# Elder Futhark (Unicode Runic); theme pixel fonts usually lack these glyphs.
+	if _blacksmith_runic_fallback_font == null:
+		var sf := SystemFont.new()
+		sf.font_names = ["Segoe UI Historic", "Segoe UI Symbol", "Noto Sans Runic", "sans-serif"]
+		_blacksmith_runic_fallback_font = sf
+	return _blacksmith_runic_fallback_font
+
+
+func _blacksmith_apply_rune_glyph_font(button: Button) -> void:
+	if button == null or not is_instance_valid(button):
+		return
+	button.add_theme_font_override("font", _blacksmith_runic_fallback_font_get())
+
+
 func _blacksmith_get_first_anvil_weapon() -> WeaponData:
 	for it in anvil_items:
 		if it is WeaponData:
@@ -3930,32 +3875,318 @@ func _blacksmith_get_first_anvil_weapon() -> WeaponData:
 	return null
 
 
-func _sync_blacksmith_basic_runesmith_button() -> void:
-	if _blacksmith_basic_runesmith_btn == null or not is_instance_valid(_blacksmith_basic_runesmith_btn):
-		return
-	if blacksmith_panel == null or not is_instance_valid(blacksmith_panel) or not blacksmith_panel.visible:
-		_blacksmith_basic_runesmith_btn.visible = false
-		return
+func _blacksmith_normalize_rune_id_key(rune_id_raw: String) -> String:
+	return str(rune_id_raw).strip_edges().to_lower().replace(" ", "_")
 
+
+func _blacksmith_rune_socket_material_costs(rune_id_norm: String) -> Array:
+	var k: String = _blacksmith_normalize_rune_id_key(rune_id_norm)
+	if k == "ember" or k == "ember_rune":
+		return [{"item_name": "Emberwood Resin", "count": 1}, {"item_name": "Tinder Fungus", "count": 1}]
+	if k == "swift" or k == "swift_rune":
+		return [{"item_name": "Leather Straps", "count": 1}, {"item_name": "Linen Roll", "count": 1}]
+	if k == "ward" or k == "ward_rune":
+		return [{"item_name": "Chain Links", "count": 1}, {"item_name": "Beeswax", "count": 1}]
+	if k == "flux" or k == "flux_rune":
+		return [{"item_name": "Moonsteel Shard", "count": 1}, {"item_name": "Iron Ingot", "count": 1}]
+	return []
+
+
+func _blacksmith_count_material_in_convoy(item_name: String) -> int:
+	var want: String = str(item_name).strip_edges()
+	if want == "":
+		return 0
+	var n: int = 0
+	for it in CampaignManager.global_inventory:
+		if it is MaterialData and _get_item_display_name(it) == want:
+			n += 1
+	return n
+
+
+func _blacksmith_convoy_can_pay_material_rows(cost_rows: Array) -> bool:
+	for row in cost_rows:
+		if not (row is Dictionary):
+			continue
+		var d: Dictionary = row as Dictionary
+		var nm: String = str(d.get("item_name", "")).strip_edges()
+		var need: int = clampi(int(d.get("count", 1)), 1, 999)
+		if nm == "" or _blacksmith_count_material_in_convoy(nm) < need:
+			return false
+	return true
+
+
+func _blacksmith_convoy_pay_material_rows(cost_rows: Array) -> void:
+	for row in cost_rows:
+		if not (row is Dictionary):
+			continue
+		var d: Dictionary = row as Dictionary
+		var nm: String = str(d.get("item_name", "")).strip_edges()
+		var need: int = clampi(int(d.get("count", 1)), 1, 999)
+		if nm == "":
+			continue
+		var removed: int = 0
+		for i in range(CampaignManager.global_inventory.size() - 1, -1, -1):
+			if removed >= need:
+				break
+			var it: Resource = CampaignManager.global_inventory[i]
+			if it is MaterialData and _get_item_display_name(it) == nm:
+				CampaignManager.global_inventory.remove_at(i)
+				removed += 1
+
+
+func _blacksmith_rune_material_cost_hint_line(cost_rows: Array) -> String:
+	var parts: Array[String] = []
+	for row in cost_rows:
+		if not (row is Dictionary):
+			continue
+		var d: Dictionary = row as Dictionary
+		parts.append("%s ×%d" % [str(d.get("item_name", "")), clampi(int(d.get("count", 1)), 1, 999)])
+	return ", ".join(parts)
+
+
+func _blacksmith_rune_material_shortfall_line(cost_rows: Array) -> String:
+	for row in cost_rows:
+		if not (row is Dictionary):
+			continue
+		var d: Dictionary = row as Dictionary
+		var nm: String = str(d.get("item_name", "")).strip_edges()
+		var need: int = clampi(int(d.get("count", 1)), 1, 999)
+		if nm == "":
+			continue
+		var have: int = _blacksmith_count_material_in_convoy(nm)
+		if have < need:
+			return "Need %d× %s in convoy (have %d)." % [need, nm, have]
+	return ""
+
+
+func _blacksmith_weapon_rune_fill_count(wpn: WeaponData) -> int:
+	if wpn == null or not is_instance_valid(wpn):
+		return 0
+	var sockets_raw: Variant = wpn.socketed_runes
+	if not (sockets_raw is Array):
+		return 0
+	var n: int = 0
+	for entry in sockets_raw as Array:
+		if not (entry is Dictionary):
+			continue
+		var row: Dictionary = entry as Dictionary
+		if str(row.get("id", "")).strip_edges() != "":
+			n += 1
+	return n
+
+
+func _sync_blacksmith_runesmith_buttons() -> void:
 	var unlocked: bool = CampaignManager.is_runesmithing_unlocked()
+	var advanced: bool = CampaignManager.has_advanced_runesmithing()
 	var wpn: WeaponData = _blacksmith_get_first_anvil_weapon()
 	var ok_weapon: bool = (wpn != null and is_instance_valid(wpn) and int(wpn.rune_slot_count) > 0)
 	var can_use: bool = unlocked and ok_weapon and bool(wpn.get_meta("is_locked", false)) == false
+	var panel_open: bool = blacksmith_panel != null and is_instance_valid(blacksmith_panel) and blacksmith_panel.visible
+	var filled: int = _blacksmith_weapon_rune_fill_count(wpn) if ok_weapon else 0
 
-	_blacksmith_basic_runesmith_btn.visible = unlocked
-	_blacksmith_basic_runesmith_btn.disabled = not can_use
-	_blacksmith_basic_runesmith_btn.text = "SOCKET"
-	if not unlocked:
-		_blacksmith_basic_runesmith_btn.tooltip_text = "Runesmithing is locked."
-	elif not ok_weapon:
-		_blacksmith_basic_runesmith_btn.tooltip_text = "Place a rune-capable weapon on the anvil to socket a basic rune."
-	elif bool(wpn.get_meta("is_locked", false)) == true:
-		_blacksmith_basic_runesmith_btn.tooltip_text = "Cannot modify a locked item."
+	if _blacksmith_pop_rune_btn != null and is_instance_valid(_blacksmith_pop_rune_btn):
+		if not panel_open:
+			_blacksmith_pop_rune_btn.visible = false
+		else:
+			_blacksmith_pop_rune_btn.visible = unlocked
+			_blacksmith_pop_rune_btn.disabled = not can_use or filled <= 0
+			_blacksmith_pop_rune_btn.text = WeaponRuneDisplayHelpers.BLACKSMITH_POP_GLYPH
+			if not unlocked:
+				_blacksmith_pop_rune_btn.tooltip_text = "Runesmithing is locked."
+			elif not ok_weapon:
+				_blacksmith_pop_rune_btn.tooltip_text = "Place a rune-capable weapon on the anvil."
+			elif bool(wpn.get_meta("is_locked", false)) == true:
+				_blacksmith_pop_rune_btn.tooltip_text = "Cannot modify a locked item."
+			elif filled <= 0:
+				_blacksmith_pop_rune_btn.tooltip_text = "POP: no inscribed runes to remove yet."
+			else:
+				_blacksmith_pop_rune_btn.tooltip_text = "POP (Tiwaz): strip the last inscribed rune from this weapon. Materials are not refunded."
+
+	var ember_costs: Array = _blacksmith_rune_socket_material_costs("ember_rune")
+	var swift_costs: Array = _blacksmith_rune_socket_material_costs("swift_rune")
+	var ward_costs: Array = _blacksmith_rune_socket_material_costs("ward_rune")
+	var flux_costs: Array = _blacksmith_rune_socket_material_costs("flux_rune")
+	var can_pay_ember: bool = ember_costs.size() > 0 and _blacksmith_convoy_can_pay_material_rows(ember_costs)
+	var can_pay_swift: bool = swift_costs.size() > 0 and _blacksmith_convoy_can_pay_material_rows(swift_costs)
+	var can_pay_ward: bool = ward_costs.size() > 0 and _blacksmith_convoy_can_pay_material_rows(ward_costs)
+	var can_pay_flux: bool = flux_costs.size() > 0 and _blacksmith_convoy_can_pay_material_rows(flux_costs)
+
+	if _blacksmith_basic_runesmith_btn != null and is_instance_valid(_blacksmith_basic_runesmith_btn):
+		if not panel_open:
+			_blacksmith_basic_runesmith_btn.visible = false
+		else:
+			_blacksmith_basic_runesmith_btn.visible = unlocked
+			_blacksmith_basic_runesmith_btn.disabled = not can_use or not can_pay_ember
+			_blacksmith_basic_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("ember_rune")
+			var ember_mats: String = _blacksmith_rune_material_cost_hint_line(ember_costs)
+			if not unlocked:
+				_blacksmith_basic_runesmith_btn.tooltip_text = "Runesmithing is locked."
+			elif not ok_weapon:
+				_blacksmith_basic_runesmith_btn.tooltip_text = "Place a rune-capable weapon on the anvil to socket runes."
+			elif bool(wpn.get_meta("is_locked", false)) == true:
+				_blacksmith_basic_runesmith_btn.tooltip_text = "Cannot modify a locked item."
+			elif not can_pay_ember:
+				_blacksmith_basic_runesmith_btn.tooltip_text = "%s\nCosts: %s." % [_blacksmith_rune_material_shortfall_line(ember_costs), ember_mats]
+			else:
+				var tail: String = " Next empty socket; if full, replaces the last inscription."
+				_blacksmith_basic_runesmith_btn.tooltip_text = (
+					"Ember (+Might) via materials. Costs: %s.%s" % [ember_mats, tail]
+				)
+
+	if _blacksmith_swift_runesmith_btn != null and is_instance_valid(_blacksmith_swift_runesmith_btn):
+		if not panel_open:
+			_blacksmith_swift_runesmith_btn.visible = false
+		else:
+			_blacksmith_swift_runesmith_btn.visible = unlocked
+			_blacksmith_swift_runesmith_btn.disabled = not can_use or not can_pay_swift
+			_blacksmith_swift_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("swift_rune")
+			var swift_mats: String = _blacksmith_rune_material_cost_hint_line(swift_costs)
+			if not unlocked:
+				_blacksmith_swift_runesmith_btn.tooltip_text = "Runesmithing is locked."
+			elif not ok_weapon:
+				_blacksmith_swift_runesmith_btn.tooltip_text = "Place a rune-capable weapon on the anvil to socket runes."
+			elif bool(wpn.get_meta("is_locked", false)) == true:
+				_blacksmith_swift_runesmith_btn.tooltip_text = "Cannot modify a locked item."
+			elif not can_pay_swift:
+				_blacksmith_swift_runesmith_btn.tooltip_text = "%s\nCosts: %s." % [_blacksmith_rune_material_shortfall_line(swift_costs), swift_mats]
+			else:
+				var tail2: String = " Next empty socket; if full, replaces the last inscription."
+				_blacksmith_swift_runesmith_btn.tooltip_text = "Swift (+Hit) via materials. Costs: %s.%s" % [swift_mats, tail2]
+
+	if _blacksmith_ward_runesmith_btn != null and is_instance_valid(_blacksmith_ward_runesmith_btn):
+		if not panel_open:
+			_blacksmith_ward_runesmith_btn.visible = false
+		else:
+			_blacksmith_ward_runesmith_btn.visible = unlocked and advanced
+			_blacksmith_ward_runesmith_btn.disabled = not can_use or not advanced or not can_pay_ward
+			_blacksmith_ward_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("ward_rune")
+			var ward_mats: String = _blacksmith_rune_material_cost_hint_line(ward_costs)
+			if not unlocked:
+				_blacksmith_ward_runesmith_btn.tooltip_text = "Runesmithing is locked."
+			elif not advanced:
+				_blacksmith_ward_runesmith_btn.tooltip_text = "Advanced runesmithing unlocks later in the campaign."
+			elif not ok_weapon:
+				_blacksmith_ward_runesmith_btn.tooltip_text = "Place a rune-capable weapon on the anvil to socket runes."
+			elif bool(wpn.get_meta("is_locked", false)) == true:
+				_blacksmith_ward_runesmith_btn.tooltip_text = "Cannot modify a locked item."
+			elif not can_pay_ward:
+				_blacksmith_ward_runesmith_btn.tooltip_text = "%s\nCosts: %s." % [_blacksmith_rune_material_shortfall_line(ward_costs), ward_mats]
+			else:
+				var tail3: String = " Next empty socket; if full, replaces the last inscription."
+				_blacksmith_ward_runesmith_btn.tooltip_text = "Ward (+Def / +Res) via materials. Costs: %s.%s" % [ward_mats, tail3]
+
+	if _blacksmith_flux_runesmith_btn != null and is_instance_valid(_blacksmith_flux_runesmith_btn):
+		if not panel_open:
+			_blacksmith_flux_runesmith_btn.visible = false
+		else:
+			_blacksmith_flux_runesmith_btn.visible = unlocked and advanced
+			_blacksmith_flux_runesmith_btn.disabled = not can_use or not advanced or not can_pay_flux
+			_blacksmith_flux_runesmith_btn.text = WeaponRuneDisplayHelpers.blacksmith_rune_button_glyph_for_id("flux_rune")
+			var flux_mats: String = _blacksmith_rune_material_cost_hint_line(flux_costs)
+			if not unlocked:
+				_blacksmith_flux_runesmith_btn.tooltip_text = "Runesmithing is locked."
+			elif not advanced:
+				_blacksmith_flux_runesmith_btn.tooltip_text = "Advanced runesmithing unlocks later in the campaign."
+			elif not ok_weapon:
+				_blacksmith_flux_runesmith_btn.tooltip_text = "Place a rune-capable weapon on the anvil to socket runes."
+			elif bool(wpn.get_meta("is_locked", false)) == true:
+				_blacksmith_flux_runesmith_btn.tooltip_text = "Cannot modify a locked item."
+			elif not can_pay_flux:
+				_blacksmith_flux_runesmith_btn.tooltip_text = "%s\nCosts: %s." % [_blacksmith_rune_material_shortfall_line(flux_costs), flux_mats]
+			else:
+				var tail4: String = " Next empty socket; if full, replaces the last inscription."
+				_blacksmith_flux_runesmith_btn.tooltip_text = "Flux (+Might / +Hit) via materials. Costs: %s.%s" % [flux_mats, tail4]
+
+
+func _blacksmith_rune_id_requires_advanced(rune_id_raw: String) -> bool:
+	var k: String = _blacksmith_normalize_rune_id_key(rune_id_raw)
+	return k == "ward" or k == "ward_rune" or k == "flux" or k == "flux_rune"
+
+
+## Validates and optionally applies socketing [param rune_id] onto [param wpn]. If [param apply_changes] is false, the weapon is unchanged (forge preview).
+func _blacksmith_rune_socket_resolve(wpn: WeaponData, rune_id: String, apply_changes: bool) -> Dictionary:
+	if wpn == null or not is_instance_valid(wpn):
+		return {"ok": false, "replaced": false, "err": "no_weapon"}
+	if bool(wpn.get_meta("is_locked", false)) == true:
+		return {"ok": false, "replaced": false, "err": "locked"}
+	var slot_count: int = clampi(int(wpn.rune_slot_count), 0, 8)
+	if slot_count <= 0:
+		return {"ok": false, "replaced": false, "err": "no_slots"}
+	var id_norm: String = _blacksmith_normalize_rune_id_key(rune_id)
+	if _blacksmith_rune_socket_material_costs(id_norm).is_empty():
+		return {"ok": false, "replaced": false, "err": "unknown_rune"}
+	var sockets_raw: Variant = wpn.socketed_runes
+	var sockets: Array = sockets_raw.duplicate() if sockets_raw is Array else []
+	var filled: int = 0
+	for row in sockets:
+		if not (row is Dictionary):
+			continue
+		var r: Dictionary = row as Dictionary
+		if str(r.get("id", "")).strip_edges() != "":
+			filled += 1
+	var replaced: bool = false
+	if filled >= slot_count:
+		var remove_i: int = -1
+		for i in range(sockets.size() - 1, -1, -1):
+			var e: Variant = sockets[i]
+			if e is Dictionary and str((e as Dictionary).get("id", "")).strip_edges() != "":
+				remove_i = i
+				break
+		if remove_i < 0:
+			return {"ok": false, "replaced": false, "err": "no_replace"}
+		sockets.remove_at(remove_i)
+		replaced = true
+	sockets.append({"id": rune_id, "rank": 0, "charges": 0})
+	if apply_changes:
+		wpn.socketed_runes = sockets
+	return {"ok": true, "replaced": replaced, "err": ""}
+
+
+func _blacksmith_anvil_weapon_and_rune_stone() -> Variant:
+	var wpn: WeaponData = null
+	var stone: RuneItemData = null
+	var n: int = 0
+	for it in anvil_items:
+		if it == null:
+			continue
+		n += 1
+		if it is WeaponData:
+			if wpn != null:
+				return null
+			wpn = it as WeaponData
+		elif it is RuneItemData:
+			if stone != null:
+				return null
+			stone = it as RuneItemData
+		else:
+			return null
+	if n != 2 or wpn == null or stone == null:
+		return null
+	return {"weapon": wpn, "rune_stone": stone}
+
+
+func _blacksmith_set_rune_socket_outcome_readout(wpn: WeaponData, rid: String, res_sock: Dictionary) -> void:
+	if result_icon != null and wpn != null and is_instance_valid(wpn):
+		result_icon.texture = wpn.get("icon") as Texture2D
+	if wpn == null or not is_instance_valid(wpn):
+		return
+	var cat: String = WeaponRuneDisplayHelpers.catalog_name_for_rune_id(rid)
+	var vg2: String = WeaponRuneDisplayHelpers.viking_rune_glyph_for_key(rid)
+	var who2: String = ("%s %s" % [vg2, cat]).strip_edges() if vg2 != "" else cat
+	var headline: String
+	if bool(res_sock.get("replaced", false)):
+		headline = "[center][color=#9effb0][b]✓ LAST RUNE REPLACED[/b][/color][/center]"
 	else:
-		_blacksmith_basic_runesmith_btn.tooltip_text = "Socket an Ember rune into the first open slot."
+		headline = "[center][color=#9effb0][b]✓ RUNE INSCRIBED[/b][/color][/center]"
+	recipe_result_label.text = headline
+	recipe_result_label.text += "\n\n[center][color=#ffe9d6]%s[/color] → [color=white]%s[/color][/center]\n\n" % [who2, wpn.weapon_name]
+	recipe_result_label.text += "[center][color=#a09090][i]Weapon stayed in convoy — only the rune stone was consumed.[/i][/color][/center]\n\n"
+	var rc2: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(wpn)
+	if rc2 != "":
+		recipe_result_label.text += "[center]" + rc2.replace("\n", "\n") + "[/center]"
 
 
-func _on_blacksmith_basic_runesmith_pressed() -> void:
+func _blacksmith_try_apply_rune_to_anvil_weapon(rune_id: String, label_pretty: String) -> void:
 	if not CampaignManager.is_runesmithing_unlocked():
 		return
 	var wpn: WeaponData = _blacksmith_get_first_anvil_weapon()
@@ -3967,31 +4198,105 @@ func _on_blacksmith_basic_runesmith_pressed() -> void:
 	if slot_count <= 0:
 		return
 
-	var sockets_raw: Variant = wpn.socketed_runes
-	var sockets: Array[Dictionary] = sockets_raw as Array[Dictionary] if sockets_raw is Array else ([] as Array[Dictionary])
-	var filled: int = 0
-	for row in sockets:
-		var rid: String = str(row.get("id", "")).strip_edges()
-		if rid != "":
-			filled += 1
-	if filled >= slot_count:
-		recipe_result_label.text = "[center][color=gray]No empty rune slots on this weapon.[/color][/center]"
-		_sync_blacksmith_basic_runesmith_button()
+	var id_norm: String = _blacksmith_normalize_rune_id_key(rune_id)
+	var cost_rows: Array = _blacksmith_rune_socket_material_costs(id_norm)
+	if cost_rows.is_empty():
+		recipe_result_label.text = "[center][color=gray]Unknown rune type.[/color][/center]"
 		return
+	var pre: Dictionary = _blacksmith_rune_socket_resolve(wpn, rune_id, false)
+	if not bool(pre.get("ok", false)):
+		var err_pre: String = str(pre.get("err", ""))
+		if err_pre == "no_replace":
+			recipe_result_label.text = "[center][color=gray]No socketed runes to replace.[/color][/center]"
+		else:
+			recipe_result_label.text = "[center][color=gray]Cannot socket this rune.[/color][/center]"
+		_sync_blacksmith_runesmith_buttons()
+		return
+	if not _blacksmith_convoy_can_pay_material_rows(cost_rows):
+		var sf: String = _blacksmith_rune_material_shortfall_line(cost_rows)
+		recipe_result_label.text = "[center][color=gray]%s[/color][/center]" % sf if sf != "" else (
+			"[center][color=gray]Not enough materials in convoy.[/color][/center]"
+		)
+		_sync_blacksmith_runesmith_buttons()
+		return
+	_blacksmith_convoy_pay_material_rows(cost_rows)
+	var post: Dictionary = _blacksmith_rune_socket_resolve(wpn, rune_id, true)
+	if not bool(post.get("ok", false)):
+		push_error("Rune socket apply failed after paying materials — check convoy state.")
+		_sync_blacksmith_runesmith_buttons()
+		return
+	call_deferred("_populate_material_list")
 
-	# Basic tier: minimal vertical slice. Socket one known id (ember_rune) into the next open slot.
-	sockets.append({"id": "ember_rune", "rank": 0, "charges": 0})
-	wpn.socketed_runes = sockets
-
+	var replaced: bool = bool(post.get("replaced", false))
 	var rune_camp: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(wpn)
-	recipe_result_label.text = "[center][color=#ffe9d6]Runesmithing applied.[/color][/center]\n\n"
+	var vg: String = WeaponRuneDisplayHelpers.viking_rune_glyph_for_key(rune_id)
+	var who: String = ("%s %s" % [vg, label_pretty]).strip_edges() if vg != "" else label_pretty
+	var gh: String = "[center][color=#9effb0][b]✓ GLYPH INSCRIPTION[/b][/color][/center]" if not replaced else "[center][color=#9effb0][b]✓ LAST RUNE REPLACED[/b][/color][/center]"
+	recipe_result_label.text = gh + "\n\n[center][color=#ffe9d6]%s[/color] → [color=white]%s[/color][/center]\n\n" % [who, wpn.weapon_name]
+	recipe_result_label.text += "[center][color=#a09090][i]Paid from convoy materials — weapon not consumed.[/i][/color][/center]\n\n"
 	if rune_camp != "":
 		recipe_result_label.text += "[center]" + rune_camp.replace("\n", "\n") + "[/center]"
 	if select_sound and select_sound.stream:
 		select_sound.pitch_scale = 1.06
 		select_sound.play()
 
-	_sync_blacksmith_basic_runesmith_button()
+	_sync_blacksmith_runesmith_buttons()
+
+
+func _on_blacksmith_pop_rune_pressed() -> void:
+	if not CampaignManager.is_runesmithing_unlocked():
+		return
+	var wpn: WeaponData = _blacksmith_get_first_anvil_weapon()
+	if wpn == null or not is_instance_valid(wpn):
+		return
+	if bool(wpn.get_meta("is_locked", false)) == true:
+		return
+	if int(wpn.rune_slot_count) <= 0:
+		return
+	var sockets_raw: Variant = wpn.socketed_runes
+	var sockets: Array = sockets_raw.duplicate() if sockets_raw is Array else []
+	var remove_i: int = -1
+	for i in range(sockets.size() - 1, -1, -1):
+		var e: Variant = sockets[i]
+		if e is Dictionary and str((e as Dictionary).get("id", "")).strip_edges() != "":
+			remove_i = i
+			break
+	if remove_i < 0:
+		recipe_result_label.text = "[center][color=gray]No socketed runes to remove.[/color][/center]"
+		_sync_blacksmith_runesmith_buttons()
+		return
+	sockets.remove_at(remove_i)
+	wpn.socketed_runes = sockets
+
+	var rune_camp2: String = WeaponRuneDisplayHelpers.format_runes_bbcode_for_item_variant(wpn)
+	recipe_result_label.text = "[center][color=#e8c896][b]✓ RUNE REMOVED[/b][/color][/center]\n\n[center][color=#ffe9d6]Stripped the last inscription from %s.[/color][/center]\n\n" % wpn.weapon_name
+	recipe_result_label.text += "[center][color=#a09090][i]Materials from that rune are not refunded.[/i][/color][/center]\n\n"
+	if rune_camp2 != "":
+		recipe_result_label.text += "[center]" + rune_camp2.replace("\n", "\n") + "[/center]"
+	if select_sound and select_sound.stream:
+		select_sound.pitch_scale = 0.98
+		select_sound.play()
+	_sync_blacksmith_runesmith_buttons()
+
+
+func _on_blacksmith_ember_runesmith_pressed() -> void:
+	_blacksmith_try_apply_rune_to_anvil_weapon("ember_rune", "Ember")
+
+
+func _on_blacksmith_swift_runesmith_pressed() -> void:
+	_blacksmith_try_apply_rune_to_anvil_weapon("swift_rune", "Swift")
+
+
+func _on_blacksmith_ward_runesmith_pressed() -> void:
+	if not CampaignManager.has_advanced_runesmithing():
+		return
+	_blacksmith_try_apply_rune_to_anvil_weapon("ward_rune", "Ward")
+
+
+func _on_blacksmith_flux_runesmith_pressed() -> void:
+	if not CampaignManager.has_advanced_runesmithing():
+		return
+	_blacksmith_try_apply_rune_to_anvil_weapon("flux_rune", "Flux")
 
 
 func _blacksmith_update_craft_ready_affordance() -> void:
@@ -4005,8 +4310,11 @@ func _blacksmith_update_craft_ready_affordance() -> void:
 		_blacksmith_play_craft_ready_tick_sound()
 	if _blacksmith_craft_ready_tween != null and _blacksmith_craft_ready_tween.is_valid():
 		return
+	var hi: Color = Color(1.2, 1.14, 0.92)
+	if not current_recipe.is_empty() and current_recipe.get("type") == "socket_rune":
+		hi = Color(1.05, 1.38, 1.12)
 	_blacksmith_craft_ready_tween = create_tween().set_loops()
-	_blacksmith_craft_ready_tween.tween_property(craft_button, "modulate", Color(1.2, 1.14, 0.92), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_blacksmith_craft_ready_tween.tween_property(craft_button, "modulate", hi, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_blacksmith_craft_ready_tween.tween_property(craft_button, "modulate", Color.WHITE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
@@ -4017,17 +4325,7 @@ func _blacksmith_slot_receive_juice(slot_index: int) -> void:
 	var tr: Control = slots[slot_index] as Control
 	if tr == null or not is_instance_valid(tr):
 		return
-	var orig: Vector2 = Vector2.ONE
-	tr.scale = orig
-	var tw := create_tween()
-	tw.tween_property(tr, "scale", orig * 1.14, 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(tr, "scale", orig, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	if shop_buy_sound != null and shop_buy_sound.stream != null:
-		shop_buy_sound.pitch_scale = 0.88
-		shop_buy_sound.play()
-	elif select_sound != null and select_sound.stream != null:
-		select_sound.pitch_scale = 1.22
-		select_sound.play()
+	CampMenuMotion.forge_slot_land(self, tr, shop_buy_sound, select_sound)
 
 
 func _blacksmith_forge_success_panel_juice() -> void:
@@ -4038,6 +4336,7 @@ func _blacksmith_forge_success_panel_juice() -> void:
 		var rtw := create_tween()
 		rtw.tween_property(result_icon, "modulate", hi, 0.09)
 		rtw.tween_property(result_icon, "modulate", Color.WHITE, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		CampMenuMotion.craft_result_punch(self, result_icon)
 	if select_sound != null and select_sound.stream != null:
 		select_sound.pitch_scale = 1.14
 		select_sound.play()
@@ -4549,21 +4848,54 @@ func _camp_layout_merchant_talk_panel_inner() -> void:
 func _on_camp_ui_resized() -> void:
 	call_deferred("_camp_apply_ui_overhaul")
 
-## Initializes the camp UI: connects all buttons, populates shop/roster/inventory, starts music and ambient.
-## Purpose: Single entry point for camp setup; gates (e.g. blacksmith, world map) use CampaignManager.max_unlocked_index.
-## Inputs: None.  Outputs: None.
-## Side effects: Connects signals, populates grids, may append test data (dragon meat / hatch) if DragonManager is empty.
-func _ready() -> void:
+
+## Null-safe signal wiring for `_ready()` — keeps one pattern instead of many `if node:` blocks.
+func _camp_connect_pressed(btn: BaseButton, cb: Callable) -> void:
+	if btn != null and is_instance_valid(btn):
+		btn.pressed.connect(cb)
+
+
+func _camp_connect_confirmed(dlg: ConfirmationDialog, cb: Callable) -> void:
+	if dlg != null and is_instance_valid(dlg):
+		dlg.confirmed.connect(cb)
+
+
+func _camp_connect_finished(player: AudioStreamPlayer, cb: Callable) -> void:
+	if player != null and is_instance_valid(player):
+		player.finished.connect(cb)
+
+
+func _camp_connect_value_changed(slider: Range, cb: Callable) -> void:
+	if slider != null and is_instance_valid(slider):
+		slider.value_changed.connect(cb)
+
+
+## `TabBar` / `TabContainer` use `tab_selected` in Godot 4.
+func _camp_connect_tab_selected(tabs: Node, cb: Callable) -> void:
+	if tabs == null or not is_instance_valid(tabs):
+		return
+	if tabs.has_signal(&"tab_selected"):
+		tabs.tab_selected.connect(cb)
+
+
+func _camp_connect_visibility_changed(ctrl: Control, cb: Callable) -> void:
+	if ctrl != null and is_instance_valid(ctrl):
+		ctrl.visibility_changed.connect(cb)
+
+
+func _camp_connect_about_to_popup(dlg: AcceptDialog, cb: Callable) -> void:
+	if dlg != null and is_instance_valid(dlg) and dlg.has_signal(&"about_to_popup"):
+		dlg.about_to_popup.connect(cb)
+
+
+func _camp_ready_audio_tracks_meat_cursor() -> void:
 	if camp_music != null:
 		camp_music.bus = "Music"
 	if minigame_music != null:
 		minigame_music.bus = "Music"
-	# Single source of truth for default camp music (shared with CampExplore).
 	if camp_music_tracks.is_empty():
 		camp_music_tracks = DefaultCampMusic.get_default_camp_music_tracks()
-
 	# --- TEMP DRAGON MEAT TEST ---
-	# Use a loadable consumable so it has path/original_path and serializes correctly (otherwise save warns and drops the item).
 	var meat_template = load("res://Resources/Consumables/Vulnerary.tres") as Resource
 	if meat_template != null:
 		var test_meat = CampaignManager.make_unique_item(meat_template)
@@ -4572,130 +4904,128 @@ func _ready() -> void:
 			test_meat.set("description", "A perfect snack for a growing dragon.")
 			test_meat.set("gold_cost", 15)
 			CampaignManager.global_inventory.append(test_meat)
-	
-	# --- CREATE INVISIBLE CURSOR FOR DRAGGING ---
 	var invisible_img = Image.create_empty(4, 4, false, Image.FORMAT_RGBA8)
 	empty_cursor = ImageTexture.create_from_image(invisible_img)
-	if blacksmith_panel: blacksmith_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	# 1. SAFETY CHECKS: Check if nodes exist before connecting to avoid 'null instance' crashes
-	if save_button: 
-		save_button.pressed.connect(_on_save_clicked)
+	if blacksmith_panel:
+		blacksmith_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _camp_ready_save_flow_and_header_labels() -> void:
+	if save_button:
+		_camp_connect_pressed(save_button, _on_save_clicked)
 	else:
-		print("!!! WARNING: SaveButton not found. Access it as a Unique Name (%) in the editor.")
-
-	# 2. CONNECT SLOT BUTTONS
-	if save_slot_1: save_slot_1.pressed.connect(func(): _try_to_save(1))
-	if save_slot_2: save_slot_2.pressed.connect(func(): _try_to_save(2))
-	if save_slot_3: save_slot_3.pressed.connect(func(): _try_to_save(3))
-	if close_save_btn: close_save_btn.pressed.connect(_on_back_pressed)
-	if blacksmith_talk_button != null:
-		blacksmith_talk_button.pressed.connect(_on_blacksmith_talk_pressed)
-	if overwrite_dialog:
-		overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
-	
-	if back_button: 
-		back_button.pressed.connect(_on_back_pressed)
-		
-	if open_save_menu_btn:
-		open_save_menu_btn.pressed.connect(_on_save_clicked)
-		
-	# Initial UI state
-	_update_slot_labels()	
-	
-
+		push_warning("camp_menu: SaveButton not found — assign Unique Name (%) SaveButton in the camp scene.")
+	_camp_connect_pressed(save_slot_1, func(): _try_to_save(1))
+	_camp_connect_pressed(save_slot_2, func(): _try_to_save(2))
+	_camp_connect_pressed(save_slot_3, func(): _try_to_save(3))
+	_camp_connect_pressed(close_save_btn, _on_back_pressed)
+	_camp_connect_pressed(blacksmith_talk_button, _on_blacksmith_talk_pressed)
+	if blacksmith_label is RichTextLabel:
+		var rtl: RichTextLabel = blacksmith_label as RichTextLabel
+		if not rtl.meta_clicked.is_connected(_on_blacksmith_dialogue_meta_clicked):
+			rtl.meta_clicked.connect(_on_blacksmith_dialogue_meta_clicked)
+	_camp_connect_confirmed(overwrite_dialog, _on_overwrite_confirmed)
+	_camp_connect_pressed(back_button, _on_back_pressed)
+	_camp_connect_pressed(open_save_menu_btn, _on_save_clicked)
+	_update_slot_labels()
 	_update_merchant_text("welcome")
-	
 	_refresh_gold_label()
-	
-	# --- TEMP DRAGON TEST (Delete this later!) ---
-	# We only hatch test eggs if the player doesn't have any dragons yet.
+
+
+func _camp_ready_dev_test_dragons_if_empty() -> void:
 	if DragonManager.player_dragons.is_empty():
 		print("Spawning test dragons...")
 		DragonManager.hatch_egg()
-		DragonManager.hatch_egg() 
 		DragonManager.hatch_egg()
-		# Now you have 3 Gen-1 baby dragons!
-	if open_ranch_btn:
-		open_ranch_btn.pressed.connect(_open_dragon_ranch)
+		DragonManager.hatch_egg()
+
+
+func _camp_ready_wire_main_signals() -> void:
+	_camp_connect_pressed(open_ranch_btn, _open_dragon_ranch)
 	# --- SYNC CAMP UI WHEN RANCH CLOSES ---
 	if dragon_ranch_panel:
-		dragon_ranch_panel.visibility_changed.connect(func():
+		_camp_connect_visibility_changed(dragon_ranch_panel, func():
 			if not dragon_ranch_panel.visible:
 				_populate_inventory() # Show new eggs / hide consumed meat & roses
 				_refresh_gold_label() # Update gold if they threw rabbits
 				if herder_idle_timer:
 					herder_idle_timer.stop()
 		)
-	next_battle_button.pressed.connect(_on_next_battle_pressed)
-	equip_button.pressed.connect(_on_equip_pressed)
-	unequip_button.pressed.connect(_on_unequip_pressed)
-	sell_button.pressed.connect(_on_sell_pressed)
-	sell_confirmation.confirmed.connect(_on_sell_confirmed)
-	buy_button.pressed.connect(_on_buy_pressed)
-	category_tabs.tab_selected.connect(_on_tab_selected)	
-	buy_confirmation.confirmed.connect(_on_buy_confirmed)
+	_camp_connect_pressed(next_battle_button, _on_next_battle_pressed)
+	_camp_connect_pressed(equip_button, _on_equip_pressed)
+	_camp_connect_pressed(unequip_button, _on_unequip_pressed)
+	_camp_connect_pressed(sell_button, _on_sell_pressed)
+	_camp_connect_confirmed(sell_confirmation, _on_sell_confirmed)
+	_camp_connect_pressed(buy_button, _on_buy_pressed)
+	_camp_connect_tab_selected(category_tabs, _on_tab_selected)
+	_camp_connect_confirmed(buy_confirmation, _on_buy_confirmed)
 	# --- QUANTITY POPUP CONNECTIONS ---
 	if quantity_popup:
-		qty_slider.value_changed.connect(_on_qty_slider_changed)
-		qty_confirm_btn.pressed.connect(_on_qty_confirm_pressed)
-		qty_cancel_btn.pressed.connect(func(): quantity_popup.visible = false)
-	use_button.pressed.connect(_on_use_pressed)
+		_camp_connect_value_changed(qty_slider, _on_qty_slider_changed)
+		_camp_connect_pressed(qty_confirm_btn, _on_qty_confirm_pressed)
+		_camp_connect_pressed(qty_cancel_btn, func(): quantity_popup.visible = false)
+	_camp_connect_pressed(use_button, _on_use_pressed)
 	# --- JUKEBOX CONNECTIONS ---
-	if jukebox_btn: jukebox_btn.pressed.connect(_open_jukebox)
-	if close_jukebox_btn: close_jukebox_btn.pressed.connect(_close_jukebox)
-	
+	_camp_connect_pressed(jukebox_btn, _open_jukebox)
+	_camp_connect_pressed(close_jukebox_btn, _close_jukebox)
+
 	if jukebox_volume_slider:
-		jukebox_volume_slider.value_changed.connect(_on_jukebox_volume_changed)
+		_camp_connect_value_changed(jukebox_volume_slider, _on_jukebox_volume_changed)
 		# Restore persisted volume if available
 		user_music_volume = CampaignManager.jukebox_volume_db
 		jukebox_volume_slider.value = db_to_linear(user_music_volume)
 	else:
 		user_music_volume = CampaignManager.jukebox_volume_db
 
-	if jukebox_skip_btn: jukebox_skip_btn.pressed.connect(_on_jukebox_skip_pressed)
-	if jukebox_stop_btn: jukebox_stop_btn.pressed.connect(_on_jukebox_stop_pressed)
+	_camp_connect_pressed(jukebox_skip_btn, _on_jukebox_skip_pressed)
+	_camp_connect_pressed(jukebox_stop_btn, _on_jukebox_stop_pressed)
 
-	camp_music.finished.connect(_on_camp_music_finished)
+	_camp_connect_finished(camp_music, _on_camp_music_finished)
 	jukebox_playback_mode = CampaignManager.jukebox_last_mode if CampaignManager.jukebox_last_mode in [JUKEBOX_MODE_DEFAULT, JUKEBOX_MODE_LOOP_TRACK, JUKEBOX_MODE_LOOP_PLAYLIST, JUKEBOX_MODE_SHUFFLE_PLAYLIST] else JUKEBOX_MODE_DEFAULT
 	_jukebox_track_sort_mode = JUKEBOX_SORT_ALPHA if CampaignManager.jukebox_sort_mode == JUKEBOX_SORT_ALPHA else JUKEBOX_SORT_UNLOCK
 	_restore_jukebox_session()	
-	if swap_ability_btn: swap_ability_btn.pressed.connect(_on_swap_ability_pressed)
+	_camp_connect_pressed(swap_ability_btn, _on_swap_ability_pressed)
 	# --- SKILL TREE CONNECTIONS ---
-	if open_skills_btn: open_skills_btn.pressed.connect(_open_skill_tree)
-	if close_skills_btn: close_skills_btn.pressed.connect(func(): skill_tree_panel.visible = false)
-	if unlock_skill_btn: unlock_skill_btn.pressed.connect(_on_unlock_skill_pressed)
-	
-	minigame_music.finished.connect(_on_minigame_music_finished)
+	_camp_connect_pressed(open_skills_btn, _open_skill_tree)
+	_camp_connect_pressed(close_skills_btn, func():
+		if skill_tree_panel:
+			skill_tree_panel.visible = false
+	)
+	_camp_connect_pressed(unlock_skill_btn, _on_unlock_skill_pressed)
+
+	_camp_connect_finished(minigame_music, _on_minigame_music_finished)
 	_setup_task_log_button()
-	base_target_height = haggle_target_zone.size.y
+	if haggle_target_zone:
+		base_target_height = haggle_target_zone.size.y
 	
-	haggle_button.pressed.connect(_on_haggle_pressed)
-	haggle_confirmation.confirmed.connect(_start_haggle_minigame)
+	_camp_connect_pressed(haggle_button, _on_haggle_pressed)
+	_camp_connect_confirmed(haggle_confirmation, _start_haggle_minigame)
 	if haggle_confirmation != null:
-		haggle_confirmation.about_to_popup.connect(_apply_haggle_confirmation_theme)
+		_camp_connect_about_to_popup(haggle_confirmation, _apply_haggle_confirmation_theme)
 		call_deferred("_apply_haggle_confirmation_theme")
-	
-	talk_button.pressed.connect(_on_talk_pressed)
-	option1.pressed.connect(_on_option1_pressed)
-	option2.pressed.connect(_on_option2_pressed)
-	option3.pressed.connect(_on_option3_pressed)
+
+	_camp_connect_pressed(talk_button, _on_talk_pressed)
+	_camp_connect_pressed(option1, _on_option1_pressed)
+	_camp_connect_pressed(option2, _on_option2_pressed)
+	_camp_connect_pressed(option3, _on_option3_pressed)
 	if blacksmith_panel != null:
-		blacksmith_panel.visibility_changed.connect(_sync_merchant_talk_button_state)
+		_camp_connect_visibility_changed(blacksmith_panel, _sync_merchant_talk_button_state)
 
 	# --- BLACKSMITH DRAG & DROP CONNECTIONS ---
 	# 1. Forward the drag signals to our custom functions
-	slot1.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(0))
-	slot2.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(1))
-	slot3.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(2))
-	
-	# 2. Allow clicking slots to remove items from the anvil
-	slot1.gui_input.connect(_on_slot_gui_input.bind(0))
-	slot2.gui_input.connect(_on_slot_gui_input.bind(1))
-	slot3.gui_input.connect(_on_slot_gui_input.bind(2))
+	if slot1:
+		slot1.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(0))
+		slot1.gui_input.connect(_on_slot_gui_input.bind(0))
+	if slot2:
+		slot2.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(1))
+		slot2.gui_input.connect(_on_slot_gui_input.bind(1))
+	if slot3:
+		slot3.set_drag_forwarding(Callable(), _can_drop_slot, _drop_slot.bind(2))
+		slot3.gui_input.connect(_on_slot_gui_input.bind(2))
 	
 	# --- BLACKSMITH BUTTON CONNECTIONS ---
 	if open_blacksmith_btn:
-		open_blacksmith_btn.pressed.connect(open_blacksmith)
+		_camp_connect_pressed(open_blacksmith_btn, open_blacksmith)
 		if DEBUG_CAMP_ALWAYS_SHOW_BLACKSMITH:
 			open_blacksmith_btn.visible = true
 		else:
@@ -4705,20 +5035,17 @@ func _ready() -> void:
 				open_blacksmith_btn.visible = true
 			else:
 				open_blacksmith_btn.visible = false
-	if close_blacksmith_btn:
-		close_blacksmith_btn.pressed.connect(close_blacksmith)
-	if craft_button:
-		craft_button.pressed.connect(_on_craft_pressed)
-	if recipe_book_btn: recipe_book_btn.pressed.connect(_open_recipe_book)
-	if close_book_btn: close_book_btn.pressed.connect(_close_recipe_book)	
-	
+	_camp_connect_pressed(close_blacksmith_btn, close_blacksmith)
+	_camp_connect_pressed(craft_button, _on_craft_pressed)
+	_camp_connect_pressed(recipe_book_btn, _open_recipe_book)
+	_camp_connect_pressed(close_book_btn, _close_recipe_book)
+
+
+func _camp_ready_shop_roster_bootstrap() -> void:
 	_populate_inventory()
-	
-# --- UPDATED SHOP INITIALIZATION ---
 	if CampaignManager.camp_shop_stock.is_empty():
 		_generate_shop_inventory()
 		_apply_random_discount()
-		
 		CampaignManager.camp_shop_stock = shop_stock.duplicate()
 		CampaignManager.camp_discount_item = discounted_item
 		CampaignManager.camp_has_haggled = false
@@ -4727,63 +5054,72 @@ func _ready() -> void:
 		shop_stock = CampaignManager.camp_shop_stock.duplicate()
 		discounted_item = CampaignManager.camp_discount_item
 		has_haggled_this_visit = CampaignManager.camp_has_haggled
-
-	# --- NEW: SETUP DRAG AND DROP & REFRESH ---
-	if unit_grid: unit_grid.set_drag_forwarding(Callable(), _can_drop_inv, _drop_on_unit)
-	if convoy_grid: convoy_grid.set_drag_forwarding(Callable(), _can_drop_inv, _drop_on_convoy)
-	if refresh_shop_btn: refresh_shop_btn.pressed.connect(_on_refresh_shop_pressed)	
+	if unit_grid:
+		unit_grid.set_drag_forwarding(Callable(), _can_drop_inv, _drop_on_unit)
+	if convoy_grid:
+		convoy_grid.set_drag_forwarding(Callable(), _can_drop_inv, _drop_on_convoy)
+	_camp_connect_pressed(refresh_shop_btn, _on_refresh_shop_pressed)
 	_populate_shop()
 	_play_merchant_idle()
-	
 	_populate_roster()
 	if CampaignManager.player_roster.size() > 0:
 		_on_roster_item_selected(0)
 
+
+func _camp_ready_timers_ambient_and_finish() -> void:
 	idle_timer = Timer.new()
 	idle_timer.timeout.connect(_on_idle_timer_timeout)
 	add_child(idle_timer)
 	_reset_idle_timer()
-	
-	# --- DRAGON HERDER IDLE TIMER ---
 	herder_idle_timer = Timer.new()
 	herder_idle_timer.timeout.connect(_on_herder_idle_timeout)
 	add_child(herder_idle_timer)
-	
-	# --- 1. UI FADE-IN POLISH ---
 	self.modulate.a = 0.0
 	var fade_in = create_tween()
 	fade_in.tween_property(self, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	
-	# --- 2. CONNECT HOVER SOUNDS ---
 	_connect_hover_sounds(self)
-
-	# --- 3. AMBIENT CAMPFIRE LOOP ---
 	if campfire_ambient != null:
 		var ambient_player = AudioStreamPlayer.new()
 		ambient_player.stream = campfire_ambient
-		ambient_player.volume_db = -12.0 # Keep it quiet and cozy behind the music
+		ambient_player.volume_db = -12.0
 		add_child(ambient_player)
 		ambient_player.play()
-		# Force it to loop infinitely even if the raw audio file isn't set to loop
 		ambient_player.finished.connect(ambient_player.play)
-	
-	# --- WORLD MAP BUTTON LOGIC ---
-	# Show World Map and "Continue Story" only after Level 2 is cleared (max_unlocked_index >= 2).
 	if world_map_button:
-		world_map_button.pressed.connect(_on_world_map_pressed)
-		if CampaignManager.max_unlocked_index >= 2:
-			world_map_button.visible = true
-			next_battle_button.text = "Continue Story"
-		else:
-			world_map_button.visible = false
-			next_battle_button.text = "Next Battle"
-
-	# --- EXPLORE CAMP BUTTON ---
-	if explore_camp_btn:
-		explore_camp_btn.pressed.connect(_on_explore_camp_pressed)
+		_camp_connect_pressed(world_map_button, _on_world_map_pressed)
+		if next_battle_button:
+			if CampaignManager.max_unlocked_index >= 2:
+				world_map_button.visible = true
+				next_battle_button.text = "Continue Story"
+			else:
+				world_map_button.visible = false
+				next_battle_button.text = "Next Battle"
+	_camp_connect_pressed(explore_camp_btn, _on_explore_camp_pressed)
 	if not resized.is_connected(_on_camp_ui_resized):
 		resized.connect(_on_camp_ui_resized)
+	if not _camp_motion_ambient_started:
+		_camp_motion_ambient_started = true
+		if background_texture != null:
+			_camp_motion_fire_layer = CampMenuMotion.ensure_fire_flicker_layer(self, background_texture)
+			if _camp_motion_fire_layer != null:
+				CampMenuMotion.start_campfire_flicker(self, _camp_motion_fire_layer)
+			CampMenuMotion.start_background_breathe(self, background_texture)
+		CampMenuMotion.wire_hover_scales([
+			next_battle_button, world_map_button, explore_camp_btn, jukebox_btn, open_blacksmith_btn
+		])
 	call_deferred("_camp_apply_ui_overhaul")
+
+
+## Initializes the camp UI: phased setup (audio → save header → dev fixtures → signals → shop/roster → polish).
+## Side effects: Connects signals, populates grids; may append test meat / hatch dragons when roster is empty.
+func _ready() -> void:
+	_camp_ready_audio_tracks_meat_cursor()
+	_camp_ready_save_flow_and_header_labels()
+	_camp_ready_dev_test_dragons_if_empty()
+	_camp_ready_wire_main_signals()
+	_camp_ready_shop_roster_bootstrap()
+	_camp_ready_timers_ambient_and_finish()
+	call_deferred("_camp_start_pending_haldor_solo_gifts")
 
 
 ## Opens the walkable Explore Camp scene. Does not save; returning restores camp menu.
@@ -5161,8 +5497,9 @@ func _end_haggle_minigame(won: bool) -> void:
 		_update_merchant_text("haggle_lose")
 
 	_show_rep_popup(won)
+	CampMenuMotion.haggle_resolve_flash(self, won, haggle_progress, _camp_cards.get("shop") as Control)
 	_populate_shop()
-	
+
 func _update_merchant_text(category: String) -> void:
 	var mc_name = "Hero"
 	if CampaignManager.player_roster.size() > 0:
@@ -5241,8 +5578,8 @@ func _get_final_price(item: Resource) -> int:
 
 func _play_typewriter_animation(new_text: String) -> void:
 	merchant_label.text = new_text
-	merchant_label.visible_characters = 0 
-	
+	merchant_label.visible_characters = 0
+	CampMenuMotion.merchant_portrait_line_nudge(self, merchant_portrait)
 	# THE FIX: Kill the old animation if they clicked quickly!
 	if merchant_tween and merchant_tween.is_valid():
 		merchant_tween.kill()
@@ -5294,8 +5631,8 @@ func _generate_shop_inventory() -> void:
 		shop_stock.append(dup_item)
 										
 func _on_tab_selected(_tab_index: int) -> void:
-	# Simply refresh the list whenever a new tab is clicked
 	_populate_inventory()
+	CampMenuMotion.flash_inventory_card(self, _camp_cards.get("inventory") as Control)
 
 ## Populates the shop grid with stock items. Uses _style_item_button (rarity + daily-deal gold); price tags via _add_item_corner_label (20px, 4px margin); lock star if is_locked.
 ## Purpose: Rebuild shop_grid for current shop_stock; integrates with _get_shop_button_center / _animate_buy_item_fly_in for overclocked buy juice. Inputs: None. Outputs: None. Side effects: Clears shop_grid, adds buttons, clears selected_shop_meta.
@@ -5324,6 +5661,8 @@ func _populate_shop() -> void:
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.add_theme_font_size_override("font_size", 20)
 		shop_grid.add_child(btn)
+		if is_on_sale:
+			call_deferred("_camp_motion_shop_deal_one", btn)
 
 		var state := {"is_empty": false, "is_on_sale": is_on_sale}
 		_style_item_button(btn, item, state)
@@ -5404,7 +5743,7 @@ func _on_buy_pressed() -> void:
 	var item_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
 	
 	# Determine if it's a stackable item (Potions, Materials, Keys)
-	var is_stackable = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
+	var is_stackable = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData) or (item is RuneItemData)
 	
 	if is_stackable:
 		# Max amount is based on how much gold they currently have!
@@ -5588,7 +5927,7 @@ func _populate_inventory() -> void:
 			3: if data["source"] == "convoy": should_show = true # CONVOY ONLY TAB
 		
 		if should_show:
-			var can_stack = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
+			var can_stack = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData) or (item is RuneItemData)
 			
 			if can_stack and data["source"] == "convoy":
 				var i_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
@@ -6118,6 +6457,7 @@ func _on_roster_item_selected(index: int) -> void:
 				h_style.border_color = Color.CYAN
 				h_style.set_border_width_all(3)
 				child.add_theme_stylebox_override("normal", h_style)
+				CampMenuMotion.roster_pick_pulse(self, child as Button)
 			else:
 				child.modulate = Color.WHITE
 				var tier_color_restore: Color = child.get_meta("tier_color", Color(0.29, 0.62, 1.0))
@@ -6621,7 +6961,7 @@ func _on_sell_pressed() -> void:
 	var sell_price = int(cost / 2)
 	var item_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
 	
-	var is_stackable = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
+	var is_stackable = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData) or (item is RuneItemData)
 	
 	if is_stackable and count > 1:
 		qty_mode = "sell"
@@ -7011,6 +7351,14 @@ func _get_item_detailed_info(
 		lines.append(_camp_inv_section_heading("Overview"))
 		lines.append(_camp_inv_kv("Kind", "[color=#f5ecd8]Crafting material[/color]"))
 
+	elif item is RuneItemData:
+		lines.append(_camp_inv_section_heading("Overview"))
+		lines.append(_camp_inv_kv("Kind", "[color=#f5ecd8]Rune stone[/color]"))
+		var rid: String = str(item.rune_id).strip_edges()
+		if rid != "":
+			lines.append(_camp_inv_kv("Inscribes", WeaponRuneDisplayHelpers.catalog_name_for_rune_id(rid)))
+		lines.append("[font_size=21][color=#c4bba8]Place a weapon and this stone on the anvil, then press SOCKET at the forge.[/color][/font_size]")
+
 	else:
 		lines.append(_camp_inv_section_heading("Overview"))
 		lines.append("[font_size=21][color=#c4bba8]Miscellaneous inventory — still salable at standard rates.[/color][/font_size]")
@@ -7090,6 +7438,11 @@ func _merchant_talk_grab_primary_focus() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if DEBUG_HALDOR_SOLO_TAP_TEST and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
+		if (event as InputEventKey).keycode == KEY_F9:
+			_blacksmith_debug_trigger_solo_tap_test()
+			get_viewport().set_input_as_handled()
+			return
 	if haggle_active and event.is_action_pressed("camp_cancel"):
 		_end_haggle_concede()
 		get_viewport().set_input_as_handled()
@@ -7625,6 +7978,14 @@ func _try_to_save(slot: int) -> void:
 	
 	if FileAccess.file_exists(path):
 		pending_save_slot = slot
+		var warn_btn: Button = null
+		if slot == 1:
+			warn_btn = save_slot_1
+		elif slot == 2:
+			warn_btn = save_slot_2
+		elif slot == 3:
+			warn_btn = save_slot_3
+		CampMenuMotion.save_slot_overwrite_warn_pulse(self, warn_btn)
 		if overwrite_dialog:
 			overwrite_dialog.dialog_text = "Slot " + str(slot) + " already has save data. Overwrite?"
 			overwrite_dialog.popup_centered()
@@ -7859,20 +8220,89 @@ func open_blacksmith() -> void:
 	# --- 3. Recipe book button (always shown; disabled until Blacksmith's Tome) ---
 	_sync_blacksmith_recipe_book_button_state()
 
+	# --- 3b. Dev: sample rune stones + test unlock (before material list so icons appear immediately) ---
+	_debug_grant_rune_stones_if_enabled()
+
 	# --- 4. REFRESH UI ---
 	_update_anvil_visuals()
 	_populate_material_list()
 	check_blacksmith_recipe()
 	if haldor_normal: blacksmith_portrait.texture = haldor_normal
 	
+	# First forge visit after runesmithing unlocks: dedicated lecture (persisted flag).
+	if CampaignManager.is_runesmithing_unlocked() and not CampaignManager.seen_haldor_runesmith_forge_intro:
+		CampaignManager.seen_haldor_runesmith_forge_intro = true
+		_update_blacksmith_text("runesmith_forge_intro")
+	# Rare interstitial beat from the post-map queue (does not replace runesmith intro).
+	elif randf() < 0.18 and CampaignManager.haldor_has_pending_beats():
+		var beat_id_open: String = CampaignManager.peek_haldor_beat_queue_front_id()
+		var forge_beat: String = str(CampaignManager.try_consume_haldor_beat_from_queue()).strip_edges()
+		if forge_beat != "":
+			last_monologue_text = forge_beat
+			var hint_open: Variant = DialogueDatabase.get_haldor_beat_solo_hint(beat_id_open) if beat_id_open != "" else null
+			var bb_open: String = DialogueDatabase.apply_haldor_solo_tap_hint(forge_beat, hint_open, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+			_blacksmith_begin_typed_bbcode(bb_open, forge_beat)
+		elif last_blacksmith_dialogue_plain == "" or last_blacksmith_dialogue_plain.begins_with("The forge"):
+			_update_blacksmith_text("welcome")
 	# Only play the welcome text if he didn't just announce a new recipe
-	if blacksmith_label.text == "" or blacksmith_label.text.begins_with("The forge"):
+	elif last_blacksmith_dialogue_plain == "" or last_blacksmith_dialogue_plain.begins_with("The forge"):
 		_update_blacksmith_text("welcome")
-		
+
 	_play_blacksmith_idle()
 	_populate_inventory()
 	_refresh_blueprint_stock()
-	
+
+func _debug_grant_rune_stones_if_enabled() -> void:
+	if not DEBUG_GRANT_RUNE_STONES_FIRST_BLACKSMITH_OPEN:
+		return
+	if _debug_blacksmith_test_kit_granted:
+		return
+	var paths: Array[String] = [
+		"res://Resources/Runes/ember_rune_stone.tres",
+		"res://Resources/Runes/swift_rune_stone.tres",
+		"res://Resources/Runes/ward_rune_stone.tres",
+		"res://Resources/Runes/flux_rune_stone.tres",
+	]
+	var any_added: bool = false
+	for p in paths:
+		if not ResourceLoader.exists(p):
+			push_warning("Rune stone debug grant: missing resource %s" % p)
+			continue
+		var tpl: Resource = load(p)
+		if tpl == null:
+			push_warning("Rune stone debug grant: failed load %s" % p)
+			continue
+		if not (tpl is RuneItemData):
+			push_warning("Rune stone debug grant: not RuneItemData at %s" % p)
+			continue
+		var inst: Resource = CampaignManager.duplicate_item(tpl)
+		if inst == null:
+			continue
+		CampaignManager.global_inventory.append(inst)
+		any_added = true
+
+	const DEBUG_WEAPON_PATH: String = "res://Resources/Runes/debug_rune_test_sword.tres"
+	if ResourceLoader.exists(DEBUG_WEAPON_PATH):
+		var w_tpl: Resource = load(DEBUG_WEAPON_PATH)
+		if w_tpl is WeaponData:
+			var w_inst: Resource = CampaignManager.duplicate_item(w_tpl)
+			if w_inst is WeaponData:
+				CampaignManager.global_inventory.append(w_inst)
+				any_added = true
+			else:
+				push_warning("Blacksmith debug grant: duplicate_item did not return WeaponData for %s" % DEBUG_WEAPON_PATH)
+		else:
+			push_warning("Blacksmith debug grant: not WeaponData at %s" % DEBUG_WEAPON_PATH)
+	else:
+		push_warning("Blacksmith debug grant: missing %s" % DEBUG_WEAPON_PATH)
+
+	if not any_added:
+		return
+	_debug_blacksmith_test_kit_granted = true
+	# So SOCKET / glyphs / status match gameplay (ward & flux stones need advanced).
+	CampaignManager.raise_runesmithing_unlock_tier_to_at_least(CampaignManager.RUNESMITHING_TIER_ADVANCED)
+	_refresh_blacksmith_runesmith_status_label()
+
 func _try_unlock_recipe(item: Resource) -> bool:
 	var i_name = str(item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name"))
 	
@@ -7928,7 +8358,7 @@ func _populate_material_list() -> void:
 		var item = CampaignManager.global_inventory[i]
 		if item == null: continue
 			
-		var can_stack = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData)
+		var can_stack = (item is ConsumableData) or (item is ChestKeyData) or (item is MaterialData) or (item is RuneItemData)
 		var found_stack = false
 		
 		if can_stack:
@@ -8091,11 +8521,15 @@ func _drop_slot(_at_position: Vector2, data: Variant, slot_index: int) -> void:
 	var c_idx = data.get("convoy_index", -1)
 	
 	# Checks if this specific convoy slot is already sitting on the anvil
-	if c_idx != -1 and c_idx in anvil_indices: 
-		if select_sound and select_sound.stream: 
+	if c_idx != -1 and c_idx in anvil_indices:
+		if select_sound and select_sound.stream:
 			select_sound.pitch_scale = 0.5
 			select_sound.play()
-		return 
+		var slots_shake: Array = [slot1, slot2, slot3]
+		if slot_index >= 0 and slot_index < slots_shake.size():
+			var sh: Control = slots_shake[slot_index] as Control
+			CampMenuMotion.shake_control(self, sh)
+		return
 		
 	if select_sound and select_sound.stream:
 		select_sound.pitch_scale = 1.0
@@ -8140,6 +8574,7 @@ func check_blacksmith_recipe() -> void:
 	current_recipe.clear()
 	craft_button.disabled = true
 	craft_button.text = "CRAFT" # Default text
+	craft_button.tooltip_text = ""
 	result_icon.texture = null
 	
 	# --- THE FIX: Define the variables right here! ---
@@ -8161,12 +8596,72 @@ func check_blacksmith_recipe() -> void:
 					broken_weapon_on_anvil = item
 				
 	if current_ingredients.is_empty():
-		recipe_result_label.text = "[center][color=gray]Outcome preview appears here when a pattern matches.[/color][/center]"
+		recipe_result_label.text = (
+			"[center][color=#c4a8f0][b]OUTCOME[/b][/color][/center]\n\n"
+			+ "[center][color=gray]Place items on the anvil to preview forging, repair, salvage, or runes.[/color][/center]\n\n"
+			+ "[center][color=#9a8a78]• [color=#c4a8f0]Runes (stone):[/color] one weapon + one rune stone — [b]SOCKET[/b]. Third socket can stay empty.[/color][/center]\n\n"
+			+ "[center][color=#9a8a78]• [color=#c4a8f0]Runes (glyphs):[/color] weapon on anvil — tap a rune button; pays materials from convoy.[/color][/center]"
+		)
 		_blacksmith_finish_recipe_check()
 		return
 
 	current_ingredients.sort()
-	
+
+	# --- Weapon + rune stone (inventory item) → SOCKET (consumes rune stone only; no ore) ---
+	var wr_pair: Variant = _blacksmith_anvil_weapon_and_rune_stone()
+	if wr_pair is Dictionary:
+		var dwr: Dictionary = wr_pair as Dictionary
+		var w_run: WeaponData = dwr["weapon"] as WeaponData
+		var stone: RuneItemData = dwr["rune_stone"] as RuneItemData
+		if not CampaignManager.is_runesmithing_unlocked():
+			recipe_result_label.text = "[center][color=gray]Runesmithing is locked.[/color][/center]"
+			_blacksmith_finish_recipe_check()
+			return
+		var rid: String = str(stone.rune_id).strip_edges()
+		if rid == "":
+			recipe_result_label.text = "[center][color=red]This rune stone has no rune id.[/color][/center]"
+			_blacksmith_finish_recipe_check()
+			return
+		if _blacksmith_rune_id_requires_advanced(rid) and not CampaignManager.has_advanced_runesmithing():
+			recipe_result_label.text = "[center][color=red]Advanced runesmithing is required for this stone.[/color][/center]"
+			_blacksmith_finish_recipe_check()
+			return
+		if bool(w_run.get_meta("is_locked", false)) == true:
+			recipe_result_label.text = "[center][color=red]Cannot modify a locked weapon.[/color][/center]"
+			_blacksmith_finish_recipe_check()
+			return
+		var dr: Dictionary = _blacksmith_rune_socket_resolve(w_run, rid, false)
+		if not bool(dr.get("ok", false)):
+			var e: String = str(dr.get("err", ""))
+			if e == "unknown_rune":
+				recipe_result_label.text = "[center][color=red]Unknown rune type on this stone.[/color][/center]"
+			elif e == "no_replace":
+				recipe_result_label.text = "[center][color=gray]No socketed runes to replace.[/color][/center]"
+			elif e == "no_slots":
+				recipe_result_label.text = "[center][color=gray]This weapon has no rune slots.[/color][/center]"
+			else:
+				recipe_result_label.text = "[center][color=gray]Cannot socket this rune.[/color][/center]"
+			_blacksmith_finish_recipe_check()
+			return
+		var rname: String = WeaponRuneDisplayHelpers.catalog_name_for_rune_id(rid)
+		# Outcome art shows the weapon being inscribed (not the stone alone).
+		result_icon.texture = w_run.get("icon") as Texture2D
+		if result_icon != null and result_icon.texture == null and stone.get("icon") != null:
+			result_icon.texture = stone.icon
+		recipe_result_label.text = "[center][color=#c4a8f0][b]— SOCKET RUNE —[/b][/color][/center]\n\n"
+		recipe_result_label.text += "[center]Uses up [color=cyan]%s[/color] and inscribes [color=#ffe9d6]%s[/color] on [color=white]%s[/color].[/center]" % [
+			str(stone.item_name), rname, w_run.weapon_name
+		]
+		recipe_result_label.text += "\n\n[center][color=#9effb0][b]▶ Press SOCKET[/b][/color] [color=#a09090]— the weapon stays in convoy.[/color][/center]"
+		if bool(dr.get("replaced", false)):
+			recipe_result_label.text += "\n\n[center][color=#e8c080][i]All sockets full — the last inscription will be replaced.[/i][/color][/center]"
+		current_recipe = {"type": "socket_rune", "weapon": w_run, "rune_id": rid, "rune_stone": stone}
+		craft_button.text = "SOCKET"
+		craft_button.tooltip_text = "Removes only the rune stone from convoy. The weapon keeps its slot and gains this inscription."
+		craft_button.disabled = false
+		_blacksmith_finish_recipe_check()
+		return
+
 # --- NEW & IMPROVED: SMART SALVAGE ---
 	if current_ingredients.size() == 1 and weapon_count == 1:
 		if last_weapon != null and last_weapon.get_meta("is_locked", false) == true:
@@ -8304,8 +8799,10 @@ func check_blacksmith_recipe() -> void:
 			_blacksmith_finish_recipe_check()
 			return
 
-	var invalid_body := "[center][color=#c45c5c]No known forge pattern for this mix.[/color][/center]\n\n"
-	invalid_body += "[center][color=gray]Try different materials or check ingredient counts.[/color][/center]"
+	var invalid_body := "[center][color=#c45c5c][b]No forge pattern for this mix.[/b][/color][/center]\n\n"
+	invalid_body += "[center][color=gray]Try three materials for crafting, one broken weapon + ingot to repair, or one weapon alone to salvage.[/color][/center]"
+	if CampaignManager.is_runesmithing_unlocked():
+		invalid_body += "\n\n[center][color=#c4a8f0][b]Runes:[/b][/color] [color=gray]Exactly [b]one weapon + one rune stone[/b] — leave the third socket empty — then SOCKET.[/color][/center]"
 	if CampaignManager.has_recipe_book:
 		invalid_body += "\n\n[center][color=#c4a060]Open Recipe Book for known recipes and blueprints.[/color][/center]"
 	else:
@@ -8320,15 +8817,19 @@ func _on_craft_pressed() -> void:
 	_blacksmith_stop_craft_ready_affordance()
 
 	var is_masterwork = false
+	var restore_socket_outcome: bool = false
+	var restore_sock_wpn: WeaponData = null
+	var restore_sock_rid: String = ""
+	var restore_sock_res: Dictionary = {}
 	
-	# 1. RUN MINIGAME (Skip for salvaging)
-	if current_recipe["type"] != "salvage":
+	# 1. RUN MINIGAME (Skip for salvaging and rune socketing from inventory stones)
+	if current_recipe["type"] != "salvage" and current_recipe["type"] != "socket_rune":
 		blacksmith_panel.visible = false
 		is_masterwork = await _run_forge_minigame()
 		blacksmith_panel.visible = true
-	else:
+	elif current_recipe["type"] == "salvage":
 		# Play a heavy crunching/breaking sound instead!
-		if shop_sell_sound and shop_sell_sound.stream: 
+		if shop_sell_sound and shop_sell_sound.stream:
 			shop_sell_sound.pitch_scale = 0.6
 			shop_sell_sound.play()
 	
@@ -8339,7 +8840,9 @@ func _on_craft_pressed() -> void:
 			# If it's a repair, don't delete the weapon itself!
 			if current_recipe.get("type") == "repair" and anvil_item == current_recipe["weapon"]:
 				continue
-				
+			if current_recipe.get("type") == "socket_rune" and anvil_item == current_recipe["weapon"]:
+				continue
+
 			for i in range(CampaignManager.global_inventory.size() -1, -1, -1):
 				var convoy_item = CampaignManager.global_inventory[i]
 				if convoy_item == anvil_item:
@@ -8440,6 +8943,20 @@ func _on_craft_pressed() -> void:
 		await _play_dynamic_crafting_visuals(salvaged_mat.get("icon"), false)
 		_update_blacksmith_text("salvage")
 
+	elif current_recipe["type"] == "socket_rune":
+		var w_sock: WeaponData = current_recipe["weapon"] as WeaponData
+		var rid_sock: String = str(current_recipe["rune_id"])
+		var res_sock: Dictionary = _blacksmith_rune_socket_resolve(w_sock, rid_sock, true)
+		if not bool(res_sock.get("ok", false)):
+			push_error("socket_rune: apply failed after consuming rune stone.")
+		await _play_dynamic_crafting_visuals(w_sock.get("icon"), false)
+		_blacksmith_set_rune_socket_outcome_readout(w_sock, rid_sock, res_sock)
+		_update_blacksmith_text("craft_normal")
+		restore_socket_outcome = true
+		restore_sock_wpn = w_sock
+		restore_sock_rid = rid_sock
+		restore_sock_res = res_sock
+
 	await _blacksmith_forge_success_panel_juice()
 
 	# 4. CLEAN UP & REFRESH
@@ -8449,6 +8966,9 @@ func _on_craft_pressed() -> void:
 	_populate_material_list()
 	_populate_inventory() 
 	check_blacksmith_recipe()
+	# check_blacksmith_recipe clears outcome when the anvil is empty — restore socket success readout.
+	if restore_socket_outcome and restore_sock_wpn != null and is_instance_valid(restore_sock_wpn):
+		_blacksmith_set_rune_socket_outcome_readout(restore_sock_wpn, restore_sock_rid, restore_sock_res)
 	_refresh_blueprint_stock()
 		
 # ==========================================
@@ -8557,6 +9077,7 @@ func _run_forge_minigame() -> bool:
 	
 func close_blacksmith() -> void:
 	if select_sound and select_sound.stream: select_sound.play()
+	CampaignManager.debug_haldor_solo_meta_gates_bypass = false
 	
 	# Clear the anvil array AND indices
 	for i in range(3):
@@ -8603,6 +9124,15 @@ func _open_recipe_book() -> void:
 		txt += "[color=white]" + s_name + ": " + str(s_count) + "[/color]\n"
 	txt += "\n"
 	# --------------------------------------------
+
+	if CampaignManager.is_runesmithing_unlocked():
+		txt += "[color=#d8b878]——— CHAPTER: RUNE-WORK (smudged ink) ———[/color]\n"
+		txt += "[color=gray]If the tongs respect your steel, you hold two honest pacts.[/color]\n"
+		txt += "[color=gray]• [/color][color=#c4a8f0]Stone-path:[/color][color=gray] one blade, one carved stone — the third socket may go cold. Strike [/color][color=#9effb0]SOCKET[/color][color=gray]. The shard spends itself; the weapon does not leave your train.[/color]\n"
+		txt += "[color=gray]• [/color][color=#c4a8f0]Glyph-path:[/color][color=gray] leave the blade on the hearth and feed the rune-row; it takes components from the convoy and bites the metal all the same.[/color]\n"
+		if CampaignManager.has_advanced_runesmithing():
+			txt += "[color=gray]• [/color][color=#c4a8f0]Ward / Flux:[/color][color=gray] the deep marks — I only scratch them for hands that have earned the advanced seal.[/color]\n"
+		txt += "[color=gray][i]Tiwaz (POP) files off the last mark if you need a clean socket. Slag does not crawl back into your purse. — H.[/i][/color]\n\n"
 	
 	for recipe in RecipeDatabase.master_recipes:
 		if CampaignManager.unlocked_recipes.has(recipe["name"]):
@@ -8690,6 +9220,86 @@ func _ask_for_masterwork_name(base_name: String, bonus_text: String) -> String:
 	rename_layer.queue_free()
 	return chosen_name
 
+
+func _camp_start_pending_haldor_solo_gifts() -> void:
+	_play_haldor_solo_gifts_when_ready()
+
+
+func _play_haldor_solo_gifts_when_ready() -> void:
+	await get_tree().create_timer(0.45).timeout
+	if not CampaignManager.has_pending_haldor_solo_gift_fx():
+		return
+	var entries: Array = CampaignManager.consume_pending_haldor_solo_gift_fx()
+	for e in entries:
+		if e is Dictionary:
+			var d: Dictionary = e
+			var it: Resource = d.get("item") as Resource
+			var amt: int = maxi(1, int(d.get("amount", 1)))
+			var toast: String = str(d.get("toast", "From Haldor"))
+			await _play_haldor_solo_gift_present(it, amt, toast)
+	_populate_inventory()
+
+
+func _play_haldor_solo_gift_present(item: Resource, amount: int, caption: String) -> void:
+	var tex: Texture2D = null
+	if item != null and item.get("icon") != null:
+		tex = item.get("icon") as Texture2D
+	var original_bgm_vol: float = 0.0
+	if camp_music and camp_music.playing:
+		original_bgm_vol = camp_music.volume_db
+		var duck_tween = create_tween()
+		duck_tween.tween_property(camp_music, "volume_db", original_bgm_vol - 10.0, 0.15)
+	if shop_buy_sound:
+		shop_buy_sound.play()
+	var fx_layer = CanvasLayer.new()
+	fx_layer.layer = 120
+	add_child(fx_layer)
+	var vp_size: Vector2 = get_viewport_rect().size
+	var icon: Control
+	if tex != null:
+		var tr := TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(180, 180)
+		icon = tr
+	else:
+		var rect := ColorRect.new()
+		rect.color = Color(0.55, 0.48, 0.35)
+		rect.custom_minimum_size = Vector2(180, 180)
+		icon = rect
+	icon.position = (vp_size - icon.custom_minimum_size) / 2.0
+	icon.pivot_offset = icon.custom_minimum_size / 2.0
+	fx_layer.add_child(icon)
+	var msg := Label.new()
+	var cap: String = str(caption).strip_edges()
+	if cap == "":
+		cap = "From Haldor"
+	var subline: String = ("× %d" % amount) if amount > 1 else ""
+	msg.text = cap if subline == "" else (cap + "\n" + subline)
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.add_theme_font_size_override("font_size", 26)
+	msg.add_theme_color_override("font_color", Color(0.95, 0.82, 0.55))
+	msg.position = Vector2(0, icon.position.y + 200)
+	msg.size.x = vp_size.x
+	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	msg.modulate.a = 0.0
+	fx_layer.add_child(msg)
+	var hold_time: float = 1.05
+	var tween := create_tween().set_parallel(true)
+	icon.scale = Vector2(0.12, 0.12)
+	tween.tween_property(icon, "scale", Vector2(1.0, 1.0), 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(msg, "modulate:a", 1.0, 0.25)
+	tween.chain().set_parallel(true)
+	tween.tween_property(icon, "modulate:a", 0.0, 0.35).set_delay(hold_time)
+	tween.tween_property(msg, "modulate:a", 0.0, 0.35).set_delay(hold_time)
+	await tween.finished
+	if camp_music and camp_music.playing:
+		var restore_tween = create_tween()
+		restore_tween.tween_property(camp_music, "volume_db", original_bgm_vol, 0.65)
+	fx_layer.queue_free()
+
+
 # ==========================================
 # DYNAMIC CRAFTING VISUALS
 # ==========================================
@@ -8752,6 +9362,8 @@ func _play_dynamic_crafting_visuals(item_texture: Texture2D, is_masterwork: bool
 			msg.text = "REPAIRED!"
 		elif current_recipe.get("type") == "salvage":
 			msg.text = "SALVAGED!"
+		elif current_recipe.get("type") == "socket_rune":
+			msg.text = "RUNE INSCRIBED!"
 		else:
 			msg.text = "SENT TO CONVOY"
 	
@@ -8789,29 +9401,116 @@ func _play_dynamic_crafting_visuals(item_texture: Texture2D, is_masterwork: bool
 	fx_layer.queue_free()
 
 func _update_blacksmith_text(category: String) -> void:
-	if not blacksmith_label: return
-	
-	var lines = DialogueDatabase.blacksmith_lines[category]
-	var full_text = lines[randi() % lines.size()]
-	
-	blacksmith_label.text = full_text
-	blacksmith_label.visible_characters = 0
-	
-	# THE FIX: Kill the old animation
+	if blacksmith_label == null or not (blacksmith_label is RichTextLabel):
+		return
+	var pick: Dictionary
+	if category == "welcome":
+		var welcome_pool: Array = DialogueDatabase.get_blacksmith_welcome_pool()
+		if welcome_pool.is_empty():
+			return
+		var wraw: Variant = welcome_pool[randi() % welcome_pool.size()]
+		pick = wraw if wraw is Dictionary else DialogueDatabase.normalize_blacksmith_line_pick(wraw)
+	else:
+		var lines: Variant = DialogueDatabase.blacksmith_lines.get(category, [])
+		if not (lines is Array) or (lines as Array).is_empty():
+			return
+		var la: Array = lines as Array
+		var lraw: Variant = la[randi() % la.size()]
+		pick = lraw if lraw is Dictionary else DialogueDatabase.normalize_blacksmith_line_pick(lraw)
+	var plain: String = str(pick.get("text", "")).strip_edges()
+	if plain == "":
+		return
+	var hint: Variant = pick.get("solo_hint", null)
+	var bbcode: String = DialogueDatabase.apply_haldor_solo_tap_hint(plain, hint, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+	_blacksmith_begin_typed_bbcode(bbcode, plain)
+
+
+func _blacksmith_begin_typed_bbcode(bbcode: String, plain_for_history: String) -> void:
+	if blacksmith_label == null or not (blacksmith_label is RichTextLabel):
+		return
+	var rtl: RichTextLabel = blacksmith_label as RichTextLabel
+	rtl.bbcode_enabled = true
+	rtl.text = bbcode
+	rtl.visible_characters = 0
+	last_blacksmith_dialogue_plain = str(plain_for_history).strip_edges()
 	if blacksmith_tween and blacksmith_tween.is_valid():
 		blacksmith_tween.kill()
-	
-	var duration = full_text.length() * 0.04
+	var char_total: int = rtl.get_total_character_count() if rtl.has_method("get_total_character_count") else rtl.get_parsed_text().length()
+	if char_total <= 0:
+		rtl.visible_characters = -1
+		return
+	var duration: float = maxf(float(char_total) * 0.04, 0.12)
 	blacksmith_tween = create_tween()
-	blacksmith_tween.tween_method(_set_blacksmith_visible_chars, 0, full_text.length(), duration)
-	
+	blacksmith_tween.tween_method(_set_blacksmith_visible_chars, 0, char_total, duration)
+
+
 func _set_blacksmith_visible_chars(count: int) -> void:
-	if count > blacksmith_label.visible_characters:
-		var current_char = blacksmith_label.text.substr(count - 1, 1)
-		if current_char != " " and merchant_blip and merchant_blip.stream != null:
-			merchant_blip.play() # Reuse the blip sound!
-	blacksmith_label.visible_characters = count
-	
+	if blacksmith_label == null or not (blacksmith_label is RichTextLabel):
+		return
+	var rtl: RichTextLabel = blacksmith_label as RichTextLabel
+	if count > rtl.visible_characters:
+		var parsed: String = rtl.get_parsed_text()
+		if count > 0 and count <= parsed.length():
+			var current_char: String = parsed.substr(count - 1, 1)
+			if current_char != " " and merchant_blip and merchant_blip.stream != null:
+				merchant_blip.play()
+	rtl.visible_characters = count
+
+
+func _on_blacksmith_dialogue_meta_clicked(meta: Variant) -> void:
+	var scene_id: String = str(meta).strip_edges()
+	if scene_id == "":
+		return
+	if CampaignManager.debug_haldor_solo_meta_gates_bypass:
+		CampaignManager.debug_haldor_solo_meta_gates_bypass = false
+		if select_sound and select_sound.stream != null:
+			select_sound.play()
+		CampaignManager.begin_haldor_solo_scene(scene_id)
+		return
+	var resolved: String = DialogueDatabase.resolve_haldor_solo_scene_pick(scene_id, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+	if resolved.strip_edges() == "":
+		return
+	if not DialogueDatabase.is_haldor_solo_scene_hint_eligible(resolved, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids):
+		return
+	if select_sound and select_sound.stream != null:
+		select_sound.play()
+	CampaignManager.begin_haldor_solo_scene(resolved)
+
+
+func _blacksmith_debug_trigger_solo_tap_test() -> void:
+	if not DEBUG_HALDOR_SOLO_TAP_TEST:
+		return
+	if blacksmith_panel == null or blacksmith_label == null:
+		push_warning("camp_menu: Haldor solo tap debug — blacksmith UI missing.")
+		return
+	if not blacksmith_panel.visible:
+		open_blacksmith()
+	call_deferred("_blacksmith_debug_apply_solo_tap_test_line")
+
+
+func _blacksmith_debug_apply_solo_tap_test_line() -> void:
+	if not DEBUG_HALDOR_SOLO_TAP_TEST:
+		return
+	if blacksmith_panel == null or not blacksmith_panel.visible:
+		return
+	CampaignManager.debug_haldor_solo_meta_gates_bypass = true
+	const TEST_SCENE: String = "haldor_solo_first_quiet"
+	var plain: String = "[DEBUG] Haldor solo tap — click underlined HINTTEST to load scene '%s' (press F9 in camp again to retry)." % TEST_SCENE
+	var bb: String = DialogueDatabase.apply_haldor_solo_tap_hint_for_debug(plain, "HINTTEST", TEST_SCENE)
+	_blacksmith_begin_typed_bbcode(bb, plain)
+	if blacksmith_portrait != null and haldor_normal != null:
+		blacksmith_portrait.texture = haldor_normal
+	print("[DEBUG] Haldor solo tap: forge line shown — click HINTTEST (underline). Scene=%s" % TEST_SCENE)
+
+
+func _blacksmith_play_typed_line(full_text: String) -> void:
+	var ft: String = str(full_text).strip_edges()
+	if ft == "":
+		return
+	var esc: String = DialogueDatabase.blacksmith_escape_bbcode_literal(ft)
+	_blacksmith_begin_typed_bbcode(esc, ft)
+
+
 func _play_blacksmith_idle() -> void:
 	if not blacksmith_portrait: return
 	var tween = create_tween().set_loops()
@@ -8820,36 +9519,52 @@ func _play_blacksmith_idle() -> void:
 
 func _on_blacksmith_talk_pressed() -> void:
 	if select_sound: select_sound.play()
+
+	# ~50% chance to play a queued interstitial beat (from last story map clear) when any remain.
+	if CampaignManager.haldor_has_pending_beats() and randf() < 0.5:
+		var beat_id_talk: String = CampaignManager.peek_haldor_beat_queue_front_id()
+		var beat_txt: String = str(CampaignManager.try_consume_haldor_beat_from_queue()).strip_edges()
+		if beat_txt != "" and beat_txt != last_monologue_text:
+			last_monologue_text = beat_txt
+			var hint_talk: Variant = DialogueDatabase.get_haldor_beat_solo_hint(beat_id_talk) if beat_id_talk != "" else null
+			var bb_talk: String = DialogueDatabase.apply_haldor_solo_tap_hint(beat_txt, hint_talk, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+			_blacksmith_begin_typed_bbcode(bb_talk, beat_txt)
+			if blacksmith_portrait:
+				_shake_node(blacksmith_portrait)
+			return
+		# Empty line (bad id) or same as last monologue: fall through to normal pool.
 	
-	var available_lines = []
+	var available_lines: Array = []
 	
 	# 1. Filter the lines based on how far the player is in the game
 	for mono in DialogueDatabase.blacksmith_monologues:
-		# max_unlocked_index is the variable you used for the World Map button!
-		if CampaignManager.max_unlocked_index >= mono["unlock_level"]:
-			available_lines.append(mono["text"])
+		if CampaignManager.max_unlocked_index < int(mono.get("unlock_level", 0)):
+			continue
+		if bool(mono.get("requires_runesmithing", false)) and not CampaignManager.is_runesmithing_unlocked():
+			continue
+		if bool(mono.get("requires_advanced_runesmithing", false)) and not CampaignManager.has_advanced_runesmithing():
+			continue
+		var tx: Variant = mono.get("text", "")
+		if str(tx) == "":
+			continue
+		available_lines.append({
+			"plain": str(tx),
+			"solo_hint": mono.get("solo_hint", null),
+		})
 			
-	if available_lines.is_empty(): return
+	if available_lines.is_empty():
+		return
 	
-	# 2. Pick a random line, ensuring it's not the exact same as the last one
-	var chosen_text = available_lines[randi() % available_lines.size()]
-	
-	while chosen_text == last_monologue_text and available_lines.size() > 1:
-		chosen_text = available_lines[randi() % available_lines.size()]
+	# 2. Pick a random line, ensuring it's not the exact same as the last one (plain text).
+	var pick: Dictionary = available_lines[randi() % available_lines.size()]
+	var chosen_plain: String = str(pick.get("plain", ""))
+	while chosen_plain == last_monologue_text and available_lines.size() > 1:
+		pick = available_lines[randi() % available_lines.size()]
+		chosen_plain = str(pick.get("plain", ""))
 		
-	# Remember this line for next time
-	last_monologue_text = chosen_text
-	
-	# 3. Animate the text in the Blacksmith's dialogue box
-	if blacksmith_label:
-		blacksmith_label.text = chosen_text
-		blacksmith_label.visible_characters = 0
-		
-		var duration = chosen_text.length() * 0.04
-		var tween = create_tween()
-		
-		# This uses the specific Blacksmith text function so the Merchant doesn't talk!
-		tween.tween_method(_set_blacksmith_visible_chars, 0, chosen_text.length(), duration)
+	last_monologue_text = chosen_plain
+	var bb_mono: String = DialogueDatabase.apply_haldor_solo_tap_hint(chosen_plain, pick.get("solo_hint", null), CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+	_blacksmith_begin_typed_bbcode(bb_mono, chosen_plain)
 		
 	if blacksmith_portrait:
 		_shake_node(blacksmith_portrait)
@@ -10056,6 +10771,7 @@ func _refresh_jukebox_up_next() -> void:
 func _update_now_playing_ui(override_name: String = "") -> void:
 	if jukebox_now_playing == null:
 		return
+	call_deferred("_camp_jukebox_np_motion_tick")
 	var mode_str: String = ""
 	match jukebox_playback_mode:
 		JUKEBOX_MODE_DEFAULT:
@@ -10116,6 +10832,11 @@ func _update_now_playing_ui(override_name: String = "") -> void:
 	jukebox_now_playing.text = "[center][color=#f2bf59]NOW PLAYING[/color]\n[color=#9f9688]STOPPED[/color]\n[color=#b6ad9b]%s[/color]%s[/center]" % [mode_str.to_upper(), status_line]
 	_refresh_jukebox_up_next()
 
+
+func _camp_jukebox_np_motion_tick() -> void:
+	CampMenuMotion.jukebox_now_playing_tick(self, jukebox_now_playing)
+
+
 func _on_jukebox_volume_changed(value: float) -> void:
 	if value <= 0.001:
 		user_music_volume = -80.0
@@ -10124,6 +10845,7 @@ func _on_jukebox_volume_changed(value: float) -> void:
 	CampaignManager.jukebox_volume_db = user_music_volume
 	if camp_music:
 		camp_music.volume_db = user_music_volume
+	CampMenuMotion.jukebox_volume_slider_tick(self, jukebox_volume_slider)
 
 func _on_jukebox_skip_pressed() -> void:
 	if select_sound: select_sound.play()
@@ -10480,8 +11202,10 @@ func add_party_gold(amount: int) -> void:
 func _refresh_gold_label() -> void:
 	if gold_label == null:
 		return
-
-	gold_label.text = "Gold: %dG" % int(CampaignManager.global_gold)
+	var g: int = int(CampaignManager.global_gold)
+	CampMenuMotion.gold_label_delta_pulse(self, gold_label, g, _camp_motion_last_gold)
+	gold_label.text = "Gold: %dG" % g
+	_camp_motion_last_gold = g
 
 func _refresh_world_map_button() -> void:
 	if world_map_button == null or next_battle_button == null:
