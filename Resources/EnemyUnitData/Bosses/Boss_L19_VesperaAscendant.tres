@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_6otq7")
+voice_gender = 1
 display_name = "Vespera Ascendant"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Lyell… I reached for godhood only to find the same cold hands waiting there."])

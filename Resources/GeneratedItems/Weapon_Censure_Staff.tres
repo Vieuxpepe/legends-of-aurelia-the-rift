@@ -9,6 +9,7 @@ description = "A severe debuff staff used to weaken enemy fronts."
 weapon_name = "Censure Staff"
 gold_cost = 1400
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 4
 is_debuff_staff = true
 affected_stat = "defense"

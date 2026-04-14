@@ -11,6 +11,7 @@ weapon_name = "Holy Lance"
 gold_cost = 8800
 damage_type = 1
 weapon_type = 1
+magic_damage_kind = 4
 projectile_scene = ExtResource("2_hl_proj")
 projectile_scale = 0.62
 affected_stat = "magic"

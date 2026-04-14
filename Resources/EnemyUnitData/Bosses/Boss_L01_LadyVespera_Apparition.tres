@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_a1hhe")
+voice_gender = 1
 display_name = "Lady Vespera"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["I wanted to break the chain, and instead I became its final link."])

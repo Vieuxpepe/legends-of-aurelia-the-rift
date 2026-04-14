@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_jncry")
+voice_gender = 1
 display_name = "Thorn-Captain Edda Fen"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Then the forest will judge between us… and I doubt it will be kind."])

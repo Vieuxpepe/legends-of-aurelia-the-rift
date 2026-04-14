@@ -32,6 +32,11 @@ signal closed
 @onready var _online_refresh_button: Button = %OnlineRefreshButton
 @onready var _online_room_list: ItemList = %OnlineRoomList
 @onready var _online_status_label: Label = %OnlineStatusLabel
+@onready var _steam_section: VBoxContainer = %SteamSectionVBox
+@onready var _steam_host_button: Button = %SteamHostFriendsButton
+@onready var _steam_lobby_id_field: LineEdit = %SteamLobbyIdField
+@onready var _steam_join_button: Button = %SteamJoinLobbyButton
+@onready var _steam_status_label: Label = %SteamStatusLabel
 @onready var _local_companion_option: OptionButton = %LocalCompanionOption
 @onready var _partner_companion_value: Label = %PartnerCompanionValue
 
@@ -60,6 +65,8 @@ func _ready() -> void:
 	_online_refresh_button.pressed.connect(_on_online_refresh_pressed)
 	_online_room_list.item_selected.connect(_on_online_room_selected)
 	_online_room_list.item_activated.connect(_on_online_room_activated)
+	_steam_host_button.pressed.connect(_on_steam_host_friends_lobby_pressed)
+	_steam_join_button.pressed.connect(_on_steam_join_lobby_pressed)
 	_local_companion_option.item_selected.connect(_on_local_companion_selected)
 	_ensure_online_browser_transport()
 	if not CoopExpeditionSessionManager.session_state_changed.is_connected(_on_session_state_changed):
@@ -122,16 +129,27 @@ func _ensure_host_session_for_map(map_key: String) -> void:
 	var mgr = CoopExpeditionSessionManager
 	var phase: int = mgr.phase
 	## Already connected as a network guest (e.g. LAN join / online room): only sync map + payload.
-	if (mgr.uses_enet_coop_transport() or mgr.uses_online_coop_transport()) and phase == mgr.Phase.GUEST:
+	if (
+			mgr.uses_enet_coop_transport()
+			or mgr.uses_online_coop_transport()
+			or mgr.uses_steam_coop_transport()
+	) and phase == mgr.Phase.GUEST:
 		mgr.set_selected_expedition_map(map_key)
 		mgr.refresh_local_player_payload_from_campaign()
 		return
 	if phase == mgr.Phase.NONE:
 		## Skip auto-host when the transport expects an explicit network bootstrap (LAN or online room).
-		if not mgr.uses_enet_coop_transport() and not mgr.uses_online_coop_transport():
+		if (
+				not mgr.uses_enet_coop_transport()
+				and not mgr.uses_online_coop_transport()
+				and not mgr.uses_steam_coop_transport()
+		):
 			mgr.begin_host_session()
 	elif phase != mgr.Phase.HOST:
-		if (mgr.uses_enet_coop_transport() or mgr.uses_online_coop_transport()) and phase == mgr.Phase.GUEST:
+		if (
+				(mgr.uses_enet_coop_transport() or mgr.uses_online_coop_transport() or mgr.uses_steam_coop_transport())
+				and phase == mgr.Phase.GUEST
+		):
 			pass
 		else:
 			mgr.leave_session()
@@ -171,6 +189,8 @@ func _format_partner_participant_card(coop_ok: bool) -> String:
 		s += "[color=#e8c8a0][b]Seat open[/b][/color]\n"
 		if CoopExpeditionSessionManager.uses_enet_coop_transport():
 			s += "[font_size=13][color=#a89888]Use [b]Host LAN game[/b] / [b]Join LAN game[/b] above. On another PC, your partner must enter your [b]LAN IP[/b] and port (not 127.0.0.1). For one machine, use [b]Same-PC rehearsal[/b] or [b]127.0.0.1:port[/b].[/color][/font_size]"
+		elif CoopExpeditionSessionManager.uses_steam_coop_transport():
+			s += "[font_size=13][color=#a89888]Use [b]Steam[/b] above: host creates a [b]friends-only lobby[/b] and shares the numeric [b]Lobby ID[/b]. Your friend runs the game through Steam, then uses [b]Join Steam lobby[/b] with that ID (Steam overlay invite also works).[/color][/font_size]"
 		elif CoopExpeditionSessionManager.uses_online_coop_transport():
 			s += "[font_size=13][color=#a89888]Use the [b]Online room[/b] controls above and share the room code with your partner. This path relays staging and live battle sync through the online room service, so expect a little more latency than LAN/direct play.[/color][/font_size]"
 		else:
@@ -384,6 +404,8 @@ func _refresh_ui() -> void:
 	if not coop_ok:
 		if _online_section != null:
 			_online_section.visible = false
+		if _steam_section != null:
+			_steam_section.visible = false
 		if _lan_section != null:
 			_lan_section.visible = false
 		_blockers_label.text = "[b][color=#f0c090]Marshal's desk — hold[/color][/b]\nCo-op staging is [b]not available[/b] for this chart from your current save."
@@ -408,6 +430,16 @@ func _refresh_ui() -> void:
 	if _lan_section != null:
 		_lan_section.visible = true
 	_refresh_lan_status_line()
+	if _steam_section != null:
+		_steam_section.visible = true
+		var steam_ready: bool = SteamService != null and SteamService.steam_initialized
+		if _steam_host_button != null:
+			_steam_host_button.disabled = not steam_ready
+			_steam_host_button.tooltip_text = "" if steam_ready else "Launch the game from the Steam client with GodotSteam enabled."
+		if _steam_join_button != null:
+			_steam_join_button.disabled = not steam_ready
+			_steam_join_button.tooltip_text = "" if steam_ready else "Launch the game from the Steam client with GodotSteam enabled."
+	_refresh_steam_status_line()
 
 	var guest_network_pending: bool = (
 			CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
@@ -427,7 +459,15 @@ func _refresh_ui() -> void:
 		_blockers_label.text = (
 				"[b][color=#a8e090]Marshal's desk — co-op finalize sent[/color][/b]\n"
 				+ "[b]Request is with the host.[/b] Keep this window open; when the host finishes finalize, both games should load the battle.\n"
-				+ ("[font_size=12][color=#a0a0b8][i]Tip: online room relay can take a moment to flush the handoff. LAN/direct is faster, online is friendlier to join.[/i][/color][/font_size]" if CoopExpeditionSessionManager.uses_online_coop_transport() else "[font_size=12][color=#a0a0b8][i]Tip: leave the [b]host[/b] instance running in the foreground — if the OS or Godot pauses unfocused games, direct sync may not process until you switch back.[/i][/color][/font_size]")
+				+ (
+					"[font_size=12][color=#a0a0b8][i]Tip: online room relay can take a moment to flush the handoff. LAN/direct is faster, online is friendlier to join.[/i][/color][/font_size]"
+					if CoopExpeditionSessionManager.uses_online_coop_transport()
+					else (
+						"[font_size=12][color=#a0a0b8][i]Tip: Steam P2P may take a moment after both players are in the lobby — keep the charter open until the status line shows linked.[/i][/color][/font_size]"
+						if CoopExpeditionSessionManager.uses_steam_coop_transport()
+						else "[font_size=12][color=#a0a0b8][i]Tip: leave the [b]host[/b] instance running in the foreground — if the OS or Godot pauses unfocused games, direct sync may not process until you switch back.[/i][/color][/font_size]"
+					)
+				)
 		)
 		_apply_launch_status_panel_style(true)
 	elif all_clear:
@@ -666,6 +706,12 @@ func _refresh_lan_status_line() -> void:
 			var en: ENetCoopTransport = transport_instance as ENetCoopTransport
 			bits.append("port %d" % en.get_listen_port())
 			bits.append("link: %s" % ("ok" if en.is_session_wired() else "connecting…"))
+	elif mgr.uses_steam_coop_transport():
+		bits.append("Mode: Steam friends lobby")
+		var st_inst: CoopSessionTransport = mgr.get_transport()
+		if st_inst is SteamLobbyCoopTransport:
+			var st: SteamLobbyCoopTransport = st_inst as SteamLobbyCoopTransport
+			bits.append("link: %s" % ("ok" if st.is_session_wired() else "connecting…"))
 	else:
 		bits.append("Mode: —")
 	if str(mgr.session_id).strip_edges() != "":
@@ -733,6 +779,71 @@ func _on_lan_loopback_pressed() -> void:
 	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
 	if not bool(r.get("ok", false)):
 		_last_launch_error = "Offline rehearsal: " + str(r.get("error", str(r)))
+		_refresh_ui()
+		return
+	_apply_session_after_transport_change()
+
+
+func _refresh_steam_status_line() -> void:
+	if _steam_status_label == null:
+		return
+	var mgr = CoopExpeditionSessionManager
+	if SteamService == null or not SteamService.steam_initialized:
+		_steam_status_label.text = "Steam: not initialized — run from the Steam client with GodotSteam (see Output if singleton is missing)."
+		return
+	if not mgr.uses_steam_coop_transport():
+		_steam_status_label.text = "Steam: friends-only lobby + P2P for staging and battle sync. Host first, then partner joins with your lobby ID."
+		return
+	var tr: CoopSessionTransport = mgr.get_transport()
+	if tr is SteamLobbyCoopTransport:
+		var st: SteamLobbyCoopTransport = tr as SteamLobbyCoopTransport
+		var bits: PackedStringArray = PackedStringArray([st.get_status_line()])
+		if str(mgr.session_id).strip_edges() != "":
+			bits.append("session %s" % mgr.session_id)
+		match mgr.phase:
+			mgr.Phase.HOST:
+				bits.append("you: host")
+			mgr.Phase.GUEST:
+				bits.append("you: guest")
+			_:
+				bits.append("you: —")
+		_steam_status_label.text = " · ".join(bits)
+		return
+	_steam_status_label.text = "Steam transport active."
+
+
+func _on_steam_host_friends_lobby_pressed() -> void:
+	if SteamService == null or not SteamService.steam_initialized:
+		_last_launch_error = "Steam is not running or failed to initialize."
+		_refresh_ui()
+		return
+	CoopExpeditionSessionManager.leave_session()
+	var steam_transport := SteamLobbyCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(steam_transport)
+	var r: Dictionary = CoopExpeditionSessionManager.begin_host_session()
+	if not bool(r.get("ok", false)):
+		_last_launch_error = "Steam host: " + str(r.get("error", str(r)))
+		_refresh_ui()
+		return
+	_apply_session_after_transport_change()
+
+
+func _on_steam_join_lobby_pressed() -> void:
+	if SteamService == null or not SteamService.steam_initialized:
+		_last_launch_error = "Steam is not running or failed to initialize."
+		_refresh_ui()
+		return
+	var lid: String = str(_steam_lobby_id_field.text).strip_edges()
+	if lid == "" or not lid.is_valid_int():
+		_last_launch_error = "Enter the numeric Steam lobby ID from the host."
+		_refresh_ui()
+		return
+	CoopExpeditionSessionManager.leave_session()
+	var steam_transport := SteamLobbyCoopTransport.new()
+	CoopExpeditionSessionManager.set_transport(steam_transport)
+	var r: Dictionary = CoopExpeditionSessionManager.join_session(lid)
+	if not bool(r.get("ok", false)):
+		_last_launch_error = "Steam join: " + str(r.get("error", str(r)))
 		_refresh_ui()
 		return
 	_apply_session_after_transport_change()

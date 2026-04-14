@@ -329,15 +329,16 @@ static func unit_info_stat_definitions() -> Array[Dictionary]:
 		{"key": "agility", "label": "AGI"},
 	]
 
-static func unit_info_stat_fill_color(field, stat_key: String, stat_value: int) -> Color:
+## Same tints as the bottom-bar stat mini-bars ([method unit_info_stat_fill_color]); usable without a [BattleField] instance (e.g. Field Notes).
+static func unit_info_stat_fill_color_standalone(stat_key: String, stat_value: int) -> Color:
 	if stat_value >= 200:
-		return field.UNIT_INFO_STAT_TIER_WHITE
+		return Color(0.96, 0.96, 0.98, 1.0)
 	if stat_value >= 150:
-		return field.UNIT_INFO_STAT_TIER_ORANGE
+		return Color(1.0, 0.64, 0.22, 1.0)
 	if stat_value >= 100:
-		return field.UNIT_INFO_STAT_TIER_PURPLE
+		return Color(0.76, 0.48, 1.0, 1.0)
 	if stat_value >= 50:
-		return field.UNIT_INFO_STAT_TIER_CYAN
+		return Color(0.28, 0.88, 1.0, 1.0)
 	match stat_key:
 		"strength":
 			return Color(0.94, 0.48, 0.36, 1.0)
@@ -352,7 +353,11 @@ static func unit_info_stat_fill_color(field, stat_key: String, stat_value: int) 
 		"agility":
 			return Color(0.96, 0.82, 0.44, 1.0)
 		_:
-			return field.TACTICAL_UI_ACCENT_SOFT
+			return Color(0.74, 0.86, 0.42, 1.0)
+
+
+static func unit_info_stat_fill_color(field, stat_key: String, stat_value: int) -> Color:
+	return unit_info_stat_fill_color_standalone(stat_key, stat_value)
 
 static func style_unit_info_stat_bar(_field, bar: ProgressBar, fill: Color, overcap: bool) -> void:
 	if bar == null:

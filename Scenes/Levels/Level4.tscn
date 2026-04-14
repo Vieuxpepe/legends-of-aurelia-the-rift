@@ -1512,6 +1512,7 @@ script = ExtResource("1_lmj7r")
 ally_phase_texture = ExtResource("2_5yudt")
 player_phase_texture = ExtResource("3_s4gt7")
 enemy_phase_texture = ExtResource("4_ucucl")
+level_display_name = "Merchant's Maze"
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
 
@@ -2235,13 +2236,22 @@ grow_vertical = 2
 size_flags_stretch_ratio = 1.09
 theme_override_styles/panel = SubResource("StyleBoxFlat_7feyu")
 
-[node name="ItemList" type="ItemList" parent="UI/InventoryPanel" unique_id=1617138117]
+[node name="InventoryScroll" type="ScrollContainer" parent="UI/InventoryPanel"]
+custom_minimum_size = Vector2(500, 400)
 layout_mode = 0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 499.0
-offset_bottom = 412.0
-theme_override_font_sizes/font_size = 32
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="InventoryVBox" type="VBoxContainer" parent="UI/InventoryPanel/InventoryScroll"]
+layout_mode = 2
+
+[node name="UnitGrid" type="GridContainer" parent="UI/InventoryPanel/InventoryScroll/InventoryVBox"]
+layout_mode = 2
+columns = 5
+
+[node name="ConvoyGrid" type="GridContainer" parent="UI/InventoryPanel/InventoryScroll/InventoryVBox"]
+layout_mode = 2
+columns = 5
 
 [node name="EquipButton" type="Button" parent="UI/InventoryPanel" unique_id=1138857740]
 layout_mode = 0

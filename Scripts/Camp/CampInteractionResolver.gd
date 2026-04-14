@@ -7,7 +7,7 @@
 # 2) request_turn_in (giver ready, or active item delivery with items satisfied)
 # 3) request_progress (active giver, not auto-promoted to turn-in)
 # 4) request_target_talk / request_branching (active talk-to target at progress 0)
-# 5) special_scene, direct_conversation, pair_snippet, lore — only when no quest is
+# 5) special_scene, roster_solo (full-screen beat), direct_conversation, pair_snippet, lore — only when no quest is
 #    active, ready_to_turn_in, or failed (side stories deferred until camp request cleared)
 # 6) request_offer
 # 7) idle_talk
@@ -81,6 +81,8 @@ func peek_walker_interaction_kind(walker_node: Node) -> String:
 				var tier_ok: bool = (scene_tier == "close" and tier in ["close", "bonded"]) or (scene_tier == "trusted" and tier in ["trusted", "close", "bonded"])
 				if tier_ok and not (scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier)):
 					return "special_scene"
+		if DialogueDatabase.get_eligible_roster_solo_beat_id(unit_name, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen) != "":
+			return "roster_solo"
 		var ctx_dict: Dictionary = _ctx.build_camp_context_dict()
 		var visit_snap: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
 		if CampConversationDB.has_eligible_direct_conversation(unit_name, ctx_dict, _gather_walker_names(), visit_snap):
@@ -160,6 +162,8 @@ func would_single_walker_priority(nearest: Node) -> bool:
 				var tier_ok: bool = (scene_tier == "close" and tier in ["close", "bonded"]) or (scene_tier == "trusted" and tier in ["trusted", "close", "bonded"])
 				if tier_ok and not (scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier)):
 					return true
+		if DialogueDatabase.get_eligible_roster_solo_beat_id(unit_name, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen) != "":
+			return true
 		var ctx2: Dictionary = _ctx.build_camp_context_dict()
 		var snap2: Dictionary = _dialogue.get_direct_conversation_visit_snapshot()
 		if CampConversationDB.has_eligible_direct_conversation(unit_name, ctx2, _gather_walker_names(), snap2):
@@ -226,6 +230,11 @@ func open_dialogue(walker_node: Node) -> void:
 			if scene.get("one_time", true) and CampaignManager.has_seen_special_scene(unit_name, scene_tier):
 				continue
 			_dialogue.show_special_camp_scene(walker_node, unit_name, unit_data, scene, scene_tier)
+			return
+	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
+		var roster_solo: String = DialogueDatabase.get_eligible_roster_solo_beat_id(unit_name, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen)
+		if roster_solo != "":
+			_dialogue.show_roster_solo_gate(walker_node, unit_name, unit_data, roster_solo)
 			return
 	if _side_stories_allowed_for_request_status(status) and CampaignManager and unit_name != "":
 		var camp_ctx: Dictionary = _ctx.build_camp_context_dict()

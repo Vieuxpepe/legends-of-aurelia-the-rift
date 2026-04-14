@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_47q2y")
+voice_gender = 1
 display_name = "Captain Selene"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Tch… precision fails only once, and the body remembers forever."])

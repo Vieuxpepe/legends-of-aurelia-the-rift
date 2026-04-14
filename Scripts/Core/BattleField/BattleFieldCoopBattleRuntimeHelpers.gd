@@ -59,7 +59,7 @@ static func apply_remote_synced_enemy_death_loot_events(field, raw: Variant) -> 
 	field.pending_loot.clear()
 	field.pending_loot.append_array(combined_items)
 	field.loot_recipient = recipient
-	field.show_loot_window()
+	field.schedule_loot_window_after_combat_juice()
 
 
 static func build_runtime_unit_wire_snapshot(field, unit: Node2D) -> Dictionary:
@@ -499,3 +499,121 @@ static func find_unit_by_relationship_id_any_side(field, rid: String) -> Node2D:
 static func wait_for_enemy_state_ready(field) -> void:
 	while field.is_inside_tree() and field.current_state != field.enemy_state:
 		await field.get_tree().process_frame
+
+
+## Host → guest after ENet reconnect mid-battle: full unit wire rows + counters + optional RNG seed (see [method CoopExpeditionSessionManager.enet_send_runtime_full_battle_resync_to_guest]).
+static func build_full_battle_resync_wire_body(field) -> Dictionary:
+	var units: Array = []
+	var rows: Array = [
+		{"kind": "player", "node": field.player_container},
+		{"kind": "ally", "node": field.ally_container},
+		{"kind": "enemy", "node": field.enemy_container},
+	]
+	for row in rows:
+		var cont: Node = row["node"] as Node
+		var kind: String = str(row["kind"])
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			if not c is Node2D:
+				continue
+			var u: Node2D = c as Node2D
+			if not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			if u.get("current_hp") != null and int(u.current_hp) <= 0:
+				continue
+			var snap: Dictionary = build_runtime_unit_wire_snapshot(field, u)
+			if snap.is_empty():
+				continue
+			snap["parent_kind"] = kind
+			units.append(snap)
+	var out: Dictionary = {
+		"action": "full_battle_resync",
+		"resync_schema": 1,
+		"units": units,
+		"player_gold": int(field.player_gold),
+		"ek": int(field.enemy_kills_count),
+		"pd": int(field.player_deaths_count),
+		"ad": int(field.ally_deaths_count),
+		"atc": int(field.ability_triggers_count),
+	}
+	if field._coop_net_have_battle_seed:
+		out["battle_seed"] = int(field._coop_net_stored_battle_seed)
+	return out
+
+
+static func apply_full_battle_resync_from_host(field, body: Dictionary) -> void:
+	if int(body.get("resync_schema", 0)) != 1:
+		if OS.is_debug_build():
+			push_warning("Coop full_battle_resync: unsupported resync_schema")
+		return
+	var units_raw: Variant = body.get("units", [])
+	if typeof(units_raw) != TYPE_ARRAY:
+		if OS.is_debug_build():
+			push_warning("Coop full_battle_resync: missing or invalid units array")
+		return
+	var units_arr: Array = units_raw as Array
+	if units_arr.is_empty():
+		if OS.is_debug_build():
+			push_warning("Coop full_battle_resync: empty units list — refusing apply")
+		return
+	field._coop_full_resync_generation += 1
+	var CoopRt := preload("res://Scripts/Core/BattleField/BattleFieldCoopRuntimeSyncHelpers.gd")
+	CoopRt.coop_enet_prepare_for_full_battle_resync(field)
+	if body.has("battle_seed") and field.has_method("apply_coop_battle_net_rng_seed"):
+		field.apply_coop_battle_net_rng_seed(int(body.get("battle_seed", 0)))
+	field.player_gold = int(body.get("player_gold", field.player_gold))
+	field.enemy_kills_count = int(body.get("ek", field.enemy_kills_count))
+	field.player_deaths_count = int(body.get("pd", field.player_deaths_count))
+	field.ally_deaths_count = int(body.get("ad", field.ally_deaths_count))
+	field.ability_triggers_count = int(body.get("atc", field.ability_triggers_count))
+	var keep_ids: Dictionary = {}
+	for entry_any in units_arr:
+		if not entry_any is Dictionary:
+			continue
+		var eid: String = str((entry_any as Dictionary).get("id", "")).strip_edges()
+		if eid != "":
+			keep_ids[eid] = true
+	for entry_any in units_arr:
+		if not entry_any is Dictionary:
+			continue
+		var entry: Dictionary = entry_any as Dictionary
+		var pk: String = str(entry.get("parent_kind", "player")).strip_edges()
+		var parent: Node = field.player_container
+		if pk == "ally":
+			parent = field.ally_container
+		elif pk == "enemy":
+			parent = field.enemy_container
+		apply_runtime_unit_wire_snapshot(field, entry, parent)
+	field._assign_mock_coop_unit_ownership_from_context()
+	prune_guest_units_not_in_resync_keep_set(field, keep_ids)
+	field.rebuild_grid()
+	field.update_fog_of_war()
+	field.update_objective_ui()
+	if field.has_method("update_gold_display"):
+		field.update_gold_display()
+
+
+## Remove guest-side units with stable co-op ids that the host snapshot did not include (corrects drift / duplicates).
+static func prune_guest_units_not_in_resync_keep_set(field, keep_ids: Dictionary) -> void:
+	if keep_ids.is_empty():
+		return
+	var removed: int = 0
+	for cont in [field.player_container, field.ally_container, field.enemy_container]:
+		if cont == null:
+			continue
+		for c in cont.get_children():
+			if not c is Node2D:
+				continue
+			var u: Node2D = c as Node2D
+			if not is_instance_valid(u) or u.is_queued_for_deletion():
+				continue
+			var rid: String = field._get_mock_coop_command_id(u).strip_edges()
+			if rid == "":
+				continue
+			if keep_ids.has(rid):
+				continue
+			u.queue_free()
+			removed += 1
+	if removed > 0 and OS.is_debug_build():
+		push_warning("Coop full_battle_resync: pruned %d orphan unit(s) absent from host snapshot." % removed)

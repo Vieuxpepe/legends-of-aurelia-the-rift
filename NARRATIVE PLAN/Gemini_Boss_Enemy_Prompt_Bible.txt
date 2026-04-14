@@ -1,0 +1,626 @@
+================================================================================
+LEGENDS OF AURELIA — GEMINI PROMPT BIBLE: NAMED BOSSES ONLY
+================================================================================
+**Art Director — use one file:** `NARRATIVE PLAN/Art_Director_Boss_Portrait_And_Battle_Sprite_Sourcebook.md`
+has global direction + every boss portrait/battle prompt in one place. This file
+remains a plain-text duplicate for tooling / search; prefer the sourcebook for humans.
+
+Purpose: Reusable text prompts for Google Gemini (image or multimodal concepting)
+for **named boss characters** in Legends of Aurelia. Excludes generic / roster
+enemy archetypes (Sun Archer, League Guard, etc.).
+
+How to use:
+- **Check FINISHED BOSS ART first** — five bosses already have portrait + battle
+  sprite PNGs in the repo; skip fresh generation unless you are matching style or
+  replacing files.
+- **Dialogue / UI / dossier art** → paste **MASTER PORTRAIT BLOCK**, then the
+  boss’s **PORTRAIT PROMPT** (and optional AVOID / NOTES).
+- **Tactical battle sprite, unit strip, combat roster** → paste **MASTER BATTLE
+  SPRITE BLOCK**, then the boss’s **BATTLE SPRITE PROMPT** (and optional AVOID).
+- Keep prompts in English unless you are localizing marketing copy separately.
+- For recurring bosses (same name, harder encounter), add one line to either prompt:
+  “More battle-worn / higher ritual corruption than earlier appearance.”
+
+Source synthesis: NARRATIVE PLAN/Boss_Artstyle_Production_Sheet.txt,
+Scripts/BossUnitDataGenerator.gd (classes & signature weapons),
+Scripts/Narrative/BossPersonalDialogueDB.gd (voice and threat profile).
+
+================================================================================
+FINISHED BOSS ART (DO NOT REGENERATE UNLESS REPLACING)
+================================================================================
+These five named bosses already have **both** a portrait PNG and a tactical battle
+sprite PNG in the repo. Use the prompts below only for **variants**, **style
+matching**, or **explicit redesign** — not as if art were still missing.
+
+Portrait path convention: `res://Assets/Portraits/<file>.png`
+Battle sprite path convention: `res://Assets/Sprites/<file>.png`
+
+- **The Ash Adjudicator** — `Ash Adjudicator Portrait.png` + `Ash Adjudicator Battle Sprite.png`
+- **Mortivar Hale** — `Mortivar Hale Portrait.png` + `Mortivar Hale Battle Sprite.png`
+- **Mother Caldris Vein** — `Mother Caldris Vein Portrait.png` + `Mother Caldris Vein Battle Sprite.png`
+- **Noemi Veyr** — `Noemi Veyr Portrait.png` + `Noemi Veyr Battle sprite.png` (filename uses lowercase “sprite”)
+- **Port-Master Rhex Valcero** — `Port-Master Rhex Valcero Portrait.png` + `Port-Master Rhex Valcero Battle Sprite.png`
+
+**Lady Vespera / Vespera Ascendant:** narrative expression portraits exist under
+`Assets/Portraits/` (e.g. `vespera.png`, `vespera_smirk.png`, …). That is **not**
+the same deliverable as the paired boss portrait + battle sprite set above; cards
+01–02 remain the reference if you still need **tactical** portrait/sprite art.
+
+When generating **variants** for bosses who already have PNGs, still follow
+`Boss_Artstyle_Production_Sheet` §1 (global pillars) and that boss’s §4 card so
+output stays aligned with in-game direction (palette, silhouette, avoid list).
+
+================================================================================
+MASTER PORTRAIT BLOCK (dialogue / character sheet / bust art)
+================================================================================
+Dark fantasy **character portrait**. Chest-up or waist-up, centered composition;
+face clearly readable at small UI scale (~35–45% of frame height). Slight three-
+quarter turn OK. High-contrast lighting on face and eyes, grounded materials
+(metal, cloth, leather, ritual details). Painterly or high-quality illustration;
+NOT chibi, NOT gacha, NOT Fortnite, NOT photorealistic stock photo. No modern
+clothing, logos, or sci-fi tech. Serious adult tone. Hands only if simple
+(book edge, staff rest); avoid elaborate gestures that muddy a small crop.
+Clean background or soft abstract mood (smoke, sigils, bokeh) — not busy scenery.
+No text or watermarks.
+
+================================================================================
+MASTER BATTLE SPRITE BLOCK (full-body tactical / combat roster)
+================================================================================
+Dark fantasy **full-body tactical battle illustration**. Entire figure from head
+to toe; strong readable silhouette; weapon and armor role obvious at a glance.
+Dynamic combat-ready or commanding stance; feet planted; weight believable.
+Simple ground plane or subtle shadow; optional faint hex-grid or stone floor
+suggestion — **no UI frames, no stat text**. Slight isometric-friendly or three-
+quarter front view (JRPG battle sprite convention OK). Materials grounded; palette
+controlled. NOT chibi, NOT gacha, NOT Fortnite. No modern items. No text or
+watermarks.
+
+================================================================================
+WORLD TONE (optional short prefix)
+================================================================================
+Late-medieval / early-Renaissance fantasy realm at war. Factions include: a
+militant church-state (Valeron), a predatory merchant league, occult rift cultists
+(Obsidian Circle), frontier loggers and wardens, and drowning cosmic forces (Dark Tide).
+
+================================================================================
+BOSS INDEX (canonical display names — match game data)
+================================================================================
+01 Lady Vespera (early apparition → late game; see also Vespera Ascendant)
+02 Vespera Ascendant
+03 Master Enric
+04 Captain Selene
+05 Ephrem the Zealot
+06 Mother Caldris Vein
+07 Port-Master Rhex Valcero
+08 Mortivar Hale
+09 Preceptor Cassian Vow
+10 Auditor Nerez Sable
+11 Juno Kest
+12 Lord Septen Harrow
+13 Thorn-Captain Edda Fen
+14 Justicar Halwen Serast
+15 Noemi Veyr
+16 Provost Serik Quill
+17 Roen Halbrecht
+18 The Ash Adjudicator
+19 Duke Alric Thornmere
+20 Naeva, Marrow-Seer of the Dark Tide
+21 The Witness Without Eyes
+
+================================================================================
+INDIVIDUAL BOSS PROMPT CARDS
+================================================================================
+Each card: SUMMARY + SIGNATURE GEAR + PORTRAIT PROMPT + BATTLE SPRITE PROMPT
++ AVOID + NOTES (where needed).
+
+--------------------------------------------------------------------------------
+01 — LADY VESPERA
+--------------------------------------------------------------------------------
+SUMMARY: Obsidian Circle mastermind; cold ceremonial authority; rift/ash magic;
+         priestly stillness that can snap into violence. Escalates: apparition =
+         more spectral; late game = more corporeal void-touched certainty.
+
+FACTION / THREAT: Obsidian Circle | void ritualist | catalyst antagonist
+
+SIGNATURE GEAR (game): Rift Rite Tome; fire-sage / ritual caster read
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Lady Vespera, formidable antagonist priestess of a rift
+cult. High ceremonial collar, asymmetrical occult detail, void-weave fabrics,
+fractured ritual metal at shoulders or throat. Palette: black-violet, controlled
+blood-red accents, cold lunar rim light on face. Expression: intelligent, patient
+cruelty; eyes that judge. Faint ash and rift bloom at frame edges only.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Lady Vespera full body, ritual caster stance: one
+hand on open Rift Rite Tome, other hand raised with gathering void flame. Long
+ceremonial layers with asymmetrical occult trim; hem and sleeves readable in
+silhouette. Black-violet and ember accent; ash particles minimal. Ground shadow
+only; commanding, still-before-storm posture.
+
+AVOID: generic “sexy sorceress”, pin-up, cartoon evil queen, Sauron pastiche.
+
+NOTES: Portrait + sprite **softer and more translucent** for apparition;
+       **sharper armor and harder light** for late-game duels.
+
+--------------------------------------------------------------------------------
+02 — VESPERA ASCENDANT
+--------------------------------------------------------------------------------
+SUMMARY: End-state Vespera — ascension / void stride. Cosmic asymmetry; barely
+         human containment; tragic ambition.
+
+FACTION / THREAT: Obsidian Circle climax | ascended void strider
+
+SIGNATURE GEAR (game): Rift Rite Tome; void-strider hybrid threat
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Vespera Ascendant, void-touched woman: ecstasy and terror
+in the same expression; pale skin; unnatural highlight under eyes and cheekbones.
+Hair and ritual collar disturbed by invisible wind. Subtle geometry fracture or
+void crack **only at edges** of frame. Black-violet core light on face; keep
+facial anatomy clear.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Vespera Ascendant full body, ascendant mage-warrior:
+fused ritual robes and armored panels, torn elegance, tome chained or fused to
+belt. Rift energy at hands and spine silhouette; cloth lifting unnaturally. Strong
+asymmetric silhouette; void particles; feet visible, aggressive float-step or
+lunging cast pose. Epic tragic, not generic monster.
+
+AVOID: pure silhouette blob; anime aura-only body; lose material texture.
+
+--------------------------------------------------------------------------------
+03 — MASTER ENRIC
+--------------------------------------------------------------------------------
+SUMMARY: Scholar-necromancer of the marsh; cold curiosity; rot as methodology.
+
+FACTION / THREAT: Obsidian Circle | necromantic researcher
+
+SIGNATURE GEAR (game): Grave Thesis (tome); Divine Sage / rot dissertation
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Master Enric, male scholar-necromancer: slight stooped
+burden, damp stained robes, old strap bindings at collar. Face: fascinated,
+clinical calm; tired eyes. Marsh green and corpse-grey palette; soft underlight
+like corpse-candle; faint spore motes **not** obscuring face.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Master Enric full body, hunched scholar stance:
+clutching Grave Thesis tome in both hands or one hand extended with rot mire
+effect from fingers. Robes weighted with damp hem, tool belt with ritual implements.
+Boots in mud splash; green-brown-grey palette; precise small gesture, not brawler.
+
+AVOID: cartoon plague doctor; silly slime; oversized WoW shoulders.
+
+--------------------------------------------------------------------------------
+04 — CAPTAIN SELENE
+--------------------------------------------------------------------------------
+SUMMARY: Elite duelist-commander; precision, clean lethality; professional killer.
+
+FACTION / THREAT: Vespera-aligned elite | assassin-commander
+
+SIGNATURE GEAR (game): Shadowglass Knives; umbra-step assassin read
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Captain Selene, female elite commander: sharp jaw, cold
+focus; short or tied-back hair; midnight blue and steel palette. Fitted high collar
+or gorget; hint of twin knife hilts at shoulders. Restrained crimson accent **one
+element only**. Expression: unimpressed, lethal patience.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Captain Selene full body, low combat stance, twin
+shadowglass knives forward, cape or half-cape as **sharp diagonal** silhouette.
+Sleek dark armor panels; weight on front foot; arena-neutral floor. Minimal motion
+blur — readability first. Steel, midnight blue, one crimson edge light.
+
+AVOID: armor so ornate it hides pose; clutter; twin daggers lost in busy FX.
+
+--------------------------------------------------------------------------------
+05 — EPHREM THE ZEALOT
+--------------------------------------------------------------------------------
+SUMMARY: Fallen Valeron purifier — terrifying sincerity; cinder devotion.
+
+FACTION / THREAT: Fallen Valeron zealot | monk-enforcer
+
+SIGNATURE GEAR (game): Censer rod / censers; Mark of Cinder
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Ephrem the Zealot, male militant monk: austere face,
+shaved or severe hair; cinder-scorch marks on ivory liturgical cloth at neck.
+Ember-orange catch light in eyes; optional faint brand glow at brow. Expression:
+fanatic clarity, calm not frothing.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Ephrem full body, wide martial stance, censer rod
+or chain-censer swung ready; scorched white-and-ember robes over light armor.
+Feet wide; ash falling; ember motes at hands. Silhouette: vertical monk-warrior,
+readable weapon arc.
+
+AVOID: comical preacher; clown face; cartoon fire beard.
+
+--------------------------------------------------------------------------------
+06 — MOTHER CALDRIS VEIN
+--------------------------------------------------------------------------------
+SUMMARY: Valeron purifier matriarch — tribunal cruelty as holiness; NOT gentle healer.
+
+FACTION / THREAT: Valeron Purifiers | high inquisitor
+
+SIGNATURE GEAR (game): Silence Staff; litany of restraint
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Mother Caldris Vein, severe matriarch inquisitor: pristine
+white-gold regalia with punitive iconography (chains, nails motif — symbolic not
+gore). Cold courtroom top light; steel at throat. Expression: calm surgical moral
+authority; eyes that sentence.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Mother Caldris full body, upright tribunal stance,
+Silence Staff vertical before her or thrust to command; long punitive vestments
+over armored skirt/plates; white-gold-cold-steel palette; faint restraint-circle
+suggestion on ground (abstract). Heavy vertical silhouette.
+
+AVOID: warm motherly healer; soft pastel saint.
+
+ART STATUS: Portrait + battle sprite **already in repo** — see **FINISHED BOSS ART** section.
+
+--------------------------------------------------------------------------------
+07 — PORT-MASTER RHEX VALCERO
+--------------------------------------------------------------------------------
+SUMMARY: League waterfront warlord; wealth, guns, paid muscle; smiling predator.
+
+FACTION / THREAT: Merchant League | bow-knight / handgonne
+
+SIGNATURE GEAR (game): Broker’s Handgonne; naval-enforcer coat
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Port-Master Rhex Valcero, imposing male dock magnate:
+expensive naval greatcoat collar and brass buttons; coin or seal chain at chest;
+weathered confident face; smiling predator eyes. Tar black, brass gold, rust-red
+accents. Soft harbor fog background blur.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Rhex full body, wide planted stance, Broker’s
+Handgonne raised in one hand, other hand on coat lapel or belt of seals. Heavy
+coat tails readable in silhouette; armored core under coat; dock plank or rope-
+shadow ground. Broad “merchant warlord” read.
+
+AVOID: pirate Halloween; Jack Sparrow.
+
+ART STATUS: Portrait + battle sprite **already in repo** — see **FINISHED BOSS ART** section.
+
+--------------------------------------------------------------------------------
+08 — MORTIVAR HALE
+--------------------------------------------------------------------------------
+SUMMARY: Grave Marshal of Greyspire — death-parade commander; funeral plate;
+         cyan gravefire.
+
+FACTION / THREAT: Obsidian Circle military | death knight commander
+
+SIGNATURE GEAR (game): Blackened Lance; grave muster
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Mortivar Hale, male death-marshal: funerary plate helm
+**partially open** or visor up so face is visible — grey skin or deathly pallor,
+piercing tired command. Ossified trim on pauldrons; cyan gravefire reflection in
+eye sockets or cheek. Iron-black and bone-ash palette.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Mortivar Hale full body in funerary full plate,
+tattered parade cloak, blackened lance held in command point or brace for charge.
+Cyan accent glow at joints/eyesocket; heavy vertical knight silhouette; mist at
+boots. Parade-ground or ash field ground shadow.
+
+AVOID: skeleton king cliché; skull pile throne.
+
+ART STATUS: Portrait + battle sprite **already in repo** — see **FINISHED BOSS ART** section.
+
+--------------------------------------------------------------------------------
+09 — PRECEPTOR CASSIAN VOW
+--------------------------------------------------------------------------------
+SUMMARY: Valeron hardline diplomat-inquisitor; peace as procedure and blade.
+
+FACTION / THREAT: Valeron hardliners | doctrinal preceptor
+
+SIGNATURE GEAR (game): Edict Staff; false accord
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Preceptor Cassian Vow, tall severe male inquisitor:
+ceremonial armor-cloth hybrid at shoulders; legal seal brooch; edict staff top
+visible at frame edge. Ivory, deep blue, cold gold. Expression: polite menace,
+frozen smile or no smile.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Cassian full body, formal stance, Edict Staff in
+both hands or one hand driving staff butt to ground; long doctrinal coat layers;
+tall vertical silhouette; tent or column suggested only as soft background. Cold
+palette; staff head a clear readable shape.
+
+AVOID: flamboyant golden paladin; radiant hero halo.
+
+--------------------------------------------------------------------------------
+10 — AUDITOR NEREZ SABLE
+--------------------------------------------------------------------------------
+SUMMARY: Vharian elite auditor — ledger and blade; aristocratic extraction.
+
+FACTION / THREAT: Vharian elite | blade weaver
+
+SIGNATURE GEAR (game): Ledger Needle; collateral clause
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Auditor Nerez Sable, aristocratic enforcer: burgundy-black
+tailored coat, high collar; thin needle blade barely visible at lower frame or
+held still at shoulder height; seal/ledger motif on glove or pin. Pale precise face;
+small knowing smile. Coin-gold trim accents.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Nerez full body, poised duelist stance, Ledger Needle
+extended forward; coattails and slim silhouette; one foot forward; concealed
+armor panels at ribs visible at joints. Elite duelist readability — not street
+thug. Deep wine, black, gold.
+
+AVOID: generic hooded rogue; must feel **institutional elite**.
+
+--------------------------------------------------------------------------------
+11 — JUNO KEST
+--------------------------------------------------------------------------------
+SUMMARY: Keeper of Bells — alarm tempo; dock security; signal discipline.
+
+FACTION / THREAT: Vharian dock security | thief-tempo specialist
+
+SIGNATURE GEAR (game): Bellhook Knife; alarm net
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Juno Kest, wiry professional enforcer: weathered navy
+uniform collar, brass buttons, small bell-hook tool or knife hilt at belt visible.
+Signal-red scarf or armband **one accent**. Face: tired, owns the clock; sharp eyes.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Juno full body, compact agile stance, bellhook knife
+forward low, other hand on bell-rope coil or signal whistle at hip. Reinforced
+guard kit; rope rigging suggested in silhouette; feet on stone tower step. Quick
+“tempo boss” silhouette.
+
+AVOID: pirate bell comedy; clockpunk clutter.
+
+--------------------------------------------------------------------------------
+12 — LORD SEPTEN HARROW
+--------------------------------------------------------------------------------
+SUMMARY: Famine logistics tyrant; granaries; noble armor stained by necessity.
+
+FACTION / THREAT: Edranor opportunists | great knight / halberd
+
+SIGNATURE GEAR (game): Knight’s Halberd; hoardfire
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Lord Septen Harrow, heavy noble male lord: mixed plate
+and fur-lined collar; halberd shaft crossing behind shoulders **or** halberd head
+visible top of frame. Muted crimson, grain-ash grey, tarnished gold. Face:
+contemptuous, well-fed hardness; cold eyes.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Septen full body, planted wide, halberd as vertical
+authority — butt on ground or sweeping guard stance. Ration-pouch or granary-key
+motif on belt; hoardfire orange **subtle** at feet or distant wagon silhouette.
+Heavy silhouette, grounded weight.
+
+AVOID: cartoon glutton noble; must feel competent and dangerous.
+
+--------------------------------------------------------------------------------
+13 — THORN-CAPTAIN EDDA FEN
+--------------------------------------------------------------------------------
+SUMMARY: Frontier logging-war captain; axe, traps, unsentimental border violence.
+
+FACTION / THREAT: Frontier militarization | wild warden
+
+SIGNATURE GEAR (game): Steel Axe; timberline snare
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Thorn-Captain Edda Fen, female frontier captain: weathered
+face, practical braid or short hair; thorned leather collar; mud and pine-green
+palette; steel axe haft along shoulder line. Expression: defiant, no romance.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Edda full body, wide stance, steel axe two-handed
+ready or over shoulder; thorned leather and field plate mix; boots in mud; **stumps
+or corduroy road** suggested in minimal background. Strong triangular silhouette.
+
+AVOID: druid gown; Disney forest spirit.
+
+--------------------------------------------------------------------------------
+14 — JUSTICAR HALWEN SERAST
+--------------------------------------------------------------------------------
+SUMMARY: Arena tribunal judge-warrior; judgment as spectacle; punitive light.
+
+FACTION / THREAT: Valeron militant tribunal | high paladin / judgment pike
+
+SIGNATURE GEAR (game): Judgment Pike; verdict of flame
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Justicar Halwen Serast, imposing martial judge: tribunal
+helm open or crested; execution textile layer at neck; punitive orange rim light
+on cheek. Cold white-steel armor reflection. Expression: charismatic terror — arena
+performer of law.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Halwen full body, vertical imposing stance, Judgment
+Pike held high or driving downward; layered tribunal plate and tabard; cape as
+clean diagonal; punitive orange edge highlights on armor rims; arena sand or stone
+floor shadow only.
+
+AVOID: golden hero paladin; warm smile.
+
+--------------------------------------------------------------------------------
+15 — NOEMI VEYR
+--------------------------------------------------------------------------------
+SUMMARY: Mask-market assassin; porcelain elegance; hidden blades; dancer rhythm.
+
+FACTION / THREAT: League assassin | fifth mask
+
+SIGNATURE GEAR (game): Masquerade Needle; mask motifs
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Noemi Veyr, elegant female assassin: porcelain half-mask
+or held mask at chin; black silk and one jewel-tone accent (emerald or amethyst);
+thin needle weapon visible at hand **simple hold**. Playful menace in eyes;
+festival bokeh **soft** behind.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Noemi full body, dancer-off-balance combat pose,
+masquerade needle extended; layered skirts or coat tails for motion silhouette;
+mask on face or pushed to forehead; light feet, one leg extended. Readable
+“assassin performer” shape.
+
+AVOID: harlequin clown; jester.
+
+ART STATUS: Portrait + battle sprite **already in repo** — see **FINISHED BOSS ART** section.
+
+--------------------------------------------------------------------------------
+16 — PROVOST SERIK QUILL
+--------------------------------------------------------------------------------
+SUMMARY: College archive tyrant; locks, keys, censored knowledge; scholar-warden.
+
+FACTION / THREAT: College censor-technologist | divine sage
+
+SIGNATURE GEAR (game): Chain-Key Staff; archive lock
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Provost Serik Quill, severe male scholar: angular dark
+robes, brass locking seals at throat; monocle or lens; chain-key staff head
+peeking into frame. Ink black, parchment skin tone, brass glint. Face: insulted
+intellect, thin lips.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Serik full body, staff vertical with chain-keys
+radiating **simple geometric** lock sigils; robes with sharp vertical folds;
+slightly hunched forward aggressive scholar pose; feet visible on archive stone.
+Readable staff silhouette — not steampunk explosion.
+
+AVOID: gear clutter hiding body line.
+
+--------------------------------------------------------------------------------
+17 — ROEN HALBRECHT
+--------------------------------------------------------------------------------
+SUMMARY: Broken castellan; betrayal and guilt; Dawnkeep tragedy.
+
+FACTION / THREAT: Traitor castellan | general / pike
+
+SIGNATURE GEAR (game): Pike of Valor; betrayer’s lever
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Roen Halbrecht, exhausted male officer: cracked heraldic
+collar, dirt and sweat, five o’clock shadow or lined face. Eyes: shame + defiance.
+Weathered steel and faded heraldry colors; distant fire orange on cheek **subtle**.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Roen full body, slumped but ready guard, Pike of Valor
+held across body defensively; repaired mismatched armor plates; cracked keep floor;
+fatigue in shoulders — still competent soldier silhouette. Human tragedy, not villain pose.
+
+AVOID: twirling mustache villain.
+
+--------------------------------------------------------------------------------
+18 — THE ASH ADJUDICATOR
+--------------------------------------------------------------------------------
+SUMMARY: Spectral Order vestige — ash law, hollow verdict, ritual inevitability.
+
+FACTION / THREAT: Spectral vestige | dreadnought / verdict blade
+
+SIGNATURE GEAR (game): Verdict Blade; trial mirror
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] The Ash Adjudicator **helmet / hollow visor close-up**:
+burnt-white ash mantle collar; cracked heraldic crest on brow; inner light in
+visor slit — **no normal face**. Charcoal and ember specks. Iconic, uncanny,
+still readable as “judge” silhouette at UI size.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Ash Adjudicator full body, towering armored judge:
+massive Verdict Blade grounded or two-handed ready; burnt-white ash cloak;
+cracked ancient heraldry on chest; hollow helm; cinder drifting; slow heavy stance;
+feet in ash circle. Broad dreadnought triangle silhouette.
+
+AVOID: generic blob ghost; add **heraldic** ruin detail.
+
+ART STATUS: Portrait + battle sprite **already in repo** — see **FINISHED BOSS ART** section.
+
+--------------------------------------------------------------------------------
+19 — DUKE ALRIC THORNMERE
+--------------------------------------------------------------------------------
+SUMMARY: Edranor noble cavalry authority; polish, contempt, inherited violence.
+
+FACTION / THREAT: Edranor traditionalist | high paladin / lance
+
+SIGNATURE GEAR (game): Silver Lance; banner break
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Duke Alric Thornmere, aristocratic male commander: rich
+heraldic gorget and mantle (thorn motif coherent with family colors); silver lance
+shaft diagonal behind head **or** gauntlet on chest. Sneer disciplined by martial
+bearing; misty field blur.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Alric full body, cavalry commander on foot **or**
+short rearing pose without full horse — if no horse, lance held as infantry brace
+in elite plate; heavy riding cloak sweep; thorn-heraldry on tabard; silver lance
+horizontal threat. Strong noble knight triangle.
+
+AVOID: decadent cartoon fop; must read **soldier**.
+
+--------------------------------------------------------------------------------
+20 — NAEVA, MARROW-SEER OF THE DARK TIDE
+--------------------------------------------------------------------------------
+SUMMARY: Dark Tide oracle; calm devotional menace; wet shadow; marrow ornament.
+
+FACTION / THREAT: Obsidian Circle / Dark Tide | void strider mage
+
+SIGNATURE GEAR (game): Dark Tide Grimoire; marrow hymn
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] Naeva, Marrow-Seer, female void-tide priestess: wet-shadow
+silk at neck and jaw; shell and bone jewelry framing face; subtle void markings
+on temples. Abyss teal and marrow ivory highlights in eyes. Expression: too calm,
+tragic beauty. Soft tide shadow **behind** head only.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] Naeva full body, flowing stance, Dark Tide Grimoire
+open at chest height; free hand in ritual gesture; robes trailing like shallow
+water; bone ornaments catching teal light; feet bare or sandaled on wet stone;
+elongated graceful silhouette with **readable** book and hands.
+
+AVOID: bikini armor; beach vacation; cheerful mood.
+
+--------------------------------------------------------------------------------
+21 — THE WITNESS WITHOUT EYES
+--------------------------------------------------------------------------------
+SUMMARY: Vel’golath manifestation — cosmic observer; non-human; geometry stress.
+
+FACTION / THREAT: Cosmic manifestation | rift archon
+
+SIGNATURE GEAR (game): Null Hymn; grid-unmaking
+
+PORTRAIT PROMPT:
+[MASTER PORTRAIT BLOCK] The Witness Without Eyes — **abstract iconic crop**:
+fragment of alien “face” without eyes: bone plates, void-glass facets, parchment-
+flesh seams; wrong symmetry; invasive non-local highlight on one plane only.
+Oppressive scale hint (edge of something vast). Still square-safe for UI **omen
+slot** — not cute, not human.
+
+BATTLE SPRITE PROMPT:
+[MASTER BATTLE SPRITE BLOCK] The Witness full figure, towering asymmetric entity:
+multiple limbs or wing-plates **but one clear primary body mass**; Null Hymn as
+strange object-staff or folded geometry in hands; subtle bent perspective at feet;
+wrong neutrals palette; deliberate impossible posture; strong **readable** boss
+silhouette for tactical screen.
+
+AVOID: generic horned demon; standard human proportions.
+
+================================================================================
+QUICK COPY: NEGATIVE PROMPT ADD-ON (optional tail)
+================================================================================
+text, watermark, logo, modern clothing, smartphone, sci-fi visor, low quality,
+deformed hands, extra fingers, blurry face, childlike proportions, chibi, gacha,
+Fortnite style, oversaturated neon, comic slapstick.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

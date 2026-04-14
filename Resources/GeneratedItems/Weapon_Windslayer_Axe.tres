@@ -9,6 +9,7 @@ description = "An axe that rends through wind and flesh."
 weapon_name = "Windslayer Axe"
 gold_cost = 8900
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 2
 affected_stat = "magic"
 effect_amount = 0

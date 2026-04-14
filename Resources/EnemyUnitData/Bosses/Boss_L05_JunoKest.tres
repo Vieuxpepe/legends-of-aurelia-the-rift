@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_r6ynm")
+voice_gender = 1
 display_name = "Juno Kest"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Heh — guess I rang one bell too many."])

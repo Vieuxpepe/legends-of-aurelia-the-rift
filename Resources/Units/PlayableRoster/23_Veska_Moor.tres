@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_5pue1")
+voice_gender = 1
 display_name = "Veska Moor"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["I held as long as I could; now you hold.", "The wall doesn’t mourn. It stands.", "Don’t make speeches. Close the gap.", "If I fall, then someone else plants their feet here."])

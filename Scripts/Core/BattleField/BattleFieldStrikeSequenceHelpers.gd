@@ -1501,11 +1501,9 @@ static func run_strike_sequence(
 			damage += rookie_dmg
 			damage += UnitCombatStatusHelpers.resolve_combat_might_bonus(attacker)
 
-			# Physical subtype multiplier (slashing/piercing/bludgeoning). Magic stays untouched.
-			if not is_magic and wpn != null:
-				var subtype: int = field.resolve_physical_subtype(wpn)
-				var mult: float = field.resolve_physical_subtype_multiplier(defender, subtype)
-				damage = int(round(float(damage) * mult))
+			# Physical subtype + magic damage kind multipliers (must match forecast).
+			if wpn != null:
+				damage = field.apply_outgoing_weapon_damage_multipliers(int(damage), defender, wpn)
 
 			var is_crit: bool = force_crit or (randi() % 100 < crit_chance)
 			var attack_hits: bool = force_hit or (randi() % 100 < hit_chance)

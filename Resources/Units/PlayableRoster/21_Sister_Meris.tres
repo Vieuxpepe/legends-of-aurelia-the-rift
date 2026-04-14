@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_amuq1")
+voice_gender = 1
 display_name = "Sister Meris"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["I spent too long mistaking severity for righteousness… do better than I did.", "So this is the weight of judgment without excuse.", "If penance means anything, let it spare someone after me.", "I was wrong in ways discipline could not cleanse."])

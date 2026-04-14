@@ -9,6 +9,7 @@ description = "Contains advanced fire spells."
 weapon_name = "Flame Tome"
 gold_cost = 3200
 damage_type = 1
+magic_damage_kind = 1
 weapon_type = 3
 affected_stat = "magic"
 effect_amount = 0

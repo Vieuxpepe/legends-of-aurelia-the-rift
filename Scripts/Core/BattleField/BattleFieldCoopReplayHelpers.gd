@@ -9,6 +9,11 @@ static func coop_net_reset_battle_rng_sync(field) -> void:
 	field._coop_net_stored_battle_seed = 0
 	field._coop_net_local_combat_seq = 0
 	field._coop_net_incoming_enemy_combat_fifo.clear()
+	field._coop_enet_remote_sync_queue.clear()
+	field._coop_enet_remote_sync_busy = false
+	field._coop_full_resync_generation = 0
+	field._coop_pending_full_battle_resync.clear()
+	field._coop_full_battle_resync_apply_in_progress = false
 
 	# QTE mirror + capture state
 	field._coop_qte_event_seq = 0
@@ -22,6 +27,9 @@ static func coop_net_reset_battle_rng_sync(field) -> void:
 	field._coop_combat_loot_capture_events.clear()
 
 	field._coop_guest_awaiting_combat_aid = ""
+	field._coop_host_guest_combat_request_busy = false
+	if field.has_method("coop_enet_clear_reconnect_grace_pause_if_any"):
+		field.coop_enet_clear_reconnect_grace_pause_if_any()
 	field._coop_remote_enemy_turn_completed = false
 	field._coop_remote_battle_result_applying = false
 	field._coop_host_battle_result_broadcast = ""

@@ -630,7 +630,8 @@ level_up_fx_scene = ExtResource("9_qy62q")
 fire_tile_loop_vfx_scene = ExtResource("9_314h1")
 intro_dialogue = Array[ExtResource("6_dm0ry")]([SubResource("Resource_8a6bc")])
 map_objective = 1
-turn_limit = 3
+turn_limit = 1
+level_display_name = "Prologue: The Razed Village"
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
 

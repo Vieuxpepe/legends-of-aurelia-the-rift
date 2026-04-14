@@ -36,3 +36,7 @@ class_name ConsumableData
 @export var unlocked_music_track: AudioStream
 @export var track_title: String = ""
 @export_multiline var track_lyrics: String = ""
+
+@export_category("Knowledge / Field Notes")
+## If non-empty, using this item in camp unlocks these intel ids (BeastiaryIntelRegistry).
+@export var knowledge_intel_ids: Array[String] = []

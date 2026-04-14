@@ -115,6 +115,7 @@ static func apply_special_modes_after_fog(field) -> void:
 				CombatPassiveAbilityHelpers.ensure_finished_turn_hook(field, enemy)
 
 				enemy.data = loaded_unit_data.duplicate(true)
+				enemy.set_meta("enemy_unit_data_path", chosen_data_path)
 				enemy.level = max_roster_level
 				enemy.unit_name = enemy.data.get("unit_name") if enemy.data.get("unit_name") != null else "Raider"
 				enemy.set("is_custom_avatar", false)

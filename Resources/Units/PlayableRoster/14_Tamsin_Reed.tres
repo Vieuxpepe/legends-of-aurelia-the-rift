@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_duja6")
+voice_gender = 1
 display_name = "Tamsin Reed"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["No, no — don’t stop because of me… there are still people who need you.", "It’s all right… help the ones you still can.", "Please don’t waste time grieving while someone else is bleeding.", "I know I’m scared. Just… don’t let that be what survives of me."])

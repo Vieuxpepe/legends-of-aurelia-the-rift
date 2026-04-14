@@ -191,7 +191,15 @@ func _fade_alpha(target_a: float, time_sec: float) -> void:
 	var audio_tween: Tween = null
 	var bus_idx: int = AudioServer.get_bus_index("Master")
 	var start_db: float = AudioServer.get_bus_volume_db(bus_idx)
-	var end_db: float = -20.0 if target_a >= 1.0 else 0.0
+	
+	var target_vol_linear: float = 1.0
+	if CampaignManager != null:
+		target_vol_linear = maxf(0.001, CampaignManager.audio_master_volume)
+	var normal_db: float = linear_to_db(target_vol_linear)
+	if target_vol_linear <= 0.001:
+		normal_db = -80.0
+		
+	var end_db: float = -40.0 if target_a >= 1.0 else normal_db
 
 	if fade_audio:
 		audio_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)

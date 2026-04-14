@@ -8,6 +8,7 @@ description = "A basic healing staff for early sustain and stability."
 weapon_name = "Heal Staff"
 gold_cost = 520
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 4
 is_healing_staff = true
 affected_stat = "magic"

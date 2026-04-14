@@ -9,6 +9,7 @@ description = "A support staff that hardens an ally's footing."
 weapon_name = "Protect Staff"
 gold_cost = 1100
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 4
 is_buff_staff = true
 affected_stat = "defense"

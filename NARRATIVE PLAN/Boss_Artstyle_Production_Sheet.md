@@ -1,5 +1,9 @@
 # Legends of Aurelia - Boss Artstyle Production Sheet
 
+**Art Director — one-file prompts + direction:** [`Art_Director_Boss_Portrait_And_Battle_Sprite_Sourcebook.md`](Art_Director_Boss_Portrait_And_Battle_Sprite_Sourcebook.md)
+(merged pillars, faction colors, delivery table, per-boss art cards + copy-paste prompts).
+This sheet stays the structured §1–§4 reference; prefer the sourcebook when commissioning portraits/sprites.
+
 Purpose: Production-facing art direction for named bosses and major rivals only.
 Scope: Bosses/sub-bosses from the Enemy Bible. Excludes generic enemies and common fodder.
 
@@ -10,6 +14,22 @@ Scope: Bosses/sub-bosses from the Enemy Bible. Excludes generic enemies and comm
 - Rule of exaggeration: silhouettes can become dramatic for boss identity, but gear should still feel physically plausible unless intentionally cosmic/aberrant.
 - Readability priority: weapon, stance, and threat type must be identifiable at a glance.
 - Boss hierarchy signal: each boss must own at least one unique silhouette trait plus one unique VFX language.
+
+## 1.5) Delivered portrait + battle sprite pairs (prompt / commission note)
+
+These bosses already have **both** a portrait PNG and a full-body tactical battle sprite PNG under `Assets/Portraits/` and `Assets/Sprites/`. Treat as **complete** in art briefs and Gemini prompts unless you are explicitly replacing files.
+
+| Boss (display name) | Portrait file | Battle sprite file |
+| --- | --- | --- |
+| The Ash Adjudicator | `Ash Adjudicator Portrait.png` | `Ash Adjudicator Battle Sprite.png` |
+| Mortivar Hale | `Mortivar Hale Portrait.png` | `Mortivar Hale Battle Sprite.png` |
+| Mother Caldris Vein | `Mother Caldris Vein Portrait.png` | `Mother Caldris Vein Battle Sprite.png` |
+| Noemi Veyr | `Noemi Veyr Portrait.png` | `Noemi Veyr Battle sprite.png` |
+| Port-Master Rhex Valcero | `Port-Master Rhex Valcero Portrait.png` | `Port-Master Rhex Valcero Battle Sprite.png` |
+
+**Lady Vespera:** separate narrative expression portraits exist (`vespera*.png`); not the same paired deliverable as the table above.
+
+Inventory status does not relax **§1 global pillars** or the matching **§4 boss art card** (palette, silhouette, materials, avoid). Use those for variants, replacements, or VFX-led iterations.
 
 ## 2) Boss Tier Visual Hierarchy
 
@@ -88,6 +108,7 @@ Scope: Bosses/sub-bosses from the Enemy Bible. Excludes generic enemies and comm
 - Avoid: pirate caricature.
 
 ### 7. Mortivar Hale, Grave Marshal of Greyspire
+- Asset delivery: portrait + battle sprite PNGs already on disk (see §1.5).
 - Faction: Obsidian Circle military arm
 - Deployments: Level 6, 14
 - Silhouette: grave-knight commander with death-parade authority.
@@ -158,6 +179,7 @@ Scope: Bosses/sub-bosses from the Enemy Bible. Excludes generic enemies and comm
 - Avoid: hero-paladin glow language.
 
 ### 14. Noemi Veyr, The Fifth Mask
+- Asset delivery: portrait + battle sprite PNGs already on disk (see §1.5).
 - Faction: League-linked assassin interests
 - Deployment: Level 11
 - Silhouette: elegant shape-shifter aesthetic, interchangeable social profiles.
@@ -188,6 +210,7 @@ Scope: Bosses/sub-bosses from the Enemy Bible. Excludes generic enemies and comm
 - Avoid: cartoon villain posture; keep tragic humanity.
 
 ### 17. The Ash Adjudicator
+- Asset delivery: portrait + battle sprite PNGs already on disk (see §1.5).
 - Faction: Spectral vestige of the Order of the Dawn
 - Deployment: Level 16
 - Silhouette: iconographic ghost-judge, ritual and ancient.

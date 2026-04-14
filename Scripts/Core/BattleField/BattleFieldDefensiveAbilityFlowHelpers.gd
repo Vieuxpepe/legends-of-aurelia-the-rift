@@ -154,8 +154,9 @@ static func resolve_phase_d_defensive_abilities(
 
 				if result == 2:
 					var counter_dmg: int = int(max(1, round(float(defender.magic) * 0.85)))
-					if field.crit_sound and field.crit_sound.stream != null:
+					if field.crit_sound != null and field.crit_sound.stream != null:
 						field.play_attack_hit_sound(field.crit_sound)
+					field.play_crit_striker_voice_grunt(defender)
 					attacker.take_damage(counter_dmg, defender)
 					field.spawn_loot_text(str(counter_dmg) + " ARCANE", Color(0.8, 0.6, 1.0), attacker.global_position + Vector2(32, -16))
 					field.add_combat_log("PERFECT ARCANE SHIFT! The Mage vanishes and lashes back with arcane force!", "gold")
@@ -187,11 +188,15 @@ static func resolve_phase_d_defensive_abilities(
 				var def_might: int = int(def_wpn.might) if def_wpn != null else 0
 
 				var base_counter_dmg: int = int(max(1, (counter_offense + def_might) - counter_defense))
+				if def_wpn != null:
+					base_counter_dmg = field.apply_outgoing_weapon_damage_multipliers(base_counter_dmg, attacker, def_wpn)
 				var final_counter_dmg: int = base_counter_dmg if result == 1 else int(round(float(base_counter_dmg) * 1.75))
 
-				if field.crit_sound and field.crit_sound.stream != null and result == 2:
-					field.play_attack_hit_sound(field.crit_sound)
-				elif field.attack_sound and field.attack_sound.stream != null:
+				if result == 2:
+					if field.crit_sound != null and field.crit_sound.stream != null:
+						field.play_attack_hit_sound(field.crit_sound)
+					field.play_crit_striker_voice_grunt(defender)
+				elif field.attack_sound != null and field.attack_sound.stream != null:
 					field.play_attack_hit_sound(field.attack_sound)
 
 				attacker.take_damage(final_counter_dmg, defender)

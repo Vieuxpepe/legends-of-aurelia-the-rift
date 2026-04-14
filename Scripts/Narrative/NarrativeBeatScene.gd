@@ -1,5 +1,6 @@
-# Optional camp-triggered scene: Haldor speaks plainly with the commander (no forge UI).
-# Data from [method DialogueDatabase.get_haldor_solo_playback_lines]; return path on [member CampaignManager.haldor_solo_return_scene_path].
+# Full-screen scripted dialogue beat: Haldor forge solos, roster bond scenes, world encounters.
+# Replaces the removed HaldorSoloScene; entered via [method CampaignManager.begin_narrative_beat] → [member CampaignManager.NARRATIVE_BEAT_SCENE_PATH].
+# Data from [method DialogueDatabase.get_narrative_beat_playback_lines]; return path on [member CampaignManager.narrative_beat_return_scene_path].
 extends Control
 
 @onready var background: TextureRect = $Background
@@ -17,16 +18,15 @@ extends Control
 @export var peaceful_music: AudioStream
 @export var tense_music: AudioStream
 @export var vespera_music: AudioStream
-## Dedicated BGM for Haldor solo campfire-style scenes ([code]music: "haldor_solo"[/code] from dialogue rows). Falls back to [member peaceful_music] if unset.
+## Default BGM when line [code]music: "haldor_solo"[/code] (shared campfire track for early roster beats too).
 @export var haldor_solo_music: AudioStream
 
 var story_sequence: Array[Dictionary] = []
-var active_scene_id: String = ""
+var active_beat_id: String = ""
 
 var music_tween: Tween
 var speaker_pulse_tween: Tween
 var _line_tween: Tween
-## When unchanged across lines, the idle scale "breath" on the active portrait is not restarted (avoids stutter on Next).
 var _portrait_breathe_target: TextureRect = null
 
 var current_line_index: int = 0
@@ -44,11 +44,16 @@ var _inject_tail: Array[Dictionary] = []
 var _awaiting_choice: bool = false
 var _line_in_progress: Dictionary = {}
 var _choice_row: HBoxContainer
+var _choice_canvas: CanvasLayer
+var _choice_holder: Control
+var _dialogue_click_backdrop: ColorRect
+var _continue_hint_layer: CanvasLayer
+var _continue_hint: Label
 
 
 func _ready() -> void:
-	active_scene_id = str(CampaignManager.pending_haldor_solo_scene_id).strip_edges()
-	story_sequence = DialogueDatabase.get_haldor_solo_playback_lines(active_scene_id)
+	active_beat_id = str(CampaignManager.pending_narrative_beat_id).strip_edges()
+	story_sequence = DialogueDatabase.get_narrative_beat_playback_lines(active_beat_id)
 	if line_illustration != null:
 		line_illustration.visible = false
 	if bg_music != null:
@@ -57,8 +62,17 @@ func _ready() -> void:
 	if resolved_solo_bgm != null:
 		haldor_solo_music = resolved_solo_bgm
 	_ensure_audio_stream_loops(haldor_solo_music)
-	next_indicator.visible = false
+	# RichTextLabel defaults to MOUSE_FILTER_STOP and overlaps the choice row; it would eat clicks on tone buttons.
+	if dialogue_text:
+		dialogue_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if speaker_label:
+		speaker_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_setup_dialogue_click_backdrop()
+	_setup_continue_hint()
 	_setup_choice_row()
+	if next_indicator:
+		next_indicator.visible = false
+	_set_continue_hint_visible(false)
 	if skip_button:
 		skip_button.pressed.connect(_on_skip_pressed)
 		skip_button.modulate.a = 0.0
@@ -70,26 +84,95 @@ func _ready() -> void:
 		call_deferred("_abort_invalid_scene")
 		return
 
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_present_line_data(story_sequence[0])
 
 
+## Full-panel hit target behind speaker/text/next so clicks reach a leaf Control. Do not use Panel.gui_input — it can run for subtree input and steal TextureButton clicks.
+func _setup_dialogue_click_backdrop() -> void:
+	_dialogue_click_backdrop = ColorRect.new()
+	_dialogue_click_backdrop.name = "DialogueClickBackdrop"
+	_dialogue_click_backdrop.color = Color(1, 1, 1, 0)
+	_dialogue_click_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dialogue_click_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_dialogue_click_backdrop.gui_input.connect(_on_dialogue_click_backdrop_gui_input)
+	dialogue_panel.add_child(_dialogue_click_backdrop)
+	dialogue_panel.move_child(_dialogue_click_backdrop, 0)
+
+
+func _setup_continue_hint() -> void:
+	_continue_hint_layer = CanvasLayer.new()
+	_continue_hint_layer.name = "ContinueHintLayer"
+	_continue_hint_layer.layer = 90
+	add_child(_continue_hint_layer)
+	_continue_hint = Label.new()
+	_continue_hint.name = "ContinueHintLabel"
+	_continue_hint.text = "Press space to continue..."
+	_continue_hint.add_theme_font_size_override("font_size", 17)
+	_continue_hint.modulate = Color(1, 1, 1, 0.5)
+	_continue_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_continue_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_continue_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_continue_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_continue_hint.offset_left = -420.0
+	_continue_hint.offset_top = -44.0
+	_continue_hint.offset_right = -28.0
+	_continue_hint.offset_bottom = -18.0
+	_continue_hint_layer.add_child(_continue_hint)
+	_continue_hint.visible = false
+
+
+func _set_continue_hint_visible(on: bool) -> void:
+	if _continue_hint != null:
+		_continue_hint.visible = on
+
+
+func _set_choice_canvas_visible(on: bool) -> void:
+	if _choice_canvas != null:
+		_choice_canvas.visible = on
+
+
 func _setup_choice_row() -> void:
+	# CanvasLayer keeps choices above portraits / panel stacking; avoids lost hits from deep Control trees.
+	_choice_canvas = CanvasLayer.new()
+	_choice_canvas.name = "ChoiceToneCanvas"
+	_choice_canvas.layer = 80
+	add_child(_choice_canvas)
+	_choice_holder = Control.new()
+	_choice_holder.name = "ChoiceHolder"
+	_choice_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_choice_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_choice_canvas.add_child(_choice_holder)
 	_choice_row = HBoxContainer.new()
 	_choice_row.name = "ChoiceToneRow"
 	_choice_row.add_theme_constant_override("separation", 10)
 	_choice_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_choice_row.visible = false
-	dialogue_panel.add_child(_choice_row)
-	_choice_row.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_choice_row.offset_left = 24.0
-	_choice_row.offset_right = -24.0
-	_choice_row.offset_top = -118.0
-	_choice_row.offset_bottom = -28.0
+	_choice_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	_choice_holder.add_child(_choice_row)
+	_choice_row.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	# Invisible full-screen CanvasLayers can still block input to layers below in some setups — keep off until choices show.
+	_choice_canvas.visible = false
+
+
+func _refresh_choice_row_layout() -> void:
+	if _choice_row == null or dialogue_panel == null:
+		return
+	var pr: Rect2 = dialogue_panel.get_global_rect()
+	_choice_row.position = pr.position + Vector2(24.0, pr.size.y - 118.0)
+	_choice_row.size = Vector2(maxf(80.0, pr.size.x - 48.0), 90.0)
+
+
+func _on_viewport_size_changed() -> void:
+	if _choice_row != null and _choice_row.visible:
+		_refresh_choice_row_layout()
 
 
 func _abort_invalid_scene() -> void:
-	CampaignManager.pending_haldor_solo_scene_id = ""
-	SceneTransition.change_scene_to_file(CampaignManager.haldor_solo_return_scene_path)
+	if active_beat_id != "":
+		push_warning("NarrativeBeatScene: no lines for beat id '%s'; returning." % active_beat_id)
+	CampaignManager.pending_narrative_beat_id = ""
+	SceneTransition.change_scene_to_file(CampaignManager.narrative_beat_return_scene_path)
 
 
 func _process(delta: float) -> void:
@@ -97,16 +180,49 @@ func _process(delta: float) -> void:
 		return
 	if input_cooldown > 0.0:
 		input_cooldown -= delta
+
+
+## Space / ui_accept — mouse still uses [method _on_dialogue_click_backdrop_gui_input].
+func _unhandled_input(event: InputEvent) -> void:
+	if is_ending or _awaiting_choice:
 		return
-	if Input.is_action_just_pressed("ui_accept") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		if _awaiting_choice:
-			return
-		if is_typing:
-			_finish_typing()
-			input_cooldown = cooldown_duration
-		else:
-			_advance_dialogue()
-			input_cooldown = cooldown_duration
+	if input_cooldown > 0.0:
+		return
+	var want: bool = event.is_action_pressed("ui_accept")
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_SPACE or event.physical_keycode == KEY_SPACE:
+			want = true
+	if not want:
+		return
+	get_viewport().set_input_as_handled()
+	input_cooldown = cooldown_duration
+	if is_typing:
+		_finish_typing()
+	else:
+		_advance_dialogue()
+
+
+func _on_dialogue_click_backdrop_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mb: InputEventMouseButton = event as InputEventMouseButton
+	if not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	_dialogue_click_backdrop.accept_event()
+	get_viewport().set_input_as_handled()
+	_try_advance_dialogue_from_ui()
+
+
+func _try_advance_dialogue_from_ui() -> void:
+	if is_ending or _awaiting_choice:
+		return
+	if input_cooldown > 0.0:
+		return
+	input_cooldown = cooldown_duration
+	if is_typing:
+		_finish_typing()
+	else:
+		_advance_dialogue()
 
 
 func _advance_dialogue() -> void:
@@ -154,7 +270,7 @@ func _present_line_data(line_data: Dictionary) -> void:
 				mc_weapon = (eq as WeaponData).weapon_name
 
 	var raw_text: String = str(line_data.get("text", ""))
-	var raw_speaker: String = str(line_data.get("speaker", "Haldor"))
+	var raw_speaker: String = str(line_data.get("speaker", ""))
 	var final_text: String = raw_text.replace("{hero_name}", mc_name).replace("{weapon_name}", mc_weapon)
 	var final_speaker: String = raw_speaker.replace("{hero_name}", mc_name)
 
@@ -231,7 +347,8 @@ func _present_line_data(line_data: Dictionary) -> void:
 
 	dialogue_text.visible_characters = 0
 	is_typing = true
-	next_indicator.visible = false
+	_set_continue_hint_visible(false)
+	_set_choice_canvas_visible(false)
 	_choice_row.visible = false
 	_awaiting_choice = false
 	_clear_choice_buttons()
@@ -325,7 +442,6 @@ func _update_portrait(portrait_node: TextureRect, new_texture: Texture2D, flip: 
 			portrait_node.visible = false
 
 
-## File on disk may use a typographic apostrophe (U+2019) in [code]Haldor's[/code]; try that before ASCII [code]'[/code].
 func _load_haldor_solo_bgm() -> AudioStream:
 	for path in [
 		"res://Assets/Haldor/Haldor\u2019s Quiet Hour.mp3",
@@ -395,7 +511,7 @@ func _finish_typing() -> void:
 	if pc != null and pc is Dictionary:
 		_show_tone_choice(pc as Dictionary)
 	else:
-		next_indicator.visible = true
+		_set_continue_hint_visible(true)
 
 
 func _default_tone_id(pc: Dictionary) -> String:
@@ -416,7 +532,7 @@ func _show_tone_choice(pc: Dictionary) -> void:
 	_clear_choice_buttons()
 	var opts: Variant = pc.get("options", [])
 	if not (opts is Array):
-		next_indicator.visible = true
+		_set_continue_hint_visible(true)
 		return
 	for o_raw in opts as Array:
 		if not (o_raw is Dictionary):
@@ -429,14 +545,23 @@ func _show_tone_choice(pc: Dictionary) -> void:
 		var btn: Button = Button.new()
 		btn.text = lbl
 		btn.add_theme_font_size_override("font_size", 22)
+		btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		btn.focus_mode = Control.FOCUS_ALL
+		btn.custom_minimum_size = Vector2(120.0, 44.0)
 		btn.pressed.connect(_on_tone_chosen.bind(tid))
 		_choice_row.add_child(btn)
 	if _choice_row.get_child_count() == 0:
-		next_indicator.visible = true
+		_set_continue_hint_visible(true)
 		return
+	_refresh_choice_row_layout()
+	call_deferred("_refresh_choice_row_layout")
 	_choice_row.visible = true
+	_set_choice_canvas_visible(true)
 	_awaiting_choice = true
-	next_indicator.visible = false
+	_set_continue_hint_visible(false)
+	var first_btn: Node = _choice_row.get_child(0)
+	if first_btn is Control:
+		(first_btn as Control).grab_focus()
 
 
 func _clear_choice_buttons() -> void:
@@ -449,6 +574,7 @@ func _on_tone_chosen(tone_id: String) -> void:
 		return
 	_awaiting_choice = false
 	_choice_row.visible = false
+	_set_choice_canvas_visible(false)
 	_clear_choice_buttons()
 	var pc: Variant = _line_in_progress.get("player_choice", null)
 	if pc == null or not (pc is Dictionary):
@@ -475,18 +601,22 @@ func _end_sequence(mark_seen: bool) -> void:
 	if speaker_pulse_tween and speaker_pulse_tween.is_valid():
 		speaker_pulse_tween.kill()
 	_portrait_breathe_target = null
-	if mark_seen and active_scene_id != "":
-		CampaignManager.mark_haldor_solo_scene_seen(active_scene_id)
-		CampaignManager.try_grant_haldor_solo_scene_rewards(active_scene_id)
-	CampaignManager.pending_haldor_solo_scene_id = ""
+	if mark_seen and active_beat_id != "":
+		CampaignManager.mark_narrative_beat_seen(active_beat_id)
+		CampaignManager.try_grant_narrative_beat_rewards(active_beat_id)
+	CampaignManager.pending_narrative_beat_id = ""
 	$DialoguePanel.visible = false
+	_set_continue_hint_visible(false)
+	_set_choice_canvas_visible(false)
+	if _choice_row != null:
+		_choice_row.visible = false
 	portrait_left.visible = false
 	portrait_right.visible = false
 	if bg_music:
 		var tween = create_tween()
 		tween.tween_property(bg_music, "volume_db", -40.0, 2.0)
 	await get_tree().create_timer(2.0).timeout
-	SceneTransition.change_scene_to_file(CampaignManager.haldor_solo_return_scene_path)
+	SceneTransition.change_scene_to_file(CampaignManager.narrative_beat_return_scene_path)
 
 
 func _on_skip_pressed() -> void:
@@ -513,8 +643,8 @@ func _on_skip_pressed() -> void:
 
 func _end_sequence_instant(mark_seen: bool) -> void:
 	is_ending = true
-	if mark_seen and active_scene_id != "":
-		CampaignManager.mark_haldor_solo_scene_seen(active_scene_id)
-		CampaignManager.try_grant_haldor_solo_scene_rewards(active_scene_id)
-	CampaignManager.pending_haldor_solo_scene_id = ""
-	SceneTransition.change_scene_to_file(CampaignManager.haldor_solo_return_scene_path)
+	if mark_seen and active_beat_id != "":
+		CampaignManager.mark_narrative_beat_seen(active_beat_id)
+		CampaignManager.try_grant_narrative_beat_rewards(active_beat_id)
+	CampaignManager.pending_narrative_beat_id = ""
+	SceneTransition.change_scene_to_file(CampaignManager.narrative_beat_return_scene_path)

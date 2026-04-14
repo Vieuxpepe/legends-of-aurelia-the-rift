@@ -12,6 +12,7 @@ description = "A fire tome."
 weapon_name = "Fire Beam Tome"
 damage_type = 1
 weapon_type = 3
+magic_damage_kind = 1
 projectile_scene = ExtResource("4_l8qas")
 impact_scene = ExtResource("3_2ib4s")
 projectile_scale = 1.0

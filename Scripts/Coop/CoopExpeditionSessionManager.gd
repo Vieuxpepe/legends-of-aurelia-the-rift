@@ -10,6 +10,12 @@ signal enet_guest_finalize_finished(fin: Dictionary)
 
 enum Phase { NONE, HOST, GUEST }
 
+## In-battle ENet: pause and wait for peer after disconnect; host may continue solo after this window.
+## Tuning: shorter window keeps tension; longer helps flaky LAN. Pair with [member RUNTIME_COOP_RECONNECT_USE_TREE_PAUSE].
+const RUNTIME_COOP_RECONNECT_GRACE_SEC: float = 90.0
+## If [code]true[/code], grace uses [code]get_tree().paused[/code] (menus with [code]PROCESS_MODE_ALWAYS[/code] still work). If [code]false[/code], battle-only soft-freeze (no global pause; see [method BattleField.coop_reconnect_grace_blocks_gameplay]).
+const RUNTIME_COOP_RECONNECT_USE_TREE_PAUSE: bool = false
+
 ## Pre-launch staging (single-process: host ingests guest via transport.send_session_payload).
 enum StagingState {
 	INACTIVE,
@@ -41,6 +47,9 @@ var _enet_host_handoff_for_deferred_launch: Dictionary = {}
 var _enet_battle_sync_battlefield: Node = null
 ## Host publishes once per session so both processes can lock global RNG + per-combat epochs (see BattleField).
 var _coop_battle_rng_seed_sent: bool = false
+var _runtime_coop_reconnect_grace_deadline_msec: int = 0
+## Host only: guest never returned within grace — stop sending runtime battle sync; promote partner units locally on the battlefield.
+var _runtime_coop_host_solo_after_dropout: bool = false
 
 func _ready() -> void:
 	## Keep polling ENet while other UI pauses the tree or a window loses focus (two-instance LAN testing).
@@ -50,6 +59,11 @@ func _ready() -> void:
 	clear_session()
 
 func _process(_delta: float) -> void:
+	_runtime_coop_tick_reconnect_grace_if_needed()
+	if runtime_coop_reconnect_grace_active():
+		var bfo: Node = _enet_battle_sync_battlefield
+		if bfo != null and is_instance_valid(bfo) and bfo.has_method("coop_enet_refresh_reconnect_grace_overlay"):
+			bfo.call("coop_enet_refresh_reconnect_grace_overlay")
 	if _transport == null:
 		return
 	_transport.poll_transport()
@@ -57,6 +71,7 @@ func _process(_delta: float) -> void:
 	if _enet_guest_finalize_pending:
 		_transport.poll_transport()
 
+## May be [code]null[/code] after [method leave_session] until [method ensure_loopback_coop_transport_if_absent], [method begin_host_session], or [method set_transport].
 func get_transport() -> CoopSessionTransport:
 	return _transport
 
@@ -70,6 +85,9 @@ func set_transport(transport: CoopSessionTransport) -> void:
 	transport.bind_manager(self)
 
 func clear_session() -> void:
+	var bf_prev: Node = _enet_battle_sync_battlefield
+	if bf_prev != null and is_instance_valid(bf_prev) and bf_prev.has_method("coop_enet_clear_reconnect_grace_pause_if_any"):
+		bf_prev.call("coop_enet_clear_reconnect_grace_pause_if_any")
 	session_id = ""
 	phase = Phase.NONE
 	selected_expedition_map_id = ""
@@ -77,15 +95,27 @@ func clear_session() -> void:
 	remote_player_payload = {}
 	local_ready = false
 	remote_ready = false
+	_runtime_coop_reconnect_grace_deadline_msec = 0
+	_runtime_coop_host_solo_after_dropout = false
 	_enet_reset_enet_staging_guards()
 	_enet_battle_sync_battlefield = null
 	_coop_battle_rng_seed_sent = false
 	session_state_changed.emit()
 
+## Drops the active transport reference after teardown ([code]_transport == null[/code]) so detached backends are never polled or messaged.
+## Restore loopback with [method ensure_loopback_coop_transport_if_absent] or switch mode with [method set_transport]. [method begin_host_session] ensures loopback automatically.
 func leave_session() -> void:
 	if _transport != null:
 		_transport.leave_session()
+		_transport = null
 	clear_session()
+
+
+func ensure_loopback_coop_transport_if_absent() -> void:
+	if _transport != null:
+		return
+	_transport = LocalLoopbackCoopTransport.new()
+	_transport.bind_manager(self)
 
 func _enet_reset_enet_staging_guards() -> void:
 	_enet_host_launch_pipeline_locked = false
@@ -132,6 +162,8 @@ func enet_try_publish_coop_battle_rng_seed() -> void:
 func enet_send_coop_battle_sync_action(payload: Dictionary) -> void:
 	if not uses_runtime_network_coop_transport():
 		return
+	if _runtime_coop_host_solo_after_dropout:
+		return
 	if _enet_battle_sync_battlefield == null or not is_instance_valid(_enet_battle_sync_battlefield):
 		if OS.is_debug_build():
 			var act_missing_bf: String = str(payload.get("action", "")).strip_edges()
@@ -148,6 +180,8 @@ func enet_send_coop_battle_sync_action(payload: Dictionary) -> void:
 		send_transport_message("coop_battle_sync", body)
 
 func _enet_apply_incoming_coop_battle_sync(body: Dictionary) -> void:
+	if _runtime_coop_host_solo_after_dropout:
+		return
 	var bf: Node = _enet_battle_sync_battlefield
 	if bf == null or not is_instance_valid(bf):
 		if OS.is_debug_build():
@@ -180,6 +214,12 @@ func _enet_apply_incoming_coop_battle_sync(body: Dictionary) -> void:
 		if bf.has_method("coop_enet_guest_receive_combat_request_nack"):
 			bf.coop_enet_guest_receive_combat_request_nack(body.duplicate(true))
 		return
+	if act == "full_battle_resync":
+		if i_am_host:
+			return
+		if bf.has_method("coop_enet_schedule_full_battle_resync_from_host"):
+			bf.call("coop_enet_schedule_full_battle_resync_from_host", body.duplicate(true))
+		return
 	## Guest buffers host-led AI/enemy strikes; local AITurnState consumes FIFO (see [method BattleField.coop_enet_ai_execute_combat]).
 	if act == "enemy_combat":
 		if bf.has_method("coop_enet_buffer_incoming_enemy_combat"):
@@ -189,8 +229,7 @@ func _enet_apply_incoming_coop_battle_sync(body: Dictionary) -> void:
 		bf.apply_remote_coop_enet_sync(body)
 
 func begin_host_session() -> Dictionary:
-	if _transport == null:
-		return {"ok": false, "error": "no_transport"}
+	ensure_loopback_coop_transport_if_absent()
 	return _transport.create_session()
 
 func join_session(session_descriptor: String) -> Dictionary:
@@ -302,6 +341,10 @@ func uses_online_coop_transport() -> bool:
 	return _transport is SilentWolfOnlineCoopTransport
 
 
+func uses_steam_coop_transport() -> bool:
+	return _transport is SteamLobbyCoopTransport
+
+
 func get_transport_mode_id() -> String:
 	if _transport == null:
 		return "none"
@@ -338,6 +381,114 @@ func register_runtime_coop_battle_sync_target(battlefield: Node) -> void:
 
 func unregister_runtime_coop_battle_sync_target(battlefield: Node) -> void:
 	unregister_enet_coop_battle_sync_battlefield(battlefield)
+
+
+## ENet (and future transports): peer dropped while a battle may still be registered — unblock guest combat waits and host pipeline flags.
+func notify_runtime_coop_battle_transport_peer_lost() -> void:
+	var bf: Node = _enet_battle_sync_battlefield
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_on_transport_peer_lost"):
+		bf.call("coop_enet_on_transport_peer_lost")
+
+
+func notify_runtime_coop_battle_reconnect_grace_started(grace_sec: float) -> void:
+	var bf: Node = _enet_battle_sync_battlefield
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_on_reconnect_grace_started"):
+		bf.call("coop_enet_on_reconnect_grace_started", grace_sec)
+
+
+func notify_runtime_coop_battle_reconnect_grace_cancelled() -> void:
+	var bf: Node = _enet_battle_sync_battlefield
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_on_reconnect_grace_cancelled_peer_returned"):
+		bf.call("coop_enet_on_reconnect_grace_cancelled_peer_returned")
+
+
+func notify_runtime_coop_battle_host_continue_solo() -> void:
+	var bf: Node = _enet_battle_sync_battlefield
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_on_host_continue_solo_after_partner_dropout"):
+		bf.call("coop_enet_on_host_continue_solo_after_partner_dropout")
+
+
+func notify_runtime_coop_battle_guest_grace_expired() -> void:
+	var bf: Node = _enet_battle_sync_battlefield
+	if bf == null or not is_instance_valid(bf):
+		return
+	if bf.has_method("coop_enet_on_guest_reconnect_grace_expired"):
+		bf.call("coop_enet_on_guest_reconnect_grace_expired")
+
+
+func runtime_coop_reconnect_grace_active() -> bool:
+	return _runtime_coop_reconnect_grace_deadline_msec > 0 and Time.get_ticks_msec() < _runtime_coop_reconnect_grace_deadline_msec
+
+
+func get_runtime_coop_reconnect_grace_remaining_sec() -> float:
+	if _runtime_coop_reconnect_grace_deadline_msec <= 0:
+		return 0.0
+	return maxf(0.0, float(_runtime_coop_reconnect_grace_deadline_msec - Time.get_ticks_msec()) / 1000.0)
+
+
+func get_runtime_coop_reconnect_grace_seconds_config() -> float:
+	return RUNTIME_COOP_RECONNECT_GRACE_SEC
+
+
+func runtime_coop_reconnect_uses_tree_pause() -> bool:
+	return RUNTIME_COOP_RECONNECT_USE_TREE_PAUSE
+
+
+func enet_send_runtime_full_battle_resync_to_guest() -> void:
+	if phase != Phase.HOST or not uses_runtime_network_coop_transport():
+		return
+	if _runtime_coop_host_solo_after_dropout:
+		return
+	if not is_runtime_coop_session_wired():
+		return
+	var bf: Node = _enet_battle_sync_battlefield
+	if bf == null or not is_instance_valid(bf) or not bf.has_method("coop_enet_build_full_battle_resync_wire_body"):
+		return
+	var inner: Dictionary = bf.call("coop_enet_build_full_battle_resync_wire_body") as Dictionary
+	if inner.is_empty():
+		return
+	var wire: Dictionary = inner.duplicate(true)
+	wire["v"] = 1
+	wire["from_host"] = true
+	if not wire.has("action"):
+		wire["action"] = "full_battle_resync"
+	var json_len: int = JSON.stringify(wire).length()
+	if OS.is_debug_build() and json_len > 32000:
+		push_warning(
+			"Coop: full_battle_resync payload is large (%d chars) — may exceed transport limits; consider slimming." % json_len
+		)
+	broadcast_transport_message("coop_battle_sync", wire)
+
+
+func runtime_coop_host_solo_after_partner_dropout() -> bool:
+	return _runtime_coop_host_solo_after_dropout
+
+
+func _runtime_coop_tick_reconnect_grace_if_needed() -> void:
+	if _runtime_coop_reconnect_grace_deadline_msec <= 0:
+		return
+	if Time.get_ticks_msec() < _runtime_coop_reconnect_grace_deadline_msec:
+		return
+	_runtime_coop_reconnect_grace_deadline_msec = 0
+	if phase == Phase.HOST:
+		_runtime_coop_host_solo_after_dropout = true
+		remote_player_payload = {}
+		remote_ready = false
+		notify_runtime_coop_battle_host_continue_solo()
+		session_state_changed.emit()
+	elif phase == Phase.GUEST:
+		remote_player_payload = {}
+		remote_ready = false
+		notify_runtime_coop_battle_guest_grace_expired()
+		leave_session()
 
 
 func runtime_coop_battle_sync_active() -> bool:
@@ -786,26 +937,87 @@ func _online_transport_after_guest_join(room_code: String) -> Dictionary:
 	session_state_changed.emit()
 	return {"ok": true, "session_id": session_id}
 
+
+func _steam_transport_begin_host_pending() -> void:
+	clear_session()
+	session_id = "steam:pending"
+	phase = Phase.HOST
+	refresh_local_player_payload_from_campaign()
+	session_state_changed.emit()
+
+
+func _steam_transport_host_lobby_ready(lobby_id: int) -> void:
+	if not uses_steam_coop_transport():
+		return
+	if phase != Phase.HOST:
+		return
+	session_id = str(lobby_id)
+	session_state_changed.emit()
+
+
+func _steam_transport_begin_guest_pending() -> void:
+	clear_session()
+	session_id = "steam:pending"
+	phase = Phase.GUEST
+	refresh_local_player_payload_from_campaign()
+	session_state_changed.emit()
+
+
+func _steam_transport_lobby_failed(_reason: String) -> void:
+	if _transport is SteamLobbyCoopTransport:
+		leave_session()
+	ensure_loopback_coop_transport_if_absent()
+
+
 func _enet_host_on_client_joined(_peer_id: int) -> void:
+	_runtime_coop_reconnect_grace_deadline_msec = 0
+	_runtime_coop_host_solo_after_dropout = false
+	notify_runtime_coop_battle_reconnect_grace_cancelled()
+	enet_send_runtime_full_battle_resync_to_guest()
 	session_state_changed.emit()
 	_enet_broadcast_session_snapshot()
 
 func _enet_host_on_client_disconnected(_peer_id: int) -> void:
+	notify_runtime_coop_battle_transport_peer_lost()
+	var bf_dc: Node = _enet_battle_sync_battlefield
+	var in_battle: bool = bf_dc != null and is_instance_valid(bf_dc)
+	var start_grace: bool = in_battle and phase == Phase.HOST
+	if start_grace:
+		_runtime_coop_host_solo_after_dropout = false
+		_runtime_coop_reconnect_grace_deadline_msec = Time.get_ticks_msec() + int(RUNTIME_COOP_RECONNECT_GRACE_SEC * 1000.0)
+		notify_runtime_coop_battle_reconnect_grace_started(RUNTIME_COOP_RECONNECT_GRACE_SEC)
+	else:
+		_runtime_coop_reconnect_grace_deadline_msec = 0
+	if not start_grace:
+		remote_player_payload = {}
+		remote_ready = false
 	release_enet_host_launch_pipeline()
 	_enet_host_finalize_busy = false
-	remote_player_payload = {}
-	remote_ready = false
 	session_state_changed.emit()
 
 func _enet_guest_on_transport_connected() -> void:
+	_runtime_coop_reconnect_grace_deadline_msec = 0
+	_runtime_coop_host_solo_after_dropout = false
+	notify_runtime_coop_battle_reconnect_grace_cancelled()
 	refresh_local_player_payload_from_campaign()
 	_enet_guest_push_participant()
 
 func _enet_guest_on_transport_disconnected() -> void:
+	notify_runtime_coop_battle_transport_peer_lost()
+	var bf_g: Node = _enet_battle_sync_battlefield
+	var in_battle_g: bool = bf_g != null and is_instance_valid(bf_g)
+	var start_grace_g: bool = in_battle_g and phase == Phase.GUEST
+	if start_grace_g:
+		_runtime_coop_host_solo_after_dropout = false
+		_runtime_coop_reconnect_grace_deadline_msec = Time.get_ticks_msec() + int(RUNTIME_COOP_RECONNECT_GRACE_SEC * 1000.0)
+		notify_runtime_coop_battle_reconnect_grace_started(RUNTIME_COOP_RECONNECT_GRACE_SEC)
+	else:
+		_runtime_coop_reconnect_grace_deadline_msec = 0
+	if not start_grace_g:
+		remote_player_payload = {}
+		remote_ready = false
 	_enet_guest_finalize_pending = false
 	_enet_guest_launch_apply_locked = false
-	remote_player_payload = {}
-	remote_ready = false
 	session_state_changed.emit()
 
 
@@ -1087,6 +1299,7 @@ func _local_transport_start_expedition(map_id: String) -> Dictionary:
 func apply_loopback_partner_staging_payload(owned_map_ids: Array, partner_ready: bool = false) -> Dictionary:
 	if phase != Phase.HOST:
 		return {"ok": false, "error": "not_host"}
+	ensure_loopback_coop_transport_if_absent()
 	var ids: Array[String] = []
 	for x in owned_map_ids:
 		var s: String = str(x).strip_edges()
@@ -1100,7 +1313,10 @@ func apply_loopback_partner_staging_payload(owned_map_ids: Array, partner_ready:
 			ids,
 			get_local_selected_companion_unit_id()
 	)
-	get_transport().send_session_payload("guest_staging_join", guest_payload)
+	var tr_loop: CoopSessionTransport = get_transport()
+	if tr_loop == null:
+		return {"ok": false, "error": "no_transport"}
+	tr_loop.send_session_payload("guest_staging_join", guest_payload)
 	return {"ok": true, "staging_state": get_coop_staging_state()}
 
 # --- Debug / mock (editor & debug builds only) ---
@@ -1130,7 +1346,10 @@ func debug_apply_mock_host_payload_for_staging(owned_map_ids: Array, host_ready:
 			ids,
 			get_local_selected_companion_unit_id()
 	)
-	get_transport().send_session_payload("host_staging_join", host_payload)
+	var tr: CoopSessionTransport = get_transport()
+	if tr == null:
+		return {"ok": false, "error": "no_transport"}
+	tr.send_session_payload("host_staging_join", host_payload)
 	return {"ok": true, "staging_state": get_coop_staging_state()}
 
 func debug_simulate_ready_coop_pair(map_id: String) -> Dictionary:

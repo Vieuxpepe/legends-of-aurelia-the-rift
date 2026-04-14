@@ -6,6 +6,10 @@ const ActiveCombatAbilityHelpers = preload("res://Scripts/Core/BattleField/Activ
 static func process(field, delta: float) -> void:
 	field.update_cursor_pos()
 	field.update_cursor_color()
+	if field.has_method("coop_runtime_should_block_gameplay_tick") and field.coop_runtime_should_block_gameplay_tick():
+		if field.has_method("coop_enet_refresh_reconnect_grace_overlay"):
+			field.coop_enet_refresh_reconnect_grace_overlay()
+		return
 	field._refresh_overhead_unit_bars()
 	field.update_unit_info_panel()
 	field._refresh_hover_status_popup()

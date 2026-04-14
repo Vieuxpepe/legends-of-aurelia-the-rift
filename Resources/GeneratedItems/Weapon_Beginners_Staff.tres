@@ -8,6 +8,7 @@ description = "A staff used to channel basic healing energy."
 weapon_name = "Beginner's Staff"
 gold_cost = 450
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 3
 is_healing_staff = true
 affected_stat = "magic"

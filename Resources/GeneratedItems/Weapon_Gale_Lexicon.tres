@@ -9,6 +9,7 @@ description = "A tome of slicing winds and battlefield pressure."
 weapon_name = "Gale Lexicon"
 gold_cost = 1850
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 4
 affected_stat = "magic"
 effect_amount = 0

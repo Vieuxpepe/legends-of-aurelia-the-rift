@@ -14,6 +14,17 @@ enum PhysicalSubtype {
 	BLUDGEONING = 2
 }
 
+## When [member damage_type] is MAGIC, which channel applies for defender [member UnitData.mag_mult_*] multipliers.
+## IMPORTANT: Append only; do not reorder (serialized in .tres).
+enum MagicDamageKind {
+	ARCANE = 0,
+	FIRE = 1,
+	FROST = 2,
+	LIGHTNING = 3,
+	DIVINE = 4,
+	NECROTIC = 5,
+}
+
 # IMPORTANT:
 # Existing serialized values are preserved explicitly.
 # New weapon categories are appended safely to avoid remapping old .tres files.
@@ -40,6 +51,8 @@ enum WeaponType {
 @export var damage_type: DamageType = DamageType.PHYSICAL
 @export var weapon_type: WeaponType = WeaponType.SWORD
 @export var physical_subtype: PhysicalSubtype = PhysicalSubtype.SLASHING
+## Magic channel for defender [member UnitData.mag_mult_*]. For MAGIC attacks this is the only subtype step; for PHYSICAL attacks it is multiplied after slash/pierce/bludgeon (default [enum MagicDamageKind.ARCANE] is usually neutral at 1.0).
+@export var magic_damage_kind: MagicDamageKind = MagicDamageKind.ARCANE
 
 @export_category("Visual Effects")
 @export var projectile_scene: PackedScene

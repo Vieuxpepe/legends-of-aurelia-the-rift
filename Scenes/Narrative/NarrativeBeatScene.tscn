@@ -1,6 +1,6 @@
-[gd_scene load_steps=13 format=3 uid="uid://bqx7haldor_solo1"]
+[gd_scene format=3 uid="uid://dttdu27saji65"]
 
-[ext_resource type="Script" path="res://Scripts/Narrative/HaldorSoloScene.gd" id="1_hsolo"]
+[ext_resource type="Script" path="res://Scripts/Narrative/NarrativeBeatScene.gd" id="1_nbeat"]
 [ext_resource type="AudioStream" uid="uid://bug5gwmdwqqod" path="res://SoundEffects/Music/Story recap V2.wav" id="2_music"]
 [ext_resource type="AudioStream" path="res://Assets/Haldor/Haldor’s Quiet Hour.mp3" id="11_haldor_solo_bgm"]
 [ext_resource type="AudioStream" uid="uid://5wyixscn6dem" path="res://SoundEffects/Click Dialog Sound-1.mp3" id="3_blip"]
@@ -22,14 +22,14 @@ corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
-[node name="HaldorSoloScene" type="Control"]
+[node name="NarrativeBeatScene" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_hsolo")
+script = ExtResource("1_nbeat")
 peaceful_music = ExtResource("2_music")
 tense_music = ExtResource("5_alt")
 vespera_music = ExtResource("5_alt")

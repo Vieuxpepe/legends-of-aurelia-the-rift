@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_qclc4")
+voice_gender = 1
 display_name = "Inez"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Listen to the ground… it will tell you what still needs protecting.", "The land keeps score. Don’t fail it.", "Stay quiet. Watch the trees. Live.", "I’m done. The wild isn’t."])

@@ -35,6 +35,8 @@ DialogueDatabase="*uid://xxc4kh1tx0q1"
 ItemDatabase="*uid://borft2uumnmjj"
 ScavengerManager="*uid://b3lf5jw2mhkfh"
 CoopExpeditionSessionManager="*res://Scripts/Coop/CoopExpeditionSessionManager.gd"
+BeastiaryPlayerNotes="*res://Scripts/UI/BeastiaryPlayerNotes.gd"
+PersonalJournalStore="*res://Scripts/UI/PersonalJournalStore.gd"
 
 [display]
 

@@ -167,6 +167,8 @@ var is_arena_ghost: bool = false
 var unit_name: String = ""
 var unit_class_name: String = ""
 var unit_tags: Array = []  # Relationship Web: e.g. undead, cultist, holy, beast
+## 0 = male crit voice bank, 1 = female. Set from [member UnitData.voice_gender], roster saves, or custom avatar.
+var voice_gender: int = 0
 
 
 func get_unit_type() -> UnitData.UnitType:
@@ -365,6 +367,14 @@ func _ready() -> void:
 				speed = int(speed * multiplier)
 				agility = int(agility * multiplier)
 		ability = data.ability
+
+	# Crit voice gender: commander uses save dict; everyone else uses UnitData default.
+	if is_custom_avatar and not is_arena_ghost and CampaignManager.custom_avatar.has("stats"):
+		voice_gender = int(CampaignManager.custom_avatar.get("voice_gender", 0))
+	elif data != null:
+		voice_gender = int(data.voice_gender)
+	else:
+		voice_gender = 0
 
 	# Equip starting weapon and set bars
 	if data.starting_weapon != null and CampaignManager.has_method("duplicate_item"):
@@ -1923,6 +1933,8 @@ func setup_from_save_data(save_dict: Dictionary) -> void:
 	resistance = save_dict.get("resistance", resistance)
 	speed = save_dict.get("speed", speed)
 	agility = save_dict.get("agility", agility)
+	if save_dict.has("voice_gender"):
+		voice_gender = int(save_dict["voice_gender"])
 	
 	# 2. Restore Movement (Boots)
 	if save_dict.has("move_range"):

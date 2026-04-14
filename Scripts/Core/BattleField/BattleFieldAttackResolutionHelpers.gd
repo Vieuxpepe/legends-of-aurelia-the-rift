@@ -348,8 +348,10 @@ static func resolve_phase_e_normal_attack(field, ctx: Dictionary) -> Dictionary:
 					else:
 						# STANDARD ATTACK
 						if attack_hits and is_crit:
-							if not did_melee_crit_animation and field.crit_sound.stream != null:
-								field.play_attack_hit_sound(field.crit_sound)
+							if not did_melee_crit_animation:
+								if field.crit_sound != null and field.crit_sound.stream != null:
+									field.play_attack_hit_sound(field.crit_sound)
+								field.play_crit_striker_voice_grunt(attacker)
 							if is_bludgeon:
 								field.screen_shake(19.0, 0.48)
 							else:

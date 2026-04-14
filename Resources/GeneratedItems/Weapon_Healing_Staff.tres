@@ -9,6 +9,7 @@ description = "A staff imbued with stronger healing magic."
 weapon_name = "Healing Staff"
 gold_cost = 1300
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 3
 is_healing_staff = true
 affected_stat = "magic"

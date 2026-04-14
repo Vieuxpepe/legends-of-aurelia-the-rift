@@ -9,6 +9,7 @@ description = "A compact grimoire for educated battlefield mages."
 weapon_name = "Arcane Grimoire"
 gold_cost = 980
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 4
 affected_stat = "magic"
 effect_amount = 0

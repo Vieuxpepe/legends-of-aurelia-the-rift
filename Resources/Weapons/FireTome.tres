@@ -12,6 +12,7 @@ description = "A fire tome."
 weapon_name = "Fire Tome"
 damage_type = 1
 weapon_type = 4
+magic_damage_kind = 1
 projectile_scene = ExtResource("2_n6sbq")
 impact_scene = ExtResource("2_ndjnb")
 custom_hit_sound = ExtResource("1_hkiwk")

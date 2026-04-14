@@ -569,8 +569,12 @@ func run_charge_minigame(bf: Node2D, attacker: Node2D) -> int:
 	var theme = _get_class_theme(job)
 	var qte_script = load("res://Scripts/Core/QTEHoldReleaseBar.gd")
 	var qte = qte_script.run(bf, "CHARGE", "HOLD SPACE, RELEASE IN GREEN", 1400, theme)
-	qte.green_zone.position.x = 365.0; qte.green_zone.size.x = 70.0
-	qte.perfect_zone.size.x = 22.0
+	# QTEHoldReleaseBar exposes the timing window as outer_good ("GoodZone"), not green_zone.
+	if qte.outer_good != null:
+		qte.outer_good.position.x = 365.0
+		qte.outer_good.size.x = 70.0
+	if qte.perfect_zone != null:
+		qte.perfect_zone.size.x = 22.0
 	var res = await qte.qte_finished
 	return res
 

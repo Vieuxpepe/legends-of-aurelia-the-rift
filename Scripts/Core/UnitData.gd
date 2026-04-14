@@ -50,6 +50,10 @@ enum UnitType {
 @export var portrait: Texture2D # High-res portrait for the UI
 @export var visual_scale: float = 1.0
 
+@export_category("Voice")
+## Drives layered crit exertion SFX ([BattleFieldCritVoiceHelpers]). 0 = male grunts, 1 = female. Avatar uses [CampaignManager.custom_avatar] instead.
+@export_enum("Male", "Female") var voice_gender: int = 0
+
 @export_category("Character Base Stats")
 @export var max_hp: int = 15
 @export var strength: int = 3
@@ -64,6 +68,15 @@ enum UnitType {
 @export var phys_mult_slashing: float = 1.0
 @export var phys_mult_piercing: float = 1.0
 @export var phys_mult_bludgeoning: float = 1.0
+
+@export_category("Damage Subtype Multipliers (Magic)")
+## Applied after Mag vs Res when the attacker's weapon uses [enum WeaponData.MagicDamageKind]. 1.0 = neutral, <1.0 = resistant, >1.0 = vulnerable.
+@export var mag_mult_arcane: float = 1.0
+@export var mag_mult_fire: float = 1.0
+@export var mag_mult_frost: float = 1.0
+@export var mag_mult_lightning: float = 1.0
+@export var mag_mult_divine: float = 1.0
+@export var mag_mult_necrotic: float = 1.0
 
 @export_category("Undead / Bone pile reform")
 ## Legacy fallback when no [member passive_combat_abilities] entry uses [enum PassiveCombatAbilityData.EffectKind.BONE_PILE_REFORM_ON_DEATH]. Prefer that passive on [PassiveCombatAbilityData].

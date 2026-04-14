@@ -486,6 +486,7 @@ player_unit_scene = ExtResource("2_of5bi")
 dash_fx_scene = ExtResource("8_whup6")
 slash_fx_scene = ExtResource("9_0k1eq")
 level_up_fx_scene = ExtResource("10_ddpcx")
+level_display_name = "Grand Arena"
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
 

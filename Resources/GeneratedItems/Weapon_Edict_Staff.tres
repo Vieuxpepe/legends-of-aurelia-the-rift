@@ -9,6 +9,7 @@ description = "A command staff that hardens allies under strict authority."
 weapon_name = "Edict Staff"
 gold_cost = 5200
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 4
 is_buff_staff = true
 affected_stat = "defense"

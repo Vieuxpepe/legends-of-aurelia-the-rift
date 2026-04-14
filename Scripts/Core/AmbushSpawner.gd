@@ -111,7 +111,10 @@ func _trigger_ambush(bf: Node2D) -> void:
 		
 		var enemy = base_unit_scene.instantiate()
 		if enemy_data != null:
+			var orig_path: String = str(enemy_data.resource_path).strip_edges()
 			enemy.data = enemy_data.duplicate()
+			if orig_path != "":
+				enemy.set_meta("enemy_unit_data_path", orig_path)
 		
 		enemy.position = Vector2(spawn_pos.x * 64, spawn_pos.y * 64)
 		bf.enemy_container.add_child(enemy)

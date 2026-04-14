@@ -8,6 +8,7 @@ description = "A beginner's dark text that whispers more than it teaches."
 weapon_name = "Gloam Primer"
 gold_cost = 500
 damage_type = 1
+magic_damage_kind = 5
 weapon_type = 10
 affected_stat = "magic"
 effect_amount = 0

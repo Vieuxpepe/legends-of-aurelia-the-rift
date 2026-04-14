@@ -8,16 +8,31 @@ Loopback / single-machine mock co-op is separate (no wire).
 | Action | Direction | Applied via | Notes |
 |--------|-----------|-------------|--------|
 | `battle_rng_seed` | Host → guest | Immediate | Locks global `seed()` + combat seq for packed IDs. |
-| `player_combat_request` | Guest → host | Immediate → `BattleField` | Host-only resolution for **guest** player strikes/heals. |
+| `player_combat_request` | Guest → host | Immediate → `BattleField` | Host-only resolution for **guest** player strikes/heals. Optional `active_ability_id` for `ActiveCombatAbilityData` (host runs `execute_async`, then `player_combat` includes `active_ability_only`). Host serializes overlapping requests (busy → `player_combat_request_nack`); guest wait has a **45s** timeout so UI cannot soft-lock. |
 | `player_combat_request_nack` | Host → guest | Immediate | Unblocks guest if request invalid. |
 | `enemy_combat` | Host → guest | Buffered FIFO | AI/enemy strikes; snapshot preferred. |
 | `player_move` | Either | Remote queue | Partner unit mirror only (`MOCK_COOP_OWNER_REMOTE`). |
 | `player_defend` | Either | Remote queue | Same. |
-| `player_combat` | Either | Remote queue | Partner mirror **or** guest `host_authority` + `auth_snapshot`. |
+| `player_combat` | Either | Remote queue | Partner mirror **or** guest `host_authority` + `auth_snapshot`. `active_ability_only` skips strike replay for data-driven actives. |
+| `full_battle_resync` | Host → guest | Immediate | After ENet **reconnect** while a battle is registered: host sends `resync_schema` **1** + `units[]` (runtime wire rows + `parent_kind`) + counters + optional `battle_seed`. Guest applies via `BattleFieldCoopBattleRuntimeHelpers.apply_full_battle_resync_from_host` then re-applies mock ownership from the existing handoff. Large maps may hit packet-size limits (host emits a debug warning when serialized JSON exceeds ~32k characters). |
 | `player_post_combat` | Either | Remote queue | Canto / finish mirror; `host_authority` for guest’s own unit. |
 | `player_finish_turn` | Either | Remote queue | Partner unit only. |
 
 Anything **not** in this table is **not** replicated on the wire today.
+
+### Peer disconnect (ENet)
+
+- `ENetCoopTransport` notifies `CoopExpeditionSessionManager` (`_enet_host_on_client_disconnected` / `_enet_guest_on_transport_disconnected`). Staging clears remote payload; **battle** registration stays until `BattleField` exits and unregisters.
+- While unwired, `enet_send_coop_battle_sync_action` **drops** outbound `coop_battle_sync` (see `is_runtime_coop_session_wired()`), so neither side can complete authoritative sync until the session is restored.
+- `notify_runtime_coop_battle_transport_peer_lost()` → `BattleField.coop_enet_on_transport_peer_lost()` clears guest combat wait + host busy flag (no combat log here; grace / solo messages own the UX).
+- **Reconnect grace (in battle, ENet):** `CoopExpeditionSessionManager.RUNTIME_COOP_RECONNECT_GRACE_SEC` (default **90s**) and `RUNTIME_COOP_RECONNECT_USE_TREE_PAUSE` (default **false** = battle-only soft-freeze).
+  - **Tree pause (`USE_TREE_PAUSE` true):** `get_tree().paused = true` during grace. `CoopExpeditionSessionManager` still ticks (`PROCESS_MODE_ALWAYS`) and refreshes the on-battle **overlay** (`get_runtime_coop_reconnect_grace_remaining_sec()`).
+  - **Soft pause (default):** `BattleField.coop_reconnect_grace_blocks_gameplay()` gates `TurnOrchestrationHelpers.process` and `BattleField._unhandled_input` so the battle does not advance, while global UI/menus can remain usable.
+  - **Overlay:** top-of-screen countdown + short mode hint; driven from `CoopExpeditionSessionManager._process` whenever grace is active (so it updates even under tree pause).
+- If the peer **reconnects** in time: grace cleared, unpaused / soft-freeze cleared, host calls `enet_send_runtime_full_battle_resync_to_guest()` ( **`full_battle_resync`** wire) so the guest can realign to host state.
+- If **not**:
+  - **Host:** `runtime_coop_host_solo_after_partner_dropout` becomes true → outbound runtime battle sync stops; partner-owned units are promoted to **local** command on the host battlefield until the battle ends.
+  - **Guest:** grace expiry calls `leave_session()` after unpause / overlay hide.
 
 ---
 

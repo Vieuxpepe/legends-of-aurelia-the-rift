@@ -476,6 +476,24 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
   - **Parity-sensitive helpers** should get a **few strategic comments** where behavior is non-obvious or tightly coupled to forecast/resolution/sync ordering.
   - **Future Battlefield work should prioritize:** (1) helper cohesion, (2) wrapper cleanup **only when safe**, (3) **anti-regrowth** discipline on the monolith.
 
+### 39) Battlefield inventory panel rework / convoy focus extraction — **completed**
+- **Moved to:** `Scripts/Core/BattleField/BattleFieldInventoryPanelHelpers.gd`
+- **Delegated from:** `Scripts/Core/BattleField.gd`
+- **Extracted / rewired:**
+  - Focused battlefield inventory layout + runtime panel composition
+  - Active-unit-only inventory / convoy entry flow
+  - Inventory grid rebuilds and convoy filtering
+  - Inventory-only drag/drop from backpack -> convoy
+  - Action-button gating (`Equip` / `Use`) before click
+- **Scene contract updates:** `Scenes/battle_field.tscn` and `Scenes/Levels/Level4.tscn` now expose the same grid-schema inventory nodes as Level1/2/3/Arena (`ItemDescLabel`, `Panel`, `InventoryScroll`, `InventoryVBox`, `UnitGrid`, `ConvoyGrid`).
+- **Trade isolation:** Trade window / trade-item swap flow intentionally stayed on the existing trade helper path; only shared inventory node resolution and loot handoff target lookup were adjusted for the new panel layout.
+- **Parity-sensitive areas:**
+  - Runtime reparenting (`UnitGrid` out of `InventoryVBox`, `ItemDescLabel` into `Panel`, `InventoryScroll` into the convoy card) depends on recursive node resolution staying valid.
+  - Loot close handoff now targets both `unit_grid` and `convoy_grid`; fly-to-slot visuals need runtime confirmation on scenes that previously used the legacy panel.
+  - Drag/drop must reject convoy-locked dragon weapons while still accepting normal stackables and preserving equip validation after a stored equipped weapon leaves the backpack.
+  - Convoy filter refresh clears selection state on rebuild; this is intentional, but it is a user-facing behavior change worth smoke-testing.
+- **Verification:** No repo `ReadLints` entry point was present in this session, and no Godot executable was available from the shell. Verification was limited to direct code / scene diff review; runtime smoke still required.
+
 ---
 
 ## Verification log
@@ -491,6 +509,23 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 - **Milestone #35 (2026-03-31):** Level-up presentation extraction — `ReadLints` on `BattleField.gd` + `BattleFieldLevelUpPresentationHelpers.gd` — clean. Godot smoke: not executed in agent session; run editor/Level1 + level-up or promo reveal locally to confirm parity.
 - **Milestone #36 (2026-03-31):** Battle-end flow — `ReadLints` on `BattleField.gd` + `BattleFieldBattleEndFlowHelpers.gd` — clean. Godot: exercise unit death → loot → victory/defeat UI, continue/restart, arena + co-op defeat continue path locally.
 - **Milestone #37 (2026-03-31):** Campaign setup — `ReadLints` on `BattleField.gd` + `BattleFieldCampaignSetupHelpers.gd` — clean. Godot: deployment roster, start battle, skirmish spawn path locally.
+- **Milestone #39 (2026-04-13):** Battlefield inventory panel rework — shell session had no `ReadLints` runner in-repo and no Godot executable on PATH / common user install paths checked from the agent session. Verification performed here was source-level only: touched helper scripts, `BattleField.gd`, loot handoff, tactical HUD layout, and old/new inventory scene blocks were re-read after patching.
+- **Milestone #39 local smoke still required:**
+  - Level1 + Level4: open active-unit inventory and convoy; confirm no missing-node errors and confirm the focused two-pane layout appears.
+  - Drag a normal item and a stackable from backpack -> convoy; confirm stack merge and confirm dragon-bound convoy-locked weapons reject with invalid feedback.
+  - Claim loot with backpack space + convoy overflow and verify fly-to-slot targets still land in the correct backpack / convoy UI.
+  - Open trade after the inventory changes and smoke one swap to confirm the trade window stayed behaviorally unchanged.
+- **Milestone #39 follow-up verification (2026-04-13):** Battlefield inventory item-detail metadata pass for rune inscriptions + forged/masterwork provenance reviewed in-source.
+  - `git diff --check` on `Scripts/Core/BattleField/BattleFieldInventoryPanelHelpers.gd`: clean.
+  - Repo-wide `git diff --check`: not clean due pre-existing trailing whitespace in unrelated files (`Scenes/camp_menu.gd`, `scene_transition.gd`); no new whitespace errors from the inventory helper patch.
+  - Verified call sites and data paths:
+    - battlefield detail header/body/chips now read forge/rune helpers from `BattleFieldInventoryPanelHelpers.gd`
+    - rune persistence fields still source from `Resources/WeaponData.gd`
+    - forge provenance still source from `base_recipe_name` metadata established in `Scenes/camp_menu.gd`
+  - Runtime smoke still required in-editor:
+    - inspect a weapon with socketed runes and confirm `Runes` section + chip row render correctly
+    - inspect a forged normal weapon and a masterwork weapon and confirm `FORGED` / `MASTERWORK` labels match actual item quality
+    - confirm long item detail bodies still fit and scroll cleanly with rune-heavy weapons
 - Visual parity checks:
   - `_draw()` pre-battle deployment overlay drift was corrected in `BattleFieldDrawHelpers.gd` and verified.
   - Cursor/path preview + loot-close still require runtime smoke confirmation for final “no drift” proof (lint does not validate visuals).
@@ -505,6 +540,28 @@ This document tracks the ongoing “heavy refactor” work inside `Scripts/Core/
 
 ## Next Heavy Refactor Targets (proposed)
 **Note:** The list below remains useful for backlog sizing, but **stabilization** (helper cohesion, safe wrapper trims, anti-regrowth) is the **current priority** over starting new large extractions unless they unblock a bug or parity issue.
+
+### Immediate post-inventory checkpoints
+- **Trade-only cleanup / isolation audit**
+  - Goal: keep the new inventory panel helper and the legacy trade helper from drifting back together.
+  - Drift checkpoints:
+    1. Inventory node resolution stays recursive / schema-safe without trade re-assuming `InventoryVBox -> UnitGrid`.
+    2. Loot close handoff still finds the intended button targets after any future trade or inventory UI edits.
+- **Inventory metadata display parity**
+  - Goal: keep battlefield item detail parity with camp/forge provenance and rune visibility.
+  - Drift checkpoints:
+    1. `base_recipe_name`-driven forged/masterwork labels remain consistent with forge-crafted items, not merely rarity.
+    2. Rune sockets / inscriptions / charges continue to surface in battlefield item info after any future detail-pane layout changes.
+- **Support-ready popup queue extraction**
+  - Goal: move the remaining level-up-style queue UI out of `BattleField.gd` without re-growing the field script.
+  - Drift checkpoints:
+    1. Popup FIFO / busy-flag sequencing remains exact.
+    2. No overlap with inventory / loot modal states.
+- **Arena VS cinematic presentation extraction**
+  - Goal: finish peeling off another large UI-heavy awaited presentation block.
+  - Drift checkpoints:
+    1. Pause / tween ordering preserved.
+    2. Inventory / loot overlays stay hidden/restored exactly as before during the sequence.
 
 These are the next subsystems that are likely to be large and parity-sensitive.
 
@@ -591,4 +648,3 @@ When we do the next extraction, make sure we answer these before calling it done
 - Are all helper->field internal calls valid (no missing private methods / renamed members)?
 - For UI-heavy logic: do we have at least one targeted runtime check (cursor preview, loot close, flying icon landing, etc.)?
 - Do lints stay clean after each helper addition?
-

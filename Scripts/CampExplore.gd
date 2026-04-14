@@ -1,10 +1,12 @@
 # CampExplore.gd
 # Walkable Explore Camp scene: WASD/arrows movement, roster NPCs wandering, nearest-NPC talk.
 # Entered from camp_menu via "Explore Camp" button; Back/Esc returns to camp menu.
+# Dev: F10 — when [member DEBUG_KAELEN_ROSTER_SOLO_HOTKEY] is true, jump into Kaelen's roster solo beat (clears seen so you can replay).
 
 extends Node2D
 
 const CAMP_MENU_PATH: String = "res://Scenes/camp_menu.tscn"
+const CAMP_EXPLORE_SCENE_PATH: String = "res://Scenes/CampExplore.tscn"
 const BOUNDS_MARGIN: float = 40.0
 const INTERACT_RANGE: float = 70.0
 const PLAYER_SPEED: float = 180.0
@@ -20,6 +22,11 @@ const PLAYER_MIN_MOVE_SPEED_FOR_BOB: float = 20.0
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
 ## Dev-only: when true, F9 dumps direct-conversation + micro-bark diagnostics for the nearest walker (see debug_dump_camp_selection).
 const DEBUG_CAMP_SELECTION_DUMP: bool = false
+## Dev-only: F10 in Explore Camp forces [member _DEBUG_KAELEN_ROSTER_SOLO_BEAT_ID] (clears seen/reward flags first). Set false before release.
+const DEBUG_KAELEN_ROSTER_SOLO_HOTKEY: bool = true
+const _DEBUG_KAELEN_ROSTER_SOLO_BEAT_ID: String = "roster_solo_kaelen_sharpening_watch"
+const BEASTIARY_SCHOLAR_NAME: String = "Elara Wyn"
+const BEASTIARY_SCHOLAR_TEX: String = "res://Assets/Portraits/Elara Battle Sprite.png"
 const INTERACT_PROMPT_SLIDE_PX: float = 10.0
 const INTERACT_PROMPT_FADE_IN_SEC: float = 0.13
 const INTERACT_PROMPT_SLIDE_SEC: float = 0.15
@@ -34,6 +41,7 @@ var _camp_music_tracks: Array[AudioStream] = []
 @onready var player: Node2D = get_node_or_null("Player")
 @onready var camp_music: AudioStreamPlayer = get_node_or_null("CampMusic")
 @onready var walkers_container: Node2D = get_node_or_null("Walkers")
+@onready var beastiary_scholar: Node2D = get_node_or_null("BeastiaryScholar")
 @onready var background: ColorRect = get_node_or_null("Background")
 @onready var time_of_day_overlay: ColorRect = get_node_or_null("TimeOfDayOverlay")
 @onready var back_btn: Button = get_node_or_null("UI/BackButton")
@@ -41,7 +49,7 @@ var _camp_music_tracks: Array[AudioStream] = []
 @onready var dialogue_panel: PanelContainer = get_node_or_null("UI/DialoguePanel")
 @onready var dialogue_name: Label = get_node_or_null("UI/DialoguePanel/VBox/NameLabel")
 @onready var dialogue_portrait: TextureRect = get_node_or_null("UI/DialoguePanel/VBox/HBox/Portrait")
-@onready var dialogue_text: Label = get_node_or_null("UI/DialoguePanel/VBox/HBox/TextLabel")
+@onready var dialogue_text: Control = get_node_or_null("UI/DialoguePanel/VBox/HBox/TextLabel")
 @onready var dialogue_close_btn: Button = get_node_or_null("UI/DialoguePanel/VBox/CloseButton")
 @onready var accept_btn: Button = get_node_or_null("UI/DialoguePanel/VBox/ButtonRow/AcceptButton")
 @onready var decline_btn: Button = get_node_or_null("UI/DialoguePanel/VBox/ButtonRow/DeclineButton")
@@ -176,6 +184,26 @@ func _ready() -> void:
 	_ambient.set_debug_pacing(debug_camp_pacing)
 	_ambient.prime_attempt_timers_after_ready(now_time)
 	_setup_pair_listen_focus_line()
+	_ensure_beastiary_scholar_sprite_texture()
+
+
+func _ensure_beastiary_scholar_sprite_texture() -> void:
+	if beastiary_scholar == null:
+		return
+	var spr: Sprite2D = beastiary_scholar.get_node_or_null("Sprite2D") as Sprite2D
+	if spr == null:
+		return
+	if spr.texture != null:
+		return
+	if ResourceLoader.exists(BEASTIARY_SCHOLAR_TEX):
+		var loaded: Variant = load(BEASTIARY_SCHOLAR_TEX)
+		if loaded is Texture2D:
+			spr.texture = loaded as Texture2D
+			return
+	push_warning("BeastiaryScholar: texture missing or not imported yet. Open the project in the Godot editor to reimport %s (or delete a broken .import next to the PNG)." % BEASTIARY_SCHOLAR_TEX)
+	var icon_fb: Texture2D = load("res://icon.svg") as Texture2D
+	if icon_fb != null:
+		spr.texture = icon_fb
 
 
 func _setup_pair_listen_focus_line() -> void:
@@ -277,6 +305,13 @@ func _connect_ui() -> void:
 func _input(event: InputEvent) -> void:
 	if _task_log != null and is_instance_valid(_task_log) and _task_log.visible:
 		return
+	if DEBUG_KAELEN_ROSTER_SOLO_HOTKEY and event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F10 or event.physical_keycode == KEY_F10:
+			if _dialogue.dialogue_active:
+				_dialogue.close_dialogue()
+			_debug_start_kaelen_roster_solo()
+			get_viewport().set_input_as_handled()
+			return
 	if _dialogue.dialogue_active:
 		if event.is_action_pressed("camp_cancel") or event.is_action_pressed("ui_cancel"):
 			if _dialogue.pair_scene_active:
@@ -539,6 +574,18 @@ func _gather_walker_names_for_debug() -> Array:
 	return out
 
 
+## Dev-only: used by F10 when [member DEBUG_KAELEN_ROSTER_SOLO_HOTKEY] is true.
+func _debug_start_kaelen_roster_solo() -> void:
+	if CampaignManager == null:
+		push_warning("CampExplore: CampaignManager missing; cannot start Kaelen roster solo debug.")
+		return
+	var bid: String = _DEBUG_KAELEN_ROSTER_SOLO_BEAT_ID
+	CampaignManager.narrative_beats_seen.erase(bid)
+	CampaignManager.narrative_beat_rewards_claimed.erase(bid)
+	print("[DEBUG] CampExplore F10 → begin_narrative_beat('%s') return=%s" % [bid, CAMP_EXPLORE_SCENE_PATH])
+	CampaignManager.begin_narrative_beat(bid, CAMP_EXPLORE_SCENE_PATH)
+
+
 ## Dev-only: print why CampConversationDB / micro-barks resolve as they do for this unit. Requires DEBUG_CAMP_SELECTION_DUMP := true, or warns once.
 func debug_dump_camp_selection(unit_name: String) -> void:
 	if not DEBUG_CAMP_SELECTION_DUMP:
@@ -621,6 +668,41 @@ func _reset_interact_prompt_visual() -> void:
 	interact_prompt.offset_top = _interact_prompt_base_offset_top
 
 
+func _beastiary_scholar_in_range() -> bool:
+	if beastiary_scholar == null or player == null:
+		return false
+	return player.global_position.distance_to(beastiary_scholar.global_position) <= INTERACT_RANGE
+
+
+func _beastiary_scholar_preempts_walker(nearest: Node) -> bool:
+	if not _beastiary_scholar_in_range():
+		return false
+	if beastiary_scholar == null or player == null:
+		return false
+	var d_s: float = player.global_position.distance_to(beastiary_scholar.global_position)
+	if nearest == null or not (nearest is Node2D):
+		return true
+	var d_w: float = player.global_position.distance_to((nearest as Node2D).global_position)
+	return d_s < d_w
+
+
+func _open_beastiary_scholar_talk() -> void:
+	var first: bool = CampaignManager == null or not CampaignManager.met_beastiary_scholar
+	if CampaignManager:
+		CampaignManager.met_beastiary_scholar = true
+	var body: String
+	if first:
+		body = "You look like someone who counts survivors before trophies. Good.\n\nI catalogue threats from specimens, rumors, and whatever comes back alive. Your camp menu has my Field Notes — everything listed is something your company has actually faced in battle.\n\nIf the page is empty, we simply haven't met the world yet. Keep breathing; the ink follows."
+	else:
+		body = "Back for a reread? Field Notes in the camp menu updates whenever you encounter something new. Tell me if anything disagrees with reality — I prefer revisions to epitaphs."
+	var tex: Texture2D = null
+	if beastiary_scholar != null:
+		var spr: Sprite2D = beastiary_scholar.get_node_or_null("Sprite2D") as Sprite2D
+		if spr != null and spr.texture != null:
+			tex = spr.texture
+	_dialogue.show_static_npc_snippet(BEASTIARY_SCHOLAR_NAME, body, tex)
+
+
 func _update_interact_prompt() -> void:
 	if interact_prompt == null:
 		return
@@ -634,6 +716,10 @@ func _update_interact_prompt() -> void:
 	var nearest: Node = _get_nearest_walker_in_range()
 	var eligible_pair: Dictionary = _dialogue.get_eligible_pair_scene()
 	var prompt_line: String = _interactions.get_interact_prompt_primary_line(nearest, eligible_pair)
+	if prompt_line == "E  Talk" and _beastiary_scholar_preempts_walker(nearest):
+		prompt_line = "E  Field scholar"
+	elif prompt_line == "" and _beastiary_scholar_preempts_walker(nearest):
+		prompt_line = "E  Field scholar"
 	var want_show: bool = prompt_line != ""
 	if want_show:
 		interact_prompt.text = prompt_line
@@ -681,6 +767,9 @@ func _try_interact() -> void:
 	if not eligible_pair.is_empty():
 		_dialogue.start_pair_scene(eligible_pair)
 		return
+	if _beastiary_scholar_preempts_walker(nearest):
+		_open_beastiary_scholar_talk()
+		return
 	if nearest != null:
 		_interactions.open_dialogue(nearest)
 
@@ -702,6 +791,14 @@ func _try_click_interact(_screen_pos: Vector2) -> void:
 	if not eligible_pair.is_empty():
 		_dialogue.start_pair_scene(eligible_pair)
 		return
+	if beastiary_scholar != null and beastiary_scholar.global_position.distance_to(world_pos) <= INTERACT_RANGE:
+		var d_s: float = world_pos.distance_to(beastiary_scholar.global_position)
+		var d_w: float = 1e12
+		if clicked is Node2D:
+			d_w = world_pos.distance_to((clicked as Node2D).global_position)
+		if d_s <= d_w:
+			_open_beastiary_scholar_talk()
+			return
 	if clicked != null:
 		_interactions.open_dialogue(clicked)
 

@@ -183,7 +183,10 @@ func _spawn_single_unit(bf: Node2D, spawn_tile: Vector2i, index: int) -> Node2D:
 
 	# IMPORTANT: assign data BEFORE add_child so Unit._ready() initializes correctly
 	if chosen_data != null and ("data" in enemy or enemy.get("data") != null):
+		var orig_path: String = str(chosen_data.resource_path).strip_edges()
 		enemy.data = chosen_data.duplicate(true)
+		if orig_path != "":
+			enemy.set_meta("enemy_unit_data_path", orig_path)
 
 	if "is_custom_avatar" in enemy:
 		enemy.is_custom_avatar = false

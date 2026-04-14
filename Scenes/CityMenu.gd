@@ -3,8 +3,13 @@ const AUCTION_LISTING_DATA_SCRIPT: GDScript = preload("res://Scripts/UI/Auction/
 const AUCTION_UUID = preload("res://addons/silent_wolf/utils/UUID.gd")
 const AUCTION_LISTINGS_DOCUMENT_FALLBACK: String = "auction_house_listings_v1"
 const AUCTION_SETTLEMENT_LOCK_SECONDS: int = 20
+const AUCTION_SETTLEMENT_GRACE_SECONDS: int = 8
 const AUCTION_NOTIFICATION_HISTORY_MAX: int = 8
 const AUCTION_SHARED_CACHE_PATH: String = "user://auction_house_shared_cache_v1.json"
+const AUCTION_LOCAL_BID_CACHE_PATH: String = "user://auction_house_local_bid_cache_v1.json"
+const AUCTION_LOCAL_PLAYER_ID_PATH: String = "user://auction_house_local_player_id_v1.txt"
+const AUCTION_MAX_SCORE_FETCH: int = 5000
+const AUCTION_POST_BID_REFRESH_DELAY_SECONDS: float = 1.5
 const CampUiSkin = preload("res://Scripts/UI/CampUiSkin.gd")
 ## Full black scrim — anything less and the city still reads through the blend.
 const ARENA_EPIC_DIMMER_BASE := Color(0, 0, 0, 1)
@@ -104,6 +109,7 @@ var _auction_row_icon_by_listing: Dictionary = {}
 var _auction_search_query: String = ""
 var _auction_status_filter_index: int = 0
 var _auction_sort_mode_index: int = 0
+var _auction_cached_local_player_id: String = ""
 
 const AUCTION_ICON_SCAN_DIRS: Array[String] = [
 	"res://Resources/Materials/",
@@ -1124,12 +1130,11 @@ func _listing_matches_search_query(listing: Dictionary) -> bool:
 
 
 func _listing_live_bid_value(listing: Dictionary) -> int:
-	var listing_id: String = str(listing.get("listing_id", "")).strip_edges()
 	var status: String = str(listing.get("status", "active")).strip_edges().to_lower()
 	var start_bid: int = maxi(int(listing.get("starting_bid", 0)), 0)
 	if status == "sold":
 		return maxi(int(listing.get("final_bid", 0)), start_bid)
-	var bid_data: Dictionary = _auction_highest_by_listing.get(listing_id, {})
+	var bid_data: Dictionary = _get_effective_top_bid_data_for_listing(listing)
 	var highest_bid: int = int(bid_data.get("bid_amount", -1))
 	if highest_bid < 0:
 		return start_bid
@@ -1377,8 +1382,7 @@ func _try_acquire_listing_settlement_lock_async(listing_id: String, local_player
 
 func _listing_needs_cloud_mutation(listing: Dictionary, local_player_id: String, now_unix: int) -> bool:
 	var status: String = str(listing.get("status", "active")).strip_edges().to_lower()
-	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
-	if status == "active" and end_timestamp_unix > 0 and now_unix >= end_timestamp_unix:
+	if status == "active" and _is_auction_ready_for_settlement(listing, now_unix):
 		return true
 	var local_id: String = local_player_id.strip_edges()
 	if local_id == "":
@@ -1402,10 +1406,9 @@ func _listing_needs_cloud_mutation(listing: Dictionary, local_player_id: String,
 func _apply_cloud_mutation_to_listing(listing: Dictionary, local_player_id: String, now_unix: int) -> Dictionary:
 	var out: Dictionary = listing.duplicate(true)
 	var status: String = str(out.get("status", "active")).strip_edges().to_lower()
-	var end_timestamp_unix: int = int(out.get("end_timestamp_unix", 0))
-	if status == "active" and end_timestamp_unix > 0 and now_unix >= end_timestamp_unix:
-		var listing_id: String = str(out.get("listing_id", "")).strip_edges()
-		var top_bid_data: Dictionary = _auction_highest_by_listing.get(listing_id, {})
+	if status == "active" and _is_auction_ready_for_settlement(out, now_unix):
+		var top_bid_data: Dictionary = _get_effective_top_bid_data_for_listing(out)
+		out = _apply_bid_snapshot_to_listing(out, top_bid_data)
 		var winning_bid: int = maxi(int(top_bid_data.get("bid_amount", 0)), 0)
 		var winning_bidder_id: String = str(top_bid_data.get("bidder_id", "")).strip_edges()
 		var winning_bidder_name: String = str(top_bid_data.get("bidder", "Unknown Commander")).strip_edges()
@@ -1519,7 +1522,7 @@ func _get_auction_player_id() -> String:
 				var steam_id: String = str(api.call("getSteamID")).strip_edges()
 				if steam_id != "":
 					return steam_id
-	return "local_%d" % int(Time.get_unix_time_from_system())
+	return _get_or_create_persistent_local_auction_player_id()
 
 
 func _extract_item_uid(item: Resource) -> String:
@@ -1988,6 +1991,7 @@ func _settle_closed_auction_listings_async() -> void:
 			if saved:
 				await _fetch_auction_listings_document_async()
 
+	_sync_auction_bid_state_to_runtime_and_cache()
 	for listing_variant in _auction_cloud_listings_by_id.values():
 		if not (listing_variant is Dictionary):
 			continue
@@ -2011,7 +2015,7 @@ func _apply_local_auction_outcomes_from_listing(listing: Dictionary, local_playe
 	var escrow_amount: int = _get_local_auction_escrow_for_listing(listing_id)
 
 	if status == "active" and escrow_amount > 0:
-		var active_top_bid: Dictionary = _auction_highest_by_listing.get(listing_id, {})
+		var active_top_bid: Dictionary = _get_effective_top_bid_data_for_listing(listing)
 		var active_top_bidder_id: String = str(active_top_bid.get("bidder_id", "")).strip_edges()
 		var active_top_bidder_name: String = str(active_top_bid.get("bidder", "")).strip_edges()
 		var is_local_top_bidder: bool = false
@@ -2092,6 +2096,10 @@ func _build_default_cloud_auction_listings() -> Dictionary:
 		payload["winner_id"] = str(payload.get("winner_id", ""))
 		payload["winner_name"] = str(payload.get("winner_name", ""))
 		payload["final_bid"] = maxi(int(payload.get("final_bid", 0)), 0)
+		payload["top_bid_amount"] = maxi(int(payload.get("top_bid_amount", 0)), 0)
+		payload["top_bidder_id"] = str(payload.get("top_bidder_id", ""))
+		payload["top_bidder_name"] = str(payload.get("top_bidder_name", ""))
+		payload["top_bid_submitted_at"] = int(payload.get("top_bid_submitted_at", 0))
 		payload["seller_paid"] = bool(payload.get("seller_paid", false))
 		payload["delivered_to_winner"] = bool(payload.get("delivered_to_winner", false))
 		payload["returned_to_seller"] = bool(payload.get("returned_to_seller", false))
@@ -2106,7 +2114,7 @@ func _build_default_cloud_auction_listings() -> Dictionary:
 
 
 func _merge_pending_local_listings(loaded_listings: Dictionary, previous_local: Dictionary) -> Dictionary:
-	var merged: Dictionary = loaded_listings.duplicate(true)
+	var merged: Dictionary = _normalize_auction_listings_dictionary(loaded_listings)
 	for listing_id_variant in previous_local.keys():
 		var listing_id: String = str(listing_id_variant).strip_edges()
 		if listing_id == "":
@@ -2117,12 +2125,12 @@ func _merge_pending_local_listings(loaded_listings: Dictionary, previous_local: 
 		var local_listing: Dictionary = local_listing_variant
 		if not bool(local_listing.get("pending_local", false)):
 			continue
-		merged[listing_id] = local_listing.duplicate(true)
+		merged[listing_id] = _normalize_auction_listing_payload(local_listing, listing_id)
 	return merged
 
 
 func _merge_campaign_pending_local_listings(runtime_listings: Dictionary) -> Dictionary:
-	var merged: Dictionary = runtime_listings.duplicate(true)
+	var merged: Dictionary = _normalize_auction_listings_dictionary(runtime_listings)
 	var pending_variant: Variant = CampaignManager.auction_pending_local_listings_by_id
 	if not (pending_variant is Dictionary):
 		return merged
@@ -2137,7 +2145,7 @@ func _merge_campaign_pending_local_listings(runtime_listings: Dictionary) -> Dic
 		var payload: Dictionary = (payload_variant as Dictionary).duplicate(true)
 		payload["pending_local"] = true
 		payload["listing_id"] = listing_id
-		merged[listing_id] = payload
+		merged[listing_id] = _normalize_auction_listing_payload(payload, listing_id)
 	return merged
 
 
@@ -2153,7 +2161,7 @@ func _persist_pending_local_listings_to_campaign(save_now: bool = false) -> void
 		var listing: Dictionary = listing_variant
 		if not bool(listing.get("pending_local", false)):
 			continue
-		pending_cache[listing_id] = listing.duplicate(true)
+		pending_cache[listing_id] = _normalize_auction_listing_payload(listing, listing_id)
 	CampaignManager.auction_pending_local_listings_by_id = pending_cache
 	if save_now:
 		CampaignManager.save_current_progress()
@@ -2174,7 +2182,7 @@ func _load_shared_auction_listings_cache() -> Dictionary:
 	var parsed: Dictionary = parsed_variant
 	var listings_variant: Variant = parsed.get("listings", {})
 	if listings_variant is Dictionary:
-		return (listings_variant as Dictionary).duplicate(true)
+		return _normalize_auction_listings_dictionary((listings_variant as Dictionary), "War Table", "system")
 	return {}
 
 
@@ -2182,16 +2190,280 @@ func _save_shared_auction_listings_cache(listings: Dictionary) -> void:
 	var file: FileAccess = FileAccess.open(AUCTION_SHARED_CACHE_PATH, FileAccess.WRITE)
 	if file == null:
 		return
+	var normalized_listings: Dictionary = _normalize_auction_listings_dictionary(listings)
 	var payload: Dictionary = {
 		"schema": 1,
 		"updated_at": int(Time.get_unix_time_from_system()),
-		"listings": listings.duplicate(true)
+		"listings": normalized_listings
 	}
 	file.store_string(JSON.stringify(payload))
 
 
+func _load_local_auction_bid_cache() -> Dictionary:
+	if not FileAccess.file_exists(AUCTION_LOCAL_BID_CACHE_PATH):
+		return {}
+	var file: FileAccess = FileAccess.open(AUCTION_LOCAL_BID_CACHE_PATH, FileAccess.READ)
+	if file == null:
+		return {}
+	var raw_text: String = file.get_as_text()
+	if raw_text.strip_edges() == "":
+		return {}
+	var parsed_variant: Variant = JSON.parse_string(raw_text)
+	if not (parsed_variant is Dictionary):
+		return {}
+	var parsed: Dictionary = parsed_variant
+	var bids_variant: Variant = parsed.get("bids", {})
+	if bids_variant is Dictionary:
+		var normalized_bids: Dictionary = {}
+		for listing_id_variant in (bids_variant as Dictionary).keys():
+			var listing_id: String = str(listing_id_variant).strip_edges()
+			if listing_id == "":
+				continue
+			var bid_variant: Variant = (bids_variant as Dictionary).get(listing_id_variant, {})
+			if not (bid_variant is Dictionary):
+				continue
+			var normalized_bid: Dictionary = _normalize_auction_bid_data(bid_variant as Dictionary)
+			if not normalized_bid.is_empty():
+				normalized_bids[listing_id] = normalized_bid
+		return normalized_bids
+	return {}
+
+
+func _save_local_auction_bid_cache(best_by_listing: Dictionary) -> void:
+	var file: FileAccess = FileAccess.open(AUCTION_LOCAL_BID_CACHE_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+	var sanitized_bids: Dictionary = {}
+	for listing_id_variant in best_by_listing.keys():
+		var listing_id: String = str(listing_id_variant).strip_edges()
+		if listing_id == "":
+			continue
+		var bid_variant: Variant = best_by_listing.get(listing_id_variant, {})
+		if not (bid_variant is Dictionary):
+			continue
+		var normalized_bid: Dictionary = _normalize_auction_bid_data(bid_variant as Dictionary)
+		if not normalized_bid.is_empty():
+			sanitized_bids[listing_id] = normalized_bid
+	var payload: Dictionary = {
+		"schema": 1,
+		"updated_at": int(Time.get_unix_time_from_system()),
+		"bids": sanitized_bids,
+	}
+	file.store_string(JSON.stringify(payload))
+
+
+func _get_or_create_persistent_local_auction_player_id() -> String:
+	if _auction_cached_local_player_id != "":
+		return _auction_cached_local_player_id
+	if FileAccess.file_exists(AUCTION_LOCAL_PLAYER_ID_PATH):
+		var read_file: FileAccess = FileAccess.open(AUCTION_LOCAL_PLAYER_ID_PATH, FileAccess.READ)
+		if read_file != null:
+			var existing_id: String = read_file.get_as_text().strip_edges()
+			if existing_id != "":
+				_auction_cached_local_player_id = existing_id
+				return _auction_cached_local_player_id
+	var new_id: String = "local_%s" % _generate_auction_uuid()
+	var write_file: FileAccess = FileAccess.open(AUCTION_LOCAL_PLAYER_ID_PATH, FileAccess.WRITE)
+	if write_file != null:
+		write_file.store_string(new_id)
+	_auction_cached_local_player_id = new_id
+	return _auction_cached_local_player_id
+
+
+func _get_listing_bid_snapshot(listing: Dictionary) -> Dictionary:
+	if listing.is_empty():
+		return {}
+	return _normalize_auction_bid_data({
+		"bid_amount": maxi(int(listing.get("top_bid_amount", 0)), 0),
+		"bidder": str(listing.get("top_bidder_name", "")).strip_edges(),
+		"bidder_id": str(listing.get("top_bidder_id", "")).strip_edges(),
+		"submitted_at": int(listing.get("top_bid_submitted_at", 0)),
+	})
+
+
+func _normalize_auction_bid_data(bid_data_input: Dictionary) -> Dictionary:
+	if bid_data_input.is_empty():
+		return {}
+	var normalized: Dictionary = {
+		"bid_amount": maxi(int(bid_data_input.get("bid_amount", 0)), 0),
+		"bidder": str(bid_data_input.get("bidder", "")).strip_edges(),
+		"bidder_id": str(bid_data_input.get("bidder_id", "")).strip_edges(),
+		"submitted_at": maxi(int(bid_data_input.get("submitted_at", 0)), 0),
+	}
+	if int(normalized.get("bid_amount", 0)) <= 0:
+		return {}
+	if str(normalized.get("bidder_id", "")).strip_edges() == "" and str(normalized.get("bidder", "")).strip_edges() == "":
+		return {}
+	return normalized
+
+
+func _normalize_auction_listing_payload(payload_input: Dictionary, listing_id_fallback: String = "", default_seller_name: String = "Unknown Seller", default_seller_id: String = "") -> Dictionary:
+	var payload: Dictionary = payload_input.duplicate(true)
+	var listing_id: String = str(payload.get("listing_id", listing_id_fallback)).strip_edges()
+	if listing_id == "":
+		listing_id = _generate_auction_uuid()
+	payload["listing_id"] = listing_id
+	var title_text: String = str(payload.get("title", "Auction Listing")).strip_edges()
+	payload["title"] = title_text if title_text != "" else "Auction Listing"
+	payload["summary"] = str(payload.get("summary", ""))
+	payload["starting_bid"] = maxi(int(payload.get("starting_bid", 0)), 0)
+	payload["min_increment"] = maxi(int(payload.get("min_increment", 1)), 1)
+	payload["end_timestamp_unix"] = int(payload.get("end_timestamp_unix", 0))
+	var seller_name_text: String = str(payload.get("seller_name", default_seller_name if default_seller_name != "" else "Unknown Seller")).strip_edges()
+	payload["seller_name"] = seller_name_text if seller_name_text != "" else (default_seller_name if default_seller_name != "" else "Unknown Seller")
+	var seller_id_text: String = str(payload.get("seller_id", default_seller_id)).strip_edges()
+	payload["seller_id"] = seller_id_text if seller_id_text != "" else default_seller_id
+	payload["item_uid"] = str(payload.get("item_uid", "")).strip_edges()
+	payload["item_icon_path"] = str(payload.get("item_icon_path", "")).strip_edges()
+	var item_data_variant: Variant = payload.get("item_data", {})
+	payload["item_data"] = item_data_variant if item_data_variant is Dictionary else {}
+	payload["status"] = str(payload.get("status", "active")).strip_edges().to_lower()
+	payload["winner_id"] = str(payload.get("winner_id", "")).strip_edges()
+	payload["winner_name"] = str(payload.get("winner_name", "")).strip_edges()
+	payload["final_bid"] = maxi(int(payload.get("final_bid", 0)), 0)
+	payload["seller_paid"] = bool(payload.get("seller_paid", false))
+	payload["delivered_to_winner"] = bool(payload.get("delivered_to_winner", false))
+	payload["returned_to_seller"] = bool(payload.get("returned_to_seller", false))
+	payload["closed_at"] = int(payload.get("closed_at", 0))
+	payload["settlement_lock_owner"] = str(payload.get("settlement_lock_owner", "")).strip_edges()
+	payload["settlement_lock_token"] = str(payload.get("settlement_lock_token", "")).strip_edges()
+	payload["settlement_lock_until"] = int(payload.get("settlement_lock_until", 0))
+	payload["settlement_lock_at"] = int(payload.get("settlement_lock_at", 0))
+	payload["pending_local"] = bool(payload.get("pending_local", false))
+	payload["created_at"] = int(payload.get("created_at", int(Time.get_unix_time_from_system())))
+	var top_bid_snapshot: Dictionary = _get_listing_bid_snapshot(payload)
+	if not _is_bid_data_eligible_for_listing(payload, top_bid_snapshot):
+		top_bid_snapshot = {}
+	payload = _apply_bid_snapshot_to_listing(payload, top_bid_snapshot)
+	if payload["status"] == "sold":
+		if str(payload.get("winner_id", "")).strip_edges() == "" and not top_bid_snapshot.is_empty():
+			payload["winner_id"] = str(top_bid_snapshot.get("bidder_id", "")).strip_edges()
+		if payload["winner_name"] == "" and not top_bid_snapshot.is_empty():
+			payload["winner_name"] = str(top_bid_snapshot.get("bidder", "")).strip_edges()
+		if payload["final_bid"] <= 0 and not top_bid_snapshot.is_empty():
+			payload["final_bid"] = maxi(int(top_bid_snapshot.get("bid_amount", 0)), 0)
+	return payload
+
+
+func _normalize_auction_listings_dictionary(raw_listings: Dictionary, default_seller_name: String = "Unknown Seller", default_seller_id: String = "") -> Dictionary:
+	var normalized_map: Dictionary = {}
+	for listing_id_variant in raw_listings.keys():
+		var listing_variant: Variant = raw_listings.get(listing_id_variant, {})
+		if not (listing_variant is Dictionary):
+			continue
+		var normalized_listing: Dictionary = _normalize_auction_listing_payload(listing_variant, str(listing_id_variant).strip_edges(), default_seller_name, default_seller_id)
+		normalized_map[str(normalized_listing.get("listing_id", "")).strip_edges()] = normalized_listing
+	return normalized_map
+
+
+func _is_bid_data_eligible_for_listing(listing: Dictionary, bid_data: Dictionary) -> bool:
+	if listing.is_empty() or bid_data.is_empty():
+		return false
+	var bid_amount: int = maxi(int(bid_data.get("bid_amount", 0)), 0)
+	if bid_amount <= 0:
+		return false
+	var bidder_id: String = str(bid_data.get("bidder_id", "")).strip_edges()
+	var bidder_name: String = str(bid_data.get("bidder", "")).strip_edges()
+	if bidder_id == "" and bidder_name == "":
+		return false
+	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
+	var submitted_at: int = int(bid_data.get("submitted_at", 0))
+	if end_timestamp_unix > 0 and submitted_at > 0 and submitted_at > end_timestamp_unix:
+		return false
+	return true
+
+
+func _pick_better_bid_data(current_best: Dictionary, challenger: Dictionary) -> Dictionary:
+	var normalized_current: Dictionary = _normalize_auction_bid_data(current_best)
+	var normalized_challenger: Dictionary = _normalize_auction_bid_data(challenger)
+	if normalized_challenger.is_empty():
+		return normalized_current
+	if normalized_current.is_empty():
+		return normalized_challenger
+	var current_bid: int = int(normalized_current.get("bid_amount", -1))
+	var challenger_bid: int = int(normalized_challenger.get("bid_amount", -1))
+	if challenger_bid > current_bid:
+		return normalized_challenger
+	var current_time: int = int(normalized_current.get("submitted_at", 0))
+	var challenger_time: int = int(normalized_challenger.get("submitted_at", 0))
+	if challenger_bid == current_bid and challenger_time > current_time:
+		return normalized_challenger
+	return normalized_current
+
+
+func _get_effective_top_bid_data_for_listing(listing: Dictionary) -> Dictionary:
+	if listing.is_empty():
+		return {}
+	var listing_id: String = str(listing.get("listing_id", "")).strip_edges()
+	var best_bid: Dictionary = {}
+	var runtime_bid: Dictionary = _normalize_auction_bid_data(_auction_highest_by_listing.get(listing_id, {}))
+	if _is_bid_data_eligible_for_listing(listing, runtime_bid):
+		best_bid = runtime_bid.duplicate(true)
+	var snapshot_bid: Dictionary = _get_listing_bid_snapshot(listing)
+	if _is_bid_data_eligible_for_listing(listing, snapshot_bid):
+		best_bid = _pick_better_bid_data(best_bid, snapshot_bid)
+	return best_bid
+
+
+func _apply_bid_snapshot_to_listing(listing: Dictionary, bid_data: Dictionary) -> Dictionary:
+	var out: Dictionary = listing.duplicate(true)
+	if bid_data.is_empty():
+		out["top_bid_amount"] = 0
+		out["top_bidder_id"] = ""
+		out["top_bidder_name"] = ""
+		out["top_bid_submitted_at"] = 0
+		return out
+	out["top_bid_amount"] = maxi(int(bid_data.get("bid_amount", 0)), 0)
+	out["top_bidder_id"] = str(bid_data.get("bidder_id", "")).strip_edges()
+	out["top_bidder_name"] = str(bid_data.get("bidder", "")).strip_edges()
+	out["top_bid_submitted_at"] = int(bid_data.get("submitted_at", 0))
+	return out
+
+
+func _sanitize_auction_bid_state(best_by_listing: Dictionary, listings_by_id: Dictionary) -> Dictionary:
+	var sanitized: Dictionary = {}
+	for listing_variant in listings_by_id.values():
+		if not (listing_variant is Dictionary):
+			continue
+		var listing: Dictionary = listing_variant
+		var listing_id: String = str(listing.get("listing_id", "")).strip_edges()
+		if listing_id == "":
+			continue
+		if str(listing.get("status", "active")).strip_edges().to_lower() != "active":
+			continue
+		var current_best: Dictionary = {}
+		var runtime_bid: Dictionary = best_by_listing.get(listing_id, {})
+		if _is_bid_data_eligible_for_listing(listing, runtime_bid):
+			current_best = _pick_better_bid_data(current_best, runtime_bid)
+		var snapshot_bid: Dictionary = _get_listing_bid_snapshot(listing)
+		if _is_bid_data_eligible_for_listing(listing, snapshot_bid):
+			current_best = _pick_better_bid_data(current_best, snapshot_bid)
+		if not current_best.is_empty():
+			sanitized[listing_id] = current_best
+	return sanitized
+
+
+func _sync_auction_bid_state_to_runtime_and_cache() -> void:
+	_auction_cloud_listings_by_id = _normalize_auction_listings_dictionary(_auction_cloud_listings_by_id)
+	_auction_highest_by_listing = _sanitize_auction_bid_state(_auction_highest_by_listing, _auction_cloud_listings_by_id)
+	for listing_id_variant in _auction_cloud_listings_by_id.keys():
+		var listing_id: String = str(listing_id_variant).strip_edges()
+		if listing_id == "":
+			continue
+		var listing_variant: Variant = _auction_cloud_listings_by_id.get(listing_id_variant, {})
+		if not (listing_variant is Dictionary):
+			continue
+		var listing: Dictionary = listing_variant
+		if str(listing.get("status", "active")).strip_edges().to_lower() == "active":
+			_auction_cloud_listings_by_id[listing_id] = _apply_bid_snapshot_to_listing(listing, _normalize_auction_bid_data(_auction_highest_by_listing.get(listing_id, {})))
+		else:
+			_auction_cloud_listings_by_id[listing_id] = _normalize_auction_listing_payload(listing, listing_id)
+	_save_local_auction_bid_cache(_auction_highest_by_listing)
+	_save_shared_auction_listings_cache(_auction_cloud_listings_by_id)
+
+
 func _merge_missing_auction_listings(primary_listings: Dictionary, fallback_listings: Dictionary) -> Dictionary:
-	var merged: Dictionary = primary_listings.duplicate(true)
+	var merged: Dictionary = _normalize_auction_listings_dictionary(primary_listings)
 	for listing_id_variant in fallback_listings.keys():
 		var listing_id: String = str(listing_id_variant).strip_edges()
 		if listing_id == "":
@@ -2201,7 +2473,7 @@ func _merge_missing_auction_listings(primary_listings: Dictionary, fallback_list
 		var fallback_variant: Variant = fallback_listings.get(listing_id_variant, {})
 		if not (fallback_variant is Dictionary):
 			continue
-		merged[listing_id] = (fallback_variant as Dictionary).duplicate(true)
+		merged[listing_id] = _normalize_auction_listing_payload(fallback_variant as Dictionary, listing_id)
 	return merged
 
 
@@ -2228,35 +2500,7 @@ func _fetch_auction_listings_document_async() -> void:
 			var player_data: Dictionary = player_data_variant
 			var listings_variant: Variant = player_data.get("listings", {})
 			if listings_variant is Dictionary:
-				var raw_listings: Dictionary = listings_variant
-				for listing_id_variant in raw_listings.keys():
-					var listing_payload_variant: Variant = raw_listings.get(listing_id_variant, {})
-					if listing_payload_variant is Dictionary:
-						var listing_payload: Dictionary = listing_payload_variant
-						var normalized: Dictionary = listing_payload.duplicate(true)
-						var listing_id: String = str(normalized.get("listing_id", listing_id_variant)).strip_edges()
-						if listing_id == "":
-							listing_id = _generate_auction_uuid()
-						normalized["listing_id"] = listing_id
-						normalized["status"] = str(normalized.get("status", "active")).to_lower()
-						normalized["seller_name"] = str(normalized.get("seller_name", "Unknown Seller"))
-						normalized["seller_id"] = str(normalized.get("seller_id", ""))
-						normalized["item_uid"] = str(normalized.get("item_uid", ""))
-						normalized["item_data"] = normalized.get("item_data", {})
-						normalized["winner_id"] = str(normalized.get("winner_id", ""))
-						normalized["winner_name"] = str(normalized.get("winner_name", ""))
-						normalized["final_bid"] = maxi(int(normalized.get("final_bid", 0)), 0)
-						normalized["seller_paid"] = bool(normalized.get("seller_paid", false))
-						normalized["delivered_to_winner"] = bool(normalized.get("delivered_to_winner", false))
-						normalized["returned_to_seller"] = bool(normalized.get("returned_to_seller", false))
-						normalized["closed_at"] = int(normalized.get("closed_at", 0))
-						normalized["settlement_lock_owner"] = str(normalized.get("settlement_lock_owner", ""))
-						normalized["settlement_lock_token"] = str(normalized.get("settlement_lock_token", ""))
-						normalized["settlement_lock_until"] = int(normalized.get("settlement_lock_until", 0))
-						normalized["settlement_lock_at"] = int(normalized.get("settlement_lock_at", 0))
-						normalized["pending_local"] = false
-						normalized["created_at"] = int(normalized.get("created_at", int(Time.get_unix_time_from_system())))
-						loaded_listings[listing_id] = normalized
+				loaded_listings = _normalize_auction_listings_dictionary(listings_variant as Dictionary)
 	if fetch_success:
 		if not shared_cache.is_empty():
 			loaded_listings = _merge_missing_auction_listings(loaded_listings, shared_cache)
@@ -2276,12 +2520,13 @@ func _fetch_auction_listings_document_async() -> void:
 		elif auction_use_default_if_empty:
 			_auction_cloud_listings_by_id = _build_default_cloud_auction_listings()
 		_auction_cloud_listings_by_id = _merge_campaign_pending_local_listings(_auction_cloud_listings_by_id)
-	_save_shared_auction_listings_cache(_auction_cloud_listings_by_id)
+	_sync_auction_bid_state_to_runtime_and_cache()
 
 
 func _save_auction_listings_document_async() -> bool:
 	if not has_node("/root/SilentWolf"):
 		return false
+	_auction_cloud_listings_by_id = _normalize_auction_listings_dictionary(_auction_cloud_listings_by_id)
 	var cloud_safe_listings: Dictionary = {}
 	for listing_id_variant in _auction_cloud_listings_by_id.keys():
 		var listing_id: String = str(listing_id_variant).strip_edges()
@@ -2290,7 +2535,7 @@ func _save_auction_listings_document_async() -> bool:
 		var listing_variant: Variant = _auction_cloud_listings_by_id.get(listing_id_variant, {})
 		if not (listing_variant is Dictionary):
 			continue
-		var listing_payload: Dictionary = (listing_variant as Dictionary).duplicate(true)
+		var listing_payload: Dictionary = _normalize_auction_listing_payload(listing_variant as Dictionary, listing_id)
 		listing_payload.erase("pending_local")
 		cloud_safe_listings[listing_id] = listing_payload
 	var payload: Dictionary = {
@@ -2378,6 +2623,10 @@ func _get_active_auction_listings() -> Array[Dictionary]:
 			"winner_id": "",
 			"winner_name": "",
 			"final_bid": 0,
+			"top_bid_amount": 0,
+			"top_bidder_id": "",
+			"top_bidder_name": "",
+			"top_bid_submitted_at": 0,
 			"seller_paid": false,
 			"delivered_to_winner": false,
 			"returned_to_seller": false,
@@ -2424,6 +2673,47 @@ func _format_auction_time_left(end_timestamp_unix: int) -> String:
 	if days > 0:
 		return "%dd %dh left" % [days, hours]
 	return "%dh %dm left" % [hours, minutes]
+
+
+func _is_auction_bidding_closed(listing: Dictionary, now_unix: int = -1) -> bool:
+	var effective_now: int = now_unix
+	if effective_now < 0:
+		effective_now = int(Time.get_unix_time_from_system())
+	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
+	return end_timestamp_unix > 0 and effective_now >= end_timestamp_unix
+
+
+func _is_auction_within_settlement_grace(listing: Dictionary, now_unix: int = -1) -> bool:
+	var effective_now: int = now_unix
+	if effective_now < 0:
+		effective_now = int(Time.get_unix_time_from_system())
+	if not _is_auction_bidding_closed(listing, effective_now):
+		return false
+	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
+	return effective_now < (end_timestamp_unix + AUCTION_SETTLEMENT_GRACE_SECONDS)
+
+
+func _is_auction_ready_for_settlement(listing: Dictionary, now_unix: int = -1) -> bool:
+	var effective_now: int = now_unix
+	if effective_now < 0:
+		effective_now = int(Time.get_unix_time_from_system())
+	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
+	if end_timestamp_unix <= 0:
+		return false
+	return effective_now >= (end_timestamp_unix + AUCTION_SETTLEMENT_GRACE_SECONDS)
+
+
+func _format_auction_listing_window_text(listing: Dictionary) -> String:
+	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
+	if end_timestamp_unix <= 0:
+		return "OPEN CYCLE"
+	var now_unix: int = int(Time.get_unix_time_from_system())
+	if _is_auction_within_settlement_grace(listing, now_unix):
+		var settle_in: int = maxi((end_timestamp_unix + AUCTION_SETTLEMENT_GRACE_SECONDS) - now_unix, 0)
+		return "CLOSED // SETTLING (%ds)" % settle_in
+	if _is_auction_ready_for_settlement(listing, now_unix):
+		return "CLOSED"
+	return _format_auction_time_left(end_timestamp_unix)
 
 
 func _get_auction_bidder_name() -> String:
@@ -2503,7 +2793,7 @@ func _rebuild_auction_listing_buttons() -> void:
 	for listing_variant in listings:
 		var listing: Dictionary = listing_variant
 		var listing_id: String = str(listing.get("listing_id", ""))
-		var bid_data: Dictionary = _auction_highest_by_listing.get(listing_id, {})
+		var bid_data: Dictionary = _get_effective_top_bid_data_for_listing(listing)
 		var highest_bid: int = int(bid_data.get("bid_amount", -1))
 		if highest_bid < 0:
 			highest_bid = int(listing.get("starting_bid", 0))
@@ -2634,7 +2924,7 @@ func _refresh_auction_selected_view() -> void:
 		return
 	var listing_id: String = str(listing.get("listing_id", ""))
 	var status_text: String = str(listing.get("status", "active")).strip_edges().to_lower()
-	var bid_data: Dictionary = _auction_highest_by_listing.get(listing_id, {})
+	var bid_data: Dictionary = _get_effective_top_bid_data_for_listing(listing)
 	var highest_bid: int = int(bid_data.get("bid_amount", -1))
 	var top_bidder: String = str(bid_data.get("bidder", "No bids yet"))
 	var starting_bid: int = int(listing.get("starting_bid", 0))
@@ -2647,8 +2937,8 @@ func _refresh_auction_selected_view() -> void:
 	var premium_percent: int = 0
 	if starting_bid > 0:
 		premium_percent = int(round((float(premium_delta) / float(starting_bid)) * 100.0))
-	var end_timestamp_unix: int = int(listing.get("end_timestamp_unix", 0))
-	var time_left_text: String = _format_auction_time_left(end_timestamp_unix)
+	var bidding_closed: bool = _is_auction_bidding_closed(listing)
+	var time_left_text: String = _format_auction_listing_window_text(listing)
 	var item_uid: String = str(listing.get("item_uid", "")).strip_edges()
 	var seller_name: String = str(listing.get("seller_name", "Unknown Seller"))
 	var local_escrow: int = _get_local_auction_escrow_for_listing(listing_id)
@@ -2664,6 +2954,8 @@ func _refresh_auction_selected_view() -> void:
 		top_bidder = str(listing.get("winner_name", top_bidder))
 	elif status_text == "expired":
 		time_left_text = "CLOSED // EXPIRED"
+	elif status_text == "active" and _is_auction_within_settlement_grace(listing):
+		top_bidder = "%s // Settlement pending" % top_bidder
 	auction_selected_listing_label.text = (
 		"[b]%s[/b]\n"
 		+ "[color=#7cd8ff]%s[/color]\n"
@@ -2696,13 +2988,15 @@ func _refresh_auction_selected_view() -> void:
 			auction_selected_listing_label.text += "\n\n" + rune_sel
 	if auction_bid_input != null:
 		auction_bid_input.placeholder_text = "Enter %d or more" % min_next_bid
-	var can_bid: bool = (status_text == "active" and time_left_text != "CLOSED" and not is_own_listing)
+	var can_bid: bool = (status_text == "active" and not bidding_closed and not is_own_listing)
 	if auction_place_bid_button != null and not (_auction_fetch_in_flight or _auction_bid_in_flight or _auction_listing_in_flight):
 		auction_place_bid_button.disabled = not can_bid
 	if auction_bid_input != null:
 		auction_bid_input.editable = can_bid and not (_auction_fetch_in_flight or _auction_bid_in_flight or _auction_listing_in_flight)
 		if is_own_listing:
 			auction_bid_input.placeholder_text = "You cannot bid your own listing"
+		elif bidding_closed:
+			auction_bid_input.placeholder_text = "Auction closed - settlement pending"
 	_refresh_auction_control_state()
 
 
@@ -2714,8 +3008,29 @@ func _refresh_auction_house_async() -> void:
 	_refresh_auction_control_state()
 	_set_auction_status("Syncing auction feed...", Color(0.55, 0.86, 1.0, 1.0))
 	await _fetch_auction_listings_document_async()
+	var cached_local_bids: Dictionary = _load_local_auction_bid_cache()
 
 	if not has_node("/root/SilentWolf"):
+		var offline_best_by_listing: Dictionary = {}
+		for listing_variant in _get_active_auction_listings():
+			var listing: Dictionary = listing_variant
+			var listing_id: String = str(listing.get("listing_id", "")).strip_edges()
+			if listing_id == "":
+				continue
+			var merged_best: Dictionary = {}
+			var runtime_bid: Dictionary = _normalize_auction_bid_data(_auction_highest_by_listing.get(listing_id, {}))
+			if _is_bid_data_eligible_for_listing(listing, runtime_bid):
+				merged_best = _pick_better_bid_data(merged_best, runtime_bid)
+			var cached_bid: Dictionary = cached_local_bids.get(listing_id, {})
+			if _is_bid_data_eligible_for_listing(listing, cached_bid):
+				merged_best = _pick_better_bid_data(merged_best, cached_bid)
+			var snapshot_bid: Dictionary = _get_listing_bid_snapshot(listing)
+			if _is_bid_data_eligible_for_listing(listing, snapshot_bid):
+				merged_best = _pick_better_bid_data(merged_best, snapshot_bid)
+			if not merged_best.is_empty():
+				offline_best_by_listing[listing_id] = merged_best
+		_auction_highest_by_listing = offline_best_by_listing
+		_sync_auction_bid_state_to_runtime_and_cache()
 		await _settle_closed_auction_listings_async()
 		_auction_fetch_in_flight = false
 		_refresh_auction_control_state()
@@ -2729,7 +3044,7 @@ func _refresh_auction_house_async() -> void:
 			call_deferred("_refresh_auction_house_async")
 		return
 
-	var sw_result: Variant = await SilentWolf.Scores.get_scores(250, auction_leaderboard_name).sw_get_scores_complete
+	var sw_result: Variant = await SilentWolf.Scores.get_scores(AUCTION_MAX_SCORE_FETCH, auction_leaderboard_name).sw_get_scores_complete
 	var scores: Array = []
 	if sw_result is Dictionary:
 		var sw_scores_variant: Variant = sw_result.get("scores", [])
@@ -2741,6 +3056,17 @@ func _refresh_auction_house_async() -> void:
 			scores = cached_scores_variant
 
 	var best_by_listing: Dictionary = {}
+	for listing_variant in _get_active_auction_listings():
+		var listing: Dictionary = listing_variant
+		var listing_id: String = str(listing.get("listing_id", "")).strip_edges()
+		if listing_id == "":
+			continue
+		var snapshot_bid: Dictionary = _get_listing_bid_snapshot(listing)
+		if _is_bid_data_eligible_for_listing(listing, snapshot_bid):
+			best_by_listing[listing_id] = snapshot_bid
+		var cached_bid: Dictionary = cached_local_bids.get(listing_id, {})
+		if _is_bid_data_eligible_for_listing(listing, cached_bid):
+			best_by_listing[listing_id] = _pick_better_bid_data(best_by_listing.get(listing_id, {}), cached_bid)
 	for entry_variant in scores:
 		if not (entry_variant is Dictionary):
 			continue
@@ -2749,30 +3075,35 @@ func _refresh_auction_house_async() -> void:
 		var listing_id: String = str(metadata.get("listing_id", "")).strip_edges()
 		if listing_id == "":
 			continue
+		var listing: Dictionary = _get_auction_listing_by_id(listing_id)
+		if listing.is_empty():
+			continue
 		var bid_amount: int = int(entry.get("score", metadata.get("bid_amount", 0)))
 		var bidder: String = str(entry.get("player_name", metadata.get("bidder", "Unknown"))).strip_edges()
 		var bidder_id: String = str(metadata.get("bidder_id", "")).strip_edges()
 		var submitted_at: int = int(metadata.get("submitted_at", 0))
-		var current_best: Dictionary = best_by_listing.get(listing_id, {})
-		if current_best.is_empty():
-			best_by_listing[listing_id] = {
-				"bid_amount": bid_amount,
-				"bidder": bidder,
-				"bidder_id": bidder_id,
-				"submitted_at": submitted_at
-			}
+		var challenger: Dictionary = {
+			"bid_amount": bid_amount,
+			"bidder": bidder,
+			"bidder_id": bidder_id,
+			"submitted_at": submitted_at
+		}
+		if not _is_bid_data_eligible_for_listing(listing, challenger):
 			continue
-		var current_bid: int = int(current_best.get("bid_amount", -1))
-		var current_time: int = int(current_best.get("submitted_at", 0))
-		if bid_amount > current_bid or (bid_amount == current_bid and submitted_at > current_time):
-			best_by_listing[listing_id] = {
-				"bid_amount": bid_amount,
-				"bidder": bidder,
-				"bidder_id": bidder_id,
-				"submitted_at": submitted_at
-			}
+		best_by_listing[listing_id] = _pick_better_bid_data(best_by_listing.get(listing_id, {}), challenger)
 
 	_auction_highest_by_listing = best_by_listing
+	for listing_id_variant in _auction_cloud_listings_by_id.keys():
+		var listing_id: String = str(listing_id_variant).strip_edges()
+		if listing_id == "":
+			continue
+		var listing_variant: Variant = _auction_cloud_listings_by_id.get(listing_id_variant, {})
+		if not (listing_variant is Dictionary):
+			continue
+		var listing: Dictionary = listing_variant
+		var effective_bid: Dictionary = _get_effective_top_bid_data_for_listing(listing)
+		_auction_cloud_listings_by_id[listing_id] = _apply_bid_snapshot_to_listing(listing, effective_bid)
+	_sync_auction_bid_state_to_runtime_and_cache()
 	await _settle_closed_auction_listings_async()
 	await _sync_pending_local_auction_entries_async()
 	_auction_fetch_in_flight = false
@@ -2830,7 +3161,7 @@ func _on_auction_place_bid_pressed() -> void:
 		return
 
 	var listing_id: String = str(listing.get("listing_id", ""))
-	var bid_data: Dictionary = _auction_highest_by_listing.get(listing_id, {})
+	var bid_data: Dictionary = _get_effective_top_bid_data_for_listing(listing)
 	var starting_bid: int = int(listing.get("starting_bid", 0))
 	var min_increment: int = int(listing.get("min_increment", 1))
 	var min_next_bid: int = starting_bid
@@ -2852,6 +3183,7 @@ func _on_auction_place_bid_pressed() -> void:
 		auction_my_gold_label.text = "Your Gold: %d" % int(CampaignManager.global_gold)
 
 	var bidder_name: String = _get_auction_bidder_name()
+	var submitted_at: int = int(Time.get_unix_time_from_system())
 	var payload: Dictionary = {
 		"listing_id": listing_id,
 		"listing_uuid": listing_id,
@@ -2859,16 +3191,19 @@ func _on_auction_place_bid_pressed() -> void:
 		"bid_amount": bid_amount,
 		"bidder": bidder_name,
 		"bidder_id": local_player_id,
-		"submitted_at": int(Time.get_unix_time_from_system())
+		"submitted_at": submitted_at
+	}
+	var bid_snapshot: Dictionary = {
+		"bid_amount": bid_amount,
+		"bidder": bidder_name,
+		"bidder_id": local_player_id,
+		"submitted_at": submitted_at
 	}
 
 	if not has_node("/root/SilentWolf"):
-		_auction_highest_by_listing[listing_id] = {
-			"bid_amount": bid_amount,
-			"bidder": bidder_name,
-			"bidder_id": local_player_id,
-			"submitted_at": payload["submitted_at"]
-		}
+		_auction_highest_by_listing[listing_id] = _pick_better_bid_data(_auction_highest_by_listing.get(listing_id, {}), bid_snapshot)
+		_auction_cloud_listings_by_id[listing_id] = _apply_bid_snapshot_to_listing(listing, _auction_highest_by_listing[listing_id])
+		_sync_auction_bid_state_to_runtime_and_cache()
 		_set_auction_status("Offline bid staged locally.", Color(0.95, 0.75, 0.35, 1.0))
 		_push_auction_notification("Bid staged on %s at %dG." % [str(listing.get("title", "Listing")), bid_amount], "#9be8ff")
 		auction_bid_input.clear()
@@ -2903,9 +3238,16 @@ func _on_auction_place_bid_pressed() -> void:
 		return
 
 	auction_bid_input.clear()
+	_auction_highest_by_listing[listing_id] = _pick_better_bid_data(_auction_highest_by_listing.get(listing_id, {}), bid_snapshot)
+	_auction_cloud_listings_by_id[listing_id] = _apply_bid_snapshot_to_listing(listing, _auction_highest_by_listing[listing_id])
+	_sync_auction_bid_state_to_runtime_and_cache()
 	CampaignManager.save_current_progress()
-	_set_auction_status("Bid submitted. Refreshing feed...", Color(0.56, 0.93, 0.60, 1.0))
+	_set_auction_status("Bid submitted. Waiting for feed sync...", Color(0.56, 0.93, 0.60, 1.0))
 	_push_auction_notification("Bid submitted on %s at %dG." % [str(listing.get("title", "Listing")), bid_amount], "#9be8ff")
+	await get_tree().create_timer(AUCTION_POST_BID_REFRESH_DELAY_SECONDS).timeout
+	if auction_panel == null or not auction_panel.visible:
+		return
+	_set_auction_status("Bid submitted. Refreshing feed...", Color(0.56, 0.93, 0.60, 1.0))
 	_refresh_auction_house_async()
 
 
@@ -3002,6 +3344,10 @@ func _create_auction_listing_for_item_uid(item_uid: String, start_bid_text: Stri
 		"winner_id": "",
 		"winner_name": "",
 		"final_bid": 0,
+		"top_bid_amount": 0,
+		"top_bidder_id": "",
+		"top_bidder_name": "",
+		"top_bid_submitted_at": 0,
 		"seller_paid": false,
 		"delivered_to_winner": false,
 		"returned_to_seller": false,
@@ -3014,7 +3360,7 @@ func _create_auction_listing_for_item_uid(item_uid: String, start_bid_text: Stri
 		"created_at": now_unix
 		}
 	_auction_cloud_listings_by_id[listing_id] = listing_data
-	_save_shared_auction_listings_cache(_auction_cloud_listings_by_id)
+	_sync_auction_bid_state_to_runtime_and_cache()
 
 	# Persist immediately as a pending local listing so closing/reloading cannot restore
 	# the removed inventory item while the listing is still waiting cloud confirmation.
@@ -3033,7 +3379,7 @@ func _create_auction_listing_for_item_uid(item_uid: String, start_bid_text: Stri
 				published_listing = (published_variant as Dictionary).duplicate(true)
 			published_listing["pending_local"] = false
 			_auction_cloud_listings_by_id[listing_id] = published_listing
-			_save_shared_auction_listings_cache(_auction_cloud_listings_by_id)
+			_sync_auction_bid_state_to_runtime_and_cache()
 			_set_auction_status("Listing published.", Color(0.56, 0.93, 0.60, 1.0))
 	else:
 		_set_auction_status("Offline mode: listing created locally.", Color(0.95, 0.75, 0.35, 1.0))

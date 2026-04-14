@@ -179,7 +179,7 @@ func remove_camp_request_items(item_name: String, amount: int) -> int:
 	return removed
 
 
-func on_accept_pressed(current_walker: Node, dialogue_text: Label) -> void:
+func on_accept_pressed(current_walker: Node, dialogue_text: Control) -> void:
 	if pending_offer.is_empty() or not CampaignManager or current_walker == null:
 		return
 	CampaignManager.camp_request_status = "active"
@@ -207,11 +207,15 @@ func on_accept_pressed(current_walker: Node, dialogue_text: Label) -> void:
 	offer_giver_name = ""
 	pending_offer = {}
 	update_request_markers()
-	if dialogue_text:
-		dialogue_text.text = accepted_line
+	if dialogue_text is RichTextLabel:
+		var rtl: RichTextLabel = dialogue_text as RichTextLabel
+		rtl.bbcode_enabled = false
+		rtl.text = accepted_line
+	elif dialogue_text is Label:
+		(dialogue_text as Label).text = accepted_line
 
 
-func on_decline_pressed(current_walker: Node, dialogue_text: Label) -> void:
+func on_decline_pressed(current_walker: Node, dialogue_text: Control) -> void:
 	if current_walker == null:
 		pending_offer = {}
 		return
@@ -223,12 +227,16 @@ func on_decline_pressed(current_walker: Node, dialogue_text: Label) -> void:
 		CampaignManager.camp_request_unit_next_eligible_level[unit_name_decline] = CampaignManager.camp_request_progress_level + 1
 	add_giver_to_recent(unit_name_decline)
 	pending_offer = {}
-	if dialogue_text:
-		dialogue_text.text = declined_line
+	if dialogue_text is RichTextLabel:
+		var rtl_d: RichTextLabel = dialogue_text as RichTextLabel
+		rtl_d.bbcode_enabled = false
+		rtl_d.text = declined_line
+	elif dialogue_text is Label:
+		(dialogue_text as Label).text = declined_line
 
 
 ## Returns false if dialogue should close (failure / invalid); true if turn-in completed and UI updated.
-func apply_turn_in(current_walker: Node, dialogue_text: Label) -> bool:
+func apply_turn_in(current_walker: Node, dialogue_text: Control) -> bool:
 	if not CampaignManager:
 		return false
 	var req_type: String = CampaignManager.camp_request_type
@@ -276,8 +284,12 @@ func apply_turn_in(current_walker: Node, dialogue_text: Label) -> bool:
 		reward_feedback += " Favor noted."
 	if giver_name != "":
 		reward_feedback += " Relationship improved with %s." % giver_name
-	if dialogue_text:
-		dialogue_text.text = completed_line + "\n\n" + reward_feedback
+	if dialogue_text is RichTextLabel:
+		var rtl_t: RichTextLabel = dialogue_text as RichTextLabel
+		rtl_t.bbcode_enabled = false
+		rtl_t.text = completed_line + "\n\n" + reward_feedback
+	elif dialogue_text is Label:
+		(dialogue_text as Label).text = completed_line + "\n\n" + reward_feedback
 	clear_camp_request_state()
 	update_request_markers()
 	return true

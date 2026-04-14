@@ -120,6 +120,8 @@ C’est important qu’il soit **effrayant idéologiquement**, pas juste physiqu
 **Rôle :** inquisitrice traqueuse
 **Déploiement :** **Level 2**, **Level 10**, **Level 17**
 
+**Art (portrait + sprite tactique) :** déjà livré dans le dépôt — `Assets/Portraits/Mother Caldris Vein Portrait.png`, `Assets/Sprites/Mother Caldris Vein Battle Sprite.png`.
+
 Caldris est une femme polie, glaciale, extrêmement raffinée, qui considère la miséricorde comme un luxe dangereux.
 Elle fonctionne très bien comme **visage récurrent de la ligne dure de Valeron**.
 
@@ -139,6 +141,8 @@ Elle fonctionne très bien comme **visage récurrent de la ligne dure de Valeron
 **Rôle :** seigneur du port, logisticien corrompu
 **Déploiement :** **Level 4**, **Level 5**
 
+**Art (portrait + sprite tactique) :** déjà livré — `Assets/Portraits/Port-Master Rhex Valcero Portrait.png`, `Assets/Sprites/Port-Master Rhex Valcero Battle Sprite.png`.
+
 Rhex doit être charmant, sale, bien habillé, et donner l’impression que **tout a un prix**, y compris une ville entière.
 Il représente parfaitement la corruption “propre” de la League.
 
@@ -156,6 +160,8 @@ Il représente parfaitement la corruption “propre” de la League.
 **Faction :** Obsidian Circle / nécromancie militaire
 **Rôle :** chevalier funèbre, commandant de forteresse
 **Déploiement :** **Level 6**, **Level 14**
+
+**Art (portrait + sprite tactique) :** déjà livré — `Assets/Portraits/Mortivar Hale Portrait.png`, `Assets/Sprites/Mortivar Hale Battle Sprite.png`.
 
 Mortivar doit donner l’impression d’un vétéran déjà mort depuis longtemps, mais qui continue par discipline.
 Il est parfait comme **visage récurrent des forces nécromantiques “professionnelles”**.
@@ -255,6 +261,8 @@ Il fait du procès-arène un vrai moment de pageantry meurtrier.
 **Rôle :** tueuse infiltrée, boss d’enquête
 **Déploiement :** **Level 11**
 
+**Art (portrait + sprite tactique) :** déjà livré — `Assets/Portraits/Noemi Veyr Portrait.png`, `Assets/Sprites/Noemi Veyr Battle sprite.png` (nom de fichier avec « sprite » en minuscules).
+
 Noemi doit être insaisissable, gracieuse, presque performative. Elle peut sourire à quelques cases du joueur avant d’ouvrir une gorge au tour suivant.
 Elle donne à la map festival une saveur très forte.
 
@@ -293,6 +301,8 @@ C’est le bon visage pour un chapitre de **safehold brisé**.
 **Faction :** vestige spectral de l’Order of the Dawn
 **Rôle :** juge mort, gardien d’épreuve
 **Déploiement :** **Level 16**
+
+**Art (portrait + sprite tactique) :** déjà livré — `Assets/Portraits/Ash Adjudicator Portrait.png`, `Assets/Sprites/Ash Adjudicator Battle Sprite.png`.
 
 Ce n’est pas un simple fantôme. C’est un reste d’institution devenu test vivant. Il parle comme un verdict.
 Il est parfait pour faire sentir que le passé pèse encore sur Kaelen et sur l’Ordre.
@@ -518,6 +528,8 @@ Ephrem is terrifying because he is sincere. He truly believes purification is me
 **Faction:** Valeron Purifiers
 **Deployment:** Level 2, Level 10, Level 17
 
+**Art (portrait + tactical battle sprite):** already in repo — `Assets/Portraits/Mother Caldris Vein Portrait.png`, `Assets/Sprites/Mother Caldris Vein Battle Sprite.png`.
+
 **Physical description**
 Austere, elegant, and immaculately composed. She should be dressed in severe clerical finery: layered black-and-ivory vestments, restrained gold, immaculate gloves, and a face that never appears hurried. Her beauty should be severe rather than soft. Tall, narrow silhouette, upright posture, deliberate gestures. She should look expensive, disciplined, and dangerous without needing visible armor.
 
@@ -531,6 +543,8 @@ Caldris is the kind of person who mistakes restraint for moral superiority. She 
 **Faction:** Vharian Merchant League, predator bloc
 **Deployment:** Level 4, Level 5
 
+**Art (portrait + tactical battle sprite):** already in repo — `Assets/Portraits/Port-Master Rhex Valcero Portrait.png`, `Assets/Sprites/Port-Master Rhex Valcero Battle Sprite.png`.
+
 **Physical description**
 Well-fed, well-dressed, and faintly disreputable under the luxury. Rich coastal fabrics, rings, gloves, harbor-master coat cut from expensive cloth, perfume over salt and tar. He should smile easily but never warmly. A handsome face aging into smugness works well. He should look like a man who can host a gala and order a disappearance in the same breath.
 
@@ -543,6 +557,8 @@ Rhex believes that morality is mostly branding. He trusts leverage, scarcity, an
 
 **Faction:** Obsidian Circle / necromantic military arm
 **Deployment:** Level 6, Level 14
+
+**Art (portrait + tactical battle sprite):** already in repo — `Assets/Portraits/Mortivar Hale Portrait.png`, `Assets/Sprites/Mortivar Hale Battle Sprite.png`.
 
 **Physical description**
 A towering armored figure whose silhouette reads as knightly before it reads as dead. His armor should be old, heavy, and beautifully maintained in a grim way, with traces of heraldry beneath funerary corrosion. He should move slowly but with terrible certainty. His face may be partially visible: gaunt, grave, and disciplined rather than monstrous. He should look like death trained to obey formation.
@@ -637,6 +653,8 @@ Halwen is a performer of legitimacy. He believes spectacle matters because publi
 **Faction:** League-linked assassin interests
 **Deployment:** Level 11
 
+**Art (portrait + tactical battle sprite):** already in repo — `Assets/Portraits/Noemi Veyr Portrait.png`, `Assets/Sprites/Noemi Veyr Battle sprite.png` (filename uses lowercase “sprite”).
+
 **Physical description**
 Graceful, stylish, and socially unreadable. Noemi should be capable of passing for a noble guest, performer, servant, or harmless reveler depending on the costume. Slender silhouette, elegant posture, masked motifs, delicate gloves, hidden blades, and an unreadable smile. Her design should emphasize beauty as camouflage and identity as interchangeable surface.
 
@@ -675,6 +693,8 @@ Roen works because he is not built like a monster. He is a man who let fear, exh
 
 **Faction:** Spectral vestige of the Order of the Dawn
 **Deployment:** Level 16
+
+**Art (portrait + tactical battle sprite):** already in repo — `Assets/Portraits/Ash Adjudicator Portrait.png`, `Assets/Sprites/Ash Adjudicator Battle Sprite.png`.
 
 **Physical description**
 An armored spectral judge with a silhouette that feels iconographic, not merely ghostly. Burnt-white ash cloak, cracked dawn heraldry, hollow visor light, floating cinders rather than mist. The figure should feel ancient, ceremonially exact, and more like a verdict than a person. Every movement should look ritualized.

@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_jhke6")
+voice_gender = 1
 display_name = "Hest “Sparks”"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Wow… that’s rude; I was just starting to think this lot might keep me.", "Heh… guess I finally pushed one bad joke too far.", "Don’t go all sad on me now. Win first.", "So much for sticking the landing."])

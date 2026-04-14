@@ -521,12 +521,46 @@ offset_bottom = 163.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ItemList" type="ItemList" parent="UI/InventoryPanel" unique_id=1617138117]
+[node name="ItemDescLabel" type="RichTextLabel" parent="UI/InventoryPanel"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 31.0
+offset_top = -492.0
+offset_right = 523.0
+offset_bottom = -14.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_font_sizes/normal_font_size = 40
+bbcode_enabled = true
+autowrap_mode = 2
+
+[node name="Panel" type="Panel" parent="UI/InventoryPanel"]
+z_index = -1
 layout_mode = 0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 499.0
-offset_bottom = 499.0
+offset_left = 519.0
+offset_right = 1035.0
+offset_bottom = 500.0
+
+[node name="InventoryScroll" type="ScrollContainer" parent="UI/InventoryPanel"]
+custom_minimum_size = Vector2(500, 400)
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="InventoryVBox" type="VBoxContainer" parent="UI/InventoryPanel/InventoryScroll"]
+layout_mode = 2
+
+[node name="UnitGrid" type="GridContainer" parent="UI/InventoryPanel/InventoryScroll/InventoryVBox"]
+layout_mode = 2
+columns = 5
+
+[node name="ConvoyGrid" type="GridContainer" parent="UI/InventoryPanel/InventoryScroll/InventoryVBox"]
+layout_mode = 2
+columns = 5
 
 [node name="EquipButton" type="Button" parent="UI/InventoryPanel" unique_id=1138857740]
 layout_mode = 0

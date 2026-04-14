@@ -128,6 +128,10 @@ func handle_input(event: InputEvent) -> void:
 		if handled:
 			return
 
+	# Another input pass may have cleared selection while we awaited forecast / combat UI.
+	if active_unit == null or not is_instance_valid(active_unit):
+		return
+
 	# --- Move ---
 	if active_unit.has_moved and active_unit.get("in_canto_phase") != true:
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
@@ -142,29 +146,45 @@ func handle_input(event: InputEvent) -> void:
 	var move_range_val: float = float(active_unit.canto_move_budget) if in_canto_move else float(active_unit.move_range)
 	var path_cost: float = battlefield.get_path_move_cost(path, active_unit) if path.size() > 0 else 0.0
 
-	if path.size() > 0 and path_cost <= move_range_val and battlefield.reachable_tiles.has(cursor_pos):
-		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
-		battlefield.clear_ranges()
-		await active_unit.move_along_path(path)
-		if in_canto_move:
-			if battlefield.has_method("coop_enet_sync_after_local_player_move"):
-				battlefield.coop_enet_sync_after_local_player_move(active_unit, path, path_cost, true)
-			active_unit.in_canto_phase = false
-			active_unit.canto_move_budget = 0
-			active_unit.finish_turn()
-			clear_active_unit()
-			return
-		active_unit.move_points_used_this_turn += path_cost
-		battlefield.update_fog_of_war()
-		battlefield.rebuild_grid()
-		battlefield.calculate_ranges(active_unit)
-		if battlefield.has_method("coop_enet_sync_after_local_player_move"):
-			battlefield.coop_enet_sync_after_local_player_move(active_unit, path, path_cost, false)
-	else:
+	var move_ok: bool = (
+		path.size() > 0
+		and path_cost <= move_range_val
+		and battlefield.reachable_tiles.has(cursor_pos)
+	)
+	if not move_ok:
 		battlefield.play_ui_sfx(BattleField.UISfx.INVALID)
 		if battlefield.battle_log and battlefield.battle_log.visible:
 			battlefield.add_combat_log("Can't move there — blocked, out of range, or not a blue tile.", "gray")
 		clear_active_unit()
+		return
+
+	# Snapshot: handle_input is invoked without await from BattleField, so another click can clear
+	# active_unit while we await move_along_path — always mutate the unit that actually moved.
+	var moving_unit: Node2D = active_unit
+	if moving_unit == null or not is_instance_valid(moving_unit):
+		return
+	battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
+	battlefield.clear_ranges()
+	await moving_unit.move_along_path(path)
+	if not is_instance_valid(moving_unit):
+		return
+	if in_canto_move:
+		if battlefield.has_method("coop_enet_sync_after_local_player_move"):
+			battlefield.coop_enet_sync_after_local_player_move(moving_unit, path, path_cost, true)
+		moving_unit.in_canto_phase = false
+		moving_unit.canto_move_budget = 0
+		moving_unit.finish_turn()
+		clear_active_unit()
+		return
+	moving_unit.move_points_used_this_turn += path_cost
+	battlefield.update_fog_of_war()
+	battlefield.rebuild_grid()
+	if active_unit == moving_unit and is_instance_valid(active_unit):
+		battlefield.calculate_ranges(active_unit)
+	else:
+		battlefield.clear_ranges()
+	if battlefield.has_method("coop_enet_sync_after_local_player_move"):
+		battlefield.coop_enet_sync_after_local_player_move(moving_unit, path, path_cost, false)
 
 
 func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
@@ -176,6 +196,8 @@ func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 		_select_player_unit_for_command(unit)
 	elif occupant != null and occupant.get("data") != null:
 		battlefield.inspected_unit = occupant
+		if PersonalJournalStore:
+			PersonalJournalStore.note_inspected_unit_for_journal(occupant)
 		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
 		if occupant == enemy and battlefield.can_preview_enemy_threat(enemy):
 			battlefield.calculate_enemy_threat_range(enemy)
@@ -183,6 +205,8 @@ func _handle_click_with_no_selection(cursor_pos: Vector2i) -> void:
 			battlefield.clear_ranges()
 	elif enemy != null:
 		battlefield.inspected_unit = enemy
+		if PersonalJournalStore:
+			PersonalJournalStore.note_inspected_unit_for_journal(enemy)
 		battlefield.play_ui_sfx(BattleField.UISfx.MOVE_OK)
 		if battlefield.can_preview_enemy_threat(enemy):
 			battlefield.calculate_enemy_threat_range(enemy)
@@ -339,6 +363,8 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 	battlefield.play_ui_sfx(BattleField.UISfx.TARGET_OK)
 	is_forecasting = true
 	targeted_enemy = target_node
+	if PersonalJournalStore:
+		PersonalJournalStore.note_inspected_unit_for_journal(target_node)
 
 	var forecast_data: Array = await battlefield.show_combat_forecast(active_unit, target_node)
 
@@ -354,10 +380,6 @@ func _handle_action_target_click(cursor_pos: Vector2i, target_node: Node2D) -> b
 	if action == "cancel":
 		return true
 	if action == "active_ability":
-		if battlefield.has_method("coop_enet_should_delegate_player_combat_to_host") and battlefield.coop_enet_should_delegate_player_combat_to_host():
-			if battlefield.battle_log and battlefield.battle_log.visible:
-				battlefield.add_combat_log("Data-driven actives are not replicated in guest combat-delegation mode yet — use a normal attack.", "gray")
-			return true
 		var pending_aid: String = str(battlefield._forecast_pending_active_ability_id).strip_edges()
 		battlefield._forecast_pending_active_ability_id = ""
 		return await CombatTurnHelpers.resolve_player_active_ability_after_forecast(

@@ -9,6 +9,7 @@ description = "A relic staff that binds enemies or restores allied tempo."
 weapon_name = "Chain-Key Staff"
 gold_cost = 8600
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 4
 is_buff_staff = true
 is_debuff_staff = true

@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_1essp")
+voice_gender = 1
 display_name = "Liora"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["If mercy still means anything, let it live longer in you than it did in me.", "Do not use my death to justify cruelty.", "Faith is not fear… please remember that better than they did.", "If there is light left in this world, carry it gently."])

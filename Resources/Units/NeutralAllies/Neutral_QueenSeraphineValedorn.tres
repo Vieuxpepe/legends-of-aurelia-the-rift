@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_myopo")
+voice_gender = 1
 display_name = "Queen Seraphine Valedorn"
 recruit_dialogue = Array[String]([])
 character_class = ExtResource("1_dcdss")

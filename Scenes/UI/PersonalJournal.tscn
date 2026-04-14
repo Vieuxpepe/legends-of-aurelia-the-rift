@@ -1,0 +1,572 @@
+[gd_scene load_steps=7 format=3 uid="uid://personal_journal_ui_v1"]
+
+[ext_resource type="Script" uid="uid://bk4n8m2p6q1xwr3" path="res://Scripts/UI/PersonalJournalPanel.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.07, 0.068, 0.072, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.72, 0.62, 0.38, 0.95)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_section"]
+bg_color = Color(0.1, 0.096, 0.09, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.36, 0.24, 0.45)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 0
+content_margin_top = 0
+content_margin_right = 0
+content_margin_bottom = 0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_editor"]
+bg_color = Color(0.045, 0.045, 0.05, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.32, 0.22, 0.35)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sidebar"]
+content_margin_left = 8
+content_margin_top = 8
+content_margin_right = 8
+content_margin_bottom = 8
+bg_color = Color(0.085, 0.082, 0.078, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.35, 0.22, 0.4)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_itemlist_bg"]
+bg_color = Color(0.05, 0.049, 0.052, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_itemlist_selected"]
+bg_color = Color(0.38, 0.34, 0.26, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="PersonalJournal" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_script")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.72)
+
+[node name="RootPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -760.0
+offset_top = -440.0
+offset_right = 760.0
+offset_bottom = 440.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="RootPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="RootPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderRow" type="HBoxContainer" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="RootPanel/Margin/VBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.96, 0.91, 0.78, 1)
+theme_override_font_sizes/font_size = 28
+text = "Personal Journal"
+
+[node name="SaveStatusLabel" type="Label" parent="RootPanel/Margin/VBox/HeaderRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.58, 0.78, 0.62, 1)
+theme_override_font_sizes/font_size = 13
+text = "All changes saved"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="HintLine1" type="Label" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.62, 0.56, 1)
+theme_override_font_sizes/font_size = 11
+text = "Saved on this device · Esc closes · Ctrl+Tab next page · Ctrl+Shift+V paste screenshot"
+autowrap_mode = 2
+
+[node name="HSeparatorTop" type="HSeparator" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="SearchCard" type="PanelContainer" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="SearchMargin" type="MarginContainer" parent="RootPanel/Margin/VBox/SearchCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="SearchRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/SearchCard/SearchMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SearchTagLabel" type="Label" parent="RootPanel/Margin/VBox/SearchCard/SearchMargin/SearchRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.74, 0.48, 1)
+theme_override_font_sizes/font_size = 12
+text = "Search"
+vertical_alignment = 1
+
+[node name="SearchEdit" type="LineEdit" parent="RootPanel/Margin/VBox/SearchCard/SearchMargin/SearchRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+placeholder_text = "Search text across all pages…"
+
+[node name="SearchNextButton" type="Button" parent="RootPanel/Margin/VBox/SearchCard/SearchMargin/SearchRow"]
+custom_minimum_size = Vector2(88, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Next hit"
+
+[node name="MainRow" type="HBoxContainer" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="Sidebar" type="VBoxContainer" parent="RootPanel/Margin/VBox/MainRow"]
+custom_minimum_size = Vector2(232, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PagesSectionTitle" type="Label" parent="RootPanel/Margin/VBox/MainRow/Sidebar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.74, 0.48, 1)
+theme_override_font_sizes/font_size = 12
+text = "PAGES"
+
+[node name="SidebarListCard" type="PanelContainer" parent="RootPanel/Margin/VBox/MainRow/Sidebar"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_sidebar")
+
+[node name="PageList" type="ItemList" parent="RootPanel/Margin/VBox/MainRow/Sidebar/SidebarListCard"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 220)
+allow_reselect = true
+theme_override_styles/bg = SubResource("StyleBoxFlat_itemlist_bg")
+theme_override_styles/selected = SubResource("StyleBoxFlat_itemlist_selected")
+theme_override_colors/font_color = Color(0.93, 0.9, 0.82, 1)
+theme_override_colors/font_hovered_color = Color(0.98, 0.95, 0.88, 1)
+theme_override_colors/font_selected_color = Color(1, 0.98, 0.92, 1)
+theme_override_colors/font_hovered_selected_color = Color(1, 0.98, 0.92, 1)
+theme_override_colors/guide_color = Color(0.35, 0.32, 0.28, 0.35)
+theme_override_font_sizes/font_size = 15
+theme_override_constants/line_separation = 6
+
+[node name="ReorderRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/Sidebar"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="MoveUpButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/Sidebar/ReorderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+tooltip_text = "Move page up"
+text = "↑"
+
+[node name="MoveDownButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/Sidebar/ReorderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+tooltip_text = "Move page down"
+text = "↓"
+
+[node name="DeletePageButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/Sidebar/ReorderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+tooltip_text = "Delete this page"
+text = "Del"
+
+[node name="SidebarButtons" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/Sidebar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AddPageButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/Sidebar/SidebarButtons"]
+custom_minimum_size = Vector2(48, 42)
+layout_mode = 2
+tooltip_text = "Add a new page (max 10)"
+text = "+"
+
+[node name="PagesCountLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/Sidebar/SidebarButtons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.62, 0.6, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "0 / 10"
+vertical_alignment = 1
+
+[node name="PagesMaxHint" type="Label" parent="RootPanel/Margin/VBox/MainRow/Sidebar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.48, 0.44, 1)
+theme_override_font_sizes/font_size = 11
+text = "Up to 10 pages. Hover a tab to see last edited time."
+autowrap_mode = 2
+
+[node name="EditorColumn" type="VBoxContainer" parent="RootPanel/Margin/VBox/MainRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="PageTitleRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PageTitleLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/PageTitleRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.8, 0.55, 1)
+theme_override_font_sizes/font_size = 15
+text = "Page title"
+
+[node name="PageTitleEdit" type="LineEdit" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/PageTitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+placeholder_text = "Name this page…"
+max_length = 64
+
+[node name="QuickToolsCard" type="PanelContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="QuickToolsMargin" type="MarginContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="QuickToolsVBox" type="VBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="InsertRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="InsertEnemyButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Enemy:"
+
+[node name="InsertLootButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Loot:"
+
+[node name="InsertQuestButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Quest:"
+
+[node name="InsertStampButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Time"
+
+[node name="InsertUnitNameButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+tooltip_text = "Insert focused or targeted unit: name, level, class, HP, stats, weapon."
+text = "Unit"
+
+[node name="InsertBuildsButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "+ Builds"
+
+[node name="InsertDividerButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/InsertRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+tooltip_text = "Insert a horizontal rule to separate sections."
+text = "Divider"
+
+[node name="SelectionRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SelectionColorLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/SelectionRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.62, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "Mark text"
+vertical_alignment = 1
+
+[node name="SelectionColorPicker" type="ColorPickerButton" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/SelectionRow"]
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+focus_mode = 0
+tooltip_text = "Choose a color, then press Apply to wrap the current selection (permanent in saved notes)."
+color = Color(1, 0.88, 0.45, 1)
+
+[node name="ApplyMarkColorButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/SelectionRow"]
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 12
+tooltip_text = "Wrap the selected text in the notes field with the chosen color (saved as BBCode)."
+text = "Apply"
+
+[node name="MarkPlainButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/SelectionRow"]
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 12
+tooltip_text = "Mark the selection with the default note color (same as plain unstyled text)."
+text = "Plain"
+
+[node name="ToolsRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CopyJsonButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/ToolsRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Copy backup"
+
+[node name="SaveBackupButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/ToolsRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Save to file…"
+
+[node name="FontSizeLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/ToolsRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.62, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "Text size"
+
+[node name="FontSizeSlider" type="HSlider" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/QuickToolsCard/QuickToolsMargin/QuickToolsVBox/ToolsRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 12.0
+max_value = 28.0
+step = 1.0
+value = 17.0
+
+[node name="BodyCard" type="PanelContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 64.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_editor")
+
+[node name="BodyMargin" type="MarginContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/BodyCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="BodyInnerVBox" type="VBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/BodyCard/BodyMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="NotesSectionTitle" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/BodyCard/BodyMargin/BodyInnerVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.74, 0.48, 1)
+theme_override_font_sizes/font_size = 11
+text = "Notes on this page"
+
+[node name="BodyPreviewHint" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/BodyCard/BodyMargin/BodyInnerVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.52, 0.48, 1)
+theme_override_font_sizes/font_size = 11
+text = "Preview — colors are saved in your text (BBCode tags show in the editor below)."
+autowrap_mode = 2
+
+[node name="BodyPreview" type="RichTextLabel" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/BodyCard/BodyMargin/BodyInnerVBox"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.35
+bbcode_enabled = true
+fit_content = false
+scroll_active = true
+autowrap_mode = 3
+theme_override_font_sizes/normal_font_size = 17
+theme_override_colors/default_color = Color(0.93, 0.91, 0.86, 1)
+
+[node name="BodyEdit" type="TextEdit" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/BodyCard/BodyMargin/BodyInnerVBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.0
+placeholder_text = "Write notes for this page…"
+wrap_mode = 1
+deselect_on_focus_loss_enabled = false
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.93, 0.91, 0.86, 1)
+
+[node name="AttachmentsCard" type="PanelContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="AttachmentsMargin" type="MarginContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="AttachmentsVBox" type="VBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="AttachmentsToolbar" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ScreenshotsTagLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox/AttachmentsToolbar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.82, 0.74, 0.48, 1)
+theme_override_font_sizes/font_size = 11
+text = "Screenshots"
+vertical_alignment = 1
+
+[node name="PasteImageButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox/AttachmentsToolbar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+tooltip_text = "Paste image from system clipboard"
+text = "Paste clip"
+
+[node name="ImportImageButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox/AttachmentsToolbar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Import…"
+
+[node name="CaptureScreenButton" type="Button" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox/AttachmentsToolbar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+tooltip_text = "Hides the journal for a moment and grabs the current game window. Pause menus or other overlays may still appear in the image."
+text = "Capture screen"
+
+[node name="AttachmentsScroll" type="ScrollContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="AttachmentsStrip" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox/AttachmentsScroll"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="AttachmentsEmptyHint" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/AttachmentsCard/AttachmentsMargin/AttachmentsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.43, 0.4, 1)
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+text = "No images yet — paste, import, or capture (max 8)."
+autowrap_mode = 2
+
+[node name="MetaRow" type="HBoxContainer" parent="RootPanel/Margin/VBox/MainRow/EditorColumn"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LastEditedLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/MetaRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.53, 0.48, 1)
+theme_override_font_sizes/font_size = 12
+text = "Last edited: —"
+
+[node name="CountsLabel" type="Label" parent="RootPanel/Margin/VBox/MainRow/EditorColumn/MetaRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.53, 0.48, 1)
+theme_override_font_sizes/font_size = 12
+text = "0 words · 0 characters"
+
+[node name="HSeparatorBottom" type="HSeparator" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="CloseRow" type="HBoxContainer" parent="RootPanel/Margin/VBox"]
+layout_mode = 2
+alignment = 2
+theme_override_constants/separation = 16
+
+[node name="CloseHintLabel" type="Label" parent="RootPanel/Margin/VBox/CloseRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.48, 0.46, 0.42, 1)
+theme_override_font_sizes/font_size = 11
+text = "Tip: JSON backup lists images; copy the journal_images folder under user data for a full backup."
+autowrap_mode = 2
+
+[node name="CloseButton" type="Button" parent="RootPanel/Margin/VBox/CloseRow"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Close"

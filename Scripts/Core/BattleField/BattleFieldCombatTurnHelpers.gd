@@ -29,8 +29,25 @@ static func resolve_player_active_ability_after_forecast(
 	if field.has_method("coop_enet_should_delegate_player_combat_to_host"):
 		delegate_host = field.coop_enet_should_delegate_player_combat_to_host()
 	if delegate_host:
-		if field.battle_log and field.battle_log.visible:
-			field.add_combat_log("Data-driven actives are not replicated in guest combat-delegation mode yet — use a normal attack.", "gray")
+		if field.has_method("coop_enet_guest_delegate_player_combat_to_host"):
+			await field.coop_enet_guest_delegate_player_combat_to_host(coop_aid, coop_did, false, aid)
+		if is_instance_valid(field) and field.is_inside_tree() and field.get_tree().paused:
+			while is_instance_valid(field) and field.get_tree().paused:
+				await field.get_tree().process_frame
+		var au: Node2D = null
+		if field.has_method("coop_enet_get_player_side_unit_by_rel_id"):
+			au = field.coop_enet_get_player_side_unit_by_rel_id(coop_aid)
+		if au == null or not is_instance_valid(au) or int(au.current_hp) <= 0:
+			state.clear_active_unit()
+			return true
+		if au.in_canto_phase:
+			state.active_unit = au
+			au.set_selected_glow(true)
+			au.set_selected(true)
+			field.rebuild_grid()
+			field.calculate_ranges(au)
+			return true
+		state.clear_active_unit()
 		return true
 
 	var primary: Node2D = target_node

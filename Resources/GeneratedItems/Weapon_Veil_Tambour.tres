@@ -9,6 +9,7 @@ description = "A dancer's battle instrument tuned to tempo and misdirection."
 weapon_name = "Veil Tambour"
 gold_cost = 2100
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 9
 affected_stat = "magic"
 effect_amount = 0

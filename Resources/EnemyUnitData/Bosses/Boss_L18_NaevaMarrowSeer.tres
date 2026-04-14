@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_68n6n")
+voice_gender = 1
 display_name = "Naeva, Marrow-Seer of the Dark Tide"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["You hear it now, don’t you… the tide beneath the world."])

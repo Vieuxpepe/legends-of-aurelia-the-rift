@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_flhye")
+voice_gender = 1
 display_name = "Mira Ashdown"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Don’t make Oakhaven into a story people use to feel noble.", "Remember what happened. Remember it properly.", "I didn’t survive that far just to be turned into a symbol.", "If you say my name later, say it like a person, not a tragedy."])

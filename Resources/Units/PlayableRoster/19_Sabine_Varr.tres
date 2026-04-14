@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_6fv6n")
+voice_gender = 1
 display_name = "Sabine Varr"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Do not turn this into sentiment; secure the line, then grieve properly.", "Focus. Emotion after the perimeter holds.", "If my death creates disorder, then you learned nothing from me.", "Stay sharp. The threat does not pause for mourning."])

@@ -16,7 +16,7 @@ var _ambient_for_pacing: CampAmbientDirector = null
 var dialogue_panel: PanelContainer
 var dialogue_name: Label
 var dialogue_portrait: TextureRect
-var dialogue_text: Label
+var dialogue_text: Control
 var dialogue_close_btn: Button
 var accept_btn: Button
 var decline_btn: Button
@@ -74,7 +74,7 @@ func bind_dialogue_nodes(
 	panel: PanelContainer,
 	name_lbl: Label,
 	portrait: TextureRect,
-	text_lbl: Label,
+	text_lbl: Control,
 	close_btn: Button,
 	accept_b: Button,
 	decline_b: Button,
@@ -90,6 +90,15 @@ func bind_dialogue_nodes(
 	decline_btn = decline_b
 	turn_in_btn = turn_in_b
 	interact_prompt = prompt
+
+
+func _dlg_set_text(s: String) -> void:
+	if dialogue_text == null:
+		return
+	if dialogue_text is RichTextLabel:
+		(dialogue_text as RichTextLabel).text = s
+	elif dialogue_text is Label:
+		(dialogue_text as Label).text = s
 
 
 func _kill_dialogue_panel_tween() -> void:
@@ -392,7 +401,7 @@ func show_pair_scene_line() -> void:
 	if dialogue_name:
 		dialogue_name.text = speaker
 	if dialogue_text:
-		dialogue_text.text = text
+		_dlg_set_text(text)
 	var walker_for_portrait: Node = null
 	if pair_scene_walker_a != null and pair_scene_walker_a is CampRosterWalker and (pair_scene_walker_a as CampRosterWalker).unit_name == speaker:
 		walker_for_portrait = pair_scene_walker_a
@@ -517,7 +526,7 @@ func start_branching_check(walker_node: Node, unit_name: String, unit_data: Vari
 			dialogue_portrait.texture = tex if tex is Texture2D else null
 			dialogue_portrait.visible = dialogue_portrait.texture != null
 		if dialogue_text:
-			dialogue_text.text = "Done. Return to %s to complete the request." % giver
+			_dlg_set_text("Done. Return to %s to complete the request." % giver)
 		hide_request_buttons()
 		if dialogue_close_btn:
 			dialogue_close_btn.visible = true
@@ -535,7 +544,7 @@ func start_branching_check(walker_node: Node, unit_name: String, unit_data: Vari
 		dialogue_portrait.texture = tex2 if tex2 is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = str(data.get("opening_line", "")).strip_edges()
+		_dlg_set_text(str(data.get("opening_line", "")).strip_edges())
 	if accept_btn and accept_btn.get_parent():
 		accept_btn.get_parent().visible = false
 	if dialogue_close_btn:
@@ -566,14 +575,14 @@ func on_branching_choice_pressed(choice_index: int) -> void:
 	var result_line: String = str(choice.get("result_line", "")).strip_edges()
 	var outcome: String = str(choice.get("outcome", "fail")).strip_edges().to_lower()
 	if dialogue_text:
-		dialogue_text.text = result_line
+		_dlg_set_text(result_line)
 	hide_branching_choices()
 	if outcome == "success":
 		CampaignManager.camp_request_progress = 1
 		CampaignManager.camp_request_status = "ready_to_turn_in"
 		_requests.update_request_markers()
 		if dialogue_text:
-			dialogue_text.text = result_line + "\n\nReturn to %s to complete the request." % branching_giver
+			_dlg_set_text(result_line + "\n\nReturn to %s to complete the request." % branching_giver)
 	else:
 		CampaignManager.camp_request_status = "failed"
 		if branching_giver != "":
@@ -606,7 +615,7 @@ func show_special_camp_scene(walker_node: Node, unit_name: String, _unit_data: V
 		dialogue_portrait.texture = tex if tex is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = text
+		_dlg_set_text(text)
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
@@ -627,7 +636,7 @@ func show_offer_panel(walker_node: Node, unit_name: String, unit_data: Variant, 
 	var desc: String = str(pending_offer.get("description", "")).strip_edges()
 	var reward_g: int = int(pending_offer.get("reward_gold", 0))
 	if dialogue_text:
-		dialogue_text.text = line + "\n\n" + title + "\n" + desc + "\n\nReward: %d gold. (Favor noted when completed.)" % reward_g
+		_dlg_set_text(line + "\n\n" + title + "\n" + desc + "\n\nReward: %d gold. (Favor noted when completed.)" % reward_g)
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = false
 	if accept_btn:
@@ -664,7 +673,7 @@ func show_progress_panel(walker_node: Node, unit_name: String, unit_data: Varian
 		var need: int = CampaignManager.camp_request_target_amount
 		line += "\n\nProgress: %d / %d" % [have, need]
 	if dialogue_text:
-		dialogue_text.text = line
+		_dlg_set_text(line)
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
@@ -689,7 +698,7 @@ func show_turn_in_panel(walker_node: Node, unit_name: String, unit_data: Variant
 	}
 	var line: String = CampRequestDB.get_line("ready_to_turn_in", personality, data, 0, unit_name)
 	if dialogue_text:
-		dialogue_text.text = line
+		_dlg_set_text(line)
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = false
 	if accept_btn:
@@ -714,7 +723,7 @@ func show_failed_reaction(walker_node: Node, unit_name: String, giver: String) -
 		dialogue_portrait.texture = tex if tex is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = failed_line
+		_dlg_set_text(failed_line)
 	hide_request_buttons()
 	hide_branching_choices()
 	if dialogue_close_btn:
@@ -731,7 +740,7 @@ func show_talk_complete_return(walker_node: Node, unit_name: String, giver: Stri
 		dialogue_portrait.texture = tex if tex is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = "Done. Return to %s to complete the request." % giver
+		_dlg_set_text("Done. Return to %s to complete the request." % giver)
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
@@ -747,7 +756,7 @@ func show_pair_scene_snippet(walker_node: Node, unit_name: String, other_title: 
 		dialogue_portrait.texture = pair_tex if pair_tex is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = str(pair_scene.get("text", "")).strip_edges()
+		_dlg_set_text(str(pair_scene.get("text", "")).strip_edges())
 	hide_request_buttons()
 	hide_branching_choices()
 	if dialogue_close_btn:
@@ -765,13 +774,31 @@ func show_lore_snippet(walker_node: Node, unit_name: String, lore: Dictionary) -
 		dialogue_portrait.texture = lore_tex if lore_tex is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = str(lore.get("text", "")).strip_edges()
+		_dlg_set_text(str(lore.get("text", "")).strip_edges())
 	hide_request_buttons()
 	hide_branching_choices()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
 	apply_dialogue_panel_visible(true)
 	pending_lore_id = str(lore.get("id", "")).strip_edges()
+
+
+## One-off camp talk (Explore Camp static NPC) without a [CampRosterWalker].
+func show_static_npc_snippet(display_name: String, body_text: String, portrait_tex: Texture2D = null) -> void:
+	dialogue_active = true
+	current_walker = null
+	if dialogue_name:
+		dialogue_name.text = display_name
+	if dialogue_portrait:
+		dialogue_portrait.texture = portrait_tex
+		dialogue_portrait.visible = portrait_tex != null
+	if dialogue_text:
+		_dlg_set_text(str(body_text).strip_edges())
+	hide_request_buttons()
+	hide_branching_choices()
+	if dialogue_close_btn:
+		dialogue_close_btn.visible = true
+	apply_dialogue_panel_visible(true)
 
 
 func show_idle_talk(walker_node: Node, unit_name: String, unit_data: Variant) -> void:
@@ -791,7 +818,7 @@ func show_idle_talk(walker_node: Node, unit_name: String, unit_data: Variant) ->
 		dialogue_portrait.texture = tex if tex is Texture2D else null
 		dialogue_portrait.visible = dialogue_portrait.texture != null
 	if dialogue_text:
-		dialogue_text.text = line
+		_dlg_set_text(line)
 	hide_request_buttons()
 	if dialogue_close_btn:
 		dialogue_close_btn.visible = true
@@ -902,7 +929,7 @@ func show_direct_conversation_line() -> void:
 	if dialogue_name:
 		dialogue_name.text = _display_name_for_direct_speaker(raw_sp)
 	if dialogue_text:
-		dialogue_text.text = str(line.get("text", "")).strip_edges()
+		_dlg_set_text(str(line.get("text", "")).strip_edges())
 	_apply_direct_line_portrait(raw_sp)
 	hide_request_buttons(true)
 	if dialogue_close_btn:

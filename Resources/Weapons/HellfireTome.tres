@@ -11,6 +11,7 @@ description = "A fire tome."
 weapon_name = "Hellfire Tome"
 damage_type = 1
 weapon_type = 4
+magic_damage_kind = 1
 impact_scene = ExtResource("3_nc6po")
 projectile_scale = 1.0
 custom_hit_sound = ExtResource("1_eubdi")

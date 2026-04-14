@@ -2083,6 +2083,7 @@ func _coop_debug_action_launch_pending_handoff() -> void:
 
 
 func _coop_debug_action_guest_join() -> void:
+	CoopExpeditionSessionManager.ensure_loopback_coop_transport_if_absent()
 	var sid: String = CoopExpeditionSessionManager.session_id
 	if sid == "":
 		sid = "local_join_debug"

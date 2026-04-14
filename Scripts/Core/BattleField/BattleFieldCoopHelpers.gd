@@ -178,6 +178,8 @@ static func coop_net_build_authoritative_combat_snapshot(field, pre_alive_ids: D
 				e["defending"] = bool(u.is_defending)
 
 			e["cstat"] = UnitCombatStatusHelpers.export_wire(u)
+			if ActiveCombatAbilityHelpers.collect_definitions(u).size() > 0:
+				e["acd"] = ActiveCombatAbilityHelpers.export_wire(u)
 
 			units_arr.append(e)
 

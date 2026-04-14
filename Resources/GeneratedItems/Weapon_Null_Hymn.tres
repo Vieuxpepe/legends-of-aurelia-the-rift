@@ -9,6 +9,7 @@ description = "An endgame text that sings absence into the battlefield."
 weapon_name = "Null Hymn"
 gold_cost = 9800
 damage_type = 1
+magic_damage_kind = 5
 weapon_type = 10
 affected_stat = "magic"
 effect_amount = 0

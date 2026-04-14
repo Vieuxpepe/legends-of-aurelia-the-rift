@@ -212,7 +212,7 @@ static func on_unit_died(field, unit: Node2D, killer: Node2D) -> void:
 		field._coop_capture_enemy_death_loot_for_sync(unit, total_gold, field.pending_loot, local_loot_recipient)
 		if not field.pending_loot.is_empty():
 			field.loot_recipient = local_loot_recipient
-			field.show_loot_window()
+			field.schedule_loot_window_after_combat_juice()
 
 	if unit.get_parent() == field.player_container and field.player_container.get_child_count() <= 1:
 		field.add_combat_log("MISSION FAILED: Entire party wiped out.", "red")

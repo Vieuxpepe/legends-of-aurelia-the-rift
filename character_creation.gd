@@ -10,6 +10,8 @@ const CC_TEXT_MUTED := Color(0.75, 0.71, 0.62, 1.0)
 const CC_ACCENT := Color(0.96, 0.80, 0.32, 1.0)
 const CC_ERROR := Color(0.97, 0.42, 0.38, 1.0)
 const CC_METAL_TINT := Color(0.88, 0.88, 0.90, 1.0)
+## Slight lift so faces don’t read buried in the portrait frame.
+const CC_PORTRAIT_DISPLAY_LIFT := Color(1.08, 1.05, 1.02, 1.0)
 const CC_CLASS_DESC := Color(0.86, 0.78, 0.56, 1.0)
 
 const UnitInfoRuntimeHelpers := preload("res://Scripts/Core/BattleField/BattleFieldDetailedUnitInfoRuntimeHelpers.gd")
@@ -21,6 +23,7 @@ const UnitInfoRuntimeHelpers := preload("res://Scripts/Core/BattleField/BattleFi
 @onready var class_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/MidCol/ClassDropdown
 @onready var class_desc_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/ClassDescLabel
 @onready var ability_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/MidCol/AbilityDropdown
+@onready var voice_gender_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/MidCol/VoiceGenderDropdown
 @onready var points_label: Label = $Panel/MainMargin/MainVBox/TopRow/MidCol/PointsLabel
 @onready var difficulty_dropdown: OptionButton = $Panel/MainMargin/MainVBox/TopRow/RightCol/DifficultyCard/DifficultyDropdown
 @onready var difficulty_desc_label: RichTextLabel = $Panel/MainMargin/MainVBox/TopRow/RightCol/DifficultyCard/DifficultyDescLabel
@@ -264,6 +267,8 @@ func _cc_reduced_motion() -> bool:
 func _setup_focus_chain() -> void:
 	var chain: Array[Control] = []
 	chain.append(name_input)
+	if voice_gender_dropdown != null:
+		chain.append(voice_gender_dropdown)
 	chain.append(class_dropdown)
 	chain.append(ability_dropdown)
 	var stat_btns: Array[Button] = [
@@ -457,7 +462,8 @@ func _apply_theme() -> void:
 		for frame_name in ["PortraitFrame", "BattleSpriteFrame"]:
 			var frame := panel.get_node_or_null("MainMargin/MainVBox/TopRow/LeftCol/%s" % frame_name) as PanelContainer
 			if frame != null:
-				var f_style := _make_panel_style(Color(0.08, 0.07, 0.05, 0.96), CC_BORDER_MUTED, 1, 16, 0.22, 8, 3)
+				var frame_fill := Color(0.15, 0.13, 0.10, 0.94) if frame_name == "PortraitFrame" else Color(0.10, 0.09, 0.065, 0.96)
+				var f_style := _make_panel_style(frame_fill, CC_BORDER_MUTED, 1, 16, 0.22, 8, 3)
 				frame.add_theme_stylebox_override("panel", f_style)
 
 		var right_info := panel.get_node_or_null("MainMargin/MainVBox/TopRow/RightCol/RightInfoCard") as Panel
@@ -721,6 +727,12 @@ func _setup_dropdowns() -> void:
 	difficulty_dropdown.add_item("Normal")
 	difficulty_dropdown.add_item("Hard")
 	difficulty_dropdown.add_item("Maddening")
+
+	if voice_gender_dropdown != null:
+		voice_gender_dropdown.clear()
+		voice_gender_dropdown.add_item("Male", 0)
+		voice_gender_dropdown.add_item("Female", 1)
+		voice_gender_dropdown.selected = 0
 
 func _on_class_changed(_index: int) -> void:
 	_apply_selected_class_base(_cc_ready_done)
@@ -1020,7 +1032,8 @@ func _push_undo() -> void:
 		"sprite_idx": current_sprite_index,
 		"weapon_idx": current_weapon_index,
 		"class_sel": class_dropdown.selected,
-		"ability_sel": ability_dropdown.selected
+		"ability_sel": ability_dropdown.selected,
+		"voice_gender_sel": voice_gender_dropdown.selected if voice_gender_dropdown != null else 0
 	}
 	_undo_stack.append(snapshot)
 	if _undo_stack.size() > undo_limit:
@@ -1041,6 +1054,8 @@ func _on_undo_pressed() -> void:
 	current_weapon_index = int(last.get("weapon_idx", 0))
 	class_dropdown.selected = int(last.get("class_sel", 0))
 	ability_dropdown.selected = int(last.get("ability_sel", 0))
+	if voice_gender_dropdown != null:
+		voice_gender_dropdown.selected = clampi(int(last.get("voice_gender_sel", 0)), 0, voice_gender_dropdown.item_count - 1)
 
 	_update_sprite_display()
 	_update_weapon_display()
@@ -1634,6 +1649,7 @@ func _on_next_sprite_pressed() -> void:
 func _update_sprite_display() -> void:
 	if not available_sprites.is_empty() and current_sprite_index < available_sprites.size():
 		sprite_display.texture = available_sprites[current_sprite_index]
+		sprite_display.self_modulate = CC_PORTRAIT_DISPLAY_LIFT
 
 	if not available_battle_sprites.is_empty() and current_sprite_index < available_battle_sprites.size():
 		battle_sprite_display.texture = available_battle_sprites[current_sprite_index]
@@ -1737,6 +1753,10 @@ func _on_start_confirmed() -> void:
 			starting_move_range = selected_class_res.move_range
 			starting_move_type = selected_class_res.move_type
 
+	var chosen_voice_gender: int = 0
+	if voice_gender_dropdown != null:
+		chosen_voice_gender = clampi(voice_gender_dropdown.selected, 0, 1)
+
 	CampaignManager.reset_campaign_data()
 
 	# --- FIX 4: BULLETPROOF CUSTOM AVATAR DICT ---
@@ -1754,7 +1774,8 @@ func _on_start_confirmed() -> void:
 		"ability": chosen_ability,
 		"unlocked_abilities": [chosen_ability], 
 		"skill_points": 0, 
-		"unlocked_skills": [] 
+		"unlocked_skills": [],
+		"voice_gender": chosen_voice_gender
 	}
 
 	# --- FIX 3: BULLETPROOF HERO UNIT DICT ---
@@ -1788,7 +1809,8 @@ func _on_start_confirmed() -> void:
 		"traits": [],
 		"rookie_legacies": [],
 		"base_class_legacies": [],
-		"promoted_class_legacies": []
+		"promoted_class_legacies": [],
+		"voice_gender": chosen_voice_gender
 	}
 	
 	match difficulty_dropdown.selected:

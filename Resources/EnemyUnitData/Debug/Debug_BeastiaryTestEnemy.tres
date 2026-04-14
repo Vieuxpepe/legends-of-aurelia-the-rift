@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=4 format=3 uid="uid://debugbeastiarytest01"]
+
+[ext_resource type="Resource" path="res://Resources/Classes/Monster.tres" id="1_monster"]
+[ext_resource type="Script" path="res://Scripts/Core/UnitData.gd" id="2_unitdata"]
+[ext_resource type="Resource" path="res://Resources/GeneratedItems/Weapon_Wrapped_Cestus.tres" id="3_weapon"]
+
+[resource]
+script = ExtResource("2_unitdata")
+display_name = "Beastiary Debug Dummy"
+unit_type = 8
+recruit_dialogue = Array[String]([])
+character_class = ExtResource("1_monster")
+starting_weapon = ExtResource("3_weapon")
+ability = "Debug placeholder — not used in combat."
+max_hp = 12
+strength = 4
+magic = 0
+defense = 2
+resistance = 1
+speed = 5
+agility = 4
+hp_growth = 0
+str_growth = 0
+mag_growth = 0
+def_growth = 0
+res_growth = 0
+spd_growth = 0
+agi_growth = 0
+min_gold_drop = 0
+max_gold_drop = 0

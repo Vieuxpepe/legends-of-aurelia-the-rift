@@ -11,15 +11,10 @@ const FateCardLootHelpers = preload("res://Scripts/Core/FateCardLootHelpers.gd")
 static func resolve_inventory_ui_nodes(field) -> void:
 	if field.inventory_panel == null:
 		return
-	field.inv_desc_label = field.inventory_panel.get_node_or_null("ItemDescLabel") as RichTextLabel
-	field.inv_scroll = field.inventory_panel.get_node_or_null("InventoryScroll") as ScrollContainer
-	field.unit_grid = null
-	field.convoy_grid = null
-	if field.inv_scroll != null:
-		var vbox_node: Node = field.inv_scroll.get_node_or_null("InventoryVBox")
-		if vbox_node != null:
-			field.unit_grid = vbox_node.get_node_or_null("UnitGrid") as GridContainer
-			field.convoy_grid = vbox_node.get_node_or_null("ConvoyGrid") as GridContainer
+	field.inv_desc_label = field.inventory_panel.find_child("ItemDescLabel", true, false) as RichTextLabel
+	field.inv_scroll = field.inventory_panel.find_child("InventoryScroll", true, false) as ScrollContainer
+	field.unit_grid = field.inventory_panel.find_child("UnitGrid", true, false) as GridContainer
+	field.convoy_grid = field.inventory_panel.find_child("ConvoyGrid", true, false) as GridContainer
 
 
 static func stylebox_bump_all_content_margins(sb: StyleBox, delta: float) -> void:
@@ -81,6 +76,9 @@ static func refit_inventory_description_panel_height(field) -> void:
 	if field.inv_desc_label == null or field.inventory_panel == null:
 		return
 	if not field.inventory_panel.visible:
+		return
+	if field.inventory_panel.get_meta("_battle_inventory_layout_v2", false):
+		field.inv_desc_label.scroll_active = true
 		return
 	field.inv_desc_label.scroll_active = false
 	var w: float = field.inv_desc_label.size.x
@@ -368,12 +366,15 @@ static func get_item_detailed_info(field, item: Resource, stack_count: int = 1, 
 		if (
 				eq_weapon != null
 				and eq_weapon is WeaponData
-				and item != eq_weapon
 		):
-			var cmp_line: String = weapon_stat_compare_line_bbcode(item as WeaponData, eq_weapon as WeaponData)
-			if cmp_line != "":
+			if item == eq_weapon:
 				lines.append("")
-				lines.append(cmp_line)
+				lines.append("[font_size=20][color=%s][b]Equipped[/b][/color][color=#5a5248] - [/color][color=%s]This weapon is currently readied by this unit.[/color][/font_size]" % [C_OK, C_BODY])
+			else:
+				var cmp_line: String = weapon_stat_compare_line_bbcode(item as WeaponData, eq_weapon as WeaponData)
+				if cmp_line != "":
+					lines.append("")
+					lines.append(cmp_line)
 
 		if viewer_unit != null:
 			lines.append("")

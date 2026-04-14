@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_fsubi")
+voice_gender = 1
 display_name = "Captain Mirelle Dorn"
 recruit_dialogue = Array[String]([])
 character_class = ExtResource("1_gsm4r")

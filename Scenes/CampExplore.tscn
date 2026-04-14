@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://doke0ah8kq4aa" path="res://Scripts/CampExplore.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cbknu558fndlo" path="res://icon.svg" id="2_icon"]
+[ext_resource type="Texture2D" uid="uid://85hj54idfp7i" path="res://Assets/Portraits/Elara Battle Sprite.png" id="2_elara_camp_explore"]
 [ext_resource type="Script" uid="uid://bsf8vbjogtgwq" path="res://Scripts/CampBehaviorZone.gd" id="3_fnn20"]
 [ext_resource type="Script" uid="uid://b5rysttyl2ife" path="res://Scripts/CampActivityAnchor.gd" id="4_anch"]
 
@@ -37,6 +38,7 @@ debug_use_test_camp_roster = true
 volume_db = -10.05
 
 [node name="Background" type="ColorRect" parent="." unique_id=1078457718]
+z_index = -100
 offset_right = 1920.0
 offset_bottom = 1080.0
 color = Color(0.18, 0.22, 0.15, 1)
@@ -49,6 +51,16 @@ scale = Vector2(0.22, 0.22)
 texture = ExtResource("2_icon")
 
 [node name="Walkers" type="Node2D" parent="." unique_id=1349453277]
+
+[node name="BeastiaryScholar" type="Node2D" parent="." unique_id=1394152884]
+z_index = 10
+position = Vector2(920, 340)
+
+[node name="Sprite2D" type="Sprite2D" parent="BeastiaryScholar" unique_id=1394152885]
+z_index = 1
+position = Vector2(0, -12)
+scale = Vector2(0.07, 0.07)
+texture = ExtResource("2_elara_camp_explore")
 
 [node name="TimeOfDayOverlay" type="ColorRect" parent="." unique_id=1349452780]
 offset_right = 1920.0
@@ -177,12 +189,15 @@ layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TextLabel" type="Label" parent="UI/DialoguePanel/VBox/HBox" unique_id=603498813]
+[node name="TextLabel" type="RichTextLabel" parent="UI/DialoguePanel/VBox/HBox" unique_id=603498813]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 20
+bbcode_enabled = false
+theme_override_font_sizes/normal_font_size = 20
 text = "Dialogue line."
+fit_content = true
 autowrap_mode = 3
+scroll_active = false
 
 [node name="ButtonRow" type="HBoxContainer" parent="UI/DialoguePanel/VBox" unique_id=402507009]
 layout_mode = 2

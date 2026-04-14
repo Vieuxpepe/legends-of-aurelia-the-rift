@@ -170,8 +170,9 @@ static func populate_detailed_unit_info_weapon_row(field, unit: Node2D) -> void:
 	field.detailed_unit_info_weapon_icon.texture = weapon.icon
 
 
-static func detailed_unit_info_growth_fill_color(field, stat_key: String, growth_value: int) -> Color:
-	var base_key: String = stat_key.replace("_growth_bonus", "")
+## Matches growth-row tints on the detailed unit info modal; [code]stat_key[/code] may be [code]hp_growth_bonus[/code] or [code]hp_growth[/code] etc.
+static func detailed_unit_info_growth_fill_color_standalone(stat_key: String, growth_value: int) -> Color:
+	var base_key: String = str(stat_key).replace("_growth_bonus", "").replace("_growth", "")
 	if base_key == "str":
 		return Color(0.92, 0.48, 0.36, 1.0)
 	if base_key == "mag":
@@ -188,7 +189,11 @@ static func detailed_unit_info_growth_fill_color(field, stat_key: String, growth
 		return Color(0.48, 0.88, 0.55, 1.0)
 	if growth_value < 0:
 		return Color(0.84, 0.36, 0.32, 1.0)
-	return field.TACTICAL_UI_ACCENT_SOFT
+	return Color(0.74, 0.86, 0.42, 1.0)
+
+
+static func detailed_unit_info_growth_fill_color(field, stat_key: String, growth_value: int) -> Color:
+	return detailed_unit_info_growth_fill_color_standalone(stat_key, growth_value)
 
 
 static func refresh_detailed_unit_info_growth_widgets(field, unit: Node2D, animate: bool, tween: Tween = null) -> void:

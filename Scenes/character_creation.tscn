@@ -253,6 +253,13 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 40
 max_length = 14
 
+[node name="Header_Voice" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060083]
+layout_mode = 2
+text = "Voice (crit exertion) :"
+
+[node name="VoiceGenderDropdown" type="OptionButton" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060084]
+layout_mode = 2
+
 [node name="Header_Class" type="Label" parent="Panel/MainMargin/MainVBox/TopRow/MidCol" unique_id=900060002]
 layout_mode = 2
 text = "Choose your Class :"

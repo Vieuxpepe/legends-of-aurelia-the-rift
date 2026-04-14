@@ -28,11 +28,13 @@
 extends Control
 
 const TASK_LOG_SCRIPT := preload("res://Scripts/TaskLog.gd")
+const ENEMY_BEASTIARY_SCENE := preload("res://Scenes/UI/EnemyBeastiary.tscn")
 const PromotionChoiceUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPromotionChoiceUiHelpers.gd")
 const PromotionFlowSharedHelpers = preload("res://Scripts/Core/PromotionFlowSharedHelpers.gd")
 ## Single source for camp palette + shared UI helpers (`Scripts/UI/CampUiSkin.gd`).
 const CampUiSkin := preload("res://Scripts/UI/CampUiSkin.gd")
 const CampMenuMotion: Script = preload("res://Scripts/UI/CampMenuMotion.gd")
+const FLYING_GOLD_COIN_TEX: Texture2D = preload("res://Assets/Gold Coin.png")
 const CAMP_PANEL_BG := CampUiSkin.CAMP_PANEL_BG
 const CAMP_PANEL_BG_ALT := CampUiSkin.CAMP_PANEL_BG_ALT
 const CAMP_PANEL_BG_SOFT := CampUiSkin.CAMP_PANEL_BG_SOFT
@@ -54,6 +56,15 @@ const CAMP_QM_DESC_STYLE_MARGIN_H := 18
 const CAMP_QM_DESC_STYLE_MARGIN_V := 14
 ## Debug: show the camp Blacksmith button without clearing level 3+. Set to false for release / real progression tests.
 const DEBUG_CAMP_ALWAYS_SHOW_BLACKSMITH := true
+
+## Dwarf approbation on merchant / Haldor UI button presses only (not during dialogue typewriter).
+const CAMP_DWARF_BUTTON_PATH_A := "res://Assets/Voices/mmm_approbation_dwarf_male.mp3"
+const CAMP_DWARF_BUTTON_PATH_B := "res://Assets/Voices/mmm_approbation_dwarf_male2.mp3"
+const CAMP_MERCHANT_BUTTON_DWARF_PITCH_CENTER := 1.0
+const CAMP_HALDOR_BUTTON_DWARF_PITCH_CENTER := 0.86
+## Per-play jitter around center_pitch so dwarf UI mumbles feel less samey (applied in _play_camp_dwarf_button_mumble).
+const CAMP_DWARF_BUTTON_PITCH_JITTER_MIN := 0.92
+const CAMP_DWARF_BUTTON_PITCH_JITTER_MAX := 1.08
 
 var _camp_motion_intro_done: bool = false
 var _camp_motion_last_gold: int = -1
@@ -274,8 +285,15 @@ var _blacksmith_was_craft_ready: bool = false
 var _blacksmith_runic_fallback_font: Font = null
 ## Dev-only: first time the blacksmith forge opens per camp session, add sample rune stones + a rune-slot test sword to convoy and unlock runesmithing for testing. Set false before release builds.
 const DEBUG_GRANT_RUNE_STONES_FIRST_BLACKSMITH_OPEN: bool = true
-## Dev: in camp, press F9 to open the forge with a forced underlined HINTTEST → solo scene (ignores unlock/seen for that tap). Set false before release.
+## Dev: in camp, press F9 to open the forge with a forced underlined HINTTEST → NarrativeBeatScene (ignores unlock/seen for that tap). Set false before release.
 const DEBUG_HALDOR_SOLO_TAP_TEST: bool = true
+## Dev: in camp, press F11 to add [member DEBUG_BEASTIARY_TEST_ENEMY_PATH] to Field Notes (debug builds only). Set false before release.
+const DEBUG_BEASTIARY_TEST_HOTKEY: bool = true
+const DEBUG_BEASTIARY_TEST_ENEMY_PATH: String = "res://Resources/EnemyUnitData/Debug/Debug_BeastiaryTestEnemy.tres"
+## Dev: in camp, press F12 to mark a skeleton seen in Field Notes and add [member DEBUG_INTEL_SCROLL_TEST_ITEM_PATH] to convoy (debug builds only).
+const DEBUG_INTEL_SCROLL_TEST_HOTKEY: bool = true
+const DEBUG_INTEL_SCROLL_TEST_SKELETON_PATH: String = "res://Resources/Units/Skeleton.tres"
+const DEBUG_INTEL_SCROLL_TEST_ITEM_PATH: String = "res://Resources/Consumables/KnowledgeScrolls/KnowledgeScroll_UndeadBonePile.tres"
 var _debug_blacksmith_test_kit_granted: bool = false
 
 var last_monologue_text: String = ""
@@ -341,7 +359,9 @@ var selected_shop_meta: Dictionary = {}
 
 @onready var buy_confirmation: ConfirmationDialog = $BuyConfirmation
 @onready var merchant_blip: AudioStreamPlayer = $MerchantBlip
+@onready var _camp_dwarf_button_player: AudioStreamPlayer = $CampDwarfUIButtonBlip
 @onready var talk_sound: AudioStreamPlayer = $TalkSound
+var _camp_dwarf_button_streams: Array[AudioStream] = []
 
 
 
@@ -384,6 +404,8 @@ var discounted_item: Resource = null
 
 var _task_log: TaskLog = null
 var _task_log_button: Button = null
+var _enemy_beastiary: Control = null
+var _beastiary_button: Button = null
 var _camp_cards_layer: Control = null
 var _camp_cards: Dictionary = {}
 var _inventory_desc_scroll: ScrollContainer = null
@@ -523,6 +545,39 @@ func _on_task_log_pressed() -> void:
 	_ensure_task_log()
 	if _task_log != null:
 		_task_log.open_and_refresh()
+
+
+func _setup_beastiary_button() -> void:
+	if _beastiary_button != null:
+		return
+	_beastiary_button = Button.new()
+	_beastiary_button.text = "Field Notes"
+	_beastiary_button.focus_mode = Control.FOCUS_ALL
+	_beastiary_button.anchors_preset = Control.PRESET_BOTTOM_WIDE
+	_beastiary_button.anchor_left = 0.5
+	_beastiary_button.anchor_right = 0.5
+	_beastiary_button.anchor_top = 1.0
+	_beastiary_button.anchor_bottom = 1.0
+	_beastiary_button.offset_left = -530.0
+	_beastiary_button.offset_right = -360.0
+	_beastiary_button.offset_top = -126.0
+	_beastiary_button.offset_bottom = -49.0
+	add_child(_beastiary_button)
+	_beastiary_button.pressed.connect(_on_beastiary_pressed)
+
+
+func _ensure_enemy_beastiary() -> void:
+	if _enemy_beastiary != null and is_instance_valid(_enemy_beastiary):
+		return
+	_enemy_beastiary = ENEMY_BEASTIARY_SCENE.instantiate()
+	add_child(_enemy_beastiary)
+
+
+func _on_beastiary_pressed() -> void:
+	_ensure_enemy_beastiary()
+	if _enemy_beastiary != null and _enemy_beastiary.has_method("open_and_refresh"):
+		_enemy_beastiary.open_and_refresh()
+
 
 func _camp_make_panel_style(
 	bg: Color = CAMP_PANEL_BG,
@@ -3160,6 +3215,9 @@ func _camp_apply_ui_overhaul() -> void:
 		_camp_style_button(world_map_button, false, 20, 44.0)
 	if explore_camp_btn != null:
 		_camp_style_button(explore_camp_btn, false, 20, 44.0)
+	if _beastiary_button != null:
+		_beastiary_button.text = "Field Notes"
+		_camp_style_button(_beastiary_button, false, 20, 44.0)
 	if _task_log_button != null:
 		_task_log_button.text = "Tasks"
 		_camp_style_button(_task_log_button, false, 20, 44.0)
@@ -3173,6 +3231,8 @@ func _camp_apply_ui_overhaul() -> void:
 		nav_secondary.append(world_map_button)
 	if explore_camp_btn != null and explore_camp_btn.visible:
 		nav_secondary.append(explore_camp_btn)
+	if _beastiary_button != null:
+		nav_secondary.append(_beastiary_button)
 	if _task_log_button != null:
 		nav_secondary.append(_task_log_button)
 	var secondary_gap := 14.0
@@ -4908,6 +4968,31 @@ func _camp_ready_audio_tracks_meat_cursor() -> void:
 	empty_cursor = ImageTexture.create_from_image(invisible_img)
 	if blacksmith_panel:
 		blacksmith_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_cache_camp_dwarf_button_streams()
+
+
+func _cache_camp_dwarf_button_streams() -> void:
+	_camp_dwarf_button_streams.clear()
+	for path in [CAMP_DWARF_BUTTON_PATH_A, CAMP_DWARF_BUTTON_PATH_B]:
+		var res: Resource = load(path)
+		if res is AudioStream:
+			_camp_dwarf_button_streams.append(res as AudioStream)
+
+
+func _play_camp_dwarf_button_mumble(center_pitch: float) -> void:
+	if _camp_dwarf_button_player == null or _camp_dwarf_button_streams.is_empty():
+		return
+	_camp_dwarf_button_player.stream = _camp_dwarf_button_streams.pick_random()
+	_camp_dwarf_button_player.pitch_scale = center_pitch * randf_range(CAMP_DWARF_BUTTON_PITCH_JITTER_MIN, CAMP_DWARF_BUTTON_PITCH_JITTER_MAX)
+	_camp_dwarf_button_player.play()
+
+
+func _play_merchant_ui_button_mumble() -> void:
+	_play_camp_dwarf_button_mumble(CAMP_MERCHANT_BUTTON_DWARF_PITCH_CENTER)
+
+
+func _play_haldor_ui_button_mumble() -> void:
+	_play_camp_dwarf_button_mumble(CAMP_HALDOR_BUTTON_DWARF_PITCH_CENTER)
 
 
 func _camp_ready_save_flow_and_header_labels() -> void:
@@ -4995,6 +5080,7 @@ func _camp_ready_wire_main_signals() -> void:
 
 	_camp_connect_finished(minigame_music, _on_minigame_music_finished)
 	_setup_task_log_button()
+	_setup_beastiary_button()
 	if haggle_target_zone:
 		base_target_height = haggle_target_zone.size.y
 	
@@ -5105,7 +5191,7 @@ func _camp_ready_timers_ambient_and_finish() -> void:
 				CampMenuMotion.start_campfire_flicker(self, _camp_motion_fire_layer)
 			CampMenuMotion.start_background_breathe(self, background_texture)
 		CampMenuMotion.wire_hover_scales([
-			next_battle_button, world_map_button, explore_camp_btn, jukebox_btn, open_blacksmith_btn
+			next_battle_button, world_map_button, explore_camp_btn, _beastiary_button, jukebox_btn, open_blacksmith_btn
 		])
 	call_deferred("_camp_apply_ui_overhaul")
 
@@ -5119,7 +5205,7 @@ func _ready() -> void:
 	_camp_ready_wire_main_signals()
 	_camp_ready_shop_roster_bootstrap()
 	_camp_ready_timers_ambient_and_finish()
-	call_deferred("_camp_start_pending_haldor_solo_gifts")
+	call_deferred("_camp_start_pending_narrative_beat_gifts")
 
 
 ## Opens the walkable Explore Camp scene. Does not save; returning restores camp menu.
@@ -5394,6 +5480,7 @@ func _on_haggle_pressed() -> void:
 		warning_dialog.popup_centered()
 		return
 	haggle_confirmation.dialog_text = _build_haggle_confirmation_dialog_text()
+	_play_merchant_ui_button_mumble()
 	haggle_confirmation.popup_centered()
 
 
@@ -5595,7 +5682,7 @@ func _set_visible_characters(count: int) -> void:
 		var current_char = merchant_label.text.substr(count - 1, 1)
 		if current_char != " " and merchant_blip.stream != null:
 			merchant_blip.play()
-			
+
 	merchant_label.visible_characters = count
 	
 func _generate_shop_inventory() -> void:
@@ -5738,6 +5825,7 @@ func _on_shop_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
 	
 func _on_buy_pressed() -> void:
 	if selected_shop_meta.is_empty(): return
+	_play_merchant_ui_button_mumble()
 	var item = selected_shop_meta["item"]
 	var final_price = selected_shop_meta["price"]
 	var item_name = item.get("weapon_name") if item.get("weapon_name") != null else item.get("item_name")
@@ -5778,9 +5866,12 @@ func _animate_sell_gold_fountain(origin_global: Vector2, gold_gained: int) -> vo
 	var gold_per_coin: int = ceili(float(gold_gained) / float(coin_count))
 	var target_center: Vector2 = gold_label.global_position + (gold_label.size / 2.0)
 	for i in range(coin_count):
-		var coin := ColorRect.new()
+		var coin := TextureRect.new()
+		coin.texture = FLYING_GOLD_COIN_TEX
+		coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		coin.custom_minimum_size = Vector2(14, 14)
-		coin.color = Color(1.0, 0.82, 0.15)
+		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		coin.position = origin_global - (coin.custom_minimum_size / 2.0)
 		add_child(coin)
 		coin.z_index = 200
@@ -6954,6 +7045,7 @@ func _on_next_battle_pressed() -> void:
 
 func _on_sell_pressed() -> void:
 	if selected_inventory_meta.is_empty(): return
+	_play_merchant_ui_button_mumble()
 	var item = selected_inventory_meta["item"]
 	var count = selected_inventory_meta.get("count", 1) 
 	
@@ -7004,6 +7096,7 @@ func _play_merchant_idle() -> void:
 
 func _on_sort_pressed() -> void:
 	if CampaignManager.global_inventory.is_empty(): return
+	_play_merchant_ui_button_mumble()
 	CampaignManager.global_inventory.sort_custom(func(a, b):
 		var weight_a = _get_item_weight(a)
 		var weight_b = _get_item_weight(b)
@@ -7438,6 +7531,27 @@ func _merchant_talk_grab_primary_focus() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if DEBUG_BEASTIARY_TEST_HOTKEY and OS.is_debug_build() and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
+		if (event as InputEventKey).keycode == KEY_F11:
+			if CampaignManager and ResourceLoader.exists(DEBUG_BEASTIARY_TEST_ENEMY_PATH):
+				CampaignManager.mark_enemy_seen(DEBUG_BEASTIARY_TEST_ENEMY_PATH)
+				print("[DEBUG] Field Notes: marked test enemy seen — ", DEBUG_BEASTIARY_TEST_ENEMY_PATH)
+			get_viewport().set_input_as_handled()
+			return
+	if DEBUG_INTEL_SCROLL_TEST_HOTKEY and OS.is_debug_build() and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
+		if (event as InputEventKey).keycode == KEY_F12:
+			if CampaignManager:
+				if ResourceLoader.exists(DEBUG_INTEL_SCROLL_TEST_SKELETON_PATH):
+					CampaignManager.mark_enemy_seen(DEBUG_INTEL_SCROLL_TEST_SKELETON_PATH)
+					print("[DEBUG] Field Notes: marked skeleton seen — ", DEBUG_INTEL_SCROLL_TEST_SKELETON_PATH)
+				if ResourceLoader.exists(DEBUG_INTEL_SCROLL_TEST_ITEM_PATH):
+					var scroll_res: Resource = load(DEBUG_INTEL_SCROLL_TEST_ITEM_PATH) as Resource
+					if scroll_res != null:
+						CampaignManager.global_inventory.append(scroll_res)
+						print("[DEBUG] Convoy: added intel scroll — ", DEBUG_INTEL_SCROLL_TEST_ITEM_PATH)
+				call_deferred("_populate_inventory")
+			get_viewport().set_input_as_handled()
+			return
 	if DEBUG_HALDOR_SOLO_TAP_TEST and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
 		if (event as InputEventKey).keycode == KEY_F9:
 			_blacksmith_debug_trigger_solo_tap_test()
@@ -7459,6 +7573,7 @@ func _on_talk_pressed() -> void:
 	if _merchant_talk_modal != null and _merchant_talk_modal.visible:
 		_close_merchant_talk_panel()
 		return
+	_play_merchant_ui_button_mumble()
 
 	_camp_layout_merchant_talk_panel()
 	_refresh_talk_ui()
@@ -7753,6 +7868,7 @@ func _refresh_talk_ui() -> void:
 		call_deferred("_camp_layout_merchant_talk_panel_inner")
 
 func _on_option1_pressed() -> void:
+	_play_merchant_ui_button_mumble()
 	_merchant_talk_play_confirm_sfx(false)
 	if current_talk_state == "idle":
 		_generate_procedural_quest()
@@ -7760,6 +7876,7 @@ func _on_option1_pressed() -> void:
 		_try_complete_quest()
 
 func _on_option2_pressed() -> void:
+	_play_merchant_ui_button_mumble()
 	_merchant_talk_play_confirm_sfx(false)
 	var mc_name: String = "Hero"
 	if CampaignManager.player_roster.size() > 0:
@@ -7793,6 +7910,7 @@ func _on_option2_pressed() -> void:
 		_merchant_talk_flash_progress_text()
 
 func _on_option3_pressed() -> void:
+	_play_merchant_ui_button_mumble()
 	if current_talk_state == "idle":
 		_merchant_talk_play_confirm_sfx(false)
 		_close_merchant_talk_panel()
@@ -8185,6 +8303,7 @@ func _get_item_row_color(item: Resource) -> Color:
 # ==========================================
 
 func open_blacksmith() -> void:
+	_play_haldor_ui_button_mumble()
 	_ensure_blacksmith_dimmer()
 	if _blacksmith_dimmer != null:
 		_blacksmith_dimmer.visible = true
@@ -8240,7 +8359,7 @@ func open_blacksmith() -> void:
 		if forge_beat != "":
 			last_monologue_text = forge_beat
 			var hint_open: Variant = DialogueDatabase.get_haldor_beat_solo_hint(beat_id_open) if beat_id_open != "" else null
-			var bb_open: String = DialogueDatabase.apply_haldor_solo_tap_hint(forge_beat, hint_open, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+			var bb_open: String = DialogueDatabase.apply_haldor_solo_tap_hint(forge_beat, hint_open, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen)
 			_blacksmith_begin_typed_bbcode(bb_open, forge_beat)
 		elif last_blacksmith_dialogue_plain == "" or last_blacksmith_dialogue_plain.begins_with("The forge"):
 			_update_blacksmith_text("welcome")
@@ -8814,6 +8933,7 @@ func check_blacksmith_recipe() -> void:
 func _on_craft_pressed() -> void:
 	if current_recipe.is_empty():
 		return
+	_play_haldor_ui_button_mumble()
 	_blacksmith_stop_craft_ready_affordance()
 
 	var is_masterwork = false
@@ -9077,7 +9197,7 @@ func _run_forge_minigame() -> bool:
 	
 func close_blacksmith() -> void:
 	if select_sound and select_sound.stream: select_sound.play()
-	CampaignManager.debug_haldor_solo_meta_gates_bypass = false
+	CampaignManager.debug_forge_haldor_meta_gates_bypass = false
 	
 	# Clear the anvil array AND indices
 	for i in range(3):
@@ -9108,6 +9228,7 @@ func _open_recipe_book() -> void:
 	if not CampaignManager.has_recipe_book:
 		return
 	if select_sound: select_sound.play()
+	_play_haldor_ui_button_mumble()
 
 	# Safety Check: If the panel node is missing, stop here to avoid the crash!
 	if recipe_book_panel == null:
@@ -9221,26 +9342,26 @@ func _ask_for_masterwork_name(base_name: String, bonus_text: String) -> String:
 	return chosen_name
 
 
-func _camp_start_pending_haldor_solo_gifts() -> void:
-	_play_haldor_solo_gifts_when_ready()
+func _camp_start_pending_narrative_beat_gifts() -> void:
+	_play_narrative_beat_gifts_when_ready()
 
 
-func _play_haldor_solo_gifts_when_ready() -> void:
+func _play_narrative_beat_gifts_when_ready() -> void:
 	await get_tree().create_timer(0.45).timeout
-	if not CampaignManager.has_pending_haldor_solo_gift_fx():
+	if not CampaignManager.has_pending_narrative_beat_gift_fx():
 		return
-	var entries: Array = CampaignManager.consume_pending_haldor_solo_gift_fx()
+	var entries: Array = CampaignManager.consume_pending_narrative_beat_gift_fx()
 	for e in entries:
 		if e is Dictionary:
 			var d: Dictionary = e
 			var it: Resource = d.get("item") as Resource
 			var amt: int = maxi(1, int(d.get("amount", 1)))
-			var toast: String = str(d.get("toast", "From Haldor"))
-			await _play_haldor_solo_gift_present(it, amt, toast)
+			var toast: String = str(d.get("toast", "Received"))
+			await _play_narrative_beat_gift_present(it, amt, toast)
 	_populate_inventory()
 
 
-func _play_haldor_solo_gift_present(item: Resource, amount: int, caption: String) -> void:
+func _play_narrative_beat_gift_present(item: Resource, amount: int, caption: String) -> void:
 	var tex: Texture2D = null
 	if item != null and item.get("icon") != null:
 		tex = item.get("icon") as Texture2D
@@ -9274,7 +9395,7 @@ func _play_haldor_solo_gift_present(item: Resource, amount: int, caption: String
 	var msg := Label.new()
 	var cap: String = str(caption).strip_edges()
 	if cap == "":
-		cap = "From Haldor"
+		cap = "Received"
 	var subline: String = ("× %d" % amount) if amount > 1 else ""
 	msg.text = cap if subline == "" else (cap + "\n" + subline)
 	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -9421,7 +9542,7 @@ func _update_blacksmith_text(category: String) -> void:
 	if plain == "":
 		return
 	var hint: Variant = pick.get("solo_hint", null)
-	var bbcode: String = DialogueDatabase.apply_haldor_solo_tap_hint(plain, hint, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+	var bbcode: String = DialogueDatabase.apply_haldor_solo_tap_hint(plain, hint, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen)
 	_blacksmith_begin_typed_bbcode(bbcode, plain)
 
 
@@ -9461,27 +9582,27 @@ func _on_blacksmith_dialogue_meta_clicked(meta: Variant) -> void:
 	var scene_id: String = str(meta).strip_edges()
 	if scene_id == "":
 		return
-	if CampaignManager.debug_haldor_solo_meta_gates_bypass:
-		CampaignManager.debug_haldor_solo_meta_gates_bypass = false
+	if CampaignManager.debug_forge_haldor_meta_gates_bypass:
+		CampaignManager.debug_forge_haldor_meta_gates_bypass = false
 		if select_sound and select_sound.stream != null:
 			select_sound.play()
-		CampaignManager.begin_haldor_solo_scene(scene_id)
+		CampaignManager.begin_narrative_beat(scene_id)
 		return
-	var resolved: String = DialogueDatabase.resolve_haldor_solo_scene_pick(scene_id, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+	var resolved: String = DialogueDatabase.resolve_haldor_solo_scene_pick(scene_id, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen)
 	if resolved.strip_edges() == "":
 		return
-	if not DialogueDatabase.is_haldor_solo_scene_hint_eligible(resolved, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids):
+	if not DialogueDatabase.is_haldor_solo_scene_hint_eligible(resolved, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen):
 		return
 	if select_sound and select_sound.stream != null:
 		select_sound.play()
-	CampaignManager.begin_haldor_solo_scene(resolved)
+	CampaignManager.begin_narrative_beat(resolved)
 
 
 func _blacksmith_debug_trigger_solo_tap_test() -> void:
 	if not DEBUG_HALDOR_SOLO_TAP_TEST:
 		return
 	if blacksmith_panel == null or blacksmith_label == null:
-		push_warning("camp_menu: Haldor solo tap debug — blacksmith UI missing.")
+		push_warning("camp_menu: narrative beat forge tap debug — blacksmith UI missing.")
 		return
 	if not blacksmith_panel.visible:
 		open_blacksmith()
@@ -9493,14 +9614,14 @@ func _blacksmith_debug_apply_solo_tap_test_line() -> void:
 		return
 	if blacksmith_panel == null or not blacksmith_panel.visible:
 		return
-	CampaignManager.debug_haldor_solo_meta_gates_bypass = true
+	CampaignManager.debug_forge_haldor_meta_gates_bypass = true
 	const TEST_SCENE: String = "haldor_solo_first_quiet"
-	var plain: String = "[DEBUG] Haldor solo tap — click underlined HINTTEST to load scene '%s' (press F9 in camp again to retry)." % TEST_SCENE
+	var plain: String = "[DEBUG] NarrativeBeatScene — click underlined HINTTEST to load beat '%s' (press F9 in camp again to retry)." % TEST_SCENE
 	var bb: String = DialogueDatabase.apply_haldor_solo_tap_hint_for_debug(plain, "HINTTEST", TEST_SCENE)
 	_blacksmith_begin_typed_bbcode(bb, plain)
 	if blacksmith_portrait != null and haldor_normal != null:
 		blacksmith_portrait.texture = haldor_normal
-	print("[DEBUG] Haldor solo tap: forge line shown — click HINTTEST (underline). Scene=%s" % TEST_SCENE)
+	print("[DEBUG] NarrativeBeatScene forge tap: line shown — click HINTTEST (underline). beat_id=%s" % TEST_SCENE)
 
 
 func _blacksmith_play_typed_line(full_text: String) -> void:
@@ -9519,6 +9640,7 @@ func _play_blacksmith_idle() -> void:
 
 func _on_blacksmith_talk_pressed() -> void:
 	if select_sound: select_sound.play()
+	_play_haldor_ui_button_mumble()
 
 	# ~50% chance to play a queued interstitial beat (from last story map clear) when any remain.
 	if CampaignManager.haldor_has_pending_beats() and randf() < 0.5:
@@ -9527,7 +9649,7 @@ func _on_blacksmith_talk_pressed() -> void:
 		if beat_txt != "" and beat_txt != last_monologue_text:
 			last_monologue_text = beat_txt
 			var hint_talk: Variant = DialogueDatabase.get_haldor_beat_solo_hint(beat_id_talk) if beat_id_talk != "" else null
-			var bb_talk: String = DialogueDatabase.apply_haldor_solo_tap_hint(beat_txt, hint_talk, CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+			var bb_talk: String = DialogueDatabase.apply_haldor_solo_tap_hint(beat_txt, hint_talk, CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen)
 			_blacksmith_begin_typed_bbcode(bb_talk, beat_txt)
 			if blacksmith_portrait:
 				_shake_node(blacksmith_portrait)
@@ -9563,7 +9685,7 @@ func _on_blacksmith_talk_pressed() -> void:
 		chosen_plain = str(pick.get("plain", ""))
 		
 	last_monologue_text = chosen_plain
-	var bb_mono: String = DialogueDatabase.apply_haldor_solo_tap_hint(chosen_plain, pick.get("solo_hint", null), CampaignManager.max_unlocked_index, CampaignManager.haldor_solo_seen_scene_ids)
+	var bb_mono: String = DialogueDatabase.apply_haldor_solo_tap_hint(chosen_plain, pick.get("solo_hint", null), CampaignManager.max_unlocked_index, CampaignManager.narrative_beats_seen)
 	_blacksmith_begin_typed_bbcode(bb_mono, chosen_plain)
 		
 	if blacksmith_portrait:
@@ -9615,6 +9737,46 @@ func _on_use_pressed() -> void:
 	var item = meta.get("item")
 	
 	if not (item is ConsumableData): return
+	
+	# --- KNOWLEDGE SCROLL: unlock Field Notes intel; works from convoy without a selected unit ---
+	var raw_intel_ids: Variant = item.get("knowledge_intel_ids")
+	if raw_intel_ids is Array and (raw_intel_ids as Array).size() > 0:
+		var id_pack := PackedStringArray()
+		for id_el in (raw_intel_ids as Array):
+			var id_s: String = str(id_el).strip_edges()
+			if id_s != "":
+				id_pack.append(id_s)
+		if id_pack.is_empty():
+			_play_camp_inv_sfx_invalid()
+			return
+		var new_intel_ids: PackedStringArray = CampaignManager.unlock_beastiary_intel_ids(id_pack)
+		if new_intel_ids.is_empty():
+			_play_camp_inv_sfx_invalid()
+			if warning_dialog:
+				warning_dialog.dialog_text = "Already recorded in Field Notes."
+				warning_dialog.popup_centered()
+			return
+		_play_camp_inv_sfx_use()
+		var intel_bbcode: String = BeastiaryIntelRegistry.build_popup_bbcode_for_new_intel_ids(new_intel_ids)
+		IntelLearnedPopup.show_at(self, intel_bbcode)
+		if meta["source"] == "unit":
+			var ux: int = int(meta.get("unit_index", selected_roster_index))
+			if ux >= 0 and ux < CampaignManager.player_roster.size():
+				CampaignManager.player_roster[ux]["inventory"].remove_at(meta["inv_index"])
+		elif meta["source"] == "convoy":
+			CampaignManager.global_inventory.remove_at(meta["index"])
+		elif meta["source"] == "other_unit":
+			var other_u: Dictionary = CampaignManager.player_roster[meta["unit_index"]]
+			other_u["inventory"].remove_at(meta["inv_index"])
+		if portrait_rect:
+			_shake_node(portrait_rect)
+		if stats_label:
+			_shake_node(stats_label)
+		_populate_inventory()
+		var refresh_idx: int = selected_roster_index
+		if refresh_idx >= 0 and refresh_idx < CampaignManager.player_roster.size():
+			_on_roster_item_selected(refresh_idx)
+		return
 	
 	var unit_idx = selected_roster_index
 	if unit_idx < 0 or unit_idx >= CampaignManager.player_roster.size():
@@ -9756,7 +9918,10 @@ func _on_use_pressed() -> void:
 	
 	# --- EXECUTE CONSUMPTION (REMOVE THE ITEM) ---
 	if meta["source"] == "unit":
-		unit_data["inventory"].remove_at(meta["inv_index"])
+		var holder_idx: int = int(meta.get("unit_index", unit_idx))
+		if holder_idx < 0 or holder_idx >= CampaignManager.player_roster.size():
+			return
+		CampaignManager.player_roster[holder_idx]["inventory"].remove_at(meta["inv_index"])
 	elif meta["source"] == "convoy":
 		CampaignManager.global_inventory.remove_at(meta["index"])
 	elif meta["source"] == "other_unit":
@@ -9776,7 +9941,8 @@ func _on_use_pressed() -> void:
 
 	# Refresh UI
 	_populate_inventory()
-	_on_roster_item_selected(unit_idx)
+	if unit_idx >= 0 and unit_idx < CampaignManager.player_roster.size():
+		_on_roster_item_selected(unit_idx)
 				
 func _spawn_use_feedback(lines: Array) -> void:
 	if lines.is_empty(): return
@@ -9792,6 +9958,8 @@ func _spawn_use_feedback(lines: Array) -> void:
 	for line in lines:
 		var lbl = Label.new()
 		lbl.text = line
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.custom_minimum_size.x = 520
 		lbl.add_theme_font_size_override("font_size", 28)
 		lbl.add_theme_color_override("font_color", Color.CYAN if "HP" not in line else Color.LIME)
 		lbl.add_theme_constant_override("outline_size", 8)
@@ -9947,6 +10115,7 @@ func _drop_on_convoy(_at_pos: Vector2, data: Variant) -> void:
 # REFRESH SHOP & WANTED MENU LOGIC
 # ==========================================
 func _on_refresh_shop_pressed() -> void:
+	_play_merchant_ui_button_mumble()
 	var cost = 100
 	if CampaignManager.global_gold >= cost:
 		CampaignManager.global_gold -= cost

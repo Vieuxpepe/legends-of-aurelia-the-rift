@@ -9,6 +9,7 @@ description = "A staff that can heal and protect en masse."
 weapon_name = "Elysian Staff"
 gold_cost = 9500
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 3
 is_healing_staff = true
 is_buff_staff = true

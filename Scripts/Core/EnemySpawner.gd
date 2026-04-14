@@ -176,7 +176,10 @@ func _try_spawn_unit(battlefield: Node2D, slot: int) -> bool:
 		
 		if occupant == null and not is_solid:
 			var new_unit = base_unit_scene.instantiate()
+			var _spawn_ud_path: String = str(unit_data.resource_path).strip_edges()
 			new_unit.data = unit_data.duplicate(true)
+			if _spawn_ud_path != "":
+				new_unit.set_meta("enemy_unit_data_path", _spawn_ud_path)
 			new_unit.set("is_custom_avatar", false)
 			new_unit.set_meta("is_temporary_summon", true)
 			

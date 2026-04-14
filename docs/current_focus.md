@@ -17,6 +17,11 @@ This file is inferred from **code structure, recent edits, and inline documentat
 
 - **`REFACTOR_PULSE.md`** tracks **BattleField** extractions (`Scripts/Core/BattleField.gd` and helpers). That work is orthogonal to camp scripts but shares **CampaignManager** and battle → camp transitions; merges touching both need smoke tests for camp entry after battle.
 
+## Narrative beats (full-screen dialogue)
+
+- **Scene:** `Scenes/Narrative/NarrativeBeatScene.tscn` — canonical entry is `CampaignManager.begin_narrative_beat(beat_id, return_scene_path)` (`CampaignManager.NARRATIVE_BEAT_SCENE_PATH`). The old `HaldorSoloScene` is removed; beat ids still use the `haldor_solo_*` prefix in data/saves.
+- **Content:** `DialogueDatabase` narrative beat tables + `get_narrative_beat_playback_lines`.
+
 ## Systems that should not be destabilized casually
 
 - **`CampInteractionResolver`** resolution order (documented in its file header) — prompts, `peek_walker_interaction_kind`, and `open_dialogue` must stay aligned; drift produces wrong “E Talk” vs quest flows.

@@ -8,6 +8,11 @@
 #
 # STEP 1: CREATE THE SCENES
 #   - Create the map: `res://Scenes/Levels/Level4.tscn`
+#   - On that map, select the battlefield root (the Node2D using BattleField.gd — name may be "BattleField" or custom)
+#     and set [member BattleField.level_display_name] to a short player-facing title. BeastiaryMapIndex uses it for
+#     Field Notes → Maps (e.g. "Level 4 — Your Title"). Omit only if the map must stay anonymous in that list.
+#   - For MAGIC weapons, set [member WeaponData.magic_damage_kind] so defender [member UnitData.mag_mult_*] applies.
+#   - For PHYSICAL weapons, [member WeaponData.magic_damage_kind] is always stacked after physical subtype (set e.g. divine for sanctified steel; default arcane is usually 1.0 on units).
 #   - Create the intro story: `res://Scenes/Transition4_Intro.tscn` (Pre-Battle)
 #   - Create the outro story: `res://Scenes/Transition4_Outro.tscn` (Post-Battle)
 #
@@ -400,17 +405,19 @@ var seen_haldor_runesmith_forge_intro: bool = false
 var haldor_beat_queue: Array[String] = []
 ## Beat IDs already shown (once-only beats skipped on re-queue).
 var haldor_seen_beat_ids: Dictionary = {}
-## Optional full-screen Haldor solo scenes (see [method begin_haldor_solo_scene]); not saved while mid-transition.
-var pending_haldor_solo_scene_id: String = ""
-var haldor_solo_return_scene_path: String = "res://Scenes/camp_menu.tscn"
-## Solo scene ids the player has finished at least once (replay still allowed from camp).
-var haldor_solo_seen_scene_ids: Dictionary = {}
-## Solo scene ids whose [method try_grant_haldor_solo_scene_rewards] bundle was already granted (persisted).
-var haldor_solo_rewards_claimed: Dictionary = {}
-## Queued after a solo scene ends; camp_menu plays pickup FX then clears (not saved).
-var pending_haldor_solo_gift_fx: Array = []
-## Dev-only: when true, forge [signal RichTextLabel.meta_clicked] may launch a solo scene even if locked/already seen (camp_menu F9 test).
-var debug_haldor_solo_meta_gates_bypass: bool = false
+## Full-screen narrative beats (Haldor forge solos, roster bond scenes, world encounters; see [method begin_narrative_beat]). Not saved mid-transition.
+## Single packed scene for every beat id (replaces removed `HaldorSoloScene.tscn`).
+const NARRATIVE_BEAT_SCENE_PATH: String = "res://Scenes/Narrative/NarrativeBeatScene.tscn"
+var pending_narrative_beat_id: String = ""
+var narrative_beat_return_scene_path: String = "res://Scenes/camp_menu.tscn"
+## Beat ids the player has finished at least once.
+var narrative_beats_seen: Dictionary = {}
+## Beat ids whose [method try_grant_narrative_beat_rewards] bundle was already processed (persisted).
+var narrative_beat_rewards_claimed: Dictionary = {}
+## Queued after a beat with item rewards ends; camp plays pickup FX then clears (not saved).
+var pending_narrative_beat_gift_fx: Array = []
+## Dev-only: forge meta may launch a forge Haldor beat even if gated (camp_menu F9 test).
+var debug_forge_haldor_meta_gates_bypass: bool = false
 var has_smelter: bool = false
 var unlocked_recipes: Array[String] = []
 
@@ -443,6 +450,16 @@ var seen_camp_pair_scenes: Dictionary = {}
 
 # --- Camp memory (lightweight persistent social consequences) ---
 var camp_memory: Dictionary = {}
+## res:// paths of enemy [UnitData] resources encountered in battle (keys -> true).
+var beastiary_seen: Dictionary = {}
+## Neutral / green allies catalogued after fighting beside them ([member mark_neutral_seen]).
+var beastiary_neutral_seen: Dictionary = {}
+## Intel ids unlocked for Field Notes tactical lines (keys -> true). Authored in BeastiaryIntelRegistry.
+var beastiary_intel_unlocked: Dictionary = {}
+## Set when the player talks to the Field Scholar in Explore Camp (tutorial flavor).
+var met_beastiary_scholar: bool = false
+## First-time Elara welcome when opening Field Notes from camp (one-shot per campaign).
+var field_notes_intro_seen: bool = false
 var camp_unit_condition: Dictionary = {}
 var camp_condition_last_applied_progress_level: int = -1
 
@@ -653,6 +670,11 @@ func reset_campaign_data() -> void:
 	seen_camp_lore.clear()
 	seen_camp_pair_scenes.clear()
 	camp_memory.clear()
+	beastiary_seen.clear()
+	beastiary_neutral_seen.clear()
+	beastiary_intel_unlocked.clear()
+	met_beastiary_scholar = false
+	field_notes_intro_seen = false
 	camp_unit_condition.clear()
 	camp_condition_last_applied_progress_level = -1
 	merchant_quests_completed = 0
@@ -693,12 +715,12 @@ func reset_campaign_data() -> void:
 	seen_haldor_runesmith_forge_intro = false
 	haldor_beat_queue.clear()
 	haldor_seen_beat_ids.clear()
-	pending_haldor_solo_scene_id = ""
-	haldor_solo_return_scene_path = "res://Scenes/camp_menu.tscn"
-	haldor_solo_seen_scene_ids.clear()
-	haldor_solo_rewards_claimed.clear()
-	pending_haldor_solo_gift_fx.clear()
-	debug_haldor_solo_meta_gates_bypass = false
+	pending_narrative_beat_id = ""
+	narrative_beat_return_scene_path = "res://Scenes/camp_menu.tscn"
+	narrative_beats_seen.clear()
+	narrative_beat_rewards_claimed.clear()
+	pending_narrative_beat_gift_fx.clear()
+	debug_forge_haldor_meta_gates_bypass = false
 	has_smelter = false
 	unlocked_recipes.clear()
 	unlocked_music_paths.clear()
@@ -1162,8 +1184,10 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"seen_haldor_runesmith_forge_intro": seen_haldor_runesmith_forge_intro,
 		"haldor_beat_queue": haldor_beat_queue.duplicate(),
 		"haldor_seen_beat_ids": haldor_seen_beat_ids.duplicate(),
-		"haldor_solo_seen_scene_ids": haldor_solo_seen_scene_ids.duplicate(),
-		"haldor_solo_rewards_claimed": haldor_solo_rewards_claimed.duplicate(),
+		"narrative_beats_seen": narrative_beats_seen.duplicate(),
+		"narrative_beat_rewards_claimed": narrative_beat_rewards_claimed.duplicate(),
+		"haldor_solo_seen_scene_ids": _legacy_haldor_solo_seen_from_narrative(),
+		"haldor_solo_rewards_claimed": _legacy_haldor_solo_rewards_from_narrative(),
 		"has_smelter": has_smelter,
 		"unlocked_music_paths": unlocked_music_paths,
 		"saved_music_playlists": saved_music_playlists.duplicate(),
@@ -1214,6 +1238,11 @@ func save_game(slot: int, is_auto: bool = false) -> void:
 		"seen_camp_lore": seen_camp_lore.duplicate(),
 		"seen_camp_pair_scenes": seen_camp_pair_scenes.duplicate(),
 		"camp_memory": camp_memory.duplicate(true),
+		"beastiary_seen": beastiary_seen.duplicate(true),
+		"beastiary_neutral_seen": beastiary_neutral_seen.duplicate(true),
+		"beastiary_intel_unlocked": beastiary_intel_unlocked.duplicate(true),
+		"met_beastiary_scholar": met_beastiary_scholar,
+		"field_notes_intro_seen": field_notes_intro_seen,
 		"camp_unit_condition": camp_unit_condition.duplicate(true),
 		"camp_condition_last_applied_progress_level": camp_condition_last_applied_progress_level,
 	}
@@ -1379,6 +1408,41 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	else:
 		camp_memory = {}
 	ensure_camp_memory()
+	beastiary_seen.clear()
+	var raw_beastiary = save_data.get("beastiary_seen", {})
+	if raw_beastiary is Dictionary:
+		for bid in raw_beastiary:
+			var bp: String = str(bid).strip_edges()
+			if bp != "" and bool(raw_beastiary[bid]):
+				beastiary_seen[bp] = true
+	else:
+		beastiary_seen = {}
+	ensure_beastiary_seen()
+	beastiary_neutral_seen.clear()
+	var raw_neutral = save_data.get("beastiary_neutral_seen", {})
+	if raw_neutral is Dictionary:
+		for nid in raw_neutral:
+			var np: String = str(nid).strip_edges()
+			if np != "" and bool(raw_neutral[nid]):
+				beastiary_neutral_seen[np] = true
+	else:
+		beastiary_neutral_seen = {}
+	ensure_beastiary_neutral_seen()
+	beastiary_intel_unlocked.clear()
+	var raw_intel = save_data.get("beastiary_intel_unlocked", {})
+	if raw_intel is Dictionary:
+		for iid in raw_intel:
+			var ik: String = str(iid).strip_edges()
+			if ik != "" and bool(raw_intel[iid]):
+				beastiary_intel_unlocked[ik] = true
+	else:
+		beastiary_intel_unlocked = {}
+	ensure_beastiary_intel_unlocked()
+	# Rollout: damage-aptitude readout is paired with undead bone-pile tactica for existing saves.
+	if bool(beastiary_intel_unlocked.get("undead_blunt_bone_pile", false)):
+		beastiary_intel_unlocked["intel_damage_type_readout"] = true
+	met_beastiary_scholar = bool(save_data.get("met_beastiary_scholar", false))
+	field_notes_intro_seen = bool(save_data.get("field_notes_intro_seen", false))
 	var raw_condition = save_data.get("camp_unit_condition", {})
 	if raw_condition is Dictionary:
 		camp_unit_condition = (raw_condition as Dictionary).duplicate(true)
@@ -1438,19 +1502,27 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	if raw_haldor_seen is Dictionary:
 		for k in (raw_haldor_seen as Dictionary).keys():
 			haldor_seen_beat_ids[str(k)] = true
-	haldor_solo_seen_scene_ids.clear()
-	var raw_haldor_solo_seen: Variant = save_data.get("haldor_solo_seen_scene_ids", {})
-	if raw_haldor_solo_seen is Dictionary:
-		for k2 in (raw_haldor_solo_seen as Dictionary).keys():
-			haldor_solo_seen_scene_ids[str(k2)] = true
-	haldor_solo_rewards_claimed.clear()
-	var raw_haldor_rew: Variant = save_data.get("haldor_solo_rewards_claimed", {})
-	if raw_haldor_rew is Dictionary:
-		for rk in (raw_haldor_rew as Dictionary).keys():
-			haldor_solo_rewards_claimed[str(rk)] = true
-	pending_haldor_solo_scene_id = ""
-	pending_haldor_solo_gift_fx.clear()
-	debug_haldor_solo_meta_gates_bypass = false
+	narrative_beats_seen.clear()
+	var raw_nb_seen: Variant = save_data.get("narrative_beats_seen", {})
+	if raw_nb_seen is Dictionary:
+		for k2 in (raw_nb_seen as Dictionary).keys():
+			narrative_beats_seen[str(k2)] = true
+	var raw_legacy_seen: Variant = save_data.get("haldor_solo_seen_scene_ids", {})
+	if raw_legacy_seen is Dictionary:
+		for k3 in (raw_legacy_seen as Dictionary).keys():
+			narrative_beats_seen[str(k3)] = true
+	narrative_beat_rewards_claimed.clear()
+	var raw_nb_rew: Variant = save_data.get("narrative_beat_rewards_claimed", {})
+	if raw_nb_rew is Dictionary:
+		for rk in (raw_nb_rew as Dictionary).keys():
+			narrative_beat_rewards_claimed[str(rk)] = true
+	var raw_legacy_rew: Variant = save_data.get("haldor_solo_rewards_claimed", {})
+	if raw_legacy_rew is Dictionary:
+		for rk2 in (raw_legacy_rew as Dictionary).keys():
+			narrative_beat_rewards_claimed[str(rk2)] = true
+	pending_narrative_beat_id = ""
+	pending_narrative_beat_gift_fx.clear()
+	debug_forge_haldor_meta_gates_bypass = false
 	unlocked_recipes.clear()
 	for r in save_data.get("unlocked_recipes", []): unlocked_recipes.append(str(r))
 		
@@ -1477,6 +1549,10 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 	if custom_avatar.get("class_data") is String and ResourceLoader.exists(custom_avatar["class_data"]): custom_avatar["class_data"] = load(custom_avatar["class_data"])
 	if custom_avatar.get("portrait") is String and ResourceLoader.exists(custom_avatar["portrait"]): custom_avatar["portrait"] = load(custom_avatar["portrait"])
 	if custom_avatar.get("battle_sprite") is String and ResourceLoader.exists(custom_avatar["battle_sprite"]): custom_avatar["battle_sprite"] = load(custom_avatar["battle_sprite"])
+	if not custom_avatar.has("voice_gender"):
+		custom_avatar["voice_gender"] = 0
+	else:
+		custom_avatar["voice_gender"] = clampi(int(custom_avatar["voice_gender"]), 0, 1)
 
 	global_inventory.clear()
 	for d in save_data.get("global_inventory", []):
@@ -1592,6 +1668,12 @@ func load_game(slot: int, is_auto: bool = false) -> bool:
 		if unit.get("class_data") is String and ResourceLoader.exists(unit["class_data"]): unit["class_data"] = load(unit["class_data"])
 		if unit.get("portrait") is String and ResourceLoader.exists(unit["portrait"]): unit["portrait"] = load(unit["portrait"])
 		if unit.get("battle_sprite") is String and ResourceLoader.exists(unit["battle_sprite"]): unit["battle_sprite"] = load(unit["battle_sprite"])
+
+		if not unit.has("voice_gender"):
+			var vg_infer: int = 0
+			if unit.get("data") is UnitData:
+				vg_infer = int((unit["data"] as UnitData).voice_gender)
+			unit["voice_gender"] = clampi(vg_infer, 0, 1)
 		
 		if not unit.has("unit_tags"): unit["unit_tags"] = []
 		if not unit.has("skill_points"): unit["skill_points"] = 0
@@ -1695,38 +1777,66 @@ func try_consume_haldor_beat_from_queue() -> String:
 	return txt
 
 
-func mark_haldor_solo_scene_seen(scene_id: String) -> void:
-	var k: String = str(scene_id).strip_edges()
+func _legacy_haldor_solo_seen_from_narrative() -> Dictionary:
+	var out: Dictionary = {}
+	for k in narrative_beats_seen.keys():
+		var id: String = str(k).strip_edges()
+		if id == "":
+			continue
+		if DialogueDatabase.narrative_beat_family_for_id(id) == DialogueDatabase.NARRATIVE_BEAT_FAMILY_HALDOR_FORGE:
+			out[id] = true
+	return out
+
+
+func _legacy_haldor_solo_rewards_from_narrative() -> Dictionary:
+	var out: Dictionary = {}
+	for k in narrative_beat_rewards_claimed.keys():
+		var id: String = str(k).strip_edges()
+		if id == "":
+			continue
+		if DialogueDatabase.narrative_beat_family_for_id(id) == DialogueDatabase.NARRATIVE_BEAT_FAMILY_HALDOR_FORGE:
+			out[id] = true
+	return out
+
+
+func mark_narrative_beat_seen(beat_id: String) -> void:
+	var k: String = str(beat_id).strip_edges()
 	if k == "":
 		return
-	haldor_solo_seen_scene_ids[k] = true
+	narrative_beats_seen[k] = true
 
 
-func try_grant_haldor_solo_scene_rewards(scene_id: String) -> void:
-	var sid: String = str(scene_id).strip_edges()
+func mark_haldor_solo_scene_seen(scene_id: String) -> void:
+	mark_narrative_beat_seen(scene_id)
+
+
+func try_grant_narrative_beat_rewards(beat_id: String) -> void:
+	var sid: String = str(beat_id).strip_edges()
 	if sid == "":
 		return
-	if bool(haldor_solo_rewards_claimed.get(sid, false)):
+	if bool(narrative_beat_rewards_claimed.get(sid, false)):
 		return
-	var specs: Array = DialogueDatabase.get_haldor_solo_reward_entries(sid)
+	var specs: Array = DialogueDatabase.get_narrative_beat_reward_entries(sid)
 	if specs.is_empty():
 		return
-	var any_inventory_added: bool = false
+	var fam: String = DialogueDatabase.narrative_beat_family_for_id(sid)
+	var toast_fallback: String = "From Haldor" if fam == DialogueDatabase.NARRATIVE_BEAT_FAMILY_HALDOR_FORGE else "Received"
+	var granted_any: bool = false
 	for spec_raw in specs:
 		if not (spec_raw is Dictionary):
 			continue
 		var spec: Dictionary = spec_raw as Dictionary
 		var path: String = str(spec.get("item_path", "")).strip_edges()
 		if path == "" or not ResourceLoader.exists(path):
-			push_warning("Haldor solo reward: missing item_path %s" % path)
+			push_warning("Narrative beat reward: missing item_path %s" % path)
 			continue
 		var tpl: Resource = load(path) as Resource
 		if tpl == null:
 			continue
 		var amt: int = maxi(1, int(spec.get("amount", 1)))
-		var toast: String = str(spec.get("toast", "From Haldor")).strip_edges()
+		var toast: String = str(spec.get("toast", toast_fallback)).strip_edges()
 		if toast == "":
-			toast = "From Haldor"
+			toast = toast_fallback
 		var icon_item: Resource = null
 		for _i in range(amt):
 			var inst: Resource = duplicate_item(tpl)
@@ -1736,33 +1846,49 @@ func try_grant_haldor_solo_scene_rewards(scene_id: String) -> void:
 			if icon_item == null:
 				icon_item = inst
 		if icon_item != null:
-			any_inventory_added = true
-			pending_haldor_solo_gift_fx.append({
+			pending_narrative_beat_gift_fx.append({
 				"item": icon_item,
 				"amount": amt,
 				"toast": toast,
 			})
-	# One grant attempt per scene: never farm replays even if every item path failed.
-	if not specs.is_empty():
-		haldor_solo_rewards_claimed[sid] = true
+			granted_any = true
+	if granted_any:
+		narrative_beat_rewards_claimed[sid] = true
 
 
-func consume_pending_haldor_solo_gift_fx() -> Array:
-	var out: Array = pending_haldor_solo_gift_fx.duplicate()
-	pending_haldor_solo_gift_fx.clear()
+func try_grant_haldor_solo_scene_rewards(scene_id: String) -> void:
+	try_grant_narrative_beat_rewards(scene_id)
+
+
+func consume_pending_narrative_beat_gift_fx() -> Array:
+	var out: Array = pending_narrative_beat_gift_fx.duplicate()
+	pending_narrative_beat_gift_fx.clear()
 	return out
 
 
+func consume_pending_haldor_solo_gift_fx() -> Array:
+	return consume_pending_narrative_beat_gift_fx()
+
+
+func has_pending_narrative_beat_gift_fx() -> bool:
+	return not pending_narrative_beat_gift_fx.is_empty()
+
+
 func has_pending_haldor_solo_gift_fx() -> bool:
-	return not pending_haldor_solo_gift_fx.is_empty()
+	return has_pending_narrative_beat_gift_fx()
 
 
-func begin_haldor_solo_scene(scene_id: String, return_scene_path: String = "") -> void:
-	debug_haldor_solo_meta_gates_bypass = false
-	pending_haldor_solo_scene_id = str(scene_id).strip_edges()
+func begin_narrative_beat(beat_id: String, return_scene_path: String = "") -> void:
+	debug_forge_haldor_meta_gates_bypass = false
+	pending_narrative_beat_id = str(beat_id).strip_edges()
 	var rp: String = str(return_scene_path).strip_edges()
-	haldor_solo_return_scene_path = rp if rp != "" else "res://Scenes/camp_menu.tscn"
-	SceneTransition.change_scene_to_file("res://Scenes/Narrative/HaldorSoloScene.tscn")
+	narrative_beat_return_scene_path = rp if rp != "" else "res://Scenes/camp_menu.tscn"
+	SceneTransition.change_scene_to_file(NARRATIVE_BEAT_SCENE_PATH)
+
+
+## Back-compat alias for [method begin_narrative_beat]. Loads [member NARRATIVE_BEAT_SCENE_PATH] (same as roster/world beats).
+func begin_haldor_solo_scene(scene_id: String, return_scene_path: String = "") -> void:
+	begin_narrative_beat(scene_id, return_scene_path)
 
 
 func has_seen_camp_lore(lore_id: String) -> bool:
@@ -1888,6 +2014,97 @@ func mark_pair_scene_seen(scene_id: String) -> void:
 	if key.is_empty():
 		return
 	seen_camp_pair_scenes[key] = true
+
+func ensure_beastiary_seen() -> void:
+	if not (beastiary_seen is Dictionary):
+		beastiary_seen = {}
+
+
+func ensure_beastiary_intel_unlocked() -> void:
+	if not (beastiary_intel_unlocked is Dictionary):
+		beastiary_intel_unlocked = {}
+
+
+func has_beastiary_intel(intel_id: String) -> bool:
+	var key: String = str(intel_id).strip_edges()
+	if key.is_empty():
+		return false
+	ensure_beastiary_intel_unlocked()
+	return bool(beastiary_intel_unlocked.get(key, false))
+
+
+## Newly unlocked intel ids this call (empty if all were already known).
+func unlock_beastiary_intel_ids(ids: PackedStringArray) -> PackedStringArray:
+	ensure_beastiary_intel_unlocked()
+	var added: PackedStringArray = []
+	for raw in ids:
+		var k: String = str(raw).strip_edges()
+		if k.is_empty():
+			continue
+		if bool(beastiary_intel_unlocked.get(k, false)):
+			continue
+		beastiary_intel_unlocked[k] = true
+		added.append(k)
+	return added
+
+
+func is_neutral_ally_unit_data_path(path: String) -> bool:
+	var p: String = path.strip_edges()
+	if not p.begins_with("res://"):
+		return false
+	if p.find("/Resources/Units/NeutralAllies/") >= 0:
+		return true
+	if p.find("/Resources/Units/NeutralFactionAllies/") >= 0:
+		return true
+	return false
+
+
+func ensure_beastiary_neutral_seen() -> void:
+	if not (beastiary_neutral_seen is Dictionary):
+		beastiary_neutral_seen = {}
+
+
+func mark_neutral_seen(unit_data_path: String) -> void:
+	if not is_neutral_ally_unit_data_path(unit_data_path):
+		return
+	ensure_beastiary_neutral_seen()
+	beastiary_neutral_seen[unit_data_path.strip_edges()] = true
+
+
+func has_seen_neutral_ally(unit_data_path: String) -> bool:
+	ensure_beastiary_neutral_seen()
+	return bool(beastiary_neutral_seen.get(unit_data_path.strip_edges(), false))
+
+
+## Returns true for enemy [UnitData] resource paths we should track (excludes playable roster / neutral allies).
+func is_valid_beastiary_unit_data_path(path: String) -> bool:
+	var p: String = path.strip_edges()
+	if not p.begins_with("res://"):
+		return false
+	if p.find("/Resources/Units/PlayableRoster/") >= 0:
+		return false
+	if p.find("/Resources/Units/NeutralAllies/") >= 0:
+		return false
+	if p.find("/Resources/Units/NeutralFactionAllies/") >= 0:
+		return false
+	if p.find("/Resources/EnemyUnitData/") >= 0:
+		return true
+	if p.find("/Resources/Units/") >= 0:
+		return true
+	return false
+
+
+func mark_enemy_seen(unit_data_path: String) -> void:
+	if not is_valid_beastiary_unit_data_path(unit_data_path):
+		return
+	ensure_beastiary_seen()
+	beastiary_seen[unit_data_path.strip_edges()] = true
+
+
+func has_seen_enemy(unit_data_path: String) -> bool:
+	ensure_beastiary_seen()
+	return bool(beastiary_seen.get(unit_data_path.strip_edges(), false))
+
 
 func ensure_camp_memory() -> void:
 	if not (camp_memory is Dictionary):
@@ -2260,7 +2477,8 @@ func save_party(battlefield: Node2D) -> void:
 				"traits": (unit.get("traits") as Array).duplicate() if unit.get("traits") is Array else [],
 				"rookie_legacies": (unit.get("rookie_legacies") as Array).duplicate() if unit.get("rookie_legacies") is Array else [],
 				"base_class_legacies": (unit.get("base_class_legacies") as Array).duplicate() if unit.get("base_class_legacies") is Array else [],
-				"promoted_class_legacies": (unit.get("promoted_class_legacies") as Array).duplicate() if unit.get("promoted_class_legacies") is Array else []
+				"promoted_class_legacies": (unit.get("promoted_class_legacies") as Array).duplicate() if unit.get("promoted_class_legacies") is Array else [],
+				"voice_gender": int(unit.voice_gender)
 			}
 
 			if unit.get("active_ability_cooldowns") is Dictionary:

@@ -9,6 +9,7 @@ description = "A transcendent harp whose resonance feels almost holy."
 weapon_name = "Dawn Harp"
 gold_cost = 8700
 damage_type = 1
+magic_damage_kind = 4
 weapon_type = 9
 affected_stat = "magic"
 effect_amount = 0

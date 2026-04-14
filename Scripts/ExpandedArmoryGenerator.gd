@@ -9,6 +9,14 @@ const OVERWRITE_EXISTING: bool = true
 const DMG_PHYSICAL: int = 0
 const DMG_MAGIC: int = 1
 
+## Matches [WeaponData.MagicDamageKind] (append-only enum).
+const MAG_ARCANE: int = 0
+const MAG_FIRE: int = 1
+const MAG_FROST: int = 2
+const MAG_LIGHTNING: int = 3
+const MAG_DIVINE: int = 4
+const MAG_NECROTIC: int = 5
+
 const WT_SWORD: int = 0
 const WT_LANCE: int = 1
 const WT_AXE: int = 2
@@ -45,7 +53,8 @@ func _run() -> void:
 		weapon.gold_cost = int(entry["gold_cost"])
 		weapon.damage_type = int(entry["damage_type"])
 		weapon.weapon_type = int(entry["weapon_type"])
-
+		if entry.has("magic_damage_kind"):
+			weapon.magic_damage_kind = int(entry["magic_damage_kind"])
 		weapon.might = int(entry["might"])
 		weapon.hit_bonus = int(entry["hit_bonus"])
 		weapon.min_range = int(entry["min_range"])
@@ -122,21 +131,21 @@ func _build_weapon_list() -> Array:
 	# TOMES — accurate magic mainline, balanced power curve
 	# =========================================================================
 	items.append(_magic_weapon("Apprentice Tome", WT_TOME, "Common", 420, 4, 12, 1, 2, 40, "A simple practice tome for basic offensive casting."))
-	items.append(_magic_weapon("Fire Tome", WT_TOME, "Common", 520, 5, 8, 1, 2, 38, "A straightforward fire text with reliable destructive force."))
+	items.append(_magic_weapon("Fire Tome", WT_TOME, "Common", 520, 5, 8, 1, 2, 38, "A straightforward fire text with reliable destructive force.", MAG_FIRE))
 	items.append(_magic_weapon("Arcane Grimoire", WT_TOME, "Uncommon", 980, 6, 10, 1, 2, 34, "A compact grimoire for educated battlefield mages."))
 	items.append(_magic_weapon("Gale Lexicon", WT_TOME, "Rare", 1850, 8, 12, 1, 2, 30, "A tome of slicing winds and battlefield pressure."))
 	items.append(_magic_weapon("Prism Tome", WT_TOME, "Epic", 4700, 10, 14, 1, 2, 26, "A refractive spellbook tuned for precise casting."))
-	items.append(_magic_weapon("Starfire Codex", WT_TOME, "Legendary", 9000, 13, 16, 1, 2, 20, "A late-game codex burning with cold celestial fire."))
+	items.append(_magic_weapon("Starfire Codex", WT_TOME, "Legendary", 9000, 13, 16, 1, 2, 20, "A late-game codex burning with cold celestial fire.", MAG_FIRE))
 
 	# =========================================================================
 	# DARK TOMES — higher damage ceiling, shakier handling, grim identity
 	# =========================================================================
-	items.append(_magic_weapon("Gloam Primer", WT_DARK_TOME, "Common", 500, 5, 6, 1, 2, 34, "A beginner's dark text that whispers more than it teaches."))
-	items.append(_magic_weapon("Hexleaf Codex", WT_DARK_TOME, "Uncommon", 980, 6, 8, 1, 2, 32, "A compact grimoire of spite, ash, and petty malediction."))
-	items.append(_magic_weapon("Grave Thesis", WT_DARK_TOME, "Rare", 2200, 9, 6, 1, 2, 28, "A necromantic dissertation compiled with horrifying precision."))
-	items.append(_magic_weapon("Rift Rite Tome", WT_DARK_TOME, "Epic", 5200, 11, 8, 1, 2, 24, "A ritual text that resents geometry and stable reality."))
-	items.append(_magic_weapon("Dark Tide Grimoire", WT_DARK_TOME, "Legendary", 8800, 13, 10, 1, 2, 20, "A void-soaked liturgy dragged up from below the world."))
-	items.append(_magic_weapon("Null Hymn", WT_DARK_TOME, "Legendary", 9800, 14, 12, 2, 3, 16, "An endgame text that sings absence into the battlefield."))
+	items.append(_magic_weapon("Gloam Primer", WT_DARK_TOME, "Common", 500, 5, 6, 1, 2, 34, "A beginner's dark text that whispers more than it teaches.", MAG_NECROTIC))
+	items.append(_magic_weapon("Hexleaf Codex", WT_DARK_TOME, "Uncommon", 980, 6, 8, 1, 2, 32, "A compact grimoire of spite, ash, and petty malediction.", MAG_NECROTIC))
+	items.append(_magic_weapon("Grave Thesis", WT_DARK_TOME, "Rare", 2200, 9, 6, 1, 2, 28, "A necromantic dissertation compiled with horrifying precision.", MAG_NECROTIC))
+	items.append(_magic_weapon("Rift Rite Tome", WT_DARK_TOME, "Epic", 5200, 11, 8, 1, 2, 24, "A ritual text that resents geometry and stable reality.", MAG_ARCANE))
+	items.append(_magic_weapon("Dark Tide Grimoire", WT_DARK_TOME, "Legendary", 8800, 13, 10, 1, 2, 20, "A void-soaked liturgy dragged up from below the world.", MAG_NECROTIC))
+	items.append(_magic_weapon("Null Hymn", WT_DARK_TOME, "Legendary", 9800, 14, 12, 2, 3, 16, "An endgame text that sings absence into the battlefield.", MAG_NECROTIC))
 
 	# =========================================================================
 	# KNIVES — low might, high hit, light pressure, some 1-2 utility
@@ -162,7 +171,7 @@ func _build_weapon_list() -> Array:
 	items.append(_physical_weapon("Pilgrim's Knuckles", WT_FIST, "Common", 390, 4, 14, 1, 1, 40, "Simple knuckle irons used by wandering monks and zealots."))
 	items.append(_physical_weapon("Wrapped Cestus", WT_FIST, "Common", 420, 5, 12, 1, 1, 38, "A leather-and-metal fist weapon for disciplined close combat."))
 	items.append(_physical_weapon("Ironbound Cestus", WT_FIST, "Rare", 1600, 7, 10, 1, 1, 32, "A heavier striking set for trained brawlers and war monks."))
-	items.append(_physical_weapon("Temple Gauntlets", WT_FIST, "Rare", 1950, 8, 8, 1, 1, 30, "Consecrated gauntlets that reward relentless forward pressure."))
+	items.append(_physical_weapon("Temple Gauntlets", WT_FIST, "Rare", 1950, 8, 8, 1, 1, 30, "Consecrated gauntlets that reward relentless forward pressure.", true, MAG_DIVINE))
 	items.append(_physical_weapon("Meteor Knuckles", WT_FIST, "Legendary", 8200, 11, 12, 1, 1, 20, "Late-game fist weapons that hit like falling stone."))
 
 	# =========================================================================
@@ -172,17 +181,17 @@ func _build_weapon_list() -> Array:
 	items.append(_magic_weapon("Festival Bell", WT_INSTRUMENT, "Common", 650, 4, 14, 1, 2, 38, "A bright little instrument whose chime unsettles enemy rhythm."))
 	items.append(_magic_weapon("Court Lute", WT_INSTRUMENT, "Rare", 1750, 6, 16, 1, 2, 32, "A refined instrument whose notes bite deeper than they should."))
 	items.append(_magic_weapon("Veil Tambour", WT_INSTRUMENT, "Rare", 2100, 7, 12, 1, 2, 30, "A dancer's battle instrument tuned to tempo and misdirection."))
-	items.append(_magic_weapon("Dawn Harp", WT_INSTRUMENT, "Legendary", 8700, 9, 20, 1, 2, 20, "A transcendent harp whose resonance feels almost holy."))
+	items.append(_magic_weapon("Dawn Harp", WT_INSTRUMENT, "Legendary", 8700, 9, 20, 1, 2, 20, "A transcendent harp whose resonance feels almost holy.", MAG_DIVINE))
 
 	# =========================================================================
 	# STAVES — utility-first; not damage tools
 	# =========================================================================
-	items.append(_staff_weapon("Heal Staff", "Common", 520, 2, 40, true, false, false, "magic", 8, "A basic healing staff for early sustain and stability."))
-	items.append(_staff_weapon("Protect Staff", "Uncommon", 1100, 2, 34, false, true, false, "defense", 3, "A support staff that hardens an ally's footing."))
-	items.append(_staff_weapon("Censure Staff", "Uncommon", 1400, 2, 34, false, false, true, "defense", 4, "A severe debuff staff used to weaken enemy fronts."))
-	items.append(_staff_weapon("Silence Staff", "Rare", 2600, 3, 28, false, false, true, "magic", 5, "A muting staff that blunts hostile spellcasters."))
-	items.append(_staff_weapon("Edict Staff", "Epic", 5200, 3, 24, false, true, false, "defense", 5, "A command staff that hardens allies under strict authority."))
-	items.append(_staff_weapon("Chain-Key Staff", "Legendary", 8600, 3, 20, false, true, true, "speed", 6, "A relic staff that binds enemies or restores allied tempo."))
+	items.append(_staff_weapon("Heal Staff", "Common", 520, 2, 40, true, false, false, "magic", 8, "A basic healing staff for early sustain and stability.", MAG_DIVINE))
+	items.append(_staff_weapon("Protect Staff", "Uncommon", 1100, 2, 34, false, true, false, "defense", 3, "A support staff that hardens an ally's footing.", MAG_DIVINE))
+	items.append(_staff_weapon("Censure Staff", "Uncommon", 1400, 2, 34, false, false, true, "defense", 4, "A severe debuff staff used to weaken enemy fronts.", MAG_DIVINE))
+	items.append(_staff_weapon("Silence Staff", "Rare", 2600, 3, 28, false, false, true, "magic", 5, "A muting staff that blunts hostile spellcasters.", MAG_ARCANE))
+	items.append(_staff_weapon("Edict Staff", "Epic", 5200, 3, 24, false, true, false, "defense", 5, "A command staff that hardens allies under strict authority.", MAG_DIVINE))
+	items.append(_staff_weapon("Chain-Key Staff", "Legendary", 8600, 3, 20, false, true, true, "speed", 6, "A relic staff that binds enemies or restores allied tempo.", MAG_ARCANE))
 
 	return items
 
@@ -197,9 +206,10 @@ func _physical_weapon(
 	min_range: int,
 	max_range: int,
 	durability: int,
-	description: String
+	description: String,
+	magic_channel_kind: int = MAG_ARCANE
 ) -> Dictionary:
-	return {
+	var d: Dictionary = {
 		"weapon_name": weapon_name,
 		"description": description,
 		"rarity": rarity,
@@ -220,6 +230,9 @@ func _physical_weapon(
 		"required_arena_rank": "Bronze",
 		"gladiator_token_cost": 0
 	}
+	if magic_channel_kind != MAG_ARCANE:
+		d["magic_damage_kind"] = magic_channel_kind
+	return d
 
 
 func _magic_weapon(
@@ -232,7 +245,8 @@ func _magic_weapon(
 	min_range: int,
 	max_range: int,
 	durability: int,
-	description: String
+	description: String,
+	magic_damage_kind: int = MAG_ARCANE
 ) -> Dictionary:
 	return {
 		"weapon_name": weapon_name,
@@ -241,6 +255,7 @@ func _magic_weapon(
 		"gold_cost": gold_cost,
 		"damage_type": DMG_MAGIC,
 		"weapon_type": weapon_type,
+		"magic_damage_kind": magic_damage_kind,
 		"might": might,
 		"hit_bonus": hit_bonus,
 		"min_range": min_range,
@@ -268,7 +283,8 @@ func _staff_weapon(
 	is_debuff_staff: bool,
 	affected_stat: String,
 	effect_amount: int,
-	description: String
+	description: String,
+	magic_damage_kind: int = MAG_ARCANE
 ) -> Dictionary:
 	return {
 		"weapon_name": weapon_name,
@@ -277,6 +293,7 @@ func _staff_weapon(
 		"gold_cost": gold_cost,
 		"damage_type": DMG_MAGIC,
 		"weapon_type": WT_TOME,
+		"magic_damage_kind": magic_damage_kind,
 		"might": 0,
 		"hit_bonus": 18,
 		"min_range": 1,

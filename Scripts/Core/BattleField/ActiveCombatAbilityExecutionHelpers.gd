@@ -297,11 +297,9 @@ static func _ai_accept_self_centered(field, caster: Node2D, def: ActiveCombatAbi
 	return false
 
 
-## Player forecast: first ready targeted ability that can hit this defender (hidden when co-op guest delegates combat to host).
+## Player forecast: first ready targeted ability that can hit this defender (co-op guest: host still resolves the cast after confirm).
 static func find_best_forecast_targeted_active(field, attacker: Node2D, defender: Node2D):
 	if attacker == null or defender == null:
-		return null
-	if field.has_method("coop_enet_should_delegate_player_combat_to_host") and field.coop_enet_should_delegate_player_combat_to_host():
 		return null
 	var best = null
 	var best_score: int = -1

@@ -48,8 +48,9 @@ static func resolve_parry_and_shield_clash(
 				var final_counter_dmg = base_counter_dmg * 3
 
 				field.screen_shake(15.0, 0.4)
-				if field.crit_sound.stream != null:
+				if field.crit_sound != null and field.crit_sound.stream != null:
 					field.play_attack_hit_sound(field.crit_sound)
+				field.play_crit_striker_voice_grunt(defender)
 				attacker.take_damage(final_counter_dmg, defender)
 				var sc_chunk: float = -1.0
 				if attacker.max_hp > 0:
@@ -88,6 +89,8 @@ static func resolve_parry_and_shield_clash(
 			var counter_offense = defender.magic if is_magic_counter else defender.strength
 			var counter_defense = attacker.resistance if is_magic_counter else attacker.defense
 			var base_counter_dmg = max(1, (counter_offense + (def_wpn.might if def_wpn else 0)) - counter_defense)
+			if def_wpn != null:
+				base_counter_dmg = field.apply_outgoing_weapon_damage_multipliers(int(base_counter_dmg), attacker, def_wpn)
 
 			if field.crit_sound.stream != null:
 				field.play_attack_hit_sound(field.crit_sound)

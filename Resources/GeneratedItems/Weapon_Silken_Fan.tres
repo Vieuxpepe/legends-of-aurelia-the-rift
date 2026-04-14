@@ -8,6 +8,7 @@ description = "A graceful performance fan that turns movement into cutting force
 weapon_name = "Silken Fan"
 gold_cost = 520
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 9
 affected_stat = "magic"
 effect_amount = 0

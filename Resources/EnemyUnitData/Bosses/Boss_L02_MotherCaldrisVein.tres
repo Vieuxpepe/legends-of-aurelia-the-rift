@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_6dbdy")
+voice_gender = 1
 display_name = "Mother Caldris Vein"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Mercy is always beautiful from the mouths of those someone else protected."])

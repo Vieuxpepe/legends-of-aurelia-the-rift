@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ConsumableData" format=3 uid="uid://d8k2n4m7p9q1xr"]
+
+[ext_resource type="Script" uid="uid://67xkte2k6sun" path="res://Resources/Consumables/ConsumableData.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Assets/Intel Parchment.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+rarity = "Uncommon"
+description = "Field notes on skeletons: bone-pile reform, bludgeoning counters, bone toxin in melee—and how to read physical and magic-channel aptitudes in the catalogue."
+item_name = "Tactica: Undead Remains"
+gold_cost = 120
+icon = ExtResource("2_icon")
+knowledge_intel_ids = Array[String](["undead_blunt_bone_pile", "intel_damage_type_readout"])
+metadata/_custom_type_script = "uid://67xkte2k6sun"

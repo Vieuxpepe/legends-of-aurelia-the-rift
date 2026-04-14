@@ -3,6 +3,16 @@ extends RefCounted
 # ENet mock co-op: remote sync queue action dispatcher + per-action handlers — extracted from `BattleField.gd`.
 
 static func coop_run_one_remote_sync_async(field, body: Dictionary) -> void:
+	var wg: int = int(body.get("_coop_wire_gen", 0))
+	if wg < int(field._coop_full_resync_generation):
+		if OS.is_debug_build():
+			push_warning(
+				"Coop: dropped stale remote sync (action=%s wire_gen=%d battle_gen=%d)"
+				% [str(body.get("action", "")), wg, int(field._coop_full_resync_generation)]
+			)
+		field._coop_enet_remote_sync_busy = false
+		field._coop_enet_pump_remote_sync_queue()
+		return
 	var action: String = str(body.get("action", "")).strip_edges()
 	match action:
 		"battle_result":
@@ -437,6 +447,15 @@ static func coop_remote_sync_player_defend(field, body: Dictionary) -> void:
 			field.player_state.clear_active_unit()
 
 
+## Guest + [code]host_authority[/code]: if we bail out of [code]player_combat[/code] early, still unblock [method coop_enet_guest_delegate_player_combat_to_host].
+static func _coop_guest_unblock_awaiting_host_player_combat(field, body: Dictionary, attacker_id: String) -> void:
+	if CoopExpeditionSessionManager.phase != CoopExpeditionSessionManager.Phase.GUEST:
+		return
+	if not bool(body.get("host_authority", false)):
+		return
+	field._coop_emit_guest_host_combat_resolved_if_waiting(attacker_id)
+
+
 static func coop_remote_sync_player_combat(field, body: Dictionary) -> void:
 	var aid: String = str(body.get("attacker_id", "")).strip_edges()
 	var did: String = str(body.get("defender_id", "")).strip_edges()
@@ -445,6 +464,7 @@ static func coop_remote_sync_player_combat(field, body: Dictionary) -> void:
 	if att == null or defu == null or not is_instance_valid(att) or not is_instance_valid(defu):
 		if OS.is_debug_build():
 			push_warning("Coop battle sync: combat resolve failed ids att=%s def=%s" % [aid, did])
+		_coop_guest_unblock_awaiting_host_player_combat(field, body, aid)
 		return
 	var owner_att: String = field.get_mock_coop_unit_owner_for_unit(att)
 	var host_auth: bool = bool(body.get("host_authority", false))
@@ -454,18 +474,22 @@ static func coop_remote_sync_player_combat(field, body: Dictionary) -> void:
 	if not partner_mirror and not guest_own_host_auth:
 		if OS.is_debug_build():
 			push_warning("Coop battle sync: refuse combat mirror — attacker ownership mismatch (aid=%s)" % aid)
+		_coop_guest_unblock_awaiting_host_player_combat(field, body, aid)
 		return
 	var auth_v: int = int(body.get("auth_v", 0))
 	var auth_raw: Variant = body.get("auth_snapshot", {})
 	var has_auth: bool = auth_raw is Dictionary and auth_v == field.COOP_AUTH_BATTLE_SNAPSHOT_VER and (auth_raw as Dictionary).size() > 0
 	var rp: int = int(body.get("rng_packed", -1))
 	var qte_raw: Variant = body.get("qte_snapshot", {})
-	var should_replay: bool = rp >= 0 or (qte_raw is Dictionary and (qte_raw as Dictionary).size() > 0)
+	## Host-resolved [ActiveCombatAbilityData] uses snapshots only — never re-run [method BattleField.execute_combat] on the guest.
+	var active_ability_only: bool = bool(body.get("active_ability_only", false))
+	var should_replay: bool = not active_ability_only and (rp >= 0 or (qte_raw is Dictionary and (qte_raw as Dictionary).size() > 0))
 	if should_replay:
 		await field._coop_execute_remote_combat_replay(att, defu, bool(body.get("used_ability", false)), qte_raw, rp)
 	elif not has_auth:
 		if OS.is_debug_build():
 			push_warning("Coop battle sync: combat mirror missing replay data and auth_snapshot (aid=%s def=%s)" % [aid, did])
+		_coop_guest_unblock_awaiting_host_player_combat(field, body, aid)
 		return
 	if has_auth:
 		var auth_d: Dictionary = auth_raw as Dictionary
@@ -487,6 +511,10 @@ static func coop_remote_sync_player_post_combat(field, body: Dictionary) -> void
 	var aid: String = str(body.get("attacker_id", "")).strip_edges()
 	var att: Node2D = field._coop_find_player_side_unit_by_relationship_id(aid)
 	if att == null or not is_instance_valid(att):
+		var host_auth_dead: bool = bool(body.get("host_authority", false))
+		var i_am_guest_dead: bool = CoopExpeditionSessionManager.phase == CoopExpeditionSessionManager.Phase.GUEST
+		if host_auth_dead and i_am_guest_dead:
+			field._coop_emit_guest_host_combat_resolved_if_waiting(aid)
 		return
 	var owner_att: String = field.get_mock_coop_unit_owner_for_unit(att)
 	var host_auth: bool = bool(body.get("host_authority", false))

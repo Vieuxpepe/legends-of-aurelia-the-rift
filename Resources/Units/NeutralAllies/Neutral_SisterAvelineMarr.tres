@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_65pex")
+voice_gender = 1
 display_name = "Sister Aveline Marr"
 recruit_dialogue = Array[String]([])
 character_class = ExtResource("1_nu6ck")

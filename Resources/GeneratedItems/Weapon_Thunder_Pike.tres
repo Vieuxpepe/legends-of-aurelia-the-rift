@@ -9,6 +9,7 @@ description = "Crackles with electric energy."
 weapon_name = "Thunder Pike"
 gold_cost = 3600
 damage_type = 1
+magic_damage_kind = 3
 weapon_type = 1
 affected_stat = "magic"
 effect_amount = 0

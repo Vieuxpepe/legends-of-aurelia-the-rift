@@ -9,6 +9,7 @@ description = "A sword engulfed in perpetual flames."
 weapon_name = "Flame Blade"
 gold_cost = 3500
 damage_type = 1
+magic_damage_kind = 1
 affected_stat = "magic"
 effect_amount = 0
 might = 14

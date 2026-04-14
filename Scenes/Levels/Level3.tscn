@@ -688,6 +688,7 @@ intro_dialogue = Array[ExtResource("6_bcjqv")]([SubResource("Resource_8a6bc"), S
 outro_dialogue = Array[ExtResource("6_bcjqv")]([SubResource("Resource_0tovn"), SubResource("Resource_08kon")])
 map_objective = 2
 turn_limit = 20
+level_display_name = "Shattered Sanctum"
 
 [node name="PlayerUnits" type="Node" parent="." unique_id=98960577]
 

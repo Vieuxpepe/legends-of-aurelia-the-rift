@@ -278,6 +278,9 @@ title = "Purchase Item?"
 stream = ExtResource("7_532wb")
 volume_db = -11.723
 
+[node name="CampDwarfUIButtonBlip" type="AudioStreamPlayer" parent="."]
+volume_db = -4.0
+
 [node name="HaggleButton" type="Button" parent="." unique_id=1597452884]
 layout_mode = 0
 offset_left = 1446.0001
@@ -589,7 +592,7 @@ columns = 5
 
 [node name="MasterworkSound" type="AudioStreamPlayer" parent="." unique_id=745877627]
 stream = ExtResource("27_4treb")
-volume_db = 22.089
+volume_db = -8.0
 
 [node name="OpenBlacksmithButton" type="Button" parent="." unique_id=1169692218]
 unique_name_in_owner = true

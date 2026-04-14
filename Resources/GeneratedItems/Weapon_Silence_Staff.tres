@@ -9,6 +9,7 @@ description = "A muting staff that blunts hostile spellcasters."
 weapon_name = "Silence Staff"
 gold_cost = 2600
 damage_type = 1
+magic_damage_kind = 0
 weapon_type = 4
 is_debuff_staff = true
 affected_stat = "magic"

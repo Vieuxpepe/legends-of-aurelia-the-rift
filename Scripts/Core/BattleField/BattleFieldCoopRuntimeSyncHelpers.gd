@@ -78,8 +78,18 @@ static func apply_remote_coop_enet_sync(field, body: Dictionary) -> void:
 			var act_no_owner: String = str(body.get("action", "")).strip_edges()
 			push_warning("BattleField: drop incoming coop sync '%s' (mock ownership inactive on this battlefield)" % act_no_owner)
 		return
-	field._coop_enet_remote_sync_queue.append(body.duplicate(true))
+	var copy: Dictionary = body.duplicate(true)
+	copy["_coop_wire_gen"] = int(field._coop_full_resync_generation)
+	field._coop_enet_remote_sync_queue.append(copy)
 	coop_enet_pump_remote_sync_queue(field)
+
+
+## After full_battle_resync: drop pending mirrors so stale combat never applies on top of fresh host state.
+static func coop_enet_prepare_for_full_battle_resync(field) -> void:
+	field._coop_net_incoming_enemy_combat_fifo.clear()
+	coop_net_clear_remote_combat_qte_snapshot(field)
+	field._coop_enet_remote_sync_queue.clear()
+	field._coop_enet_remote_sync_busy = false
 
 
 static func coop_enet_pump_remote_sync_queue(field) -> void:

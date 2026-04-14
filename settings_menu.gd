@@ -29,6 +29,7 @@ const MODAL_HEADER_TOP := 18.0
 const MODAL_HEADER_HEIGHT := 78.0
 const MODAL_HEADER_TO_CONTENT_GAP := 8.0
 const MODAL_CONTENT_BOTTOM_PAD := 18.0
+const PERSONAL_JOURNAL_SCENE := preload("res://Scenes/UI/PersonalJournal.tscn")
 const FEEDBACK_CATEGORY_ORDER := ["ALL", "BUGS", "UI", "BALANCE", "SUGGESTIONS"]
 const GAME_SPEED_CHOICES: Array[float] = [1.0, 1.5, 2.0]
 
@@ -56,6 +57,7 @@ var _feedback_submit_category: String = "ALL"
 var _feedback_board_filter: String = "ALL"
 var _feedback_submit_category_buttons: Dictionary = {}
 var _feedback_filter_buttons: Dictionary = {}
+var _personal_journal_overlay: Control = null
 
 func _find_ui(node_name: String) -> Node:
 	return find_child(node_name, true, false)
@@ -108,6 +110,7 @@ var ui_cursor_feedback_slider: HSlider = null
 var ui_cursor_press_depth_slider: HSlider = null
 var ui_cursor_tilt_slider: HSlider = null
 @onready var pause_interface_btn: Button = _find_ui("PauseInterfaceButton") as Button
+@onready var pause_journal_btn: Button = _find_ui("PauseJournalButton") as Button
 
 # --- EXISTING SETTINGS ---
 @onready var audio_master_slider: HSlider = _find_ui("AudioMasterSlider") as HSlider
@@ -719,6 +722,8 @@ func _apply_theme() -> void:
 		_style_button(pause_audio_btn, "AUDIO", false, 20)
 	if pause_interface_btn:
 		_style_button(pause_interface_btn, "INTERFACE", false, 20)
+	if pause_journal_btn:
+		_style_button(pause_journal_btn, "JOURNAL", false, 20)
 	if pause_quit_btn:
 		_style_button(pause_quit_btn, "QUIT TO TITLE", false, 20)
 
@@ -1021,6 +1026,8 @@ func _connect_all_signals() -> void:
 	_connect_toggle_signal(perf_screen_shake_toggle, _on_perf_screen_shake_toggled)
 	if pause_interface_btn and not pause_interface_btn.pressed.is_connected(_on_pause_interface_pressed):
 		pause_interface_btn.pressed.connect(_on_pause_interface_pressed)
+	if pause_journal_btn and not pause_journal_btn.pressed.is_connected(_on_pause_journal_pressed):
+		pause_journal_btn.pressed.connect(_on_pause_journal_pressed)
 	if ui_hud_scale_option and not ui_hud_scale_option.item_selected.is_connected(_on_ui_hud_scale_selected):
 		ui_hud_scale_option.item_selected.connect(_on_ui_hud_scale_selected)
 	_connect_toggle_signal(ui_reduced_motion_toggle, _on_ui_reduced_motion_toggled)
@@ -1367,6 +1374,23 @@ func _on_pause_interface_pressed() -> void:
 	_queue_modal_layout_refresh()
 	if close_button:
 		close_button.grab_focus()
+
+
+func _ensure_personal_journal_overlay() -> void:
+	if _personal_journal_overlay != null and is_instance_valid(_personal_journal_overlay):
+		return
+	if canvas_layer == null:
+		return
+	_personal_journal_overlay = PERSONAL_JOURNAL_SCENE.instantiate()
+	_personal_journal_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	canvas_layer.add_child(_personal_journal_overlay)
+	canvas_layer.move_child(_personal_journal_overlay, canvas_layer.get_child_count() - 1)
+
+
+func _on_pause_journal_pressed() -> void:
+	_ensure_personal_journal_overlay()
+	if _personal_journal_overlay != null and _personal_journal_overlay.has_method("open_journal"):
+		_personal_journal_overlay.open_journal()
 
 
 func _ensure_ui_hud_scale_items() -> void:
@@ -2113,6 +2137,11 @@ func _input(event: InputEvent) -> void:
 		return
 	if canvas_layer == null:
 		return
+	if _personal_journal_overlay != null and is_instance_valid(_personal_journal_overlay) and _personal_journal_overlay.visible:
+		if _personal_journal_overlay.has_method("close_and_save"):
+			_personal_journal_overlay.close_and_save()
+		get_viewport().set_input_as_handled()
+		return
 	var handled: bool = false
 	if not canvas_layer.visible:
 		show_pause_menu()
@@ -2193,6 +2222,9 @@ func hide_menu() -> void:
 	_flush_interface_panel_to_campaign_if_showing()
 	if feedback_board:
 		feedback_board.hide()
+	if _personal_journal_overlay != null and is_instance_valid(_personal_journal_overlay) and _personal_journal_overlay.visible:
+		if _personal_journal_overlay.has_method("close_and_save"):
+			_personal_journal_overlay.close_and_save()
 	visible = false
 	if canvas_layer:
 		canvas_layer.visible = false

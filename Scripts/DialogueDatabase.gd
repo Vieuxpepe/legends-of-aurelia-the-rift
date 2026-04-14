@@ -237,46 +237,123 @@ func blacksmith_escape_bbcode_literal(s: String) -> String:
 
 
 const HALDOR_SOLO_FIRST_HOOK_ID: String = "haldor_solo_first_quiet"
+const NARRATIVE_BEAT_FAMILY_HALDOR_FORGE: String = "haldor_forge"
+const NARRATIVE_BEAT_FAMILY_ROSTER_SOLO: String = "roster_solo"
 
 
-func count_haldor_solo_scenes_seen_excluding(seen_scene_ids: Dictionary, exclude_scene_id: String) -> int:
-	var ex: String = str(exclude_scene_id).strip_edges()
-	var n: int = 0
-	for def_raw in haldor_solo_scene_definitions:
+## Group beats for unlock math (e.g. [code]min_other_solo_scenes_seen[/code] only counts same family). [code]haldor_solo_*[/code] ids default to [member NARRATIVE_BEAT_FAMILY_HALDOR_FORGE]; set [code]beat_family[/code] on roster/world beats.
+func narrative_beat_family(def: Dictionary) -> String:
+	var f: String = str(def.get("beat_family", "")).strip_edges()
+	if f != "":
+		return f
+	var bid: String = str(def.get("id", "")).strip_edges()
+	if bid.begins_with("haldor_solo_"):
+		return NARRATIVE_BEAT_FAMILY_HALDOR_FORGE
+	return "narrative"
+
+
+## Resolved [member narrative_beat_family] for a registered beat id, or empty if unknown.
+func narrative_beat_family_for_id(beat_id: String) -> String:
+	var sid: String = str(beat_id).strip_edges()
+	if sid == "":
+		return ""
+	for def_raw in narrative_beat_definitions:
 		if not (def_raw is Dictionary):
 			continue
-		var sid: String = str((def_raw as Dictionary).get("id", "")).strip_edges()
+		var def: Dictionary = def_raw as Dictionary
+		if str(def.get("id", "")).strip_edges() == sid:
+			return narrative_beat_family(def)
+	return ""
+
+
+## First eligible unseen roster solo for [param unit_name] (Camp Explore), in definition order. See [member NARRATIVE_BEAT_FAMILY_ROSTER_SOLO] beats with [code]solo_unit_name[/code].
+func get_eligible_roster_solo_beat_id(unit_name: String, max_unlocked_index: int, seen_beat_ids: Dictionary = {}) -> String:
+	var uname: String = str(unit_name).strip_edges()
+	if uname == "":
+		return ""
+	for def_raw in narrative_beat_definitions:
+		if not (def_raw is Dictionary):
+			continue
+		var def: Dictionary = def_raw as Dictionary
+		if narrative_beat_family(def) != NARRATIVE_BEAT_FAMILY_ROSTER_SOLO:
+			continue
+		if str(def.get("solo_unit_name", "")).strip_edges() != uname:
+			continue
+		var bid: String = str(def.get("id", "")).strip_edges()
+		if bid == "" or bool(seen_beat_ids.get(bid, false)):
+			continue
+		if not is_narrative_beat_unlocked(bid, max_unlocked_index, seen_beat_ids):
+			continue
+		return bid
+	return ""
+
+
+func count_narrative_beats_seen_in_family_excluding(seen_beat_ids: Dictionary, family: String, exclude_beat_id: String) -> int:
+	var ex: String = str(exclude_beat_id).strip_edges()
+	var fam: String = str(family).strip_edges()
+	var n: int = 0
+	for def_raw in narrative_beat_definitions:
+		if not (def_raw is Dictionary):
+			continue
+		var def: Dictionary = def_raw as Dictionary
+		if narrative_beat_family(def) != fam:
+			continue
+		var sid: String = str(def.get("id", "")).strip_edges()
 		if sid == "" or sid == ex:
 			continue
-		if bool(seen_scene_ids.get(sid, false)):
+		if bool(seen_beat_ids.get(sid, false)):
 			n += 1
 	return n
 
 
-func _haldor_solo_def_unlocked_for_player(def: Dictionary, max_unlocked_index: int, seen_scene_ids: Dictionary) -> bool:
+func _narrative_beat_def_unlocked_for_player(def: Dictionary, max_unlocked_index: int, seen_beat_ids: Dictionary) -> bool:
 	var cap: int = maxi(0, int(max_unlocked_index))
 	var need_map: int = maxi(0, int(def.get("min_max_unlocked_index", 999)))
 	if cap < need_map:
 		return false
-	if def.has("min_other_solo_scenes_seen"):
-		var need_seen: int = maxi(0, int(def.get("min_other_solo_scenes_seen", 0)))
+	var req_seen: String = str(def.get("requires_seen_beat_id", "")).strip_edges()
+	if req_seen != "" and not bool(seen_beat_ids.get(req_seen, false)):
+		return false
+	var min_other: int = 0
+	if def.has("min_other_beats_seen"):
+		min_other = maxi(0, int(def.get("min_other_beats_seen", 0)))
+	elif def.has("min_other_solo_scenes_seen"):
+		min_other = maxi(0, int(def.get("min_other_solo_scenes_seen", 0)))
+	if min_other > 0:
 		var sid: String = str(def.get("id", "")).strip_edges()
-		if count_haldor_solo_scenes_seen_excluding(seen_scene_ids, sid) < need_seen:
+		var fam: String = narrative_beat_family(def)
+		if count_narrative_beats_seen_in_family_excluding(seen_beat_ids, fam, sid) < min_other:
 			return false
 	return true
+
+
+func is_narrative_beat_unlocked(beat_id: String, max_unlocked_index: int, seen_beat_ids: Dictionary = {}) -> bool:
+	var sid: String = str(beat_id).strip_edges()
+	if sid == "":
+		return false
+	for def_raw in narrative_beat_definitions:
+		if not (def_raw is Dictionary):
+			continue
+		var def: Dictionary = def_raw as Dictionary
+		if str(def.get("id", "")).strip_edges() != sid:
+			continue
+		return _narrative_beat_def_unlocked_for_player(def, max_unlocked_index, seen_beat_ids)
+	return false
 
 
 func is_haldor_solo_scene_unlocked(scene_id: String, max_unlocked_index: int, seen_scene_ids: Dictionary = {}) -> bool:
 	var sid: String = str(scene_id).strip_edges()
 	if sid == "":
 		return false
-	for def_raw in haldor_solo_scene_definitions:
+	for def_raw in narrative_beat_definitions:
 		if not (def_raw is Dictionary):
 			continue
 		var def: Dictionary = def_raw as Dictionary
 		if str(def.get("id", "")).strip_edges() != sid:
 			continue
-		return _haldor_solo_def_unlocked_for_player(def, max_unlocked_index, seen_scene_ids)
+		if narrative_beat_family(def) != NARRATIVE_BEAT_FAMILY_HALDOR_FORGE:
+			return false
+		return _narrative_beat_def_unlocked_for_player(def, max_unlocked_index, seen_scene_ids)
 	return false
 
 
@@ -305,7 +382,7 @@ func resolve_haldor_solo_scene_pick(requested_scene_id: String, max_unlocked_ind
 
 func pick_haldor_solo_unseen_scene_ids(max_unlocked_index: int, seen_scene_ids: Dictionary) -> Array:
 	var out: Array = []
-	for sid in get_unlocked_haldor_solo_scene_ids_ordered(max_unlocked_index, seen_scene_ids):
+	for sid in get_unlocked_forge_haldor_beat_ids_ordered(max_unlocked_index, seen_scene_ids):
 		if not bool(seen_scene_ids.get(str(sid), false)):
 			out.append(sid)
 	return out
@@ -324,13 +401,15 @@ func is_haldor_solo_scene_hint_eligible(scene_id: String, max_unlocked_index: in
 		return false
 	if bool(seen_scene_ids.get(sid, false)):
 		return false
-	for def_raw in haldor_solo_scene_definitions:
+	for def_raw in narrative_beat_definitions:
 		if not (def_raw is Dictionary):
 			continue
 		var def: Dictionary = def_raw as Dictionary
 		if str(def.get("id", "")).strip_edges() != sid:
 			continue
-		return _haldor_solo_def_unlocked_for_player(def, max_unlocked_index, seen_scene_ids)
+		if narrative_beat_family(def) != NARRATIVE_BEAT_FAMILY_HALDOR_FORGE:
+			return false
+		return _narrative_beat_def_unlocked_for_player(def, max_unlocked_index, seen_scene_ids)
 	return false
 
 
@@ -360,10 +439,24 @@ func apply_haldor_solo_tap_hint(plain_text: String, solo_hint: Variant, max_unlo
 	return before + wrap_bb + after
 
 
-## Dev: build a tap line that always underlines [param needle] → [param scene_id] (used with [member CampaignManager.debug_haldor_solo_meta_gates_bypass]).
+## Dev: build a tap line that always underlines [param needle] → [param scene_id] (used with [member CampaignManager.debug_forge_haldor_meta_gates_bypass]).
 func apply_haldor_solo_tap_hint_for_debug(plain_text: String, needle: String, scene_id: String) -> String:
 	var hint: Dictionary = {"needle": str(needle).strip_edges(), "scene_id": str(scene_id).strip_edges()}
 	return apply_haldor_solo_tap_hint(plain_text, hint, 0, {}, true)
+
+
+## Camp Explore roster solo gate: append an underlined BBCode url link for [param beat_id] (same style as forge Haldor hints). [param plain_idle_body] is plain text (brackets escaped).
+func apply_camp_roster_solo_tap_hint(plain_idle_body: String, beat_id: String, cta_needle: String = "Sit a while — proper talk.") -> String:
+	var body: String = blacksmith_escape_bbcode_literal(str(plain_idle_body).strip_edges())
+	var bid: String = str(beat_id).strip_edges()
+	var needle: String = str(cta_needle).strip_edges()
+	if bid == "" or needle == "":
+		return body
+	var needle_esc: String = blacksmith_escape_bbcode_literal(needle)
+	var wrap_bb: String = "[url=" + bid + "][u][color=#d8c27a]" + needle_esc + "[/color][/u][/url]"
+	if body == "":
+		return wrap_bb
+	return body + "\n\n" + wrap_bb
 
 
 func get_haldor_beat_solo_hint(beat_id: String) -> Variant:
@@ -1003,7 +1096,8 @@ func get_haldor_beat_ids_for_cleared_map(cleared_map_index: int) -> Array:
 	return [str(gens[gi])]
 
 
-# --- Optional camp solo scenes (Haldor, full-screen dialogue; see HaldorSoloScene) ---
+# --- Full-screen narrative beats (Haldor forge solos, roster bond scenes, world encounters) ---
+# Runtime: CampaignManager.begin_narrative_beat → res://Scenes/Narrative/NarrativeBeatScene.tscn (see CampaignManager.NARRATIVE_BEAT_SCENE_PATH).
 ## Portraits: [code]res://Assets/Haldor/Haldor Sad.png[/code] … [code]Haldor Angry.png[/code]. Line dicts may set [code]haldor_expression[/code] to [code]sad[/code] / [code]serious[/code] / [code]smiling[/code] / [code]angry[/code] (default [code]serious[/code]).
 ## Background: [code]HaldorBackground.png[/code] when present.
 var _haldor_solo_portraits_by_mood: Dictionary = {}
@@ -1077,8 +1171,8 @@ func _ensure_haldor_solo_art_loaded() -> void:
 	]), "res://Assets/Backgrounds/peaceful_village.jpeg")
 
 
-## Each entry: [code]id[/code], [code]min_max_unlocked_index[/code], optional [code]min_other_solo_scenes_seen[/code] (other solos completed before this unlocks), [code]lines[/code]. Lines may set [code]player_choice[/code] ([code]options[/code] + [code]reactions[/code] by tone id). Other keys are filled by [method get_haldor_solo_playback_lines].
-var haldor_solo_scene_definitions: Array = [
+## Each entry: [code]id[/code], optional [code]beat_family[/code] (defaults from id prefix), [code]min_max_unlocked_index[/code] (omit or set [code]0[/code] for beats not gated by map progress), optional [code]min_other_solo_scenes_seen[/code] / [code]min_other_beats_seen[/code] (same-family count), optional [code]requires_seen_beat_id[/code] (that beat id must be in [param seen_beat_ids] before this unlocks — use for roster solo tiers 2+), optional [code]portrait_style[/code] ([code]haldor_moods[/code] / [code]static[/code] / [code]auto[/code]), optional [code]default_speaker_name[/code] / [code]default_speaker_portrait[/code], optional [code]default_reward_toast[/code] for [code]rewards[/code] entries that omit [code]toast[/code], roster solos: [code]beat_family[/code] [member NARRATIVE_BEAT_FAMILY_ROSTER_SOLO] + [code]solo_unit_name[/code] (display name) + [method get_eligible_roster_solo_beat_id], [code]lines[/code]. Lines may use [code]player_choice[/code]. Filled by [method get_narrative_beat_playback_lines].
+var narrative_beat_definitions: Array = [
 	{
 		"id": "haldor_solo_first_quiet",
 		"min_max_unlocked_index": 3,
@@ -1442,41 +1536,1392 @@ var haldor_solo_scene_definitions: Array = [
 			{"item_path": "res://Resources/GeneratedItems/Mat_Mythril_Ingot.tres", "amount": 1, "toast": "Coda stock — mythril, no speech tax"},
 		]
 	},
+	# --- Roster solo beats (personality bible order; Camp Explore → Talk on that unit) ---
+	{
+		"id": "roster_solo_kaelen_sharpening_watch",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Kaelen",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 0,
+		"portrait_style": "static",
+		"default_speaker_name": "Kaelen",
+		"default_speaker_portrait": "res://Assets/Portraits/kaelen_side.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Kaelen", "text": "Don't sneak up on a man filing steel, {hero_name}. I won't cut you — but my temper might."},
+			{"speaker": "Kaelen", "text": "Sit if you want. I'm not performing wisdom. I'm keeping an edge honest so it doesn't lie to you in a fight."},
+			{"speaker": "Kaelen", "text": "You've been staring at maps like they're going to apologize. They won't. People might, if you give them room — but maps just sit there smug."},
+			{"speaker": "Kaelen", "text": "If you came for comfort, wrong tent. If you came for someone who'll tell you when you're about to do something stupid — stay.", "player_choice": {
+				"options": [
+					{"id": "stoic", "label": "I don't need a lecture."},
+					{"id": "honest", "label": "I might be tired."},
+					{"id": "trust", "label": "Say what you're holding back."}
+				],
+				"reactions": {
+					"stoic": [
+						{"speaker": "Kaelen", "text": "Fine. Then take this instead of a lecture: eat, sleep, check your straps. Boring keeps you breathing."},
+						{"speaker": "Kaelen", "text": "Pride's useful until it makes you deaf. When it does, I'll nag. You'll survive the noise."}
+					],
+					"honest": [
+						{"speaker": "Kaelen", "text": "Tired isn't shame. It's weather. You still march through weather — you just stop pretending it's sunshine."},
+						{"speaker": "Kaelen", "text": "Rest isn't betrayal of the dead. It's how you keep the living from joining them."}
+					],
+					"trust": [
+						{"speaker": "Kaelen", "text": "What I'm holding back is how much I hate watching someone decent learn command the way I did — by bleeding for it."},
+						{"speaker": "Kaelen", "text": "So yeah, I'm harsh. I'd rather be harsh and have you upright than gentle and explain you at a pyre."}
+					]
+				}
+			}},
+			{"speaker": "Kaelen", "text": "I'm still here when the jokes run out, {hero_name}. That's the whole promise. Don't make me chase you to say it twice."},
+		],
+	},
+	{
+		"id": "roster_solo_kaelen_quiet_blade",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Kaelen",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_kaelen_sharpening_watch",
+		"portrait_style": "static",
+		"default_speaker_name": "Kaelen",
+		"default_speaker_portrait": "res://Assets/Portraits/kaelen_side.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Kaelen", "text": "Back again, {hero_name}? Good. Means you didn't treat last time like a story you tell once and shelve."},
+			{"speaker": "Kaelen", "text": "I sharpen when I'm angry. I oil when I'm scared. Both look like work — only one lies to the steel."},
+			{"speaker": "Kaelen", "text": "Secrecy's a habit I wore like armor. I'm trying not to hand you the same weight by 'protecting' you from truth you already lived."},
+			{"speaker": "Kaelen", "text": "If I go quiet, it's not a test. It's me deciding words won't turn into another order you didn't ask for."},
+			{"speaker": "Kaelen", "text": "You're allowed to be young at this job. I'm not — and that's fine. I'll eat the years if it keeps your throat clear for the hard sentences."},
+			{"speaker": "Kaelen", "text": "Next time you hear me bark, look at my hands. If they're busy fixing something, I'm not mad at you — I'm mad at a world that keeps breaking you."},
+		],
+	},
+	{
+		"id": "roster_solo_kaelen_bench_after_midnight",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Kaelen",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_kaelen_quiet_blade",
+		"portrait_style": "static",
+		"default_speaker_name": "Kaelen",
+		"default_speaker_portrait": "res://Assets/Portraits/kaelen_side.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Kaelen", "text": "Third visit. Alright, {hero_name} — either you're stubborn or you're learning that command doesn't cure loneliness. Both are survivable."},
+			{"speaker": "Kaelen", "text": "I've buried people I taught to stand. The guilt doesn't shrink; you just stop using it as an excuse to be cruel to the living."},
+			{"speaker": "Kaelen", "text": "Love, for me, sounds like insults and fixed buckles. If you need it softer, say so — I'll mispronounce the words and mean them anyway."},
+			{"speaker": "Kaelen", "text": "I don't want your gratitude on a plate. I want you upright when the day goes wrong — and it will."},
+			{"speaker": "Kaelen", "text": "If you ever think you're becoming me… good. Take the competence. Leave the part that thinks suffering is currency."},
+			{"speaker": "Kaelen", "text": "Bench is open. So am I — in my way. Don't make a speech about it. Just show up."},
+		],
+	},
+	{
+		"id": "roster_solo_branik_fire_and_mercy",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Branik",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 1,
+		"portrait_style": "static",
+		"default_speaker_name": "Branik",
+		"default_speaker_portrait": "res://Assets/Portraits/Branik Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Branik", "text": "Smells like onions and old smoke out here, {hero_name}. Focus on the onions. The smoke's just yesterday trying to ruin tomorrow."},
+			{"speaker": "Branik", "text": "I cook because it makes sense. Math you can eat. You start looking for deeper meaning in a war camp, you'll just end up starving."},
+			{"speaker": "Branik", "text": "Mercy's a luxury we don't stock. What we have is hot broth. And the decency not to stare when someone flinches."},
+			{"speaker": "Branik", "text": "If you're looking for a confession or a profound lesson from an old soldier, you're at the wrong fire. Sit, eat, and keep quiet."},
+		],
+	},
+	{
+		"id": "roster_solo_branik_second_ladle",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Branik",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_branik_fire_and_mercy",
+		"portrait_style": "static",
+		"default_speaker_name": "Branik",
+		"default_speaker_portrait": "res://Assets/Portraits/Branik Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Branik", "text": "Second ladle. Right. You're persistent... or just tired of outrunning your own ghosts. I know the feeling."},
+			{"speaker": "Branik", "text": "I stir the pot so loudly because I don't want to hear the silence. Silence means remembering the men who didn't get a second ladle."},
+			{"speaker": "Branik", "text": "Survivor's guilt isn't an ache, {hero_name}. It's a ringing in the ears. An accusation that you're only breathing because you stepped on someone else to do it."},
+			{"speaker": "Branik", "text": "I feed people to shut up the ringing. It works... sometimes. But don't mistake it for nobility."},
+		],
+	},
+	{
+		"id": "roster_solo_branik_the_doorway",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Branik",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_branik_second_ladle",
+		"portrait_style": "static",
+		"default_speaker_name": "Branik",
+		"default_speaker_portrait": "res://Assets/Portraits/Branik Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Branik", "text": "You keep showing up. I used to think you were just hungry. Now I think you're helping me guard the doorway. Thanks."},
+			{"speaker": "Branik", "text": "I spent a long time surviving just to spite the ones who wanted me dead. That's a hollow reason to wake up."},
+			{"speaker": "Branik", "text": "I'm done letting the dead vote on how I live. The stew isn't an apology anymore. It's defiance."},
+			{"speaker": "Branik", "text": "We're fighting for the right to an ordinary, utterly boring Tuesday. And I’d be honored to share it with you. Sit down, {hero_name}. I saved the best cut of meat for you."},
+		],
+	},
+	{
+		"id": "roster_solo_liora_tea_rites",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Liora",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 2,
+		"portrait_style": "static",
+		"default_speaker_name": "Liora",
+		"default_speaker_portrait": "res://Assets/Portraits/Liora_Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Liora", "text": "{hero_name}. I expected you. The perimeter checks out, the watch is set, and the doctrine is observed. Nothing is left to chance."},
+			{"speaker": "Liora", "text": "I offer tea the way I treat my shield. Ritualistic maintenance. If you don't maintain the structure, the chaos wins."},
+			{"speaker": "Liora", "text": "The temple taught me that obedience is the highest form of holiness. A closed hand strikes harder. I do not question the striking."},
+			{"speaker": "Liora", "text": "I hold my posture rigid because I am the bulwark. If I slouch, the standard falls. Drink your tea; I will watch the dark."},
+		],
+	},
+	{
+		"id": "roster_solo_liora_bitter_cup",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Liora",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_liora_tea_rites",
+		"portrait_style": "static",
+		"default_speaker_name": "Liora",
+		"default_speaker_portrait": "res://Assets/Portraits/Liora_Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Liora", "text": "It's exceptionally bitter on purpose, {hero_name}. Sweetness lulls the senses. Bitter keeps you painfully awake."},
+			{"speaker": "Liora", "text": "I recite the old dogmas, but the words feel like ash in my throat lately. The doctrine protects the institution, not the people."},
+			{"speaker": "Liora", "text": "If my bloodline is so sacred, why do my hands shake when the shouting stops? I am utterly terrified that I am just a weapon holding a prayerbook."},
+			{"speaker": "Liora", "text": "My rigidity isn't faith. It's panic. I am so terribly afraid of breaking that I've forgotten how to bend without shattering."},
+		],
+	},
+	{
+		"id": "roster_solo_liora_open_palm",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Liora",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_liora_bitter_cup",
+		"portrait_style": "static",
+		"default_speaker_name": "Liora",
+		"default_speaker_portrait": "res://Assets/Portraits/Liora_Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Liora", "text": "A third cup. You are remarkably stubborn at sitting with someone else's contradictions. It helps, {hero_name}."},
+			{"speaker": "Liora", "text": "I've stopped quoting the temple to myself. Their holy war requires casualties. My true faith requires survivors."},
+			{"speaker": "Liora", "text": "My hands are finally open. I can hold the shield without pretending it is forged from divine mandate. It's just steel, and I am just me."},
+			{"speaker": "Liora", "text": "I've chosen who I want to save. And who I want to stand beside when the smoke clears. It's you, {hero_name}. Truly. You have my sword, and my friendship."},
+		],
+	},
+	{
+		"id": "roster_solo_nyx_lockpick_truth",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Nyx",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 3,
+		"portrait_style": "static",
+		"default_speaker_name": "Nyx",
+		"default_speaker_portrait": "res://Assets/Portraits/Nyx Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Nyx", "text": "Oh, it's you, {hero_name}. Relax your jaw. The system is entirely rigged, we're all walking corpses, and nothing actually matters."},
+			{"speaker": "Nyx", "text": "I've mapped four exits from this campfire. Not because I expect trouble, but because betting on stability is for idiots."},
+			{"speaker": "Nyx", "text": "People assume I joke to avoid sincerity. They're wrong. I joke because sincerity is a spectacular way to get leverage used against you.", "player_choice": {
+				"options": [
+					{"id": "edge", "label": "Keep your exits. I don't need a confession."},
+					{"id": "plain", "label": "Say the plain thing. I'll carry it carefully."},
+					{"id": "tease", "label": "Mean something on purpose. I dare you."}
+				],
+				"reactions": {
+					"edge": [
+						{"speaker": "Nyx", "text": "We're mercenaries playing hero. I'm just honest about the mercenary part."}
+					],
+					"plain": [
+						{"speaker": "Nyx", "text": "The plain version: Heroism is a temporary condition. Dying is permanent."}
+					],
+					"tease": [
+						{"speaker": "Nyx", "text": "Fine. I mean it when I say we're all utterly doomed. Better?"}
+					]
+				}
+			}},
+		],
+	},
+	{
+		"id": "roster_solo_nyx_stray_warmth",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Nyx",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_nyx_lockpick_truth",
+		"portrait_style": "static",
+		"default_speaker_name": "Nyx",
+		"default_speaker_portrait": "res://Assets/Portraits/Nyx Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Nyx", "text": "Persistent. I checked the perimeter traps three times tonight. Not for tactical advantage. Because letting my guard down makes me physically sick."},
+			{"speaker": "Nyx", "text": "There's a stray cat in camp. I fed it. I fiercely hate myself for feeding it, because now it expects me to be here tomorrow."},
+			{"speaker": "Nyx", "text": "You people keep surviving. You keep winning. It's genuinely terrifying, because it forces me to consider what happens if I actually start caring."},
+			{"speaker": "Nyx", "text": "If I crack a joke while I'm bleeding, it's because crying acknowledges that I had something to lose. Don't make me admit I have things to lose."},
+		],
+	},
+	{
+		"id": "roster_solo_nyx_no_chorus",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Nyx",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_nyx_stray_warmth",
+		"portrait_style": "static",
+		"default_speaker_name": "Nyx",
+		"default_speaker_portrait": "res://Assets/Portraits/Nyx Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Nyx", "text": "Third time, Commander. Fine. You win. I dismantled the trap nearest your tent. Not an accident. Deliberate sabotage of my own detachment."},
+			{"speaker": "Nyx", "text": "I desperately wanted to leave before everything went up in flames. But the chairs I keep pulling for you all are bolted to the floor now."},
+			{"speaker": "Nyx", "text": "This attachment is irrational, dangerous, and completely against my rules. But if we're going to face the abyss, I'll walk in with my eyes open."},
+			{"speaker": "Nyx", "text": "I'm still going to complain relentlessly. But I'll do it right by your side. You actually made me care, {hero_name}. Don't make me regret it... partner."},
+		],
+	},
+	{
+		"id": "roster_solo_sorrel_margin_note",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sorrel",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 4,
+		"portrait_style": "static",
+		"default_speaker_name": "Sorrel",
+		"default_speaker_portrait": "res://Assets/Portraits/Sorrel Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sorrel", "text": "Ah, {hero_name}. Please be brief. I am currently categorizing battle trauma into statistical probabilities. It requires tremendous focus."},
+			{"speaker": "Sorrel", "text": "Ignorance is unacceptable. By treating warfare strictly as a data set, we remove the messy, unpredictable variable of human emotion."},
+			{"speaker": "Sorrel", "text": "I do not 'feel' the war, Commander. I archive it. The detachment ensures my methodologies remain pristine and uncorrupted."},
+			{"speaker": "Sorrel", "text": "I will provide tactical readouts. Do not expect me to provide morale or empathy. Those are grossly inefficient metrics."},
+		],
+	},
+	{
+		"id": "roster_solo_sorrel_wrong_question",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sorrel",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_sorrel_margin_note",
+		"portrait_style": "static",
+		"default_speaker_name": "Sorrel",
+		"default_speaker_portrait": "res://Assets/Portraits/Sorrel Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sorrel", "text": "I made an error in my margin notes, {hero_name}. I tried to calculate the acceptable losses for the next skirmish... and I recognized the names."},
+			{"speaker": "Sorrel", "text": "Detachment suddenly feels violently inadequate. A thesis on hemorrhage does absolutely nothing to stop compounding blood loss on the field."},
+			{"speaker": "Sorrel", "text": "I hide behind my ledger because touching a dying soldier requires a courage my academia never prepared me for."},
+			{"speaker": "Sorrel", "text": "My statistics are cowardly. I am terrified that understanding the mechanism of death does not give me the power to prevent it."},
+		],
+	},
+	{
+		"id": "roster_solo_sorrel_last_page",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sorrel",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_sorrel_wrong_question",
+		"portrait_style": "static",
+		"default_speaker_name": "Sorrel",
+		"default_speaker_portrait": "res://Assets/Portraits/Sorrel Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sorrel", "text": "A third conversation. The pattern holds. I have physically shut the ledger, {hero_name}. The data is secondary to the immediate reality."},
+			{"speaker": "Sorrel", "text": "I will no longer observe from a safe, academic distance. A theory untested by blood is just a dangerous vanity."},
+			{"speaker": "Sorrel", "text": "If I must drop my quill to drag someone from the line of fire, I will do so. And I will not flinch."},
+			{"speaker": "Sorrel", "text": "When we win, the record will show not just our casualty rates, but our messy, beautiful survival. I'm honored to be in your chapter, {hero_name}. Let's write the rest together."},
+		],
+	},
+	{
+		"id": "roster_solo_darian_tune_after_hours",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Darian",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 5,
+		"portrait_style": "static",
+		"default_speaker_name": "Darian",
+		"default_speaker_portrait": "res://Assets/Portraits/Darian Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Darian", "text": "Loom heroically if you must, {hero_name}. I am merely tuning a lute, not swearing fealty to your magnificent posture."},
+			{"speaker": "Darian", "text": "The aristocracy taught me that style is fundamentally superior to substance. I have simply brought that vital education to the mud."},
+			{"speaker": "Darian", "text": "I flirt to avoid standing still. If I banter, no one asks for my deeply held convictions. Mostly because I pretend not to have any."},
+			{"speaker": "Darian", "text": "Do not demand sincerity from me. Sincerity is terribly dull, and I have spent my entire life avoiding boredom at all costs."},
+		],
+	},
+	{
+		"id": "roster_solo_darian_scuffed_polish",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Darian",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_darian_tune_after_hours",
+		"portrait_style": "static",
+		"default_speaker_name": "Darian",
+		"default_speaker_portrait": "res://Assets/Portraits/Darian Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Darian", "text": "Notice the scuff on my boot, {hero_name}? It drives me mad. But it reminds me that my former elegance was funded by the starving."},
+			{"speaker": "Darian", "text": "The charm is a reflexive, exhausting lie. I smile to hide the sheer, crushing shame I feel when I hear my family's name spoken aloud."},
+			{"speaker": "Darian", "text": "My class bought its polish with your people's blood. I mock everything because treating it seriously means admitting my own complicity."},
+			{"speaker": "Darian", "text": "I am so incredibly tired of performing. Sincerity doesn't bore me. It violently terrifies me, because it demands I take a stand."},
+		],
+	},
+	{
+		"id": "roster_solo_darian_third_ask",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Darian",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_darian_scuffed_polish",
+		"portrait_style": "static",
+		"default_speaker_name": "Darian",
+		"default_speaker_portrait": "res://Assets/Portraits/Darian Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Darian", "text": "A third visit. At court, that is a calculated maneuver. Out here, it is foolish stubbornness. I find I vastly prefer the mud."},
+			{"speaker": "Darian", "text": "I am setting the instrument aside. No performance today. I am actively choosing the grueling work over the elegant excuse."},
+			{"speaker": "Darian", "text": "I will not rebuild the world my fathers broke. I will happily burn their tapestries to bandage our wounded."},
+			{"speaker": "Darian", "text": "You have my completely unvarnished loyalty, {hero_name}. Not just as a commander, but as a true friend. My blade, and my heart, are exactly where you need them."},
+		],
+	},
+	{
+		"id": "roster_solo_celia_spear_rest",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Celia",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 6,
+		"portrait_style": "static",
+		"default_speaker_name": "Celia",
+		"default_speaker_portrait": "res://Assets/Portraits/Celia Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Celia", "text": "I checked the spear straps, {hero_name}. Then the perimeter. Then the rationing. The academy taught us to abhor an idle mind."},
+			{"speaker": "Celia", "text": "Command is a performance. If the soldiers see the nobility panic, the line breaks. So my posture remains absolutely rigid."},
+			{"speaker": "Celia", "text": "I do not complain about extreme fatigue. Fatigue is merely an administrative error on the part of the flesh."},
+			{"speaker": "Celia", "text": "If you require obedience without question, merely give the order. I have practiced immaculate compliance my entire life.", "player_choice": {
+				"options": [
+					{"id": "need", "label": "I need you useful. Rest later."},
+					{"id": "see", "label": "I see you. Take the rest now."},
+					{"id": "trust", "label": "Tell me what you actually need."}
+				],
+				"reactions": {
+					"need": [
+						{"speaker": "Celia", "text": "Understood. I can do useful. Useful is a language I speak cleanly."},
+						{"speaker": "Celia", "text": "Just... if I go quiet, check that it's actually focus and not me disappearing into the work. I'm still learning the difference."}
+					],
+					"see": [
+						{"speaker": "Celia", "text": "...Thank you. That's harder to hear than an order, but it lands truer."},
+						{"speaker": "Celia", "text": "I'll rest when the line holds. Tonight it holds. Because you said so, and because I am choosing to believe you."}
+					],
+					"trust": [
+						{"speaker": "Celia", "text": "What I need is simple and difficult. Permission to matter outside my usefulness. I'm not good at asking."},
+						{"speaker": "Celia", "text": "So I'll say it once. If I fall, do not make a sermon of me. Let it mean we failed the living, not that I was only ever a symbol."}
+					]
+				}
+			}},
+			{"speaker": "Celia", "text": "Whatever you answered… I'll hold it the way I hold a shield. Steady. On purpose."},
+		],
+	},
+	{
+		"id": "roster_solo_celia_sky_line",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Celia",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_celia_spear_rest",
+		"portrait_style": "static",
+		"default_speaker_name": "Celia",
+		"default_speaker_portrait": "res://Assets/Portraits/Celia Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Celia", "text": "I checked the sky before the spear. I couldn't help it. For one second, I just wanted to look at something that didn't need organizing."},
+			{"speaker": "Celia", "text": "I am so exhausted, {hero_name}. My spine aches from holding everyone's morale up like a tent pole."},
+			{"speaker": "Celia", "text": "The Valeron drills broke the people who couldn't perform flawlessly. I survived them. I am beginning to wonder at what cost."},
+			{"speaker": "Celia", "text": "If I unclench my jaw, I might actually weep. If you value my dignity, pretend you do not see my hands shaking."},
+		],
+	},
+	{
+		"id": "roster_solo_celia_chosen_post",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Celia",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_celia_sky_line",
+		"portrait_style": "static",
+		"default_speaker_name": "Celia",
+		"default_speaker_portrait": "res://Assets/Portraits/Celia Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Celia", "text": "A third visit. You do not demand a report or a performance. You just let me sit. You have no idea what a luxury that is."},
+			{"speaker": "Celia", "text": "I am putting the spear down. Just for ten minutes. The line will not collapse if I allow myself to rest."},
+			{"speaker": "Celia", "text": "My family taught me I was a symbol first and a person second. I am actively trying to reverse that hierarchy."},
+			{"speaker": "Celia", "text": "I will proudly hold the line for you when the horns sound. But tonight, as just Celia... I'm really glad you're here. Thank you for being my friend."},
+		],
+	},
+	{
+		"id": "roster_solo_rufus_powder_math",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Rufus",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 7,
+		"portrait_style": "static",
+		"default_speaker_name": "Rufus",
+		"default_speaker_portrait": "res://Assets/Portraits/Rufus Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Rufus", "text": "If you're here for philosophy, {hero_name}, wrong tent. You want to know if we have enough canvas to patch the roofs? Pull up a stump."},
+			{"speaker": "Rufus", "text": "Powder, shot, spare leather, dried beef. These are the only things that keep heroes from becoming corpses by Tuesday."},
+			{"speaker": "Rufus", "text": "I treat the roster like a ledger because math doesn't lie to me. Math doesn't panic. Math just demands balancing."},
+			{"speaker": "Rufus", "text": "Go inspire someone. I'll sit here and count the nails. You'll thank me when your wagons don't lose their axles."},
+		],
+	},
+	{
+		"id": "roster_solo_rufus_wet_barrel",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Rufus",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_rufus_powder_math",
+		"portrait_style": "static",
+		"default_speaker_name": "Rufus",
+		"default_speaker_portrait": "res://Assets/Portraits/Rufus Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Rufus", "text": "Found a wet patch by the flour sacks. I handled it, but my heart stopped for a full minute. Flour is life out here."},
+			{"speaker": "Rufus", "text": "The ledger isn't a hobby. It's how I keep the fear out. If I know exactly what we have, I know exactly how long we survive."},
+			{"speaker": "Rufus", "text": "I was hungry on the docks. Not 'missed a meal' hungry. 'Staring at a stray dog with terrible thoughts' hungry. I will not let this camp feel that."},
+			{"speaker": "Rufus", "text": "I obsess over inventory because I am terrified of failing you all. If the food runs out, the honor follows immediately."},
+		],
+	},
+	{
+		"id": "roster_solo_rufus_young_hands",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Rufus",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_rufus_wet_barrel",
+		"portrait_style": "static",
+		"default_speaker_name": "Rufus",
+		"default_speaker_portrait": "res://Assets/Portraits/Rufus Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Rufus", "text": "Third time, {hero_name}. The ledger is closed. For tonight, anyway. I'm trying to look at the fire instead of the supplies."},
+			{"speaker": "Rufus", "text": "You recruits aren't numbers. I keep forgetting that. Five wounded isn't a deficit in bandages, it's five of my friends bleeding."},
+			{"speaker": "Rufus", "text": "I'm trusting you to keep the monsters off our backs, so I can stop planning for our total ruin quite so meticulously."},
+			{"speaker": "Rufus", "text": "Take an extra ration, {hero_name}. Tell the quartermaster I authorized it. And between you and me? Having you lead us is the best asset in this entire ledger."},
+		],
+	},
+	{
+		"id": "roster_solo_inez_tree_line",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Inez",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 8,
+		"portrait_style": "static",
+		"default_speaker_name": "Inez",
+		"default_speaker_portrait": "res://Assets/Portraits/Inez Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Inez", "text": "The wind shifted, {hero_name}. You missed it. You focus too much on the fire and not enough on the dark."},
+			{"speaker": "Inez", "text": "I stay near the tree line because out here, distance equals time. The further I am from the noise, the sooner I see the threat."},
+			{"speaker": "Inez", "text": "My rifle is a tool, my eyes are the mechanism. Empathy throws off the shot. I do not afford myself empathy."},
+			{"speaker": "Inez", "text": "I am not here for camaraderie. I am here to ensure absolutely nothing reaches the camp unseen. Go back to the warmth."},
+		],
+	},
+	{
+		"id": "roster_solo_inez_mud_memory",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Inez",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_inez_tree_line",
+		"portrait_style": "static",
+		"default_speaker_name": "Inez",
+		"default_speaker_portrait": "res://Assets/Portraits/Inez Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Inez", "text": "The mud says someone dragged something heavy away. It was an animal, this time. I watched it through the scope."},
+			{"speaker": "Inez", "text": "Distance does not erase the impact. Watching a living thing drop from three hundred yards away is still watching a living thing drop."},
+			{"speaker": "Inez", "text": "I am incredibly still because the moment I vibrate, I shatter. The spiritual toll of this precision is... eroding me. From the inside."},
+			{"speaker": "Inez", "text": "I don't look at the faces in the scope anymore. If I look, I hesitate. And if I hesitate, our people die."},
+		],
+	},
+	{
+		"id": "roster_solo_inez_still_pool",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Inez",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_inez_mud_memory",
+		"portrait_style": "static",
+		"default_speaker_name": "Inez",
+		"default_speaker_portrait": "res://Assets/Portraits/Inez Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Inez", "text": "Third time out here in the cold. Do you not feel the damp? ...Never mind. It's oddly reassuring to have someone stand in my blind spot."},
+			{"speaker": "Inez", "text": "I unloaded the breech. For five minutes. A self-imposed cease-fire. The woods do not instantly collapse when I stop aiming."},
+			{"speaker": "Inez", "text": "My stillness is shifting. From predatory focus to simple... presence. It is painfully difficult, but necessary."},
+			{"speaker": "Inez", "text": "I will protect the camp because I desperately want our people to survive. I want you to survive, {hero_name}. Stand beside me in the warmth for a change. It's nice."},
+		],
+	},
+	{
+		"id": "roster_solo_tariq_line_of_sight",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Tariq",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 9,
+		"portrait_style": "static",
+		"default_speaker_name": "Tariq",
+		"default_speaker_portrait": "res://Assets/Portraits/Tariq Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Tariq", "text": "If you've come for inspiration, {hero_name}, I'm fresh out of sermons. The rhythm of violence makes a terrible poem."},
+			{"speaker": "Tariq", "text": "I observe the camp like a stanza that doesn't rhyme. Fascinating conceptually, utterly disastrous in execution."},
+			{"speaker": "Tariq", "text": "I engage with this war philosophically. If I treat the bloodshed as abstract theory, the smell of copper bothers me significantly less."},
+			{"speaker": "Tariq", "text": "You command. I critique. It is a mutually beneficial arrangement that keeps my boots largely clean of ideological fanaticism."},
+		],
+	},
+	{
+		"id": "roster_solo_tariq_margin_lecture",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Tariq",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_tariq_line_of_sight",
+		"portrait_style": "static",
+		"default_speaker_name": "Tariq",
+		"default_speaker_portrait": "res://Assets/Portraits/Tariq Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Tariq", "text": "A second conversation. My theories are failing, {hero_name}. The mud is entirely too literal to be metaphorized."},
+			{"speaker": "Tariq", "text": "I tried to weave a philosophy out of a skirmish yesterday. Utter nonsense. A spear through the lung has no subtext."},
+			{"speaker": "Tariq", "text": "My cynicism is a coward's defense. I mock the earnestness of the recruits because their sincerity terrifies my detachment."},
+			{"speaker": "Tariq", "text": "I am suffocating on my own cleverness. At some point, sitting on the philosophical fence just leaves you full of splinters."},
+		],
+	},
+	{
+		"id": "roster_solo_tariq_bargain_kept",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Tariq",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_tariq_margin_lecture",
+		"portrait_style": "static",
+		"default_speaker_name": "Tariq",
+		"default_speaker_portrait": "res://Assets/Portraits/Tariq Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Tariq", "text": "Third visit. Fine. The poet concedes, {hero_name}. The abstract has been thoroughly routed by reality."},
+			{"speaker": "Tariq", "text": "I am discarding the clever verses. We need a philosophy built for the trenches, constructed of grit, loyalty, and blunt force trauma."},
+			{"speaker": "Tariq", "text": "I no longer view this camp as a sociological experiment. You are my people. God help my academic reputation."},
+			{"speaker": "Tariq", "text": "I'll give you the ugliest truths entirely unrhymed. But I'll also draw my blade and help you fix them. It's actually an honor standing with you, my friend."},
+		],
+	},
+	{
+		"id": "roster_solo_mira_quiet_nock",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Mira Ashdown",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 10,
+		"portrait_style": "static",
+		"default_speaker_name": "Mira Ashdown",
+		"default_speaker_portrait": "res://Assets/Portraits/Mira Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Mira Ashdown", "text": "I was checking the string tension. Someone has to make sure the weapons work when the younger ones inevitably act foolish."},
+			{"speaker": "Mira Ashdown", "text": "I do not coddle. Survival is a discipline acquired through repetition and fear. I supply both."},
+			{"speaker": "Mira Ashdown", "text": "Everyone in this camp thinks they are invincible. It is my deeply irritating duty to remind them they are made of meat."},
+			{"speaker": "Mira Ashdown", "text": "If I bark orders, do not interpret it as anger. Interpret it as an aggressive refusal to let anyone else die on my watch."},
+		],
+	},
+	{
+		"id": "roster_solo_mira_oakhaven_weight",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Mira Ashdown",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_mira_quiet_nock",
+		"portrait_style": "static",
+		"default_speaker_name": "Mira Ashdown",
+		"default_speaker_portrait": "res://Assets/Portraits/Mira Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Mira Ashdown", "text": "You came back. Good. I need someone who won't treat me like a legend when I admit a tactical error."},
+			{"speaker": "Mira Ashdown", "text": "I see the weak points in every defensive line. I see exactly how everyone could die. It's a vision I cannot turn off."},
+			{"speaker": "Mira Ashdown", "text": "Oakhaven taught me that my absolute best is sometimes profoundly inadequate. The weight of that knowledge is crushing."},
+			{"speaker": "Mira Ashdown", "text": "I smother the recruits because I am terrified. Because if one of them falls, I know I will blame my own hands for failing to catch them."},
+		],
+	},
+	{
+		"id": "roster_solo_mira_still_here",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Mira Ashdown",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_mira_oakhaven_weight",
+		"portrait_style": "static",
+		"default_speaker_name": "Mira Ashdown",
+		"default_speaker_portrait": "res://Assets/Portraits/Mira Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Mira Ashdown", "text": "Third time. You're tracking my stress levels. Astute, {hero_name}. Also, deeply annoying. But... appreciated."},
+			{"speaker": "Mira Ashdown", "text": "I am working on un-nocking the arrow before the threat actually arrives. I cannot hold the line in perpetual tension."},
+			{"speaker": "Mira Ashdown", "text": "I have to trust that the camp can protect itself. More troublingly, I have to trust that they can protect me."},
+			{"speaker": "Mira Ashdown", "text": "If I ask for help tonight, just stand at my flank. You've lightened a burden I thought I'd have to carry forever, {hero_name}. For that, you have my deepest gratitude... and my smile."},
+		],
+	},
+	{
+		"id": "roster_solo_pell_first_vigil",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Pell Rowan",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 11,
+		"portrait_style": "static",
+		"default_speaker_name": "Pell Rowan",
+		"default_speaker_portrait": "res://Assets/Portraits/Pell Rowan Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Pell Rowan", "text": "Commander {hero_name}! I—I mean, good evening. I was just practicing my sword forms. You know, for honor!"},
+			{"speaker": "Pell Rowan", "text": "I'm going to be exactly like the knights in the ballads. I've memorized the vows, polished the brass, and absolutely ignored the blister on my heel."},
+			{"speaker": "Pell Rowan", "text": "If I talk too much, it's just enthusiasm! The cause is so incredibly righteous, who wouldn't be loud about it?"},
+			{"speaker": "Pell Rowan", "text": "Just give me an order—any order—and I will execute it with maximum dramatic flair and totally genuine devotion!"},
+		],
+	},
+	{
+		"id": "roster_solo_pell_shield_drill",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Pell Rowan",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_pell_first_vigil",
+		"portrait_style": "static",
+		"default_speaker_name": "Pell Rowan",
+		"default_speaker_portrait": "res://Assets/Portraits/Pell Rowan Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Pell Rowan", "text": "Second check-in. {hero_name}... the forms aren't helping today. My arms shake, and I realized I don't actually know what I'm swinging at."},
+			{"speaker": "Pell Rowan", "text": "Heroism looked a lot simpler when it was ink on a page. In the mud, it just looks like desperate people trying not to bleed to death."},
+			{"speaker": "Pell Rowan", "text": "I keep talking loudly because if I stop, I'll think about the farm. About the soil... and the fact that it's probably burned."},
+			{"speaker": "Pell Rowan", "text": "I'm not bold. I'm reckless because I'm terrified I have nothing left to return to. The ballads didn't mention this part."},
+		],
+	},
+	{
+		"id": "roster_solo_pell_oath_without_audience",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Pell Rowan",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_pell_shield_drill",
+		"portrait_style": "static",
+		"default_speaker_name": "Pell Rowan",
+		"default_speaker_portrait": "res://Assets/Portraits/Pell Rowan Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Pell Rowan", "text": "Third time! I'm trying very hard not to be incredibly emotional about you checking on me again. I might be failing. Sorry."},
+			{"speaker": "Pell Rowan", "text": "The farm is gone. Fine. But this camp... the mud here is real. The people here are real. I can plant something new in this soil."},
+			{"speaker": "Pell Rowan", "text": "I don't care about the ballads anymore. I care about making sure Rufus gets his inventory sorted and Mira doesn't have to yell so much."},
+			{"speaker": "Pell Rowan", "text": "No more performing for ghosts. I swear my blade to this wonderful, chaotic family. I'd follow you absolutely anywhere, {hero_name}. And I mean that."},
+		],
+	},
+	{
+		"id": "roster_solo_tamsin_salve_and_list",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Tamsin Reed",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 12,
+		"portrait_style": "static",
+		"default_speaker_name": "Tamsin Reed",
+		"default_speaker_portrait": "res://Assets/Portraits/Tamsin Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Tamsin Reed", "text": "Oh—{hero_name}! Sorry, I didn't mean to startle you, I just—bandages, right, and the tincture counts, and I think I'm talking too fast already."},
+			{"speaker": "Tamsin Reed", "text": "In the medical tent, when someone's actually bleeding, I stop babbling. Mostly. Because the blood is louder than my fear."},
+			{"speaker": "Tamsin Reed", "text": "Herbs, bottles, thread—I fidget terribly when I'm scared. If my hands are busy, my heart stops sprinting."},
+			{"speaker": "Tamsin Reed", "text": "If you need something for aches or nerves, tell me. If you're fine, also tell me—otherwise I'll invent injuries for you out of sheer anxiety."},
+		],
+	},
+	{
+		"id": "roster_solo_tamsin_firm_tent",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Tamsin Reed",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_tamsin_salve_and_list",
+		"portrait_style": "static",
+		"default_speaker_name": "Tamsin Reed",
+		"default_speaker_portrait": "res://Assets/Portraits/Tamsin Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Tamsin Reed", "text": "Second visit! I mean—not that I'm keeping track—I am completely keeping track—it's fine, I'm just glad you're here, {hero_name}."},
+			{"speaker": "Tamsin Reed", "text": "People completely underestimate healers until the line breaks. Then suddenly we're 'essential.' I'd much rather be respected on the quiet days, too."},
+			{"speaker": "Tamsin Reed", "text": "Competence emerging from insecurity sounds really poetic in stories. In reality, it feels like dry-heaving before a shift and then doing the shift anyway."},
+			{"speaker": "Tamsin Reed", "text": "Survival isn't just swords and shields. It's water, stitches, sleep, and someone remembering to eat. I am the very annoying reminder with good intentions."},
+		],
+	},
+	{
+		"id": "roster_solo_tamsin_hidden_labor",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Tamsin Reed",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_tamsin_firm_tent",
+		"portrait_style": "static",
+		"default_speaker_name": "Tamsin Reed",
+		"default_speaker_portrait": "res://Assets/Portraits/Tamsin Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Tamsin Reed", "text": "Third time, {hero_name}. If you're just checking on me, I'm embarrassingly grateful. If you're not, I'm still grateful. I really can't win."},
+			{"speaker": "Tamsin Reed", "text": "I realized something. You keep coming back to my tent, and nobody has died here yet today. That makes this a good tent."},
+			{"speaker": "Tamsin Reed", "text": "I will probably always jump at loud noises. But when the noise stops, I know how to put people back together. That has to be brave enough."},
+			{"speaker": "Tamsin Reed", "text": "You don't need to be a hero when you're in here. You're just my friend. Tell me when you hurt, and I promise I'll always fix it."},
+		],
+	},
+	{
+		"id": "roster_solo_hest_sparks_corner_bit",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Hest “Sparks”",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 13,
+		"portrait_style": "static",
+		"default_speaker_name": "Hest “Sparks”",
+		"default_speaker_portrait": "res://Assets/Portraits/Hest Spark Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Hest “Sparks”", "text": "Yo, {hero_name}. If you're here to lecture me about the missing jerky, you'd better make it funny. Otherwise I'll die of sheer boredom."},
+			{"speaker": "Hest “Sparks”", "text": "Yeah, I talk fast. Yeah, I swipe extra rations. Survival goes to whoever stays weird enough to be hard to predict."},
+			{"speaker": "Hest “Sparks”", "text": "Laughing people are vastly safer people. Keep 'em laughing, keep 'em distracted. That's not profound wisdom, that's just street math."},
+			{"speaker": "Hest “Sparks”", "text": "The nickname is Sparks. Chaos included. Warranty completely void if you take me seriously before I've had coffee. Improvise."},
+		],
+	},
+	{
+		"id": "roster_solo_hest_sparks_linger",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Hest “Sparks”",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_hest_sparks_corner_bit",
+		"portrait_style": "static",
+		"default_speaker_name": "Hest “Sparks”",
+		"default_speaker_portrait": "res://Assets/Portraits/Hest Spark Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Hest “Sparks”", "text": "Back again, boss-of-mine. If this is an official inspection, I absolutely did not completely borrow anything. Today."},
+			{"speaker": "Hest “Sparks”", "text": "I swipe things when I'm feeling insecure. The jokes... they're my armor. If I'm not entertaining you, why would you keep me around?"},
+			{"speaker": "Hest “Sparks”", "text": "Fear of being disposable is my secret boss fight. Everything's a bit because bits don't get thrown in the trash—they get applauded."},
+			{"speaker": "Hest “Sparks”", "text": "If I push you and you stay totally steady... that's weirdly comforting. Just don't tell anyone I said that. It completely ruins my brand."},
+		],
+	},
+	{
+		"id": "roster_solo_hest_sparks_not_disposable",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Hest “Sparks”",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_hest_sparks_linger",
+		"portrait_style": "static",
+		"default_speaker_name": "Hest “Sparks”",
+		"default_speaker_portrait": "res://Assets/Portraits/Hest Spark Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Hest “Sparks”", "text": "Third round, {hero_name}. If you're seriously still showing up, that's... dangerous. It means I might start relying on you. Gross."},
+			{"speaker": "Hest “Sparks”", "text": "When I'm actually sincere, I desperately dodge eye contact. Staring at your shoulder right now, for the record."},
+			{"speaker": "Hest “Sparks”", "text": "Dependence officially scares me more than enemy blades. But if you actually want me here just to be here... fine. I'm in."},
+			{"speaker": "Hest “Sparks”", "text": "If you keep me around, keep me as your friend. Meaning... I'm actually here for you, not just for the jokes. Seriously. Thanks for seeing me."},
+		],
+	},
+	{
+		"id": "roster_solo_alden_service_first",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Brother Alden",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 14,
+		"portrait_style": "static",
+		"default_speaker_name": "Brother Alden",
+		"default_speaker_portrait": "res://Assets/Portraits/Brother Alden Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Brother Alden", "text": "{hero_name}. Sit, if you like. I was only folding wraps. It is work that keeps the hands honest."},
+			{"speaker": "Brother Alden", "text": "Faith is service. Anything else is mere vanity in a clean robe. I speak slowly on purpose. Panic sells beautifully. Patience protects."},
+			{"speaker": "Brother Alden", "text": "Calm is not softness. It is simply weight placed exactly where it will not break others."},
+			{"speaker": "Brother Alden", "text": "If you carry something heavy tonight, you may set part of it here. I am built to carry the excess."},
+		],
+	},
+	{
+		"id": "roster_solo_alden_infirmary_hush",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Brother Alden",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_alden_service_first",
+		"portrait_style": "static",
+		"default_speaker_name": "Brother Alden",
+		"default_speaker_portrait": "res://Assets/Portraits/Brother Alden Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Brother Alden", "text": "You returned. Good. Consistency is its own kind of courage, especially in a camp quite this loud."},
+			{"speaker": "Brother Alden", "text": "I help in the infirmary when I am asked. But lately... there is so much groaning. It is a very heavy sound to fill a small room."},
+			{"speaker": "Brother Alden", "text": "I occasionally endure more than I should. I make a virtue of not asking for aid, and the isolation of it is profound."},
+			{"speaker": "Brother Alden", "text": "True mediation is lowering the temperature. I just wish I knew how to occasionally lower my own without feeling like I have failed my vows."},
+		],
+	},
+	{
+		"id": "roster_solo_alden_rooted_prayer",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Brother Alden",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_alden_infirmary_hush",
+		"portrait_style": "static",
+		"default_speaker_name": "Brother Alden",
+		"default_speaker_portrait": "res://Assets/Portraits/Brother Alden Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Brother Alden", "text": "A third conversation, {hero_name}. You need not perform clarity for me. And tonight, I will not perform flawless serenity for you."},
+			{"speaker": "Brother Alden", "text": "I trace my wraps when my faith is thin. It is a physical reminder that hands can act even when the spirit is deeply exhausted."},
+			{"speaker": "Brother Alden", "text": "I am learning that accepting gentleness is also a form of humility. It admits I am not infinite."},
+			{"speaker": "Brother Alden", "text": "Whatever you must hold in this war, hold it with mercy. And when it gets too heavy, let me carry it with you. That's what friends do."},
+		],
+	},
+	{
+		"id": "roster_solo_oren_missing_tool",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Oren Pike",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 15,
+		"portrait_style": "static",
+		"default_speaker_name": "Oren Pike",
+		"default_speaker_portrait": "res://Assets/Portraits/OrenPike Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Oren Pike", "text": "{hero_name}. If you're here for small talk, the answer is definitively no. If you're here because something is bent or misaligned—talk."},
+			{"speaker": "Oren Pike", "text": "Waste offends me vastly more than danger does. Danger is honest. Waste is just people refusing to count the cost."},
+			{"speaker": "Oren Pike", "text": "Titles don't tighten a single bolt. Competence does. I would rather take orders from someone who understands leverage than someone with a shiny crest."},
+			{"speaker": "Oren Pike", "text": "If I sound incredibly annoyed while fixing your problem, that's just my voice doing its job. Check the structural result."},
+		],
+	},
+	{
+		"id": "roster_solo_oren_stack_height",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Oren Pike",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_oren_missing_tool",
+		"portrait_style": "static",
+		"default_speaker_name": "Oren Pike",
+		"default_speaker_portrait": "res://Assets/Portraits/OrenPike Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Oren Pike", "text": "You again, {hero_name}. Fine. Second visit means you're either intensely stubborn or you actually use your eyes."},
+			{"speaker": "Oren Pike", "text": "I rant loudly because I cannot handle the alternative. The alternative is recognizing that if I misjudge the structural load, my friends die under it."},
+			{"speaker": "Oren Pike", "text": "Calibration calms my nerves. If you see me tuning something at 3 AM, mind your business. I'm self-medicating with torque."},
+			{"speaker": "Oren Pike", "text": "Camp inefficiency isn't a comedy act. It is hours stolen from sleep, which means reflexes slow, which means death out there. Every single bolt matters."},
+		],
+	},
+	{
+		"id": "roster_solo_oren_load_bearing_truth",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Oren Pike",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_oren_stack_height",
+		"portrait_style": "static",
+		"default_speaker_name": "Oren Pike",
+		"default_speaker_portrait": "res://Assets/Portraits/OrenPike Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Oren Pike", "text": "Third time. Alright, {hero_name}. You're officially a recurring load stress. But... acceptable."},
+			{"speaker": "Oren Pike", "text": "Physical consequences are the absolute only language every single rank understands. I yell because I actually care what happens to the lot of you."},
+			{"speaker": "Oren Pike", "text": "If I completely refuse help, it's just pride. Call me out on it. Hand me the wrench without making a touching moment out of it."},
+			{"speaker": "Oren Pike", "text": "You keep us alive out there, and I'll make sure the ground under you stays solid. We make a damn good team, {hero_name}. Don't tell anyone I said that."},
+		],
+	},
+	{
+		"id": "roster_solo_garrick_oath_line",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Garrick Vale",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 16,
+		"portrait_style": "static",
+		"default_speaker_name": "Garrick Vale",
+		"default_speaker_portrait": "res://Assets/Portraits/Garrick Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Garrick Vale", "text": "{hero_name}. A moment, if you will. Not ceremony. I much prefer clarity to flourish."},
+			{"speaker": "Garrick Vale", "text": "I was raised from birth to love order. The protocols of Knighthood were my absolute foundation."},
+			{"speaker": "Garrick Vale", "text": "When I am distressed, I tighten up into rigid etiquette. If I sound abruptly formal, you may assume I am on guard."},
+			{"speaker": "Garrick Vale", "text": "If you need someone to hold a line—whether literal or moral—I will not make it theatrical. I will simply secure it."},
+		],
+	},
+	{
+		"id": "roster_solo_garrick_crown_and_crowd",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Garrick Vale",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_garrick_oath_line",
+		"portrait_style": "static",
+		"default_speaker_name": "Garrick Vale",
+		"default_speaker_portrait": "res://Assets/Portraits/Garrick Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Garrick Vale", "text": "You returned, {hero_name}. I must confess, my rigid etiquette earlier was shielding a profound sense of failure."},
+			{"speaker": "Garrick Vale", "text": "A betrayal of oath doesn't always arrive as dramatic treason. Sometimes it's realizing the crown you swore to protect is actively starving its people."},
+			{"speaker": "Garrick Vale", "text": "Disillusionment hurts considerably more when you still fundamentally love what the emblem was supposed to mean."},
+			{"speaker": "Garrick Vale", "text": "Old models of honor die loudly in my mind. I am grieving the nobility I thought we possessed."},
+		],
+	},
+	{
+		"id": "roster_solo_garrick_worthy_loyalty",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Garrick Vale",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_garrick_crown_and_crowd",
+		"portrait_style": "static",
+		"default_speaker_name": "Garrick Vale",
+		"default_speaker_portrait": "res://Assets/Portraits/Garrick Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Garrick Vale", "text": "A third conversation. Then I will be perfectly plain: I am deciding to reforge my loyalty. Not to banners, but to this ragged roster."},
+			{"speaker": "Garrick Vale", "text": "Dignity must be reciprocal. The crown failed that test. I watch you, {hero_name}, and I see someone passing it."},
+			{"speaker": "Garrick Vale", "text": "I am putting away the old etiquette. Casual, genuine ease is much harder for me, but I am currently practicing."},
+			{"speaker": "Garrick Vale", "text": "I swear my blade to this camp, and my loyalty to you. I'm honored to call you my commander, and my friend. Let the palace rust."},
+		],
+	},
+	{
+		"id": "roster_solo_sabine_perimeter_math",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sabine Varr",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 17,
+		"portrait_style": "static",
+		"default_speaker_name": "Sabine Varr",
+		"default_speaker_portrait": "res://Assets/Portraits/Sabine Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sabine Varr", "text": "{hero_name}. Perimeter secure first, messy feelings after. If you vehemently disagree, please make your case with numbers, not bad poetry."},
+			{"speaker": "Sabine Varr", "text": "True stability isn't remotely glamorous. It is food moving efficiently, gates closing securely, and keeping idiots from storing oil near the fire."},
+			{"speaker": "Sabine Varr", "text": "Standard League training: emotion only occurs after the tactical threat is gone. I am not heartless. I am securely scheduled."},
+			{"speaker": "Sabine Varr", "text": "Tell me exactly what you need secured. I will tell you exactly what is delusional. We'll meet in the middle, or we won't."},
+		],
+	},
+	{
+		"id": "roster_solo_sabine_revolt_menu",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sabine Varr",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_sabine_perimeter_math",
+		"portrait_style": "static",
+		"default_speaker_name": "Sabine Varr",
+		"default_speaker_portrait": "res://Assets/Portraits/Sabine Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sabine Varr", "text": "A second pass, {hero_name}. Good. Consistency is my favorite baseline security feature."},
+			{"speaker": "Sabine Varr", "text": "I historically cover concern with critique. If I harshly nitpick your frontline spacing, I am essentially terrorized by the idea of you dying."},
+			{"speaker": "Sabine Varr", "text": "My lack of visible reaction isn't smug moral superiority. It's aggressively compressed fear. I'm struggling with translating the difference."},
+			{"speaker": "Sabine Varr", "text": "Clean ground, perfectly clear firing lanes, and zero vulnerabilities. I overcompensate on security because the alternative makes my chest seize."},
+		],
+	},
+	{
+		"id": "roster_solo_sabine_increment_warmth",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sabine Varr",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_sabine_revolt_menu",
+		"portrait_style": "static",
+		"default_speaker_name": "Sabine Varr",
+		"default_speaker_portrait": "res://Assets/Portraits/Sabine Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sabine Varr", "text": "Third meeting, {hero_name}. If you're expecting perfect reliability and absolute ruthless efficiency? Still fully available."},
+			{"speaker": "Sabine Varr", "text": "But perhaps... you can have that without me treating every conversation like a breach protocol. I'm trying out the concept of warmth. In increments."},
+			{"speaker": "Sabine Varr", "text": "I soften slowly. If you happen to notice a crack in the armor, do not pry it wider for sport. Just stand in the clearance with me."},
+			{"speaker": "Sabine Varr", "text": "Affection, for me, is showing up fully armed when the perimeter gets ugly. But knowing I'm doing it to protect a friend... makes me actually smile."},
+		],
+	},
+	{
+		"id": "roster_solo_yselle_backstage_breath",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Yselle Maris",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 18,
+		"portrait_style": "static",
+		"default_speaker_name": "Yselle Maris",
+		"default_speaker_portrait": "res://Assets/Portraits/Yselle Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Yselle Maris", "text": "If you've come for a performance, the camp gets one later. If you've come for me... step where the lanterns don't reach."},
+			{"speaker": "Yselle Maris", "text": "Morale isn't a luxury. It's how throats forcefully unclench enough to swallow hard bread. I have watched beauty actively keep people alive. Do not dare call it frivolous unless you've tried dying without it."},
+			{"speaker": "Yselle Maris", "text": "I read crowded rooms exactly the way you read maps. Exits, appetites, and establishing who is lying to themselves the loudest."},
+			{"speaker": "Yselle Maris", "text": "A curated presentation isn't false. It is simply survival with vastly better tailoring. And I am quite tired of apologizing for the visible stitches."},
+			{"speaker": "Yselle Maris", "text": "Verbal fencing is exhilarating right up until someone bleeds. I will happily fence with you. Just tell me exactly when you want sincerity instead of a riposte."},
+			{"speaker": "Yselle Maris", "text": "Tonight, I will lift the camp's spirits on purpose. If you ever need lifting in private, ask me without an audience."},
+		],
+	},
+	{
+		"id": "roster_solo_yselle_rumor_silk",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Yselle Maris",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_yselle_backstage_breath",
+		"portrait_style": "static",
+		"default_speaker_name": "Yselle Maris",
+		"default_speaker_portrait": "res://Assets/Portraits/Yselle Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Yselle Maris", "text": "Again, {hero_name}? Good. Repetition typically means trust. Or excellent, dangerous curiosity. I will happily take either."},
+			{"speaker": "Yselle Maris", "text": "Rumors reach me carefully wrapped in silk. I unwrap them, repackage them, and hand back something actionable. That is labor, too."},
+			{"speaker": "Yselle Maris", "text": "I will smile fiercely through discomfort right up until I can't. If the smile drops, please don't stare. Just stay."},
+			{"speaker": "Yselle Maris", "text": "Performance actively regulates fear. So does a steady hand securely on your shoulder. I offer both. At entirely different prices."},
+			{"speaker": "Yselle Maris", "text": "People who demand the 'real' me usually just want a simpler, lazier story. I am not simple. I am precise."},
+			{"speaker": "Yselle Maris", "text": "If I default to managing perception before attempting intimacy, correct me—gently. I respond much better to sharp wit than to scolding."},
+		],
+	},
+	{
+		"id": "roster_solo_yselle_uncurated_hour",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Yselle Maris",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_yselle_rumor_silk",
+		"portrait_style": "static",
+		"default_speaker_name": "Yselle Maris",
+		"default_speaker_portrait": "res://Assets/Portraits/Yselle Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Yselle Maris", "text": "If you've come for a performance, the camp gets one later. If you've come for me... step where the lanterns don't reach."},
+			{"speaker": "Yselle Maris", "text": "Morale isn't a luxury. It's how throats forcefully unclench enough to swallow hard bread. I have watched beauty actively keep people alive."},
+			{"speaker": "Yselle Maris", "text": "A curated presentation isn't false. It is simply survival with vastly better tailoring. And I am quite tired of apologizing for the visible stitches."},
+			{"speaker": "Yselle Maris", "text": "Tonight, I will lift the camp's spirits. But if you ever just want to sit quietly with a friend... I'm here for that, too."},
+		],
+	},
+	{
+		"id": "roster_solo_meris_institutional_ash",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sister Meris",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 19,
+		"portrait_style": "static",
+		"default_speaker_name": "Sister Meris",
+		"default_speaker_portrait": "res://Assets/Portraits/Sister Meris Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sister Meris", "text": "{hero_name}. If you want comfort entirely devoid of truth, I am the wrong sister. If you want truth—even when it costs—speak."},
+			{"speaker": "Sister Meris", "text": "I once served utter certainty as if it were a virtue. I am uncomfortably learning that nuance is not weakness. It is courage with better eyes."},
+			{"speaker": "Sister Meris", "text": "My voice goes very cold when I am afraid of being tragically wrong again. Please correct me if simple kindness is what the moment needs."},
+			{"speaker": "Sister Meris", "text": "Duty stripped of conscience became profound cruelty in my hands. I am here to ensure it does not do so again—even when familiar discipline tempts me."},
+		],
+	},
+	{
+		"id": "roster_solo_meris_long_pause",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sister Meris",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_meris_institutional_ash",
+		"portrait_style": "static",
+		"default_speaker_name": "Sister Meris",
+		"default_speaker_portrait": "res://Assets/Portraits/Sister Meris Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sister Meris", "text": "You returned, {hero_name}. I... note it. Casual gratitude is an incredibly difficult language for me. This is my attempt."},
+			{"speaker": "Sister Meris", "text": "I will pause painfully before admitting a fault. Not from pride alone, but from old training that severely punished hesitation and branded it virtue."},
+			{"speaker": "Sister Meris", "text": "Forgiveness for my past cannot simply become another whip I use against myself. I am watching that internal boundary closely."},
+			{"speaker": "Sister Meris", "text": "Mercy must be learned exactly as rigorously as my judgment once was. I am a remarkably slow student. But I am not an absent one."},
+		],
+	},
+	{
+		"id": "roster_solo_meris_partial_road",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Sister Meris",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_meris_long_pause",
+		"portrait_style": "static",
+		"default_speaker_name": "Sister Meris",
+		"default_speaker_portrait": "res://Assets/Portraits/Sister Meris Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Sister Meris", "text": "A third conversation. Understand this: my redemption is not a weeping performance of softness. It is restraint, deeply chosen."},
+			{"speaker": "Sister Meris", "text": "I am physically uncomfortable in moments of ease. That is entirely not your fault. Unclench. Do not shrink to accommodate my jagged habits."},
+			{"speaker": "Sister Meris", "text": "I eagerly help where harsh discipline is needed. I am learning to help where genuine gentleness is needed. And to actually know the difference."},
+			{"speaker": "Sister Meris", "text": "Walk this jagged road with me, {hero_name}. I can't promise perfection, but I promise I'll be exactly the friend you need at the end of it."},
+		],
+	},
+	{
+		"id": "roster_solo_corvin_honest_gloam",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Corvin Ash",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 20,
+		"portrait_style": "static",
+		"default_speaker_name": "Corvin Ash",
+		"default_speaker_portrait": "res://Assets/Portraits/Corvin Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Corvin Ash", "text": "{hero_name}. Sit, if you like. Or stand. I find stillness highly educational either way."},
+			{"speaker": "Corvin Ash", "text": "Forbidden knowledge does not care whether saints or tyrants open it. I would much rather fully understand the lock than pretend the door doesn't exist."},
+			{"speaker": "Corvin Ash", "text": "I value truth over comfort. Nearly always. If that makes me fundamentally cold, please note that cold can be incredibly accurate."},
+			{"speaker": "Corvin Ash", "text": "Ask your question plainly. I respond very poorly to fear disguised as poetry."},
+		],
+	},
+	{
+		"id": "roster_solo_corvin_cost_of_names",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Corvin Ash",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_corvin_honest_gloam",
+		"portrait_style": "static",
+		"default_speaker_name": "Corvin Ash",
+		"default_speaker_portrait": "res://Assets/Portraits/Corvin Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Corvin Ash", "text": "You came back. Interesting. Most people prefer their mysteries strictly at arm's length. Yours seems considerably shorter."},
+			{"speaker": "Corvin Ash", "text": "Curiosity aggressively seduces. I meticulously watch myself for the exact moment understanding becomes appetite without ethics."},
+			{"speaker": "Corvin Ash", "text": "Ruin deeply fascinates me. So does repair. The boundary firmly between them is far thinner than sermons claim."},
+			{"speaker": "Corvin Ash", "text": "If I suddenly go still, something dangerously hypocritical may be nearby. In the world, or in me. Either warrants intense attention."},
+		],
+	},
+	{
+		"id": "roster_solo_corvin_edge_dweller",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Corvin Ash",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_corvin_cost_of_names",
+		"portrait_style": "static",
+		"default_speaker_name": "Corvin Ash",
+		"default_speaker_portrait": "res://Assets/Portraits/Corvin Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Corvin Ash", "text": "Third conversation, {hero_name}. Then a confession dressed fully as observation: I vastly underestimate how frightening I am. I will try to account for it."},
+			{"speaker": "Corvin Ash", "text": "Extreme detachment is a tool and a hazard. If I drift too far, pull me forcefully toward consequence. Gently or not, as needed."},
+			{"speaker": "Corvin Ash", "text": "Darkness utterly refuses to vanish just because you fear it. I live actively near it so it does not own me unexamined."},
+			{"speaker": "Corvin Ash", "text": "If you truly want a companion at the edge, I will gladly meet you there. It turns out, sharing the drop with a friend actually changes the view entirely."},
+		],
+	},
+	{
+		"id": "roster_solo_veska_line_holds",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Veska Moor",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 21,
+		"portrait_style": "static",
+		"default_speaker_name": "Veska Moor",
+		"default_speaker_portrait": "res://Assets/Portraits/Veska Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Veska Moor", "text": "{hero_name}. If you're here for flowery speeches, go to the campfire. If you're here to ask whether the line holds—I'm your primary answer."},
+			{"speaker": "Veska Moor", "text": "I strictly trust what physically survives pressure. Walls. Endless drills. People who actually show up twice. Not pretty promises."},
+			{"speaker": "Veska Moor", "text": "I am not graceful. I am painfully reliable. Pick one if you desperately need a label."},
+			{"speaker": "Veska Moor", "text": "Sleep extremely light, work the palisade constantly, and stop pretending luck is a tactical plan. Done."},
+		],
+	},
+	{
+		"id": "roster_solo_veska_dry_measure",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Veska Moor",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_veska_line_holds",
+		"portrait_style": "static",
+		"default_speaker_name": "Veska Moor",
+		"default_speaker_portrait": "res://Assets/Portraits/Veska Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Veska Moor", "text": "Back again, {hero_name}. Good. Aggressive consistency is a kind of courage. The deeply boring kind. I like it."},
+			{"speaker": "Veska Moor", "text": "Care, consistently from me, looks like taking the hit you're entirely too small for. Don't call it noble. It is basic mass and math."},
+			{"speaker": "Veska Moor", "text": "I relentlessly revise my judgments slow. Give me physical proof, not a dramatic performance."},
+			{"speaker": "Veska Moor", "text": "I predictably carry too much sheer weight instead of talking. If you need words from me, ask plain. I'll answer plain."},
+		],
+	},
+	{
+		"id": "roster_solo_veska_plant_feet",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Veska Moor",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_veska_dry_measure",
+		"portrait_style": "static",
+		"default_speaker_name": "Veska Moor",
+		"default_speaker_portrait": "res://Assets/Portraits/Veska Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Veska Moor", "text": "A third time. Then we are officially past idle curiosity, {hero_name}. Good. I vastly prefer concrete work over guessing."},
+			{"speaker": "Veska Moor", "text": "Justice I can physically touch—hot food, dry shelter, a tightly closed gate—vastly beats justice you only hear about in bard songs."},
+			{"speaker": "Veska Moor", "text": "Massive inflexibility is my primary flaw. If I dig my heels in wrong, shove me physically. I'll listen to force long before flattery."},
+			{"speaker": "Veska Moor", "text": "Plant your feet hard when the world shoves. If you stumble, fall squarely behind mine. I’ll always catch you. That's a permanent offer to a friend."},
+		],
+	},
+	{
+		"id": "roster_solo_hadrien_borrowed_dawn",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Ser Hadrien",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 22,
+		"portrait_style": "static",
+		"default_speaker_name": "Ser Hadrien",
+		"default_speaker_portrait": "res://Assets/Portraits/Ser Hadrien Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Ser Hadrien", "text": "{hero_name}. You need not physically flinch from me. I am merely memory with weight, not a crude tale told to frighten children."},
+			{"speaker": "Ser Hadrien", "text": "I relentlessly wore an oath until it completely outlived its age. What remains is... unfinished. That is not poetry. It is heavy fact."},
+			{"speaker": "Ser Hadrien", "text": "History is never a neat chapter heading to me. It is precisely what our screaming bodies paid. I can still clearly hear the tally."},
+			{"speaker": "Ser Hadrien", "text": "Speak exceptionally plainly if you seek my counsel. I have very little patience for ornament. And infinitely less time than I appear to have."},
+		],
+	},
+	{
+		"id": "roster_solo_hadrien_memory_armor",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Ser Hadrien",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_hadrien_borrowed_dawn",
+		"portrait_style": "static",
+		"default_speaker_name": "Ser Hadrien",
+		"default_speaker_portrait": "res://Assets/Portraits/Ser Hadrien Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Ser Hadrien", "text": "You returned, {hero_name}. The living remarkably often forget to return. I quietly mark it."},
+			{"speaker": "Ser Hadrien", "text": "Grief, in my condition, is a very small signal. A prolonged pause. A static breath deeply held. Not loud theater."},
+			{"speaker": "Ser Hadrien", "text": "Sacrifice can very easily become terrible idolatry. I constantly guard against loving the old wound significantly more than the new work."},
+			{"speaker": "Ser Hadrien", "text": "I know I sometimes speak as though the dead have vastly more claim on me than you do. Correct that gently. I am... slowly learning."},
+		],
+	},
+	{
+		"id": "roster_solo_hadrien_unfinished_vigil",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Ser Hadrien",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_hadrien_memory_armor",
+		"portrait_style": "static",
+		"default_speaker_name": "Ser Hadrien",
+		"default_speaker_portrait": "res://Assets/Portraits/Ser Hadrien Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Ser Hadrien", "text": "A third audience? Then hear this truth: I aggressively died for a massive cause once. Being patiently asked to live entirely beyond it... violently disorients me."},
+			{"speaker": "Ser Hadrien", "text": "Duty with exactly zero survivors is purely vanity. I absolutely will not dress vanity as shining honor again."},
+			{"speaker": "Ser Hadrien", "text": "Do not casually make a static relic of me. Make aggressive use of what I fiercely believed. For the living."},
+			{"speaker": "Ser Hadrien", "text": "My ancient vigil ends when your future is secure. Guarding a friend's future is an oath I am profoundly grateful to finally understand."},
+		],
+	},
+	{
+		"id": "roster_solo_maela_thermal_up",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Maela Thorn",
+		"min_max_unlocked_index": 2,
+		"min_other_beats_seen": 23,
+		"portrait_style": "static",
+		"default_speaker_name": "Maela Thorn",
+		"default_speaker_portrait": "res://Assets/Portraits/Maela Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Maela Thorn", "text": "{hero_name}! If you perfectly timed that entrance, bravo. If not, I'll confidently pretend you did. Looks significantly better on you."},
+			{"speaker": "Maela Thorn", "text": "Freedom is constant motion, not a boring stamp on paper. I take mine high in the air and vigorously dare the ground to complain."},
+			{"speaker": "Maela Thorn", "text": "Raw talent violently beats pedigree when pedigree stops to carefully polish its boots. We're in a massive hurry."},
+			{"speaker": "Maela Thorn", "text": "If I'm loudly showing off, I'm probably intensely nervous. If I'm dead quiet, worry significantly more."},
+		],
+	},
+	{
+		"id": "roster_solo_maela_reckless_proof",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Maela Thorn",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_maela_thermal_up",
+		"portrait_style": "static",
+		"default_speaker_name": "Maela Thorn",
+		"default_speaker_portrait": "res://Assets/Portraits/Maela Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Maela Thorn", "text": "Round two, {hero_name}. Still here? Good. Unyielding consistency is almost as impressively fast as me. Almost."},
+			{"speaker": "Maela Thorn", "text": "Confidently dismiss me and watch the incredibly stupid risks I take to violently un-dismiss myself. Working on that. Slowly."},
+			{"speaker": "Maela Thorn", "text": "Bravado is a heavy blanket. Warm, frequently obnoxious, and occasionally entirely on fire."},
+			{"speaker": "Maela Thorn", "text": "After I massively screw up, I'm deeply honest. Sometimes too honest. Use it. I intensely hate being handled gently vastly more than I violently hate being wrong."},
+		],
+	},
+	{
+		"id": "roster_solo_maela_sky_rent",
+		"beat_family": NARRATIVE_BEAT_FAMILY_ROSTER_SOLO,
+		"solo_unit_name": "Maela Thorn",
+		"min_max_unlocked_index": 2,
+		"requires_seen_beat_id": "roster_solo_maela_reckless_proof",
+		"portrait_style": "static",
+		"default_speaker_name": "Maela Thorn",
+		"default_speaker_portrait": "res://Assets/Portraits/Maela Portrait.png",
+		"background": "res://Assets/Backgrounds/peaceful_village.jpeg",
+		"lines": [
+			{"speaker": "Maela Thorn", "text": "Third lap, {hero_name}. If you're rigorously keeping score, I'm definitively winning on sheer style points."},
+			{"speaker": "Maela Thorn", "text": "I violently outrun casual expectations because standing perfectly still forcefully makes me wonder if I authentically earned my place."},
+			{"speaker": "Maela Thorn", "text": "Rash impulse is absolutely my favorite vice and my notoriously worst strategist. Violently pull my sleeve when I'm about to forcefully prove a point with extreme altitude."},
+			{"speaker": "Maela Thorn", "text": "The high sky is never casually granted, but flying alongside a true friend makes the terrifying drop entirely worth it. Race you to the clouds, {hero_name}!"},
+		],
+	},
 ]
 
 
+func has_unlocked_forge_haldor_narrative_beat(max_unlocked_index: int) -> bool:
+	return not get_unlocked_forge_haldor_beat_ids_ordered(max_unlocked_index, {}).is_empty()
+
+
 func has_unlocked_haldor_solo_scene(max_unlocked_index: int) -> bool:
-	return not get_unlocked_haldor_solo_scene_ids_ordered(max_unlocked_index, {}).is_empty()
+	return has_unlocked_forge_haldor_narrative_beat(max_unlocked_index)
 
 
-func get_unlocked_haldor_solo_scene_ids_ordered(max_unlocked_index: int, seen_scene_ids: Dictionary = {}) -> Array:
+func get_unlocked_forge_haldor_beat_ids_ordered(max_unlocked_index: int, seen_scene_ids: Dictionary = {}) -> Array:
 	var out: Array = []
-	for def_raw in haldor_solo_scene_definitions:
+	for def_raw in narrative_beat_definitions:
 		if not (def_raw is Dictionary):
 			continue
 		var def: Dictionary = def_raw as Dictionary
-		if not _haldor_solo_def_unlocked_for_player(def, max_unlocked_index, seen_scene_ids):
+		if narrative_beat_family(def) != NARRATIVE_BEAT_FAMILY_HALDOR_FORGE:
 			continue
-		var sid: String = str(def.get("id", "")).strip_edges()
-		if sid != "":
-			out.append(sid)
+		if not _narrative_beat_def_unlocked_for_player(def, max_unlocked_index, seen_scene_ids):
+			continue
+		var bid: String = str(def.get("id", "")).strip_edges()
+		if bid != "":
+			out.append(bid)
 	return out
 
 
-func _haldor_solo_normalize_playback_line(row: Dictionary) -> void:
-	if not row.has("speaker"):
-		row["speaker"] = "Haldor"
+func get_unlocked_haldor_solo_scene_ids_ordered(max_unlocked_index: int, seen_scene_ids: Dictionary = {}) -> Array:
+	return get_unlocked_forge_haldor_beat_ids_ordered(max_unlocked_index, seen_scene_ids)
+
+
+func _narrative_beat_coerce_texture(value: Variant) -> Texture2D:
+	if value is Texture2D:
+		return value as Texture2D
+	var s: String = str(value).strip_edges()
+	if s.begins_with("res://") and ResourceLoader.exists(s):
+		var res: Resource = load(s) as Resource
+		if res is Texture2D:
+			return res as Texture2D
+	return null
+
+
+func _narrative_beat_uses_haldor_mood_portraits(beat_def: Dictionary) -> bool:
+	var ps: String = str(beat_def.get("portrait_style", "auto")).strip_edges().to_lower()
+	if ps == "haldor_moods":
+		return true
+	if ps == "static":
+		return false
+	return str(beat_def.get("id", "")).strip_edges().begins_with("haldor_solo_")
+
+
+func _narrative_beat_normalize_playback_line(row: Dictionary, beat_def: Dictionary) -> void:
+	var def_speaker: String = str(beat_def.get("default_speaker_name", "")).strip_edges()
+	if not row.has("speaker") or str(row.get("speaker", "")).strip_edges() == "":
+		if def_speaker != "":
+			row["speaker"] = def_speaker
+		elif narrative_beat_family(beat_def) == NARRATIVE_BEAT_FAMILY_HALDOR_FORGE or _narrative_beat_uses_haldor_mood_portraits(beat_def):
+			row["speaker"] = "Haldor"
+		else:
+			row["speaker"] = ""
 	if not row.has("text"):
 		row["text"] = ""
-	if not row.has("portrait_left"):
-		var mood: String = str(row.get("haldor_expression", _haldor_solo_default_expression))
-		row["portrait_left"] = _haldor_solo_portrait_for_expression(mood)
-	if not row.has("portrait_right"):
+	var pl: Variant = row.get("portrait_left", null)
+	var pl_tex: Texture2D = _narrative_beat_coerce_texture(pl)
+	if pl_tex != null:
+		row["portrait_left"] = pl_tex
+	if not row.has("portrait_left") or row["portrait_left"] == null:
+		if _narrative_beat_uses_haldor_mood_portraits(beat_def):
+			_ensure_haldor_solo_art_loaded()
+			var mood: String = str(row.get("haldor_expression", _haldor_solo_default_expression))
+			row["portrait_left"] = _haldor_solo_portrait_for_expression(mood)
+		else:
+			var dp: Texture2D = _narrative_beat_coerce_texture(beat_def.get("default_speaker_portrait", null))
+			if dp != null:
+				row["portrait_left"] = dp
+	var pr: Variant = row.get("portrait_right", "HERO_PORTRAIT")
+	if pr is String and str(pr) == "HERO_PORTRAIT":
 		row["portrait_right"] = "HERO_PORTRAIT"
+	else:
+		var pr_tex: Texture2D = _narrative_beat_coerce_texture(pr)
+		if pr_tex != null:
+			row["portrait_right"] = pr_tex
 	if not row.has("background"):
-		row["background"] = _haldor_solo_bg_resolved
+		var bg_tex: Texture2D = _narrative_beat_coerce_texture(beat_def.get("background", null))
+		if bg_tex != null:
+			row["background"] = bg_tex
+		else:
+			if _narrative_beat_uses_haldor_mood_portraits(beat_def):
+				_ensure_haldor_solo_art_loaded()
+				row["background"] = _haldor_solo_bg_resolved
 	if not row.has("music"):
-		row["music"] = "haldor_solo"
+		if narrative_beat_family(beat_def) == NARRATIVE_BEAT_FAMILY_HALDOR_FORGE:
+			row["music"] = "haldor_solo"
+		else:
+			row["music"] = "peaceful"
 	if not row.has("active_side"):
 		row["active_side"] = "left"
 	if not row.has("fit_background"):
@@ -1491,44 +2936,67 @@ func _haldor_solo_normalize_playback_line(row: Dictionary) -> void:
 					for i in range((arr as Array).size()):
 						var item: Variant = (arr as Array)[i]
 						if item is Dictionary:
-							_haldor_solo_normalize_playback_line(item as Dictionary)
+							_narrative_beat_normalize_playback_line(item as Dictionary, beat_def)
 
 
-func get_haldor_solo_playback_lines(scene_id: String) -> Array[Dictionary]:
-	_ensure_haldor_solo_art_loaded()
-	var sid: String = str(scene_id).strip_edges()
+func get_narrative_beat_playback_lines(beat_id: String) -> Array[Dictionary]:
+	var sid: String = str(beat_id).strip_edges()
+	var beat_def: Dictionary = {}
 	var lines_src: Array = []
-	for def_raw in haldor_solo_scene_definitions:
+	for def_raw in narrative_beat_definitions:
 		if not (def_raw is Dictionary):
 			continue
 		var def: Dictionary = def_raw as Dictionary
 		if str(def.get("id", "")).strip_edges() != sid:
 			continue
+		beat_def = def
 		var raw_lines: Variant = def.get("lines", [])
 		if raw_lines is Array:
 			lines_src = raw_lines as Array
 		break
+	if _narrative_beat_uses_haldor_mood_portraits(beat_def):
+		_ensure_haldor_solo_art_loaded()
 	var built: Array[Dictionary] = []
 	for row_raw in lines_src:
 		if not (row_raw is Dictionary):
 			continue
 		var row: Dictionary = (row_raw as Dictionary).duplicate(true)
-		_haldor_solo_normalize_playback_line(row)
+		_narrative_beat_normalize_playback_line(row, beat_def)
 		built.append(row)
 	return built
 
 
-## Optional per-scene gifts when a solo scene completes (see [member CampaignManager.try_grant_haldor_solo_scene_rewards]). Each reward: [code]item_path[/code], [code]amount[/code], [code]toast[/code] (caption for pickup FX).
-func get_haldor_solo_reward_entries(scene_id: String) -> Array:
-	var sid: String = str(scene_id).strip_edges()
-	for def_raw in haldor_solo_scene_definitions:
+func get_haldor_solo_playback_lines(scene_id: String) -> Array[Dictionary]:
+	return get_narrative_beat_playback_lines(scene_id)
+
+
+## Optional per-beat gifts on completion (see [member CampaignManager.try_grant_narrative_beat_rewards]). Each reward: [code]item_path[/code], [code]amount[/code], [code]toast[/code].
+func get_narrative_beat_reward_entries(beat_id: String) -> Array:
+	var sid: String = str(beat_id).strip_edges()
+	for def_raw in narrative_beat_definitions:
 		if not (def_raw is Dictionary):
 			continue
 		var def: Dictionary = def_raw as Dictionary
 		if str(def.get("id", "")).strip_edges() != sid:
 			continue
 		var raw: Variant = def.get("rewards", [])
-		if raw is Array:
-			return (raw as Array).duplicate()
-		return []
+		if not (raw is Array):
+			return []
+		var fam: String = narrative_beat_family(def)
+		var beat_toast: String = str(def.get("default_reward_toast", "")).strip_edges()
+		var fallback_toast: String = "From Haldor" if fam == NARRATIVE_BEAT_FAMILY_HALDOR_FORGE else "Received"
+		var out: Array = []
+		for spec_raw in raw as Array:
+			if not (spec_raw is Dictionary):
+				continue
+			var spec: Dictionary = (spec_raw as Dictionary).duplicate(true)
+			var t: String = str(spec.get("toast", "")).strip_edges()
+			if t == "":
+				spec["toast"] = beat_toast if beat_toast != "" else fallback_toast
+			out.append(spec)
+		return out
 	return []
+
+
+func get_haldor_solo_reward_entries(scene_id: String) -> Array:
+	return get_narrative_beat_reward_entries(scene_id)

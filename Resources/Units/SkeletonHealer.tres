@@ -32,4 +32,7 @@ max_hp = 20
 drops_equipped_weapon = true
 extra_loot = Array[ExtResource("2_b7mu5")]([SubResource("Resource_6bxmx")])
 passive_combat_abilities = Array[ExtResource("8_passive_cls")]([ExtResource("9_bonepile"), ExtResource("10_bonetoxin")])
+mag_mult_fire = 1.2
+mag_mult_divine = 1.2
+mag_mult_necrotic = 0.75
 metadata/_custom_type_script = "uid://3jului3v2v6"

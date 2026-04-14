@@ -198,7 +198,7 @@ const ENEMIES := [
 		"class_key": "HeavyArcher",
 		"weapon_name": "Storm Bow",
 		"tier": 3,
-		"stats": {"hp": 34, "str": 12, "mag": 0, "def": 7, "res": 4, "spd": 5, "agi": 6},
+		"stats": {"hp": 38, "str": 14, "mag": 0, "def": 10, "res": 6, "spd": 7, "agi": 8},
 	},
 	{
 		"id": "shadowblade_skirmisher_t3",
@@ -207,7 +207,7 @@ const ENEMIES := [
 		"class_key": "Assassin",
 		"weapon_name": "Sparkknife",
 		"tier": 3,
-		"stats": {"hp": 30, "str": 11, "mag": 0, "def": 4, "res": 4, "spd": 9, "agi": 9},
+		"stats": {"hp": 34, "str": 14, "mag": 0, "def": 6, "res": 5, "spd": 11, "agi": 11},
 	},
 	{
 		"id": "siege_crew_t3",
@@ -216,7 +216,7 @@ const ENEMIES := [
 		"class_key": "Cannoneer",
 		"weapon_name": "Ramshackle Culverin",
 		"tier": 3,
-		"stats": {"hp": 38, "str": 13, "mag": 0, "def": 9, "res": 2, "spd": 3, "agi": 3},
+		"stats": {"hp": 44, "str": 16, "mag": 0, "def": 11, "res": 3, "spd": 4, "agi": 4},
 	},
 	{
 		"id": "purifier_acolyte_t1",
@@ -432,7 +432,7 @@ const ENEMIES := [
 		"class_key": "DivineSage",
 		"weapon_name": "Hexleaf Codex",
 		"tier": 3,
-		"stats": {"hp": 30, "str": 0, "mag": 11, "def": 4, "res": 8, "spd": 5, "agi": 7},
+		"stats": {"hp": 36, "str": 0, "mag": 15, "def": 6, "res": 11, "spd": 6, "agi": 8},
 	},
 	{
 		"id": "drowned_archer_t3",
@@ -441,7 +441,7 @@ const ENEMIES := [
 		"class_key": "HeavyArcher",
 		"weapon_name": "Longbow",
 		"tier": 3,
-		"stats": {"hp": 30, "str": 11, "mag": 0, "def": 7, "res": 3, "spd": 4, "agi": 5},
+		"stats": {"hp": 36, "str": 14, "mag": 0, "def": 9, "res": 6, "spd": 6, "agi": 7},
 	},
 	{
 		"id": "mire_hexer_t3",
@@ -450,7 +450,7 @@ const ENEMIES := [
 		"class_key": "FireSage",
 		"weapon_name": "Hexleaf Codex",
 		"tier": 3,
-		"stats": {"hp": 32, "str": 0, "mag": 12, "def": 4, "res": 8, "spd": 6, "agi": 7},
+		"stats": {"hp": 38, "str": 0, "mag": 16, "def": 5, "res": 10, "spd": 7, "agi": 8},
 	},
 	{
 		"id": "granary_guard_t2",
@@ -630,7 +630,7 @@ const ENEMIES := [
 		"class_key": "HeavyArcher",
 		"weapon_name": "Longbow",
 		"tier": 3,
-		"stats": {"hp": 30, "str": 11, "mag": 0, "def": 7, "res": 4, "spd": 5, "agi": 6},
+		"stats": {"hp": 36, "str": 14, "mag": 0, "def": 10, "res": 5, "spd": 7, "agi": 8},
 	},
 	{
 		"id": "chapel_echo_t2",
@@ -666,7 +666,7 @@ const ENEMIES := [
 		"class_key": "Mage",
 		"weapon_name": "Gloam Primer",
 		"tier": 3,
-		"stats": {"hp": 22, "str": 0, "mag": 10, "def": 2, "res": 6, "spd": 5, "agi": 6},
+		"stats": {"hp": 32, "str": 0, "mag": 15, "def": 5, "res": 11, "spd": 8, "agi": 8},
 	},
 	{
 		"id": "abyss_lancer_t3",
@@ -684,7 +684,7 @@ const ENEMIES := [
 		"class_key": "DivineSage",
 		"weapon_name": "Dark Tide Grimoire",
 		"tier": 3,
-		"stats": {"hp": 30, "str": 0, "mag": 12, "def": 4, "res": 9, "spd": 5, "agi": 7},
+		"stats": {"hp": 36, "str": 0, "mag": 16, "def": 6, "res": 12, "spd": 6, "agi": 8},
 	},
 	{
 		"id": "rift_stalker_t3",
@@ -693,7 +693,7 @@ const ENEMIES := [
 		"class_key": "Assassin",
 		"weapon_name": "Sparkknife",
 		"tier": 3,
-		"stats": {"hp": 28, "str": 10, "mag": 0, "def": 4, "res": 4, "spd": 9, "agi": 9},
+		"stats": {"hp": 34, "str": 14, "mag": 0, "def": 6, "res": 5, "spd": 11, "agi": 11},
 	},
 	{
 		"id": "anchor_guardian_t3",
@@ -711,7 +711,7 @@ const ENEMIES := [
 		"class_key": "Monster",
 		"weapon_name": "Wrapped Cestus",
 		"tier": 3,
-		"stats": {"hp": 30, "str": 10, "mag": 0, "def": 5, "res": 4, "spd": 6, "agi": 5},
+		"stats": {"hp": 38, "str": 14, "mag": 0, "def": 8, "res": 6, "spd": 8, "agi": 7},
 	},
 	{
 		"id": "unmade_horror_t4",

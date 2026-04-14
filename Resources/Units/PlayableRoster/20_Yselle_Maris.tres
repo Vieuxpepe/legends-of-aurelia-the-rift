@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_kox1h")
+voice_gender = 1
 display_name = "Yselle Maris"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["If I must leave the stage, at least let the living remember why beauty mattered.", "Do not let war make ugliness your only language.", "I spent my life teaching people to look — now make them see.", "If the curtain falls, let it fall on something worth remembering."])

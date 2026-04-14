@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_iqc12")
+voice_gender = 1
 display_name = "Justicar Halwen Serast"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["If this is judgment, let the sun remember that I did not kneel."])

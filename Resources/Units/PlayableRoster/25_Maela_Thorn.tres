@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_ty4cx")
+voice_gender = 1
 display_name = "Maela Thorn"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Damn… I really thought I had one more sky left in me.", "Heh… tell me that at least looked impressive.", "So that’s it. Ground finally caught me.", "Don’t slow down because of me. Fly harder."])

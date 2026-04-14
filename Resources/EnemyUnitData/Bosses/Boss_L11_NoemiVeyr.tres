@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("3_tek3a")
+voice_gender = 1
 display_name = "Noemi Veyr"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["So… the mask slips at last; pity the truth beneath it was sharper."])

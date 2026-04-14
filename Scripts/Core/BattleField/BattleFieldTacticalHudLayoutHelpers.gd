@@ -545,7 +545,8 @@ static func apply_tactical_ui_overhaul(field) -> void:
 	if field.inventory_panel != null:
 		field._style_tactical_panel(field.inventory_panel, field.TACTICAL_UI_BG_ALT, field.TACTICAL_UI_BORDER, 2, 12)
 		var inv_item_info := field.inventory_panel.get_node_or_null("Panel") as Panel
-		field._style_inventory_item_info_backdrop(inv_item_info)
+		if not field.inventory_panel.get_meta("_battle_inventory_layout_v2", false):
+			field._style_inventory_item_info_backdrop(inv_item_info)
 	if field.inv_desc_label != null:
 		field._style_tactical_richtext(field.inv_desc_label, 21, 26)
 		field.inv_desc_label.add_theme_constant_override("line_separation", 7)
@@ -556,9 +557,7 @@ static func apply_tactical_ui_overhaul(field) -> void:
 	var inv_close := field.get_node_or_null("UI/InventoryPanel/CloseButton") as Button
 	if inv_close != null:
 		field._style_tactical_button(inv_close, "CLOSE", false, 18)
-	var inv_item_list := field.get_node_or_null("UI/InventoryPanel/ItemList") as ItemList
-	field._style_tactical_item_list(inv_item_list)
-	field._apply_inventory_panel_item_list_extra_margins(inv_item_list)
+	field._layout_battle_inventory_panel()
 	field._style_tactical_item_list(field.get_node_or_null("UI/RosterPanel/RosterList") as ItemList)
 	field._style_tactical_item_list(field.loot_item_list)
 	

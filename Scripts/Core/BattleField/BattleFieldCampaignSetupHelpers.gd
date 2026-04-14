@@ -192,6 +192,8 @@ static func load_campaign_data(field) -> void:
 		new_unit.resistance = saved.get("resistance", 0)
 		new_unit.speed = saved.get("speed", 0)
 		new_unit.agility = saved.get("agility", 0)
+		if saved.has("voice_gender"):
+			new_unit.voice_gender = clampi(int(saved["voice_gender"]), 0, 1)
 
 		if saved.has("move_type"): new_unit.set("move_type", saved["move_type"])
 		if saved.has("move_range"): new_unit.move_range = saved["move_range"]
@@ -328,6 +330,34 @@ static func setup_skirmish_battle(field) -> void:
 		enemy.ai_intelligence += intelligence_boost
 
 
+static func _register_beastiary_for_deployed_unit(child: Node) -> void:
+	if child == null or not is_instance_valid(child):
+		return
+	var dv: Variant = child.get("data")
+	if dv == null or not (dv is Resource):
+		return
+	var path: String = ""
+	if child.has_meta("enemy_unit_data_path"):
+		path = str(child.get_meta("enemy_unit_data_path", "")).strip_edges()
+	if path == "":
+		path = str((dv as Resource).resource_path).strip_edges()
+	if CampaignManager.is_neutral_ally_unit_data_path(path):
+		CampaignManager.mark_neutral_seen(path)
+	elif CampaignManager.is_valid_beastiary_unit_data_path(path):
+		CampaignManager.mark_enemy_seen(path)
+
+
+## Registers [member CampaignManager.beastiary_seen] and [member CampaignManager.beastiary_neutral_seen] from every deployed unit (enemies, green allies, player roster — roster paths only match neutral/enemy rules).
+static func register_beastiary_seen_enemies(field) -> void:
+	if not CampaignManager:
+		return
+	for cont in [field.enemy_container, field.ally_container, field.player_container]:
+		if cont == null:
+			continue
+		for child in cont.get_children():
+			_register_beastiary_for_deployed_unit(child)
+
+
 static func start_battle_from_deployment(field) -> void:
 	if field.select_sound.stream != null: field.select_sound.play()
 	field._defy_death_used.clear()
@@ -336,4 +366,5 @@ static func start_battle_from_deployment(field) -> void:
 	field._enemy_damagers.clear()
 	field._boss_personal_dialogue_played.clear()
 	field._reset_rookie_battle_tracking()
+	register_beastiary_seen_enemies(field)
 	field.change_state(field.player_state)

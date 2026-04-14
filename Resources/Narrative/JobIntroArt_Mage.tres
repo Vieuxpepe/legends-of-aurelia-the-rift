@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="JobIntroArtSet" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Narrative/JobIntroArtSet.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Assets/Backstories/Mage1story.png" id="2_t"]
+[ext_resource type="Texture2D" path="res://Assets/Backstories/Mage2story.png" id="3_t"]
+[ext_resource type="Texture2D" path="res://Assets/Backstories/Mage3story.png" id="4_t"]
+[ext_resource type="Texture2D" path="res://Assets/Backstories/Mage4story.png" id="5_t"]
+
+[resource]
+script = ExtResource("1_script")
+job_name = "Mage"
+beat_textures = Array[Texture2D]([ExtResource("2_t"), ExtResource("3_t"), ExtResource("4_t"), ExtResource("5_t")])

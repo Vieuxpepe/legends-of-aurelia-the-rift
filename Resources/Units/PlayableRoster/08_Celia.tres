@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_ujplj")
+voice_gender = 1
 display_name = "Celia"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["I chose this path myself… do not dishonor it by calling me only obedient.", "Do not pity me. Stand where I stood.", "This was my will, not theirs.", "If duty survives me, let it be kinder in your hands."])

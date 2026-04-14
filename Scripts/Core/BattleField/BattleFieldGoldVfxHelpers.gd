@@ -1,5 +1,17 @@
 extends RefCounted
 
+const FLYING_GOLD_COIN_TEX: Texture2D = preload("res://Assets/Gold Coin.png")
+
+
+static func _make_flying_coin_control(coin_px: int) -> TextureRect:
+	var coin := TextureRect.new()
+	coin.texture = FLYING_GOLD_COIN_TEX
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coin.custom_minimum_size = Vector2(coin_px, coin_px)
+	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return coin
+
 
 static func animate_flying_gold(field, world_pos: Vector2, amount: int) -> void:
 	# 1. Bring back the floating text so you still see the big number instantly!
@@ -24,18 +36,7 @@ static func animate_flying_gold(field, world_pos: Vector2, amount: int) -> void:
 	# 5. Spawn the fountain of coins!
 	var ui_root = field.get_node("UI")
 	for i in range(coin_count):
-		var coin = Panel.new()
-		coin.custom_minimum_size = Vector2(16, 16)
-
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color(1.0, 0.85, 0.1) # Shiny Gold
-		style.border_width_bottom = 2
-		style.border_color = Color(0.7, 0.4, 0.0) # Shadow for depth
-		style.corner_radius_top_left = 8
-		style.corner_radius_top_right = 8
-		style.corner_radius_bottom_left = 8
-		style.corner_radius_bottom_right = 8
-		coin.add_theme_stylebox_override("panel", style)
+		var coin := _make_flying_coin_control(16)
 
 		ui_root.add_child(coin)
 		coin.global_position = screen_pos

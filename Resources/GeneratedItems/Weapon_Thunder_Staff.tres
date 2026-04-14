@@ -10,6 +10,7 @@ weapon_name = "Thunder Staff"
 gold_cost = 4000
 damage_type = 1
 weapon_type = 3
+magic_damage_kind = 3
 is_healing_staff = true
 affected_stat = "magic"
 effect_amount = 0

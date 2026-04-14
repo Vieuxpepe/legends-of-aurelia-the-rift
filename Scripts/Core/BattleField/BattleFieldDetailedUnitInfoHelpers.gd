@@ -429,6 +429,9 @@ static func show_detailed_unit_info_panel(field, unit: Node2D) -> void:
 	if unit == null:
 		return
 
+	if PersonalJournalStore:
+		PersonalJournalStore.note_inspected_unit_for_journal(unit)
+
 	var dimmer = field.detailed_unit_info_layer.get_node("Dimmer")
 	dimmer.visible = true
 	field.detailed_unit_info_panel.visible = true

@@ -382,12 +382,16 @@ static func on_close_loot_pressed(field) -> void:
 		field.update_unit_info_panel()
 		return
 
-	# 3. Open the Convoy view so we can see all grids
-	field.unit_managing_inventory = null
+	# 3. Open the inventory review so we can see both the recipient backpack and convoy.
+	var review_unit: Node2D = null
+	if is_instance_valid(field.loot_recipient) and field.loot_recipient.get_parent() == field.player_container:
+		review_unit = field.loot_recipient
+	elif field.player_state != null and is_instance_valid(field.player_state.active_unit):
+		review_unit = field.player_state.active_unit
+	field.unit_managing_inventory = review_unit
+	field.battle_inventory_open_source = "convoy"
 	field._populate_convoy_list()
 
-	field.equip_button.visible = false
-	field.use_button.visible = false
 	field.inventory_panel.visible = true
 
 	await field.get_tree().process_frame
@@ -398,6 +402,8 @@ static func on_close_loot_pressed(field) -> void:
 	var available_buttons = []
 
 	var all_grids: Array = []
+	if field.unit_grid != null:
+		all_grids.append(field.unit_grid)
 	if field.convoy_grid != null:
 		all_grids.append(field.convoy_grid)
 

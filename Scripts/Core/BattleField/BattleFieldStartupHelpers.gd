@@ -109,6 +109,7 @@ static func on_ready(field) -> void:
 
 	field._ensure_forecast_support_labels()
 	field._apply_inventory_panel_spacing()
+	field._refresh_battle_inventory_entry_state()
 
 	field._defy_death_used.clear()
 	field._grief_units.clear()

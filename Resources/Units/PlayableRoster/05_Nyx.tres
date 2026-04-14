@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("3_7yii6")
+voice_gender = 1
 display_name = "Nyx"
 recruit_dialogue = Array[String]([])
 death_quotes = Array[String](["Heh… figures I finally trusted people worth dying for.", "Well, that’s embarrassing. Don’t let them touch my things.", "Guess this is what I get for sticking around.", "Tch… if you survive, make it messy enough to honor me."])

@@ -339,6 +339,67 @@ theme_override_font_sizes/font_size = 12
 text = "Online room codes use the SilentWolf service as a lightweight relay for staging and live battle sync. LAN / direct play remains available above."
 autowrap_mode = 3
 
+[node name="SteamSectionVBox" type="VBoxContainer" parent="MainPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SteamSectionTitle" type="Label" parent="MainPanel/Margin/VBox/SteamSectionVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.92, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "Steam (friends-only lobby)"
+horizontal_alignment = 1
+
+[node name="SteamHostRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/SteamSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SteamHostFriendsButton" type="Button" parent="MainPanel/Margin/VBox/SteamSectionVBox/SteamHostRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Host Steam friends lobby"
+
+[node name="SteamJoinRow" type="HBoxContainer" parent="MainPanel/Margin/VBox/SteamSectionVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SteamLobbyIdLabel" type="Label" parent="MainPanel/Margin/VBox/SteamSectionVBox/SteamJoinRow"]
+custom_minimum_size = Vector2(88, 0)
+layout_mode = 2
+text = "Lobby ID"
+
+[node name="SteamLobbyIdField" type="LineEdit" parent="MainPanel/Margin/VBox/SteamSectionVBox/SteamJoinRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(160, 28)
+theme_override_font_sizes/font_size = 14
+placeholder_text = "numeric lobby id from host"
+
+[node name="SteamJoinLobbyButton" type="Button" parent="MainPanel/Margin/VBox/SteamSectionVBox/SteamJoinRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 32)
+layout_mode = 2
+text = "Join Steam lobby"
+
+[node name="SteamHintLabel" type="Label" parent="MainPanel/Margin/VBox/SteamSectionVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.82, 0.74, 1)
+theme_override_font_sizes/font_size = 12
+text = "Host shares the numeric lobby ID (shown after create). Friend joins Steam, then pastes the ID here. Use Steam overlay → invite to lobby for friends."
+autowrap_mode = 3
+
+[node name="SteamStatusLabel" type="Label" parent="MainPanel/Margin/VBox/SteamSectionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.82, 0.72, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+autowrap_mode = 3
+
 [node name="SepLan" type="HSeparator" parent="MainPanel/Margin/VBox"]
 layout_mode = 2
 

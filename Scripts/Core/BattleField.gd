@@ -83,6 +83,7 @@ const CoopRuntimeSyncHelpers = preload("res://Scripts/Core/BattleField/BattleFie
 const SupportHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSupportHelpers.gd")
 const SupportRelationshipHelpers = preload("res://Scripts/Core/BattleField/BattleFieldSupportRelationshipHelpers.gd")
 const InventoryUiHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryUiHelpers.gd")
+const InventoryPanelHelpers = preload("res://Scripts/Core/BattleField/BattleFieldInventoryPanelHelpers.gd")
 const DrawHelpers = preload("res://Scripts/Core/BattleField/BattleFieldDrawHelpers.gd")
 const PathCursorHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPathfindingCursorHelpers.gd")
 const PathPreviewHelpers = preload("res://Scripts/Core/BattleField/BattleFieldPathPreviewHelpers.gd")
@@ -99,6 +100,7 @@ const MinimapHelpers = preload("res://Scripts/Core/BattleField/BattleFieldMinima
 const StatusIconVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldStatusIconVfxHelpers.gd")
 const CombatVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCombatVfxHelpers.gd")
 const GoldVfxHelpers = preload("res://Scripts/Core/BattleField/BattleFieldGoldVfxHelpers.gd")
+const CritVoiceHelpers = preload("res://Scripts/Core/BattleField/BattleFieldCritVoiceHelpers.gd")
 const TurnOrchestrationHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnOrchestrationHelpers.gd")
 const BattleFieldTurnFlowHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTurnFlowHelpers.gd")
 const TacticalHudLayoutHelpers = preload("res://Scripts/Core/BattleField/BattleFieldTacticalHudLayoutHelpers.gd")
@@ -351,6 +353,9 @@ var deploy_roster_toggle_tween: Tween
 @export var custom_objective_text: String = ""
 @export var turn_limit: int = 10
 @export var vip_target: Node2D
+## Optional player-facing name for this map (Field Notes → Maps, etc.). New campaign maps under [code]Scenes/Levels[/code]
+## should set this on the battlefield root (this script), even if the node was renamed — see CampaignManager.gd header (STEP 1).
+@export var level_display_name: String = ""
 
 
 # =============================================================================
@@ -584,6 +589,8 @@ var loot_item_info_panel: Panel
 
 const ATTACK_HIT_PITCH_JITTER_MIN := 0.96
 const ATTACK_HIT_PITCH_JITTER_MAX := 1.04
+## Delay before [method show_loot_window] after a kill so crit/voice SFX play before [code]get_tree().paused[/code].
+const LOOT_WINDOW_DELAY_AFTER_KILL_SEC := 0.55
 
 func _ensure_attack_hit_base_pitch(player: AudioStreamPlayer) -> void:
 	if player == null or not is_instance_valid(player):
@@ -600,6 +607,11 @@ func play_attack_hit_sound(player: AudioStreamPlayer, relative_pitch_mult: float
 	var base_pitch: float = float(player.get_meta("_attack_hit_base_pitch"))
 	player.pitch_scale = base_pitch * relative_pitch_mult * randf_range(ATTACK_HIT_PITCH_JITTER_MIN, ATTACK_HIT_PITCH_JITTER_MAX)
 	player.play()
+
+
+## Humanoid crit exertion layer (random grunt); stacks with CritSound. Player/ally only — uses [member Unit.voice_gender] / [member Unit.gender] when set.
+func play_crit_striker_voice_grunt(striker: Node2D) -> void:
+	CritVoiceHelpers.play_crit_striker_voice_grunt(self, striker)
 
 # =============================================================================
 # PATHFINDING / GRID STATE
@@ -739,6 +751,8 @@ var _deferred_battle_result_after_loot: String = ""
 
 var player_gold: int = 0
 var player_inventory: Array[Resource] = []
+var battle_inventory_filter: String = "all"
+var battle_inventory_open_source: String = ""
 
 
 # =============================================================================
@@ -889,6 +903,10 @@ func _mock_coop_try_advance_prebattle_after_ready_sync() -> void:
 
 var _coop_enet_remote_sync_queue: Array = []
 var _coop_enet_remote_sync_busy: bool = false
+## Bumped on each [code]full_battle_resync[/code] apply; queued [code]coop_battle_sync[/code] bodies carry [code]_coop_wire_gen[/code] so stale actions are dropped after resync.
+var _coop_full_resync_generation: int = 0
+var _coop_pending_full_battle_resync: Dictionary = {}
+var _coop_full_battle_resync_apply_in_progress: bool = false
 ## ENet co-op: shared global RNG for combat (host publishes base seed; each attack re-seeds with a unique combat id).
 var _coop_net_have_battle_seed: bool = false
 var _coop_net_stored_battle_seed: int = 0
@@ -897,6 +915,14 @@ var _coop_net_local_combat_seq: int = 0
 var _coop_net_incoming_enemy_combat_fifo: Array = []
 ## Guest: relationship id of attacker while waiting for host [code]player_combat[/code] / [code]player_post_combat[/code] after [method coop_enet_guest_delegate_player_combat_to_host].
 var _coop_guest_awaiting_combat_aid: String = ""
+## Host: serialize [code]player_combat_request[/code] handling so overlapping guest packets cannot interleave [code]execute_combat[/code] / active resolves.
+var _coop_host_guest_combat_request_busy: bool = false
+## ENet reconnect grace: [code]get_tree().paused[/code] was set by us (only when session uses tree-pause mode).
+var _coop_reconnect_grace_used_tree_pause: bool = false
+## Battle-only freeze: no global tree pause — see [method coop_reconnect_grace_blocks_gameplay].
+var _coop_reconnect_grace_soft_freeze: bool = false
+var _coop_reconnect_grace_overlay_layer: CanvasLayer = null
+var _coop_reconnect_grace_overlay_label: Label = null
 var _coop_remote_enemy_turn_completed: bool = false
 
 func _exit_tree() -> void:
@@ -1196,12 +1222,183 @@ func _coop_emit_guest_host_combat_resolved_if_waiting(aid: String) -> void:
 
 
 ## Guest: send combat intent to host, then await authoritative apply + post-combat sync.
-func coop_enet_guest_delegate_player_combat_to_host(attacker_id: String, defender_id: String, used_ability: bool) -> void:
-	await CoopCombatRequestHelpers.coop_enet_guest_delegate_player_combat_to_host(self, attacker_id, defender_id, used_ability)
+func coop_enet_guest_delegate_player_combat_to_host(attacker_id: String, defender_id: String, used_ability: bool, active_ability_id: String = "") -> void:
+	await CoopCombatRequestHelpers.coop_enet_guest_delegate_player_combat_to_host(self, attacker_id, defender_id, used_ability, active_ability_id)
 
 
 func coop_enet_guest_receive_combat_request_nack(body: Dictionary) -> void:
 	CoopCombatRequestHelpers.coop_enet_guest_receive_combat_request_nack(self, body)
+
+
+## Called from [method CoopExpeditionSessionManager.notify_runtime_coop_battle_transport_peer_lost] when the ENet peer drops mid-session.
+func coop_enet_on_transport_peer_lost() -> void:
+	_coop_host_guest_combat_request_busy = false
+	if _coop_guest_awaiting_combat_aid != "":
+		_coop_guest_awaiting_combat_aid = ""
+		coop_guest_host_combat_resolved.emit()
+
+
+func coop_enet_on_reconnect_grace_started(grace_sec: float) -> void:
+	_coop_reconnect_grace_soft_freeze = false
+	if CoopExpeditionSessionManager.runtime_coop_reconnect_uses_tree_pause():
+		if not _coop_reconnect_grace_used_tree_pause:
+			_coop_reconnect_grace_used_tree_pause = true
+			get_tree().paused = true
+	else:
+		_coop_reconnect_grace_soft_freeze = true
+	_ensure_coop_reconnect_grace_overlay()
+	coop_enet_refresh_reconnect_grace_overlay()
+	if battle_log != null and battle_log.visible:
+		var mode_note: String = " (battle frozen)" if not CoopExpeditionSessionManager.runtime_coop_reconnect_uses_tree_pause() else ""
+		add_combat_log(
+			"Co-op: connection lost — waiting for reconnect (%ds)%s." % [int(ceil(grace_sec)), mode_note],
+			"orange"
+		)
+
+
+func coop_enet_on_reconnect_grace_cancelled_peer_returned() -> void:
+	if _coop_reconnect_grace_used_tree_pause:
+		_coop_reconnect_grace_used_tree_pause = false
+		get_tree().paused = false
+	_coop_reconnect_grace_soft_freeze = false
+	_hide_coop_reconnect_grace_overlay()
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: partner reconnected — resuming.", "cyan")
+
+
+func coop_enet_on_host_continue_solo_after_partner_dropout() -> void:
+	if _coop_reconnect_grace_used_tree_pause:
+		_coop_reconnect_grace_used_tree_pause = false
+		get_tree().paused = false
+	_coop_reconnect_grace_soft_freeze = false
+	_hide_coop_reconnect_grace_overlay()
+	_promote_mock_coop_remote_units_to_local_for_host_continue()
+
+
+func coop_enet_on_guest_reconnect_grace_expired() -> void:
+	if _coop_reconnect_grace_used_tree_pause:
+		_coop_reconnect_grace_used_tree_pause = false
+		get_tree().paused = false
+	_coop_reconnect_grace_soft_freeze = false
+	_hide_coop_reconnect_grace_overlay()
+	if battle_log != null and battle_log.visible:
+		add_combat_log(
+			"Co-op: reconnect window ended — lost the host session. Finish or retreat from this battle on your own.",
+			"tomato"
+		)
+
+
+func coop_enet_clear_reconnect_grace_pause_if_any() -> void:
+	if _coop_reconnect_grace_used_tree_pause:
+		_coop_reconnect_grace_used_tree_pause = false
+		get_tree().paused = false
+	_coop_reconnect_grace_soft_freeze = false
+	_hide_coop_reconnect_grace_overlay()
+
+
+func coop_reconnect_grace_blocks_gameplay() -> bool:
+	if not CoopExpeditionSessionManager.runtime_coop_reconnect_grace_active():
+		return false
+	return _coop_reconnect_grace_soft_freeze
+
+
+## Single gate for “battle logic should not advance this frame” (grace soft-freeze, guest full resync apply, …).
+func coop_runtime_should_block_gameplay_tick() -> bool:
+	if coop_reconnect_grace_blocks_gameplay():
+		return true
+	if not _coop_pending_full_battle_resync.is_empty():
+		return true
+	if _coop_full_battle_resync_apply_in_progress:
+		return true
+	return false
+
+
+func coop_enet_refresh_reconnect_grace_overlay() -> void:
+	if not CoopExpeditionSessionManager.runtime_coop_reconnect_grace_active():
+		_hide_coop_reconnect_grace_overlay()
+		return
+	_ensure_coop_reconnect_grace_overlay()
+	var rem: float = CoopExpeditionSessionManager.get_runtime_coop_reconnect_grace_remaining_sec()
+	var line: String = "Reconnecting… %ds" % maxi(0, int(ceil(rem)))
+	if not CoopExpeditionSessionManager.runtime_coop_reconnect_uses_tree_pause():
+		line += "  (battle hold — UI/menus still work)"
+	_coop_reconnect_grace_overlay_label.text = line
+	_coop_reconnect_grace_overlay_layer.visible = true
+
+
+func _ensure_coop_reconnect_grace_overlay() -> void:
+	if _coop_reconnect_grace_overlay_layer != null and is_instance_valid(_coop_reconnect_grace_overlay_layer):
+		return
+	var layer: CanvasLayer = CanvasLayer.new()
+	layer.name = "CoopReconnectGraceOverlay"
+	layer.layer = 120
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
+	var margin: MarginContainer = MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	margin.add_theme_constant_override("margin_top", 8)
+	layer.add_child(margin)
+	var lbl: Label = Label.new()
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.75, 1.0))
+	lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	lbl.add_theme_constant_override("outline_size", 5)
+	margin.add_child(lbl)
+	_coop_reconnect_grace_overlay_layer = layer
+	_coop_reconnect_grace_overlay_label = lbl
+
+
+func _hide_coop_reconnect_grace_overlay() -> void:
+	if _coop_reconnect_grace_overlay_layer != null and is_instance_valid(_coop_reconnect_grace_overlay_layer):
+		_coop_reconnect_grace_overlay_layer.visible = false
+
+
+func coop_enet_build_full_battle_resync_wire_body() -> Dictionary:
+	return CoopBattleRuntimeHelpers.build_full_battle_resync_wire_body(self)
+
+
+func coop_enet_schedule_full_battle_resync_from_host(body: Dictionary) -> void:
+	_coop_pending_full_battle_resync = body.duplicate(true)
+	if is_inside_tree():
+		call_deferred("_coop_execute_pending_full_battle_resync")
+
+
+func _coop_execute_pending_full_battle_resync() -> void:
+	if _coop_pending_full_battle_resync.is_empty():
+		return
+	_coop_full_battle_resync_apply_in_progress = true
+	var body: Dictionary = _coop_pending_full_battle_resync.duplicate(true)
+	_coop_pending_full_battle_resync.clear()
+	while _coop_enet_remote_sync_busy and is_inside_tree():
+		await get_tree().process_frame
+	CoopBattleRuntimeHelpers.apply_full_battle_resync_from_host(self, body)
+	if battle_log != null and battle_log.visible:
+		add_combat_log("Co-op: battle state refreshed from host after reconnect.", "cyan")
+	_coop_full_battle_resync_apply_in_progress = false
+	if not _coop_pending_full_battle_resync.is_empty() and is_inside_tree():
+		call_deferred("_coop_execute_pending_full_battle_resync")
+
+
+func _promote_mock_coop_remote_units_to_local_for_host_continue() -> void:
+	if not is_mock_coop_unit_ownership_active():
+		return
+	for u in _iter_all_player_side_unit_nodes_for_mock_coop():
+		if not is_instance_valid(u):
+			continue
+		if get_mock_coop_unit_owner_for_unit(u) != MOCK_COOP_OWNER_REMOTE:
+			continue
+		u.set_meta(MOCK_COOP_BATTLE_OWNER_META, MOCK_COOP_OWNER_LOCAL)
+	for a in _mock_coop_ownership_assignments:
+		if str(a.get("owner", "")) == MOCK_COOP_OWNER_REMOTE:
+			a["owner"] = MOCK_COOP_OWNER_LOCAL
+	_apply_mock_coop_ownership_visuals()
+	if battle_log != null and battle_log.visible:
+		add_combat_log(
+			"Co-op: partner did not return — you now command their expedition units for the rest of this battle (no wire sync).",
+			"cyan"
+		)
 
 
 func coop_enet_host_handle_player_combat_request(body: Dictionary) -> void:
@@ -1209,7 +1406,15 @@ func coop_enet_host_handle_player_combat_request(body: Dictionary) -> void:
 
 
 func _coop_host_start_player_combat_request(body: Dictionary) -> void:
+	if _coop_host_guest_combat_request_busy:
+		var busy_aid: String = str(body.get("attacker_id", "")).strip_edges()
+		CoopCombatRequestHelpers.coop_host_send_player_combat_request_nack(self, busy_aid if busy_aid != "" else "?")
+		if OS.is_debug_build():
+			push_warning("Coop: player_combat_request received while host pipeline busy — nack (try again).")
+		return
+	_coop_host_guest_combat_request_busy = true
 	await CoopCombatRequestHelpers.coop_host_resolve_player_combat_request_async(self, body)
+	_coop_host_guest_combat_request_busy = false
 
 
 func _coop_host_send_player_combat_request_nack(attacker_id: String) -> void:
@@ -1229,8 +1434,8 @@ func coop_enet_sync_after_local_defend(unit: Node2D) -> void:
 
 
 ## IDs captured before [method execute_combat] so we still notify peer if the attacker dies. Post-combat packet only if [param attacker_after] is still alive.
-func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false, loot_events: Array = []) -> void:
-	CoopOutboundSyncHelpers.coop_enet_sync_local_combat_done(self, attacker_id, defender_id, used_ability, attacker_after, entered_canto, canto_budget, combat_packed_rng_id, qte_snapshot, auth_snapshot, combat_host_authority, loot_events)
+func coop_enet_sync_local_combat_done(attacker_id: String, defender_id: String, used_ability: bool, attacker_after: Node2D, entered_canto: bool, canto_budget: float, combat_packed_rng_id: int = -1, qte_snapshot: Dictionary = {}, auth_snapshot: Dictionary = {}, combat_host_authority: bool = false, loot_events: Array = [], combat_body_extra: Dictionary = {}) -> void:
+	CoopOutboundSyncHelpers.coop_enet_sync_local_combat_done(self, attacker_id, defender_id, used_ability, attacker_after, entered_canto, canto_budget, combat_packed_rng_id, qte_snapshot, auth_snapshot, combat_host_authority, loot_events, combat_body_extra)
 
 
 func coop_enet_sync_after_local_finish_turn(unit: Node2D) -> void:
@@ -1582,6 +1787,8 @@ func _style_inventory_item_info_backdrop(info_bg: Panel) -> void:
 
 func _apply_inventory_panel_spacing() -> void:
 	InventoryUiHelpers.apply_inventory_panel_spacing(self)
+	InventoryPanelHelpers.ensure_inventory_layout(self)
+	InventoryPanelHelpers.layout_inventory_panel(self)
 
 func _apply_inventory_panel_item_list_extra_margins(inv_item_list: ItemList) -> void:
 	InventoryTradeFlowHelpers.apply_inventory_panel_item_list_extra_margins(self, inv_item_list)
@@ -1597,6 +1804,12 @@ func _ensure_loot_item_info_ui() -> void:
 
 func _queue_refit_item_description_panels() -> void:
 	InventoryTradeFlowHelpers.queue_refit_item_description_panels(self)
+
+func _layout_battle_inventory_panel() -> void:
+	InventoryPanelHelpers.layout_inventory_panel(self)
+
+func _refresh_battle_inventory_entry_state() -> void:
+	InventoryPanelHelpers.refresh_inventory_entry_state(self)
 
 func _refit_loot_description_panel_height() -> void:
 	BattleResultPresentationHelpers.refit_loot_description_panel_height(self)
@@ -2473,6 +2686,8 @@ func _try_jump_camera_to_custom_avatar() -> bool:
 	return CameraFxHelpers.try_jump_camera_to_custom_avatar(self)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if coop_runtime_should_block_gameplay_tick():
+		return
 	# --- Mouse wheel zoom ---
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -2493,7 +2708,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 	
 	if current_state:
-		current_state.handle_input(event)
+		# Await so async handlers (e.g. PlayerTurnState move/forecast) finish before the next
+		# _unhandled_input runs — avoids overlapping coroutines clearing active_unit mid-await.
+		await current_state.handle_input(event)
 
 func change_state(new_state: GameState) -> void:
 	await TurnOrchestrationHelpers.change_state(self, new_state)
@@ -3136,6 +3353,7 @@ func update_unit_info_panel() -> void:
 			support_btn.visible = false
 		if unit_details_button:
 			unit_details_button.visible = false
+		_refresh_battle_inventory_entry_state()
 		unit_info_panel.visible = true
 		return
 		
@@ -3254,11 +3472,18 @@ func update_unit_info_panel() -> void:
 			_set_unit_portrait_block_visible(false)
 
 		var is_friendly: bool = (target_unit.get_parent() == player_container or target_unit.get_parent() == ally_container)
-		open_inv_button.visible = (target_unit.get_parent() == player_container)
+		var can_manage_inventory: bool = (
+			current_state == player_state
+			and player_state.active_unit != null
+			and player_state.active_unit == target_unit
+			and target_unit.get_parent() == player_container
+		)
+		open_inv_button.visible = can_manage_inventory
 		if support_btn:
 			support_btn.visible = is_friendly
 		if unit_details_button:
 			unit_details_button.visible = true
+		_refresh_battle_inventory_entry_state()
 		unit_info_panel.visible = true
 	else:
 		_unit_info_stat_source_id = -1
@@ -3266,6 +3491,7 @@ func update_unit_info_panel() -> void:
 		_set_unit_info_stat_widgets_visible(false)
 		if unit_details_button:
 			unit_details_button.visible = false
+		_refresh_battle_inventory_entry_state()
 		unit_info_panel.visible = false
 				
 func _on_unit_leveled_up(unit: Node2D, gains: Dictionary) -> void:
@@ -3615,31 +3841,31 @@ func update_gold_display() -> void:
 		gold_label.text = "Gold: " + str(player_gold)
 
 func _on_convoy_pressed() -> void:
-	InventoryTradeFlowHelpers.on_convoy_pressed(self)
+	InventoryPanelHelpers.on_convoy_pressed(self)
 
 func _on_open_inv_pressed() -> void:
-	InventoryTradeFlowHelpers.on_open_inv_pressed(self)
+	InventoryPanelHelpers.on_open_inv_pressed(self)
 
 func _populate_convoy_list() -> void:
-	TradeInventoryHelpers.populate_convoy_list(self)
+	InventoryPanelHelpers.populate_convoy_list(self)
 
 func _populate_unit_inventory_list() -> void:
-	InventoryUiHelpers.populate_unit_inventory_list(self)
+	InventoryPanelHelpers.populate_unit_inventory_list(self)
 
 func _clear_grids() -> void:
-	TradeInventoryHelpers.clear_grids(self)
+	InventoryPanelHelpers.clear_grids(self)
 
 func _build_grid_items(grid: GridContainer, item_array: Array, source_type: String, owner_unit: Node2D = null, min_slots: int = 0) -> void:
-	TradeInventoryHelpers.build_grid_items(self, grid, item_array, source_type, owner_unit, min_slots)
+	InventoryPanelHelpers.build_grid_items(self, grid, item_array, source_type, owner_unit, min_slots)
 							
 func _on_grid_item_clicked(btn: Button, meta: Dictionary) -> void:
-	InventoryTradeFlowHelpers.on_grid_item_clicked(self, btn, meta)
+	InventoryPanelHelpers.on_grid_item_clicked(self, btn, meta)
 
 func _on_equip_pressed() -> void:
 	InventoryActionHelpers.on_equip_pressed(self)
 
 func _on_close_inv_pressed() -> void:
-	InventoryTradeFlowHelpers.on_close_inv_pressed(self)
+	InventoryPanelHelpers.on_close_inv_pressed(self)
 
 func _on_use_pressed() -> void:
 	await InventoryActionHelpers.on_use_pressed(self)
@@ -3747,6 +3973,29 @@ func spawn_loot_text(text: String, color: Color, pos: Vector2, meta = null) -> v
 
 func show_loot_window() -> void:
 	await InventoryUiHelpers.show_loot_window(self)
+
+
+## Waits briefly before opening loot so crit/hit SFX are not cut off by [code]get_tree().paused = true[/code] in the loot UI.
+func schedule_loot_window_after_combat_juice() -> void:
+	if CampaignManager.battle_skip_loot_window:
+		show_loot_window()
+		return
+	var tree := get_tree()
+	if tree == null:
+		show_loot_window()
+		return
+	tree.create_timer(LOOT_WINDOW_DELAY_AFTER_KILL_SEC, false, false, true).timeout.connect(_open_loot_window_if_pending, CONNECT_ONE_SHOT)
+
+
+func _open_loot_window_if_pending() -> void:
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if pending_loot.is_empty():
+		return
+	if _is_loot_window_active():
+		return
+	show_loot_window()
+
 	
 func _on_close_loot_pressed() -> void:
 	await TradeInventoryHelpers.on_close_loot_pressed(self)
@@ -5265,6 +5514,68 @@ func resolve_physical_subtype_multiplier(defender: Node2D, subtype: int) -> floa
 		_:
 			return 1.0
 
+
+## Reads [member WeaponData.magic_damage_kind] from the resource (MAGIC attacks, or second multiplier on PHYSICAL after physical subtype).
+func resolve_weapon_magic_kind_from_export(wd: WeaponData) -> int:
+	if wd == null:
+		return int(WeaponData.MagicDamageKind.ARCANE)
+	var k: Variant = wd.get("magic_damage_kind")
+	if k == null:
+		return int(WeaponData.MagicDamageKind.ARCANE)
+	return int(k)
+
+
+func resolve_magic_damage_kind(wd: WeaponData) -> int:
+	if wd == null:
+		return int(WeaponData.MagicDamageKind.ARCANE)
+	if int(wd.damage_type) != int(WeaponData.DamageType.MAGIC):
+		return int(WeaponData.MagicDamageKind.ARCANE)
+	return resolve_weapon_magic_kind_from_export(wd)
+
+
+## Multiplier vs defender [UnitData] for a given [enum WeaponData.MagicDamageKind] int value.
+func resolve_magic_damage_multiplier(defender: Node2D, kind: int) -> float:
+	if defender == null or not is_instance_valid(defender):
+		return 1.0
+	var d: Variant = defender.get("data")
+	if d == null or not (d is UnitData):
+		return 1.0
+	var ud: UnitData = d as UnitData
+	match int(kind):
+		WeaponData.MagicDamageKind.ARCANE:
+			return maxf(0.0, float(ud.mag_mult_arcane))
+		WeaponData.MagicDamageKind.FIRE:
+			return maxf(0.0, float(ud.mag_mult_fire))
+		WeaponData.MagicDamageKind.FROST:
+			return maxf(0.0, float(ud.mag_mult_frost))
+		WeaponData.MagicDamageKind.LIGHTNING:
+			return maxf(0.0, float(ud.mag_mult_lightning))
+		WeaponData.MagicDamageKind.DIVINE:
+			return maxf(0.0, float(ud.mag_mult_divine))
+		WeaponData.MagicDamageKind.NECROTIC:
+			return maxf(0.0, float(ud.mag_mult_necrotic))
+		_:
+			return maxf(0.0, float(ud.mag_mult_arcane))
+
+
+## After base damage (Str/Def or Mag/Res), apply defender subtype / magic-kind multipliers for this weapon strike or counter.
+func apply_outgoing_weapon_damage_multipliers(base_damage: int, damage_target: Node2D, wpn: WeaponData) -> int:
+	if wpn == null or damage_target == null or not is_instance_valid(damage_target):
+		return base_damage
+	var dmg: int = base_damage
+	if int(wpn.damage_type) == int(WeaponData.DamageType.PHYSICAL):
+		var subtype: int = resolve_physical_subtype(wpn)
+		var pm: float = resolve_physical_subtype_multiplier(damage_target, subtype)
+		dmg = int(round(float(dmg) * pm))
+		var mk_stack: int = resolve_weapon_magic_kind_from_export(wpn)
+		var mm_stack: float = resolve_magic_damage_multiplier(damage_target, mk_stack)
+		dmg = int(round(float(dmg) * mm_stack))
+	elif int(wpn.damage_type) == int(WeaponData.DamageType.MAGIC):
+		var mk: int = resolve_magic_damage_kind(wpn)
+		var mm: float = resolve_magic_damage_multiplier(damage_target, mk)
+		dmg = int(round(float(dmg) * mm))
+	return dmg
+
 func _format_class_weapon_permissions(class_res: Resource) -> String:
 	if class_res == null:
 		return "Weapons: Unknown"
@@ -5515,6 +5826,7 @@ func _run_melee_crit_lunge(attacker: Node2D, _defender: Node2D, orig_pos: Vector
 	# Brief hold; crit sound on impact
 	if crit_sound != null and crit_sound.stream != null:
 		play_attack_hit_sound(crit_sound)
+	play_crit_striker_voice_grunt(attacker)
 	await get_tree().create_timer(0.10).timeout
 	_melee_reset_melee_sprite_visual(attacker)
 	# Attacker remains at strike_pos; PHASE F returns to orig_pos later
@@ -5605,6 +5917,7 @@ func _run_melee_crit_lunge_piercing(attacker: Node2D, _defender: Node2D, orig_po
 
 	if crit_sound != null and crit_sound.stream != null:
 		play_attack_hit_sound(crit_sound)
+	play_crit_striker_voice_grunt(attacker)
 	await get_tree().create_timer(0.10).timeout
 	_melee_reset_melee_sprite_visual(attacker)
 
@@ -5690,6 +6003,7 @@ func _run_melee_crit_lunge_bludgeoning(attacker: Node2D, _defender: Node2D, orig
 
 	if crit_sound != null and crit_sound.stream != null:
 		play_attack_hit_sound(crit_sound)
+	play_crit_striker_voice_grunt(attacker)
 	await get_tree().create_timer(0.10).timeout
 	_melee_reset_melee_sprite_visual(attacker)
 

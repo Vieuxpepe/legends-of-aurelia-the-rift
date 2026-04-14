@@ -75,6 +75,21 @@ static func merchant_portrait_line_nudge(host: Node, portrait: TextureRect) -> v
 	tw.tween_property(portrait, "scale", s0, 0.12).set_trans(Tween.TRANS_SINE)
 
 
+## Slight vertical “bob” on Elara’s Field Notes intro portrait (Next / Enter).
+static func field_notes_elara_portrait_bob(host: Node, portrait: TextureRect) -> void:
+	if portrait == null or not is_instance_valid(host):
+		return
+	var sz: Vector2 = portrait.size
+	if sz.y < 1.0:
+		sz = portrait.custom_minimum_size
+	portrait.pivot_offset = Vector2(sz.x * 0.5, sz.y * 0.88)
+	var s0 := portrait.scale
+	var tw := host.create_tween()
+	tw.tween_property(portrait, "scale", s0 * Vector2(1.02, 1.06), 0.08).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(portrait, "scale", s0 * Vector2(1.02, 0.97), 0.1).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(portrait, "scale", s0, 0.12).set_trans(Tween.TRANS_SINE)
+
+
 static func shop_deal_sparkle(host: Node, btn: Button) -> void:
 	if btn == null or not is_instance_valid(host) or not is_instance_valid(btn):
 		return

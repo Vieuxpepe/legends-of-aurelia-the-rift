@@ -9,7 +9,6 @@
 [resource]
 script = ExtResource("4_xo5hl")
 job_name = "Warrior"
-description = "A brutal frontliner built to break formations.\nHuge HP/Strength with axes, but less resilient to magic and sustained defense."
 allowed_weapon_types = Array[int]([2])
 class_skill_tree = ExtResource("1_4l6fw")
 class_combat_ability = "Charge"
@@ -25,4 +24,6 @@ hp_growth_bonus = 30
 str_growth_bonus = 20
 def_growth_bonus = -10
 res_growth_bonus = -10
+description = "A brutal frontliner built to break formations.
+Huge HP/Strength with axes, but less resilient to magic and sustained defense."
 metadata/_custom_type_script = "uid://c45aax7tnes1o"

@@ -261,7 +261,8 @@ static func coop_enet_sync_local_combat_done(
 	qte_snapshot: Dictionary = {},
 	auth_snapshot: Dictionary = {},
 	combat_host_authority: bool = false,
-	loot_events: Array = []
+	loot_events: Array = [],
+	combat_body_extra: Dictionary = {}
 ) -> void:
 	if not field.is_mock_coop_unit_ownership_active():
 		return
@@ -292,6 +293,8 @@ static func coop_enet_sync_local_combat_done(
 		combat_body["host_authority"] = true
 	if not loot_events.is_empty():
 		combat_body["loot_events"] = loot_events.duplicate(true)
+	for ek in combat_body_extra.keys():
+		combat_body[ek] = combat_body_extra[ek]
 	CoopExpeditionSessionManager.send_runtime_coop_action(combat_body)
 	if attacker_after == null or not is_instance_valid(attacker_after) or int(attacker_after.current_hp) <= 0:
 		return
